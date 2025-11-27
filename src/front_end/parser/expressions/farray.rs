@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -6,13 +6,14 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::traits::TypeFixedArrayEntensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn build_fixed_array<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Fixed,
         "Syntax error".into(),
@@ -74,7 +75,7 @@ pub fn build_fixed_array<'parser>(
         })
     })? {
         let size: u32 = u32::try_from(items.len()).map_err(|_| {
-            ThrushCompilerIssue::Error(
+            CompilationIssue::Error(
                 "Syntax error".into(),
                 "The size limit of an array was exceeded.".into(),
                 None,

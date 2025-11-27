@@ -1,6 +1,6 @@
 use crate::back_end::llvm::compiler::builtins::Builtin;
 
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -14,7 +14,7 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn build_halloc<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let halloc_tk: &Token = ctx.consume(
         TokenType::Halloc,
         "Syntax error".into(),
@@ -49,7 +49,7 @@ pub fn build_halloc<'parser>(
 
 pub fn build_memcpy<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let memcpy_tk: &Token = ctx.consume(
         TokenType::MemCpy,
         String::from("Syntax error"),
@@ -102,7 +102,7 @@ pub fn build_memcpy<'parser>(
 
 pub fn build_memmove<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let memcpy_tk: &Token = ctx.consume(
         TokenType::MemMove,
         String::from("Syntax error"),
@@ -155,7 +155,7 @@ pub fn build_memmove<'parser>(
 
 pub fn build_memset<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let memcpy_tk: &Token = ctx.consume(
         TokenType::MemSet,
         String::from("Syntax error"),
@@ -208,7 +208,7 @@ pub fn build_memset<'parser>(
 
 pub fn build_alignof<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::AlignOf,
         "Syntax error".into(),
@@ -243,7 +243,7 @@ pub fn build_alignof<'parser>(
 
 pub fn build_sizeof<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::SizeOf,
         String::from("Syntax error"),

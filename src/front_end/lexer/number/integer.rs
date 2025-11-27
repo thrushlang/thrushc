@@ -1,7 +1,7 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    front_end::lexer::{Lexer, span::Span},
-};
+use crate::core::errors::standard::CompilationIssue;
+
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::span::Span;
 
 const I8_MIN: isize = -128;
 const I8_MAX: isize = 127;
@@ -15,7 +15,7 @@ const U16_MAX: usize = 65535;
 const U32_MAX: usize = 4294967295;
 
 #[inline]
-pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
+pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), CompilationIssue> {
     let span: Span = Span::new(lexer.line, lexer.span);
 
     if let Some(rest) = lexeme.strip_prefix("0x") {
@@ -30,7 +30,7 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCom
 
     match cleaned.parse::<usize>() {
         Ok(num) if num <= U8_MAX || num <= U16_MAX || num <= U32_MAX || num < usize::MAX => Ok(()),
-        Ok(_) => Err(ThrushCompilerIssue::Error(
+        Ok(_) => Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Integer literal is too large to be represented in a integer type.".into(),
             None,
@@ -45,13 +45,13 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCom
             {
                 Ok(())
             }
-            Ok(_) => Err(ThrushCompilerIssue::Error(
+            Ok(_) => Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
             )),
-            Err(_) => Err(ThrushCompilerIssue::Error(
+            Err(_) => Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
@@ -65,7 +65,7 @@ fn check_integer_radix_format(
     lexeme: &str,
     radix: u32,
     span: Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     let cleaned: String = lexeme.replace('_', "");
 
     match isize::from_str_radix(&cleaned, radix) {
@@ -77,7 +77,7 @@ fn check_integer_radix_format(
         {
             Ok(())
         }
-        Ok(_) => Err(ThrushCompilerIssue::Error(
+        Ok(_) => Err(CompilationIssue::Error(
             "Syntax error".into(),
             format!(
                 "Integer out of bounds signed {} format.",
@@ -90,7 +90,7 @@ fn check_integer_radix_format(
             Ok(num) if num <= U8_MAX || num <= U16_MAX || num <= U32_MAX || num < usize::MAX => {
                 Ok(())
             }
-            Ok(_) => Err(ThrushCompilerIssue::Error(
+            Ok(_) => Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 format!(
                     "Integer out of bounds unsigned {} format.",
@@ -99,7 +99,7 @@ fn check_integer_radix_format(
                 None,
                 span,
             )),
-            Err(_) => Err(ThrushCompilerIssue::Error(
+            Err(_) => Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 format!(
                     "Integer invalid numeric {} format.",

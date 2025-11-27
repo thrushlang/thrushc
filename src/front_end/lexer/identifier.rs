@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::atomic::ATOMIC;
@@ -8,7 +8,7 @@ use crate::front_end::lexer::keywords::KEYWORDS;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::lexer::types::TYPES;
 
-pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
+pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     while lexer.is_identifier_boundary(lexer.peek()) {
         lexer.advance_only();
     }

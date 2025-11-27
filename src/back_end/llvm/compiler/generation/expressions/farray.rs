@@ -10,6 +10,7 @@ use crate::core::console::logging::{self, LoggingType};
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::typesystem::traits::TypeFixedArrayEntensions;
 use crate::front_end::typesystem::types::Type;
 

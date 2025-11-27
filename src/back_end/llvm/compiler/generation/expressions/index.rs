@@ -5,6 +5,7 @@ use crate::back_end::llvm::compiler::ptr;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};

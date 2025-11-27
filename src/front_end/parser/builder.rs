@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -23,7 +23,7 @@ pub fn build_structure_modificator(attributes: &ThrushAttributes) -> StructureTy
 #[inline]
 pub fn build_thread_local_mode<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Option<ThreadLocalMode>, ThrushCompilerIssue> {
+) -> Result<Option<ThreadLocalMode>, CompilationIssue> {
     if ctx.match_token(TokenType::ThreadDynamic)? {
         return Ok(Some(ThreadLocalMode::GeneralDynamicTLSModel));
     }
@@ -42,7 +42,7 @@ pub fn build_thread_local_mode<'parser>(
 #[inline]
 pub fn build_atomic_ord<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Option<AtomicOrdering>, ThrushCompilerIssue> {
+) -> Result<Option<AtomicOrdering>, CompilationIssue> {
     if ctx.match_token(TokenType::AtomNone)? {
         return Ok(Some(AtomicOrdering::NotAtomic));
     }

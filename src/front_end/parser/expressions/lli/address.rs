@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expr};
@@ -7,7 +7,7 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn build_address<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let address_tk: &Token = ctx.advance()?;
     let address_span: Span = address_tk.get_span();
 
@@ -27,7 +27,7 @@ pub fn build_address<'parser>(
 fn build_address_indexes<'parser>(
     ctx: &mut ParserContext<'parser>,
     span: Span,
-) -> Result<Vec<Ast<'parser>>, ThrushCompilerIssue> {
+) -> Result<Vec<Ast<'parser>>, CompilationIssue> {
     ctx.consume(
         TokenType::LBrace,
         "Syntax error".into(),
@@ -63,7 +63,7 @@ fn build_address_indexes<'parser>(
     )?;
 
     if indexes.is_empty() {
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             "At least one index was expected.".into(),
             None,

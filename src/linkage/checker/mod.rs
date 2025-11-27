@@ -5,7 +5,7 @@ use crate::{
         compiler::{linking::LinkingCompilersConfiguration, options::CompilationUnit},
         console::logging::LoggingType,
         diagnostic::diagnostician::Diagnostician,
-        errors::standard::ThrushCompilerIssue,
+        errors::standard::CompilationIssue,
     },
     front_end::types::ast::Ast,
     linkage::checker::{
@@ -27,7 +27,7 @@ pub struct LinkageChecker<'linkage_checker> {
     parser: CompilerLinkerParser<'linkage_checker>,
 
     diagnostician: Diagnostician,
-    errors: Vec<ThrushCompilerIssue>,
+    errors: Vec<CompilationIssue>,
 
     current: usize,
 }
@@ -110,7 +110,7 @@ impl LinkageChecker<'_> {
 
 impl LinkageChecker<'_> {
     #[inline]
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 }

@@ -2,7 +2,7 @@ use crate::{
     core::{
         console::logging::{self, LoggingType},
         diagnostic::diagnostician::Diagnostician,
-        errors::standard::ThrushCompilerIssue,
+        errors::standard::CompilationIssue,
     },
     front_end::{
         lexer::{token::Token, tokentype::TokenType},
@@ -13,7 +13,7 @@ use crate::{
 #[derive(Debug)]
 pub struct PreprocessorContext<'preprocessor> {
     tokens: &'preprocessor [Token],
-    errors: Vec<ThrushCompilerIssue>,
+    errors: Vec<CompilationIssue>,
     module_errors: Vec<PreprocessorIssue>,
     diagnostician: Diagnostician,
 
@@ -36,7 +36,7 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
 impl<'preprocessor> PreprocessorContext<'preprocessor> {
     pub fn verify(&mut self) -> Result<(), ()> {
         if !self.errors.is_empty() || !self.module_errors.is_empty() {
-            self.errors.iter().for_each(|error: &ThrushCompilerIssue| {
+            self.errors.iter().for_each(|error: &CompilationIssue| {
                 self.diagnostician
                     .dispatch_diagnostic(error, LoggingType::Error);
             });
@@ -55,7 +55,7 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
 
 impl<'preprocessor> PreprocessorContext<'preprocessor> {
     #[inline]
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 }

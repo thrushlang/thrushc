@@ -1,11 +1,11 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::typesystem::types::Type;
 
-pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssue> {
+pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), CompilationIssue> {
     if lexeme.bytes().filter(|&b| b == b'.').count() > 1 {
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Only one decimal marker was expected.".into(),
             None,
@@ -18,7 +18,7 @@ pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssu
         .map(|f| (Type::F32, f as f64))
         .or_else(|_| lexeme.parse::<f64>().map(|f| (Type::F64, f)))
         .map_err(|_| {
-            ThrushCompilerIssue::Error(
+            CompilationIssue::Error(
                 "Syntax error".into(),
                 "Float out of bounds.".into(),
                 None,
@@ -27,7 +27,7 @@ pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), ThrushCompilerIssu
         })
 }
 
-pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIssue> {
+pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue> {
     const I8_MIN: isize = -128;
     const I8_MAX: isize = 127;
     const I16_MIN: isize = -32768;
@@ -39,14 +39,14 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
     const U16_MAX: usize = 65535;
     const U32_MAX: usize = 4294967295;
 
-    fn match_signed(number: isize, span: Span) -> Result<(Type, u64), ThrushCompilerIssue> {
+    fn match_signed(number: isize, span: Span) -> Result<(Type, u64), CompilationIssue> {
         match number {
             n if (I8_MIN..=I8_MAX).contains(&n) => Ok((Type::S8, n as u64)),
             n if (I16_MIN..=I16_MAX).contains(&n) => Ok((Type::S16, n as u64)),
             n if (I32_MIN..=I32_MAX).contains(&n) => Ok((Type::S32, n as u64)),
             n if (isize::MIN..=isize::MAX).contains(&n) => Ok((Type::S64, n as u64)),
 
-            _ => Err(ThrushCompilerIssue::Error(
+            _ => Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
@@ -55,14 +55,14 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
         }
     }
 
-    fn match_unsigned(number: usize, span: Span) -> Result<(Type, u64), ThrushCompilerIssue> {
+    fn match_unsigned(number: usize, span: Span) -> Result<(Type, u64), CompilationIssue> {
         match number {
             n if (0..=U8_MAX).contains(&n) => Ok((Type::U8, n as u64)),
             n if (0..=U16_MAX).contains(&n) => Ok((Type::U16, n as u64)),
             n if (0..=U32_MAX).contains(&n) => Ok((Type::U32, n as u64)),
             n if (0..=usize::MAX).contains(&n) => Ok((Type::U64, n as u64)),
 
-            _ => Err(ThrushCompilerIssue::Error(
+            _ => Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
@@ -91,7 +91,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
                 usize::from_str_radix(&cleaned, radix)
                     .map(|n| match_unsigned(n, span))
                     .unwrap_or_else(|_| {
-                        Err(ThrushCompilerIssue::Error(
+                        Err(CompilationIssue::Error(
                             "Syntax error".into(),
                             format!("Integer invalid numeric '{}' format.", base),
                             None,
@@ -106,7 +106,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ThrushCompilerIs
         .map(|n| match_unsigned(n, span))
         .or_else(|_| lexeme.parse::<isize>().map(|n| match_signed(n, span)))
         .unwrap_or_else(|_| {
-            Err(ThrushCompilerIssue::Error(
+            Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,

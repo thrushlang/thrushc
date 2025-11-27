@@ -20,7 +20,7 @@ use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::lexer::ThrushLexerPanic;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -38,7 +38,7 @@ const MAX_ERRORS: usize = 50;
 #[derive(Debug)]
 pub struct Lexer {
     tokens: Vec<Token>,
-    errors: Vec<ThrushCompilerIssue>,
+    errors: Vec<CompilationIssue>,
     code: Vec<char>,
     bytes: Vec<u8>,
 
@@ -195,7 +195,7 @@ impl Lexer {
     }
 
     #[inline]
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 }

@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::parser::ParserContext;
@@ -16,7 +16,7 @@ pub fn decompose<'parser>(
     property_names: Vec<&str>,
     base_type: &Type,
     span: Span,
-) -> Result<(Type, Vec<(Type, u32)>), ThrushCompilerIssue> {
+) -> Result<(Type, Vec<(Type, u32)>), CompilationIssue> {
     let mut indices: Vec<(Type, u32)> = Vec::with_capacity(50);
     let mut is_parent_ptr: bool = false;
 
@@ -29,7 +29,7 @@ pub fn decompose<'parser>(
             is_parent_ptr = true;
 
             inner_ptr.as_ref().ok_or_else(|| {
-                ThrushCompilerIssue::Error(
+                CompilationIssue::Error(
                     "Type error".into(),
                     "Properties of an non-typed pointer 'ptr' cannot be accessed.".into(),
                     None,
@@ -90,7 +90,7 @@ pub fn decompose<'parser>(
             return Ok((adjusted_inner_field_type, indices));
         }
 
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             format!("Expected property, not '{}'.", field_name),
             None,
@@ -99,7 +99,7 @@ pub fn decompose<'parser>(
     }
 
     if position < property_names.len() {
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             format!("Property source of '{}' isn't a structure.", field_name),
             None,

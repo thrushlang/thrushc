@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -8,6 +8,7 @@ use crate::front_end::parser::builder;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::dereference::DereferenceMetadata;
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::typesystem::traits::DereferenceExtensions;
 use crate::front_end::typesystem::types::Type;
 
@@ -15,7 +16,7 @@ use inkwell::AtomicOrdering;
 
 pub fn build_dereference<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let initial_deref_tk: &Token = ctx.advance()?;
     let span: Span = initial_deref_tk.span;
 

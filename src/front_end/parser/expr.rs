@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -8,7 +8,7 @@ use crate::front_end::types::ast::Ast;
 
 pub fn build_expression<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_ctx()
         .add_sync_position(ParserSyncPosition::Expression);
 
@@ -27,7 +27,7 @@ pub fn build_expression<'parser>(
 
 pub fn build_expr<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_ctx()
         .add_sync_position(ParserSyncPosition::Expression);
 

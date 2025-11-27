@@ -3,7 +3,7 @@ use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 
@@ -20,7 +20,7 @@ pub fn abort_codegen<'ctx>(
     let diagnostician: &mut Diagnostician = context.get_mut_diagnostician();
 
     diagnostician.dispatch_diagnostic(
-        &ThrushCompilerIssue::BackenEndBug(
+        &CompilationIssue::BackenEndBug(
             "Failed to Compile".into(),
             message.into(),
             span,

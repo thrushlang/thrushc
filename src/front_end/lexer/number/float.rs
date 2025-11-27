@@ -1,15 +1,15 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    front_end::lexer::{Lexer, span::Span},
-};
+use crate::core::errors::standard::CompilationIssue;
+
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::span::Span;
 
 #[inline]
-pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCompilerIssue> {
+pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), CompilationIssue> {
     let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
     let span: Span = Span::new(lexer.line, lexer.span);
 
     if dot_count > 1 {
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Only one decimal marker was expected.".into(),
             None,
@@ -21,7 +21,7 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), ThrushCompi
         return Ok(());
     }
 
-    Err(ThrushCompilerIssue::Error(
+    Err(CompilationIssue::Error(
         "Syntax error".into(),
         "Float out of bounds.".into(),
         None,

@@ -2,16 +2,17 @@ use crate::back_end;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::{AstGetType, AstLLVMGetType};
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
 
-impl Ast<'_> {
-    pub fn get_any_type(&self) -> Result<&Type, ThrushCompilerIssue> {
+impl AstGetType for Ast<'_> {
+    fn get_any_type(&self) -> Result<&Type, CompilationIssue> {
         match self {
             // Primitive Types & Literals
             Ast::Integer { kind, .. } => Ok(kind),
@@ -112,7 +113,7 @@ impl Ast<'_> {
         }
     }
 
-    pub fn get_value_type(&self) -> Result<&Type, ThrushCompilerIssue> {
+    fn get_value_type(&self) -> Result<&Type, CompilationIssue> {
         match self {
             // Primitive values
             Ast::Integer { kind, .. } => Ok(kind),
@@ -176,13 +177,142 @@ impl Ast<'_> {
             // Unreachable marker
             Ast::Unreachable { .. } => Ok(&Type::Void),
 
-            _ => Err(ThrushCompilerIssue::Error(
+            _ => Err(CompilationIssue::Error(
                 String::from("Syntax error"),
                 String::from("Expected a value to get a type."),
                 None,
                 self.get_span(),
             )),
         }
+    }
+}
+
+impl AstLLVMGetType for Ast<'_> {
+    fn llvm_get_type(&self, context: &mut LLVMCodeGenContext<'_, '_>) -> &Type {
+        match self {
+            // Primitive values
+            Ast::Integer { kind, .. } => kind,
+            Ast::Float { kind, .. } => kind,
+            Ast::Boolean { kind, .. } => kind,
+            Ast::Char { kind, .. } => kind,
+            Ast::Str { kind, .. } => kind,
+            Ast::NullPtr { .. } => &Type::Ptr(None),
+
+            // Custom Type
+            Ast::CustomType { kind, .. } => kind,
+
+            // Static
+            Ast::Static { kind, .. } => kind,
+
+            // Variables and references
+            Ast::Local { kind, .. } => kind,
+            Ast::Mut { kind, .. } => kind,
+            Ast::Reference { kind, .. } => kind,
+            Ast::DirectRef { kind, .. } => kind,
+            Ast::FunctionParameter { kind, .. } => kind,
+            Ast::AssemblerFunctionParameter { kind, .. } => kind,
+
+            // Memory operations
+            Ast::Load { kind, .. } => kind,
+            Ast::Address { kind, .. } => kind,
+            Ast::Alloc { alloc: kind, .. } => kind,
+
+            // Memory operations
+            Ast::Deref { kind, .. } => kind,
+
+            // Composite types
+            Ast::FixedArray { kind, .. } => kind,
+            Ast::Array { kind, .. } => kind,
+            Ast::Constructor { kind, .. } => kind,
+            Ast::Property { kind, .. } => kind,
+            Ast::EnumValue { kind, .. } => kind,
+
+            // Expressions
+            Ast::Call { kind, .. } => kind,
+            Ast::BinaryOp { kind, .. } => kind,
+            Ast::UnaryOp { kind, .. } => kind,
+            Ast::Group { kind, .. } => kind,
+            Ast::Index { kind, .. } => kind,
+
+            // Type operations
+            Ast::As { cast: kind, .. } => kind,
+
+            // Builtins
+            Ast::Builtin { kind, .. } => kind,
+
+            // ASM Code Block
+            Ast::AsmValue { kind, .. } => kind,
+
+            // Indirect Call
+            Ast::Indirect { kind, .. } => kind,
+
+            // Global Assembler
+            Ast::GlobalAssembler { .. } => &Type::Void,
+
+            // Intrinsic
+            Ast::Intrinsic {
+                return_type: kind, ..
+            } => kind,
+            Ast::IntrinsicParameter { kind, .. } => kind,
+
+            // Module Import
+            Ast::Import { .. } => &Type::Void,
+
+            // Ignored
+            Ast::Pass { .. } => &Type::Void,
+
+            // Unreachable marker
+            Ast::Unreachable { .. } => &Type::Void,
+
+            any => back_end::llvm::compiler::abort::abort_codegen(
+                context,
+                "Failed to compile get the type!",
+                any.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            ),
+        }
+    }
+}
+
+impl Ast<'_> {
+    #[inline]
+    pub fn get_str_literal_content(&self, span: Span) -> Result<&str, CompilationIssue> {
+        if let Ast::Str { bytes, .. } = self {
+            if let Ok(content) = std::str::from_utf8(bytes) {
+                return Ok(content);
+            }
+
+            return Err(CompilationIssue::Error(
+                "Syntax error".into(),
+                "Expected string literal.".into(),
+                None,
+                span,
+            ));
+        }
+
+        Err(CompilationIssue::Error(
+            "Syntax error".into(),
+            "Expected string literal.".into(),
+            None,
+            span,
+        ))
+    }
+
+    #[inline]
+    pub fn get_integer_value(&self) -> Result<u64, CompilationIssue> {
+        if let Ast::Integer { value, .. } = self {
+            return Ok(*value);
+        }
+
+        Err(CompilationIssue::FrontEndBug(
+            String::from("Integer not caught"),
+            String::from("Expected a integer value"),
+            self.get_span(),
+            CompilationPosition::Parser,
+            PathBuf::from(file!()),
+            line!(),
+        ))
     }
 }
 
@@ -287,134 +417,5 @@ impl Ast<'_> {
             // Unreachable marker
             Ast::Unreachable { span } => *span,
         }
-    }
-}
-
-impl Ast<'_> {
-    pub fn llvm_get_type(&self, context: &mut LLVMCodeGenContext<'_, '_>) -> &Type {
-        match self {
-            // Primitive values
-            Ast::Integer { kind, .. } => kind,
-            Ast::Float { kind, .. } => kind,
-            Ast::Boolean { kind, .. } => kind,
-            Ast::Char { kind, .. } => kind,
-            Ast::Str { kind, .. } => kind,
-            Ast::NullPtr { .. } => &Type::Ptr(None),
-
-            // Custom Type
-            Ast::CustomType { kind, .. } => kind,
-
-            // Static
-            Ast::Static { kind, .. } => kind,
-
-            // Variables and references
-            Ast::Local { kind, .. } => kind,
-            Ast::Mut { kind, .. } => kind,
-            Ast::Reference { kind, .. } => kind,
-            Ast::DirectRef { kind, .. } => kind,
-            Ast::FunctionParameter { kind, .. } => kind,
-            Ast::AssemblerFunctionParameter { kind, .. } => kind,
-
-            // Memory operations
-            Ast::Load { kind, .. } => kind,
-            Ast::Address { kind, .. } => kind,
-            Ast::Alloc { alloc: kind, .. } => kind,
-
-            // Memory operations
-            Ast::Deref { kind, .. } => kind,
-
-            // Composite types
-            Ast::FixedArray { kind, .. } => kind,
-            Ast::Array { kind, .. } => kind,
-            Ast::Constructor { kind, .. } => kind,
-            Ast::Property { kind, .. } => kind,
-            Ast::EnumValue { kind, .. } => kind,
-
-            // Expressions
-            Ast::Call { kind, .. } => kind,
-            Ast::BinaryOp { kind, .. } => kind,
-            Ast::UnaryOp { kind, .. } => kind,
-            Ast::Group { kind, .. } => kind,
-            Ast::Index { kind, .. } => kind,
-
-            // Type operations
-            Ast::As { cast: kind, .. } => kind,
-
-            // Builtins
-            Ast::Builtin { kind, .. } => kind,
-
-            // ASM Code Block
-            Ast::AsmValue { kind, .. } => kind,
-
-            // Indirect Call
-            Ast::Indirect { kind, .. } => kind,
-
-            // Global Assembler
-            Ast::GlobalAssembler { .. } => &Type::Void,
-
-            // Intrinsic
-            Ast::Intrinsic {
-                return_type: kind, ..
-            } => kind,
-            Ast::IntrinsicParameter { kind, .. } => kind,
-
-            // Module Import
-            Ast::Import { .. } => &Type::Void,
-
-            // Ignored
-            Ast::Pass { .. } => &Type::Void,
-
-            // Unreachable marker
-            Ast::Unreachable { .. } => &Type::Void,
-
-            any => back_end::llvm::compiler::abort::abort_codegen(
-                context,
-                "Failed to compile get the type!",
-                any.get_span(),
-                PathBuf::from(file!()),
-                line!(),
-            ),
-        }
-    }
-}
-
-impl Ast<'_> {
-    #[inline]
-    pub fn get_str_literal_content(&self, span: Span) -> Result<&str, ThrushCompilerIssue> {
-        if let Ast::Str { bytes, .. } = self {
-            if let Ok(content) = std::str::from_utf8(bytes) {
-                return Ok(content);
-            }
-
-            return Err(ThrushCompilerIssue::Error(
-                "Syntax error".into(),
-                "Expected string literal.".into(),
-                None,
-                span,
-            ));
-        }
-
-        Err(ThrushCompilerIssue::Error(
-            "Syntax error".into(),
-            "Expected string literal.".into(),
-            None,
-            span,
-        ))
-    }
-
-    #[inline]
-    pub fn get_integer_value(&self) -> Result<u64, ThrushCompilerIssue> {
-        if let Ast::Integer { value, .. } = self {
-            return Ok(*value);
-        }
-
-        Err(ThrushCompilerIssue::FrontEndBug(
-            String::from("Integer not caught"),
-            String::from("Expected a integer value"),
-            self.get_span(),
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ))
     }
 }

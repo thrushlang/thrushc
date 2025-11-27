@@ -1,19 +1,19 @@
 use std::path::PathBuf;
 
-use crate::core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue};
+use crate::core::errors::{position::CompilationPosition, standard::CompilationIssue};
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::{
     TypeChecker, checks, metadata::TypeCheckerExprMetadata,
 };
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::types::ast::traits::{AstGetType, AstStandardExtensions};
 use crate::front_end::typesystem::{traits::TypePointerExtensions, types::Type};
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     match node {
         Ast::LLI {
             name,
@@ -32,7 +32,7 @@ pub fn validate<'type_checker>(
             let value_type: &Type = expr.get_value_type()?;
 
             if lli_type.is_void_type() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
+                typechecker.add_error(CompilationIssue::Error(
                     "Type error".into(),
                     "The void type isn't a value.".into(),
                     None,
@@ -52,7 +52,7 @@ pub fn validate<'type_checker>(
             let span: Span = source.get_span();
 
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
+                typechecker.add_error(CompilationIssue::Error(
                     "Type error".into(),
                     format!(
                         "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
@@ -75,7 +75,7 @@ pub fn validate<'type_checker>(
             let span: Span = source.get_span();
 
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
+                typechecker.add_error(CompilationIssue::Error(
                     "Type error".into(),
                     format!(
                         "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
@@ -87,7 +87,7 @@ pub fn validate<'type_checker>(
             }
 
             if source_type.is_ptr_type() && !source_type.is_typed_ptr_type() && indexes.len() > 1 {
-                typechecker.add_error(ThrushCompilerIssue::Error(
+                typechecker.add_error(CompilationIssue::Error(
                     "Type error".into(),
                     format!(
                         "Expected raw typed pointer ptr[T] instead, got '{}'.",
@@ -100,7 +100,7 @@ pub fn validate<'type_checker>(
                 && source_type.is_typed_ptr_type()
                 && !source_type.is_ptr_indexable_like_type()
             {
-                typechecker.add_error(ThrushCompilerIssue::Error(
+                typechecker.add_error(CompilationIssue::Error(
                     "Type error".into(),
                     format!("Expected raw typed pointer type with indexable type 'struct T', or 'array[T; N]', got '{}'.", source_type),
                     None,
@@ -113,7 +113,7 @@ pub fn validate<'type_checker>(
                 let span: Span = indexe.get_span();
 
                 if !indexe_type.is_unsigned_integer_type() {
-                    typechecker.add_error(ThrushCompilerIssue::Error(
+                    typechecker.add_error(CompilationIssue::Error(
                         "Type error".into(),
                         format!("Expected unsigned integer type, got '{}'.", indexe_type),
                         None,
@@ -139,7 +139,7 @@ pub fn validate<'type_checker>(
             let span: Span = source.get_span();
 
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
-                typechecker.add_error(ThrushCompilerIssue::Error(
+                typechecker.add_error(CompilationIssue::Error(
                     "Type error".into(),
                      format!(
                         "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
@@ -166,7 +166,7 @@ pub fn validate<'type_checker>(
         _ => {
             let span: Span = node.get_span();
 
-            typechecker.add_bug(ThrushCompilerIssue::FrontEndBug(
+            typechecker.add_bug(CompilationIssue::FrontEndBug(
                 "Expression not caught".into(),
                 "Expression could not be caught for processing.".into(),
                 span,

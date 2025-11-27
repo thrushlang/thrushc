@@ -3,7 +3,7 @@ pub mod deref;
 pub mod lli;
 
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::linter::Linter;
@@ -73,7 +73,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 return;
             }
 
-            linter.add_bug(ThrushCompilerIssue::FrontEndBug(
+            linter.add_bug(CompilationIssue::FrontEndBug(
                 String::from("Structure not caught"),
                 format!("Could not get named struct with name '{}'.", name),
                 *span,
@@ -124,7 +124,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 return;
             }
 
-            linter.add_bug(ThrushCompilerIssue::FrontEndBug(
+            linter.add_bug(CompilationIssue::FrontEndBug(
                 String::from("Call not caught"),
                 format!("Could not get named function '{}'.", name),
                 *span,
@@ -170,7 +170,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 return;
             }
 
-            linter.add_bug(ThrushCompilerIssue::FrontEndBug(
+            linter.add_bug(CompilationIssue::FrontEndBug(
                 String::from("Enum value not caught"),
                 format!("Could not get correct name of the enum field '{}'.", name),
                 *span,
@@ -203,7 +203,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         _ => {
             let span: Span = expr.get_span();
 
-            linter.add_bug(ThrushCompilerIssue::FrontEndBug(
+            linter.add_bug(CompilationIssue::FrontEndBug(
                 "Expression not caught".into(),
                 "Expression could not be caught for processing.".into(),
                 span,

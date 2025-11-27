@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::{
     core::{
         compiler::{self, options::CompilationUnit},
-        errors::standard::ThrushCompilerIssue,
+        errors::standard::CompilationIssue,
     },
     front_end::{
         lexer::{Lexer, span::Span, token::Token, tokentype::TokenType},
@@ -27,7 +27,7 @@ pub fn build_import<'preprocessor>(
     let path: PathBuf = PathBuf::from(raw_path);
 
     if !path.exists() {
-        ctx.add_error(ThrushCompilerIssue::Error(
+        ctx.add_error(CompilationIssue::Error(
             "Import error".into(),
             "Cannot resolve module, specified path does not exist in filesystem.".into(),
             None,
@@ -38,7 +38,7 @@ pub fn build_import<'preprocessor>(
     }
 
     if !path.is_file() {
-        ctx.add_error(ThrushCompilerIssue::Error(
+        ctx.add_error(CompilationIssue::Error(
             "Import error".into(),
             "Invalid module target, path resolves to directory, expected file.".into(),
             None,
@@ -51,7 +51,7 @@ pub fn build_import<'preprocessor>(
     if path.extension().unwrap_or_default() != "thrush"
         && path.extension().unwrap_or_default() != "🐦"
     {
-        ctx.add_error(ThrushCompilerIssue::Error(
+        ctx.add_error(CompilationIssue::Error(
             "Import error".into(),
             "Expected '.thrush' or '.🐦' module.".into(),
             None,
@@ -66,7 +66,7 @@ pub fn build_import<'preprocessor>(
     let name: String = match path.file_name() {
         Some(name) => name.to_string_lossy().to_string(),
         None => {
-            ctx.add_error(ThrushCompilerIssue::Error(
+            ctx.add_error(CompilationIssue::Error(
                 "Import error".into(),
                 "Unable to extract filename component.".into(),
                 None,
@@ -80,7 +80,7 @@ pub fn build_import<'preprocessor>(
     let base_name: String = match path.file_stem() {
         Some(name) => name.to_string_lossy().to_string(),
         None => {
-            ctx.add_error(ThrushCompilerIssue::Error(
+            ctx.add_error(CompilationIssue::Error(
                 "Import error".into(),
                 "Unable to extract filename.".into(),
                 None,
@@ -96,7 +96,7 @@ pub fn build_import<'preprocessor>(
     let tokens: Vec<Token> = match Lexer::lex(&file) {
         Ok(tokens) => tokens,
         Err(_) => {
-            ctx.add_error(ThrushCompilerIssue::Error(
+            ctx.add_error(CompilationIssue::Error(
                 "Import error".into(),
                 "Imported module contains invalid syntax.".into(),
                 None,

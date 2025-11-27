@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -37,7 +37,7 @@ lazy_static! {
 }
 
 impl TokenType {
-    pub fn as_type(&self, span: Span) -> Result<Type, ThrushCompilerIssue> {
+    pub fn as_type(&self, span: Span) -> Result<Type, CompilationIssue> {
         match self {
             TokenType::Char => Ok(Type::Char),
 
@@ -65,7 +65,7 @@ impl TokenType {
             TokenType::Addr => Ok(Type::Addr),
             TokenType::Void => Ok(Type::Void),
 
-            any => Err(ThrushCompilerIssue::Error(
+            any => Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 format!("{} isn't a valid type.", any),
                 None,

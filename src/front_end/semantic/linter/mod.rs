@@ -10,7 +10,7 @@ use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::linter::statements::mutation;
@@ -25,8 +25,8 @@ use symbols::LinterSymbolsTable;
 pub struct Linter<'linter> {
     ast: &'linter [Ast<'linter>],
     current: usize,
-    warnings: Vec<ThrushCompilerIssue>,
-    bugs: Vec<ThrushCompilerIssue>,
+    warnings: Vec<CompilationIssue>,
+    bugs: Vec<CompilationIssue>,
     diagnostician: Diagnostician,
     symbols: LinterSymbolsTable<'linter>,
 }
@@ -57,12 +57,12 @@ impl<'linter> Linter<'linter> {
 
         self.generate_warnings();
 
-        self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
+        self.bugs.iter().for_each(|bug: &CompilationIssue| {
             self.diagnostician
                 .dispatch_diagnostic(bug, LoggingType::Bug);
         });
 
-        self.warnings.iter().for_each(|warn: &ThrushCompilerIssue| {
+        self.warnings.iter().for_each(|warn: &CompilationIssue| {
             self.diagnostician
                 .dispatch_diagnostic(warn, LoggingType::Warning);
         });
@@ -441,7 +441,7 @@ impl Linter<'_> {
                 let is_mutable_used: bool = info.2;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Local not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -449,7 +449,7 @@ impl Linter<'_> {
                 }
 
                 if !is_mutable_used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Mutable local not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -464,7 +464,7 @@ impl Linter<'_> {
                 let used: bool = info.1;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Local constant not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -480,7 +480,7 @@ impl Linter<'_> {
                 let is_mutable_used: bool = info.2;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Local Static not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -488,7 +488,7 @@ impl Linter<'_> {
                 }
 
                 if !is_mutable_used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Local mutable static not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -503,7 +503,7 @@ impl Linter<'_> {
                 let used: bool = info.1;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("LLI not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -523,7 +523,7 @@ impl Linter<'_> {
                 let is_mutable_used: bool = info.2;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Parameter not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -531,7 +531,7 @@ impl Linter<'_> {
                 }
 
                 if !is_mutable_used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Mutable parameter not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -549,7 +549,7 @@ impl Linter<'_> {
                 let used: bool = info.1;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         "Static not used".into(),
                         format!("'{}' not used.", name),
                         span,
@@ -565,7 +565,7 @@ impl Linter<'_> {
                 let used: bool = info.1;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Constant not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -581,7 +581,7 @@ impl Linter<'_> {
                 let used: bool = info.1;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Function not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -597,7 +597,7 @@ impl Linter<'_> {
                 let used: bool = info.1;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Assembler function not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -613,7 +613,7 @@ impl Linter<'_> {
                 let used: bool = info.2;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Enum not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -627,7 +627,7 @@ impl Linter<'_> {
                     let used: bool = info.1;
 
                     if !used {
-                        self.warnings.push(ThrushCompilerIssue::Warning(
+                        self.warnings.push(CompilationIssue::Warning(
                             String::from("Enum field not used"),
                             format!("'{}' not used.", name),
                             span,
@@ -644,7 +644,7 @@ impl Linter<'_> {
                 let used: bool = info.2;
 
                 if !used {
-                    self.warnings.push(ThrushCompilerIssue::Warning(
+                    self.warnings.push(CompilationIssue::Warning(
                         String::from("Structure not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -658,7 +658,7 @@ impl Linter<'_> {
                     let used: bool = info.1;
 
                     if !used {
-                        self.warnings.push(ThrushCompilerIssue::Warning(
+                        self.warnings.push(CompilationIssue::Warning(
                             String::from("Structure field not used"),
                             format!("'{}' not used.", name),
                             span,
@@ -671,7 +671,7 @@ impl Linter<'_> {
 
 impl Linter<'_> {
     #[inline]
-    fn add_bug(&mut self, bug: ThrushCompilerIssue) {
+    fn add_bug(&mut self, bug: CompilationIssue) {
         self.bugs.push(bug);
     }
 }

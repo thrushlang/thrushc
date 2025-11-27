@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -14,10 +14,10 @@ pub fn check_types(
     expr: Option<&Ast>,
     op: Option<&TokenType>,
     metadata: TypeCheckerExprMetadata,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     let span: Span = metadata.get_span();
 
-    let error: ThrushCompilerIssue = ThrushCompilerIssue::Error(
+    let error: CompilationIssue = CompilationIssue::Error(
         "Mismatched types".into(),
         format!("Expected '{}' type, got '{}' type.", lhs, rhs),
         None,
@@ -60,7 +60,7 @@ pub fn check_types(
             }
 
             if mod1 != mod2 {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Mismatched structure type modificator".into(),
                     format!(
                         "Expected structure type with '{}' attributes but found '{}'.",
@@ -90,7 +90,7 @@ pub fn check_types(
             }
 
             if mod1 != mod2 {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Mismatched function reference type modificator".into(),
                     format!(
                         "Expected function reference type with '{}' attributes but found '{}'.",
@@ -527,11 +527,11 @@ pub fn check_type_cast(
     from_type: &Type,
     metadata: &CastMetadata,
     span: &Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     let is_allocated: bool = metadata.is_allocated();
 
     let abort_cast = || {
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Type error".into(),
             format!("Cannot cast '{}' to '{}'.", from_type, cast_type),
             None,

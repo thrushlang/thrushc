@@ -12,7 +12,7 @@ use crate::back_end::llvm::compiler::{ptr, statements};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
-use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::types::ast::traits::{AstLLVMGetType, AstStandardExtensions};
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::typesystem::traits::DereferenceExtensions;
 use crate::front_end::typesystem::types::Type;

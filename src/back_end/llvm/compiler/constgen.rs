@@ -13,6 +13,7 @@ use crate::back_end::llvm::compiler::{self, builtins};
 use crate::back_end::llvm::compiler::{abort, ptr};
 
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::typesystem::traits::TypeStructExtensions;
 use crate::front_end::typesystem::types::Type;
 

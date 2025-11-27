@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -6,14 +6,14 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::property::PropertyMetadata;
-use crate::front_end::types::ast::traits::AstMemoryExtensions;
+use crate::front_end::types::ast::traits::{AstGetType, AstMemoryExtensions};
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::{self, types::Type};
 
 pub fn build_property<'parser>(
     ctx: &mut ParserContext<'parser>,
     source: Ast<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let source_type: &Type = source.get_value_type()?;
     let metadata: PropertyMetadata = PropertyMetadata::new(source.is_allocated());
 

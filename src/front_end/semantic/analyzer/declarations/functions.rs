@@ -1,5 +1,5 @@
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::analyzer::Analyzer;
@@ -10,7 +10,7 @@ use std::path::PathBuf;
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
     node: &'analyzer Ast,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     match node {
         Ast::Function { body, .. } => {
             if let Some(body) = body {
@@ -23,7 +23,7 @@ pub fn validate<'analyzer>(
         _ => {
             let span: Span = node.get_span();
 
-            analyzer.add_bug(ThrushCompilerIssue::FrontEndBug(
+            analyzer.add_bug(CompilationIssue::FrontEndBug(
                 "Expression not caught".into(),
                 "Expression could not be caught for processing.".into(),
                 span,

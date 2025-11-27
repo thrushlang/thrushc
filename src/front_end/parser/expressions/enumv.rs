@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -18,7 +18,7 @@ pub fn build_enum_value<'parser>(
     ctx: &mut ParserContext<'parser>,
     name: &'parser str,
     span: Span,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
     let enum_id: (&str, usize) = object.expected_enum(span)?;
     let id: &str = enum_id.0;
@@ -38,7 +38,7 @@ pub fn build_enum_value<'parser>(
     let field_name: &str = field_tk.get_lexeme();
 
     if !union.contain_field(field_name) {
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             String::from("Syntax error"),
             format!("Not found '{}' field in '{}' enum.", name, field_name),
             None,

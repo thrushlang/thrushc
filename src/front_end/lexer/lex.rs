@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::character;
@@ -8,7 +8,7 @@ use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::string;
 use crate::front_end::lexer::tokentype::TokenType;
 
-pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
+pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     match lexer.advance() {
         '[' => lexer.make(TokenType::LBracket),
         ']' => lexer.make(TokenType::RBracket),
@@ -39,7 +39,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
 
                 let span: Span = Span::new(lexer.line, lexer.span);
 
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Syntax error".into(),
                     "Expected '*/'.".into(),
                     None,
@@ -97,7 +97,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
 
             let span: Span = Span::new(lexer.line, lexer.span);
 
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "This character isn't recognized.".into(),
                 None,

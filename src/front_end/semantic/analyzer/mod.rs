@@ -3,7 +3,7 @@ use symbols::AnalyzerSymbolsTable;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::analyzer::context::AnalyzerContext;
 use crate::front_end::types::ast::Ast;
@@ -24,9 +24,9 @@ pub struct Analyzer<'analyzer> {
     ast: &'analyzer [Ast<'analyzer>],
     position: usize,
 
-    bugs: Vec<ThrushCompilerIssue>,
-    errors: Vec<ThrushCompilerIssue>,
-    warnings: Vec<ThrushCompilerIssue>,
+    bugs: Vec<CompilationIssue>,
+    errors: Vec<CompilationIssue>,
+    warnings: Vec<CompilationIssue>,
 
     symbols: AnalyzerSymbolsTable<'analyzer>,
     diagnostician: Diagnostician,
@@ -97,7 +97,7 @@ impl<'analyzer> Analyzer<'analyzer> {
 }
 
 impl<'analyzer> Analyzer<'analyzer> {
-    pub fn analyze_decl(&mut self, node: &'analyzer Ast) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_decl(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
         /* ######################################################################
 
 
@@ -145,7 +145,7 @@ impl<'analyzer> Analyzer<'analyzer> {
         Ok(())
     }
 
-    pub fn analyze_stmt(&mut self, node: &'analyzer Ast) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_stmt(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
         /* ######################################################################
 
 
@@ -276,7 +276,7 @@ impl<'analyzer> Analyzer<'analyzer> {
         if let Ast::Continue { .. } | Ast::Break { .. } = node {
             if !self.get_context().is_inside_loop() {
                 self.add_error(
-                    ThrushCompilerIssue::Error(
+                    CompilationIssue::Error(
                         "Syntax Error".into(),
                         "Only loop control flow terminators can be inside a loop. The instruction inside a loop was expected.".into(),
                         None,
@@ -339,7 +339,7 @@ impl<'analyzer> Analyzer<'analyzer> {
         self.analyze_expr(node)
     }
 
-    pub fn analyze_expr(&mut self, node: &'analyzer Ast) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_expr(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
         expressions::validate(self, node)
     }
 }
@@ -401,17 +401,17 @@ impl<'analyzer> Analyzer<'analyzer> {
 
 impl Analyzer<'_> {
     #[inline]
-    pub fn add_warning(&mut self, warning: ThrushCompilerIssue) {
+    pub fn add_warning(&mut self, warning: CompilationIssue) {
         self.warnings.push(warning);
     }
 
     #[inline]
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 
     #[inline]
-    pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_bug(&mut self, error: CompilationIssue) {
         self.bugs.push(error);
     }
 }

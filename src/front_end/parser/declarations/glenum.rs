@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -16,7 +16,7 @@ use crate::front_end::typesystem::types::Type;
 pub fn build_enum<'parser>(
     ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     checks::check_main_scope_state(ctx)?;
 
     ctx.consume(
@@ -77,7 +77,7 @@ pub fn build_enum<'parser>(
             continue;
         }
 
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Expected identifier in enum field.".into(),
             None,

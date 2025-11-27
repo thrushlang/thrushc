@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -18,13 +18,11 @@ use crate::front_end::parser::statements::lstructure;
 use crate::front_end::parser::statements::terminator;
 use crate::front_end::types::ast::Ast;
 
-pub fn parse<'parser>(
-    ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_ctx()
         .add_sync_position(ParserSyncPosition::Statement);
 
-    let statement: Result<Ast<'parser>, ThrushCompilerIssue> = match &ctx.peek().kind {
+    let statement: Result<Ast<'parser>, CompilationIssue> = match &ctx.peek().kind {
         TokenType::LBrace => Ok(block::build_block(ctx)?),
         TokenType::Return => Ok(terminator::build_return(ctx)?),
 

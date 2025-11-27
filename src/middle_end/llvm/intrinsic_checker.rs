@@ -1,7 +1,7 @@
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::types::ast::Ast;
 
@@ -11,7 +11,7 @@ use inkwell::intrinsics::Intrinsic;
 pub struct IntrinsicChecker<'llvm> {
     ast: &'llvm [Ast<'llvm>],
 
-    errors: Vec<ThrushCompilerIssue>,
+    errors: Vec<CompilationIssue>,
 
     diagnostician: Diagnostician,
 }
@@ -42,7 +42,7 @@ impl<'llvm> IntrinsicChecker<'llvm> {
                     || (intrinsic.is_some_and(|intrinsic| intrinsic.is_overloaded())
                         && external_name.split(".").count() <= 2)
                 {
-                    self.add_error(ThrushCompilerIssue::Error(
+                    self.add_error(CompilationIssue::Error(
                         "Intrinsic not found".into(),
                         "This intrinsic is not recognized by the compiler as existing. Try another name.".into(),
                         None,
@@ -76,7 +76,7 @@ impl IntrinsicChecker<'_> {
 
 impl<'llvm> IntrinsicChecker<'llvm> {
     #[inline]
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 }

@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expr};
@@ -14,7 +14,7 @@ pub fn build_call<'parser>(
     ctx: &mut ParserContext<'parser>,
     name: &'parser str,
     span: Span,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
 
     let function_type: Type = if object.is_intrinsic() {

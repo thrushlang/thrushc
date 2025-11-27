@@ -1,11 +1,11 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 
-pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
+pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     let char: char = match lexer.advance() {
         '\\' => {
             lexer.end_span();
@@ -24,7 +24,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     lexer.advance_only();
 
     if lexer.previous() != '\'' {
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Unclosed char. Did you forget to close the char with a '\''?.".into(),
             None,
@@ -43,7 +43,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     Ok(())
 }
 
-fn handle_char_scape_sequence(lexer: &mut Lexer, span: Span) -> Result<char, ThrushCompilerIssue> {
+fn handle_char_scape_sequence(lexer: &mut Lexer, span: Span) -> Result<char, CompilationIssue> {
     match lexer.advance() {
         'n' => Ok('\n'),
         't' => Ok('\t'),
@@ -53,7 +53,7 @@ fn handle_char_scape_sequence(lexer: &mut Lexer, span: Span) -> Result<char, Thr
         '\'' => Ok('\''),
         '"' => Ok('"'),
 
-        _ => Err(ThrushCompilerIssue::Error(
+        _ => Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Invalid escape sequence. Valid escapes are '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
             None,

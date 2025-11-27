@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -8,6 +8,7 @@ use crate::front_end::parser::attributes;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::traits::FoundSymbolEither;
@@ -24,7 +25,7 @@ use crate::front_end::typesystem::modificators::GCCFunctionReferenceTypeModifica
 use crate::front_end::typesystem::modificators::LLVMFunctionReferenceTypeModificator;
 use crate::front_end::typesystem::types::Type;
 
-pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
+pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue> {
     match ctx.peek().kind {
         tk_kind if tk_kind.is_type() => {
             let tk: &Token = ctx.advance()?;
@@ -77,7 +78,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
 
                     Ok(custom.0)
                 } else {
-                    Err(ThrushCompilerIssue::Error(
+                    Err(CompilationIssue::Error(
                         "Syntax error".into(),
                         format!("Not found type '{}'.", name),
                         None,
@@ -85,7 +86,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
                     ))
                 }
             } else {
-                Err(ThrushCompilerIssue::Error(
+                Err(CompilationIssue::Error(
                     "Syntax error".into(),
                     format!("Expected type, not '{}'", name),
                     None,
@@ -94,7 +95,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
             }
         }
 
-        what_heck => Err(ThrushCompilerIssue::Error(
+        what_heck => Err(CompilationIssue::Error(
             "Syntax error".into(),
             format!("Expected type, not '{}'", what_heck),
             None,
@@ -103,7 +104,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIss
     }
 }
 
-fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
+fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
         "Syntax error".into(),
@@ -157,11 +158,11 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompiler
     ))
 }
 
-fn build_const_type(ctx: &mut ParserContext<'_>) -> Result<Type, ThrushCompilerIssue> {
+fn build_const_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue> {
     Ok(Type::Const(self::build_type(ctx)?.into()))
 }
 
-fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, ThrushCompilerIssue> {
+fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
         "Syntax error".into(),
@@ -181,7 +182,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thr
         let size_type: &Type = size.get_value_type()?;
 
         if !size.is_integer() {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Expected literal integer value.".into(),
                 None,
@@ -190,7 +191,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thr
         }
 
         if !size_type.is_unsigned_integer_type() || !size_type.is_lesseq_unsigned32bit_integer() {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Expected unsigned integer value less than or equal to 32 bits.".into(),
                 None,
@@ -210,7 +211,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thr
             return Ok(Type::FixedArray(array_type.into(), array_size));
         }
 
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Expected any unsigned 32 bits integer value.".into(),
             None,
@@ -229,7 +230,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Thr
 fn build_recursive_type(
     ctx: &mut ParserContext<'_>,
     mut before_type: Type,
-) -> Result<Type, ThrushCompilerIssue> {
+) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
         "Syntax error".into(),
@@ -251,7 +252,7 @@ fn build_recursive_type(
 
         Ok(Type::Ptr(Some(inner_type.into())))
     } else {
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Syntax error".into(),
             format!("Expected pointer type, not '{}'", before_type),
             None,

@@ -1,14 +1,15 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::expressions::precedences::lower;
 use crate::front_end::parser::{ParserContext, expr};
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::{traits::CastTypeExtensions, types::Type};
 
 pub fn unary_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     if ctx.match_token(TokenType::Bang)? {
         let operator_tk: &Token = ctx.previous();
         let operator: TokenType = operator_tk.kind;

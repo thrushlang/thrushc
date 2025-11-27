@@ -19,6 +19,7 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::metadata::staticvar::StaticMetadata;
+use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::repr::GlobalConstant;
 use crate::front_end::types::parser::repr::GlobalStatic;

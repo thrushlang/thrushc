@@ -1,5 +1,5 @@
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::parser::constants::PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY;
@@ -151,7 +151,7 @@ impl<'parser> SymbolsTable<'parser> {
     pub fn declare_parameters(
         &mut self,
         parameters: &[Ast<'parser>],
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         parameters.iter().try_for_each(|parameter| {
             if let Ast::FunctionParameter {
                 name: id,
@@ -162,7 +162,7 @@ impl<'parser> SymbolsTable<'parser> {
             } = parameter
             {
                 if self.parameters.contains_key(id) {
-                    return Err(ThrushCompilerIssue::Error(
+                    return Err(CompilationIssue::Error(
                         "Parameter already declared".into(),
                         format!("'{}' parameter already declared before.", id),
                         None,
@@ -186,10 +186,10 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         lli: LLISymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.llis.last_mut() {
             if last_scope.contains_key(id) {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Low level instruction already declared".into(),
                     format!("Low level instruction '{}' already declared before.", id),
                     None,
@@ -202,7 +202,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::FrontEndBug(
+        return Err(CompilationIssue::FrontEndBug(
             String::from("Low level instruction not caught"),
             String::from("The final scope was not obtained."),
             span,
@@ -217,10 +217,10 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         local: LocalSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.locals.last_mut() {
             if last_scope.contains_key(id) || self.parameters.contains_key(id) {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Local variable already declared".into(),
                     format!("'{}' local variable already declared before.", id),
                     None,
@@ -233,7 +233,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::FrontEndBug(
+        return Err(CompilationIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -248,9 +248,9 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         static_: StaticSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if self.global_statics.contains_key(id) {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Static already declared".into(),
                 format!("'{}' static already declared before.", id),
                 None,
@@ -268,10 +268,10 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         static_: StaticSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_statics.last_mut() {
             if last_scope.contains_key(id) {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Static already declared".into(),
                     format!("'{}' static already declared before.", id),
                     None,
@@ -284,7 +284,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::FrontEndBug(
+        return Err(CompilationIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -299,9 +299,9 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         constant: ConstantSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if self.global_constants.contains_key(id) {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Constant already declared".into(),
                 format!("'{}' constant already declared before.", id),
                 None,
@@ -319,10 +319,10 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         constant: ConstantSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_constants.last_mut() {
             if last_scope.contains_key(id) {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Constant already declared".into(),
                     format!("'{}' constant already declared before.", id),
                     None,
@@ -335,7 +335,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::FrontEndBug(
+        return Err(CompilationIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -350,9 +350,9 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         ctype: CustomTypeSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if self.global_custom_types.contains_key(id) {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Custom type already declared".into(),
                 format!("'{}' custom type already declared before.", id),
                 None,
@@ -370,10 +370,10 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         ctype: CustomTypeSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_custom_types.last_mut() {
             if last_scope.contains_key(id) {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Custom already declared".into(),
                     format!("'{}' Custom already declared before.", id),
                     None,
@@ -386,7 +386,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::FrontEndBug(
+        return Err(CompilationIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -401,9 +401,9 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         fields: Struct<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if self.global_structs.contains_key(id) {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Structure already declared".into(),
                 format!("'{}' structure already declared before.", id),
                 None,
@@ -421,10 +421,10 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         fields: Struct<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_structs.last_mut() {
             if last_scope.contains_key(id) {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Structure already declared".into(),
                     format!("'{}' structure already declared before.", id),
                     None,
@@ -437,7 +437,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::FrontEndBug(
+        return Err(CompilationIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -452,9 +452,9 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         union: EnumSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if self.global_enums.contains_key(id) {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 String::from("Enum already declared"),
                 format!("'{}' enum already declared before.", id),
                 None,
@@ -472,10 +472,10 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         union: EnumSymbol<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_enums.last_mut() {
             if last_scope.contains_key(id) {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Enum already declared".into(),
                     format!("'{}' enum already declared before.", id),
                     None,
@@ -488,7 +488,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(ThrushCompilerIssue::FrontEndBug(
+        return Err(CompilationIssue::FrontEndBug(
             String::from("Last scope not caught"),
             String::from("The last scope could not be obtained."),
             span,
@@ -503,9 +503,9 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         function: AssemblerFunction<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if self.asm_functions.contains_key(id) {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Assembly function already declared".into(),
                 format!("'{}' assembler function already declared before.", id),
                 None,
@@ -523,9 +523,9 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         function: Function<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if self.functions.contains_key(id) {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Function already declared".into(),
                 format!("'{}' function already declared before.", id),
                 None,
@@ -543,9 +543,9 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         intrinsic: Intrinsic<'parser>,
         span: Span,
-    ) -> Result<(), ThrushCompilerIssue> {
+    ) -> Result<(), CompilationIssue> {
         if self.intrinsics.contains_key(id) {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Intrinsic already declared".into(),
                 format!("'{}' intrinsic already declared before.", id),
                 None,
@@ -564,7 +564,7 @@ impl<'parser> SymbolsTable<'parser> {
         &self,
         id: &'parser str,
         span: Span,
-    ) -> Result<FoundSymbolId<'parser>, ThrushCompilerIssue> {
+    ) -> Result<FoundSymbolId<'parser>, CompilationIssue> {
         for (idx, scope) in self.llis.iter().enumerate().rev() {
             if scope.contains_key(id) {
                 return Ok((
@@ -831,7 +831,7 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             String::from("Not found"),
             format!("'{}' isn't declared or defined.", id),
             None,
@@ -847,13 +847,13 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<&LLISymbol<'parser>, ThrushCompilerIssue> {
+    ) -> Result<&LLISymbol<'parser>, CompilationIssue> {
         if let Some(scope) = self.llis.get(scope_idx) {
             if let Some(lli) = scope.get(id) {
                 return Ok(lli);
             }
         } else {
-            return Err(ThrushCompilerIssue::FrontEndBug(
+            return Err(CompilationIssue::FrontEndBug(
                 String::from("Scope not caught"),
                 String::from("The scope could not be obtained."),
                 span,
@@ -863,7 +863,7 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             String::from("Not found"),
             String::from("LLI not found."),
             None,
@@ -876,12 +876,12 @@ impl<'parser> SymbolsTable<'parser> {
         &self,
         span: Span,
         id: &'parser str,
-    ) -> Result<AssemblerFunction<'parser>, ThrushCompilerIssue> {
+    ) -> Result<AssemblerFunction<'parser>, CompilationIssue> {
         if let Some(asm_function) = self.asm_functions.get(id).cloned() {
             return Ok(asm_function);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             String::from("Not found"),
             String::from("Assembler function not found."),
             None,
@@ -894,12 +894,12 @@ impl<'parser> SymbolsTable<'parser> {
         &self,
         span: Span,
         id: &'parser str,
-    ) -> Result<Function<'parser>, ThrushCompilerIssue> {
+    ) -> Result<Function<'parser>, CompilationIssue> {
         if let Some(function) = self.functions.get(id).cloned() {
             return Ok(function);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Not found".into(),
             "Function not found.".into(),
             None,
@@ -912,12 +912,12 @@ impl<'parser> SymbolsTable<'parser> {
         &self,
         span: Span,
         id: &'parser str,
-    ) -> Result<Intrinsic<'parser>, ThrushCompilerIssue> {
+    ) -> Result<Intrinsic<'parser>, CompilationIssue> {
         if let Some(intrinsic) = self.intrinsics.get(id).cloned() {
             return Ok(intrinsic);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Not found".into(),
             "Intrinsic not found.".into(),
             None,
@@ -931,7 +931,7 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<EnumSymbol<'parser>, ThrushCompilerIssue> {
+    ) -> Result<EnumSymbol<'parser>, CompilationIssue> {
         if scope_idx == 0 {
             if let Some(lenum) = self.global_enums.get(id).cloned() {
                 return Ok(lenum);
@@ -943,7 +943,7 @@ impl<'parser> SymbolsTable<'parser> {
                 return Ok(lenum);
             }
         } else {
-            return Err(ThrushCompilerIssue::FrontEndBug(
+            return Err(CompilationIssue::FrontEndBug(
                 String::from("Last scope not caught"),
                 String::from("The last scope could not be obtained."),
                 span,
@@ -953,7 +953,7 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Not found".into(),
             "Enum reference not found.".into(),
             None,
@@ -967,7 +967,7 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<CustomTypeSymbol<'parser>, ThrushCompilerIssue> {
+    ) -> Result<CustomTypeSymbol<'parser>, CompilationIssue> {
         if scope_idx == 0 {
             if let Some(ctype) = self.global_custom_types.get(id).cloned() {
                 return Ok(ctype);
@@ -979,7 +979,7 @@ impl<'parser> SymbolsTable<'parser> {
                 return Ok(ctype);
             }
         } else {
-            return Err(ThrushCompilerIssue::FrontEndBug(
+            return Err(CompilationIssue::FrontEndBug(
                 String::from("Last scope not caught"),
                 String::from("The last scope could not be obtained."),
                 span,
@@ -989,7 +989,7 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Not found".into(),
             "Custom type reference not found.".into(),
             None,
@@ -1003,13 +1003,13 @@ impl<'parser> SymbolsTable<'parser> {
         local_id: &'parser str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<&LocalSymbol<'parser>, ThrushCompilerIssue> {
+    ) -> Result<&LocalSymbol<'parser>, CompilationIssue> {
         if let Some(scope) = self.locals.get(scope_idx) {
             if let Some(local) = scope.get(local_id) {
                 return Ok(local);
             }
         } else {
-            return Err(ThrushCompilerIssue::FrontEndBug(
+            return Err(CompilationIssue::FrontEndBug(
                 String::from("Scope not caught"),
                 String::from("The scope could not be obtained."),
                 span,
@@ -1019,7 +1019,7 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Not found".into(),
             "Local not found.".into(),
             None,
@@ -1033,7 +1033,7 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<StaticSymbol<'parser>, ThrushCompilerIssue> {
+    ) -> Result<StaticSymbol<'parser>, CompilationIssue> {
         if scope_idx == 0 {
             if let Some(static_var) = self.global_statics.get(id).cloned() {
                 return Ok(static_var);
@@ -1045,7 +1045,7 @@ impl<'parser> SymbolsTable<'parser> {
                 return Ok(static_var);
             }
         } else {
-            return Err(ThrushCompilerIssue::FrontEndBug(
+            return Err(CompilationIssue::FrontEndBug(
                 String::from("Last scope not caught"),
                 String::from("The last scope could not be obtained."),
                 span,
@@ -1055,7 +1055,7 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Not found".into(),
             "Static reference not found.".into(),
             None,
@@ -1069,7 +1069,7 @@ impl<'parser> SymbolsTable<'parser> {
         id: &'parser str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<ConstantSymbol<'parser>, ThrushCompilerIssue> {
+    ) -> Result<ConstantSymbol<'parser>, CompilationIssue> {
         if scope_idx == 0 {
             if let Some(constant) = self.global_constants.get(id).cloned() {
                 return Ok(constant);
@@ -1081,7 +1081,7 @@ impl<'parser> SymbolsTable<'parser> {
                 return Ok(local_const);
             }
         } else {
-            return Err(ThrushCompilerIssue::FrontEndBug(
+            return Err(CompilationIssue::FrontEndBug(
                 String::from("Last scope not caught"),
                 String::from("The last scope could not be obtained."),
                 span,
@@ -1091,7 +1091,7 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             "Not found".into(),
             "Constant reference not found.".into(),
             None,
@@ -1104,12 +1104,12 @@ impl<'parser> SymbolsTable<'parser> {
         &self,
         parameter_id: &'parser str,
         span: Span,
-    ) -> Result<ParameterSymbol<'parser>, ThrushCompilerIssue> {
+    ) -> Result<ParameterSymbol<'parser>, CompilationIssue> {
         if let Some(parameter) = self.parameters.get(parameter_id).cloned() {
             return Ok(parameter);
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             String::from("Not found"),
             String::from("Parameter not found in this scope."),
             None,
@@ -1123,7 +1123,7 @@ impl<'parser> SymbolsTable<'parser> {
         id: &str,
         scope_idx: usize,
         span: Span,
-    ) -> Result<Struct<'parser>, ThrushCompilerIssue> {
+    ) -> Result<Struct<'parser>, CompilationIssue> {
         if scope_idx == 0 {
             if let Some(structure) = self.global_structs.get(id).cloned() {
                 return Ok(structure);
@@ -1135,7 +1135,7 @@ impl<'parser> SymbolsTable<'parser> {
                 return Ok(local_struct);
             }
         } else {
-            return Err(ThrushCompilerIssue::FrontEndBug(
+            return Err(CompilationIssue::FrontEndBug(
                 String::from("Last scope not caught"),
                 String::from("The last scope could not be obtained."),
                 span,
@@ -1145,7 +1145,7 @@ impl<'parser> SymbolsTable<'parser> {
             ));
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             String::from("Structure not found"),
             format!("'{}' structure not defined.", id),
             None,

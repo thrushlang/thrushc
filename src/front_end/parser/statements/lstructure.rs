@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -15,7 +15,7 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn build_structure<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Struct,
         "Syntax error".into(),
@@ -85,7 +85,7 @@ pub fn build_structure<'parser>(
                     "Expected ','.".into(),
                 )?;
             } else {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Syntax error".into(),
                     "Expected identifier.".into(),
                     None,
@@ -95,7 +95,7 @@ pub fn build_structure<'parser>(
         } else {
             ctx.only_advance()?;
 
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Expected structure fields identifiers.".into(),
                 None,

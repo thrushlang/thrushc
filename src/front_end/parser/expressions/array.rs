@@ -1,13 +1,14 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expr};
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::{traits::TypeArrayEntensions, types::Type};
 
 pub fn build_array<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let array_start_tk: &Token = ctx.consume(
         TokenType::LBracket,
         "Syntax error".into(),

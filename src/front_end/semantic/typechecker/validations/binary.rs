@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -10,7 +10,7 @@ pub fn validate_binary(
     a: &Type,
     b: &Type,
     span: Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     match op {
         TokenType::Arith
         | TokenType::Star
@@ -27,7 +27,7 @@ pub fn validate_binary(
         TokenType::LShift | TokenType::RShift => self::validate_binary_shift(op, a, b, span),
         TokenType::And | TokenType::Or => self::validate_binary_gate(op, a, b, span),
 
-        _ => Err(ThrushCompilerIssue::Error(
+        _ => Err(CompilationIssue::Error(
             String::from("Unknown Type Operation"),
             format!("'{}{}' isn't valid operation.", op, a),
             None,
@@ -37,12 +37,7 @@ pub fn validate_binary(
 }
 
 #[inline]
-fn validate_band(
-    op: &TokenType,
-    a: &Type,
-    b: &Type,
-    span: Span,
-) -> Result<(), ThrushCompilerIssue> {
+fn validate_band(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
     if let (
         Type::S8
         | Type::S16
@@ -67,7 +62,7 @@ fn validate_band(
         return Ok(());
     }
 
-    Err(ThrushCompilerIssue::Error(
+    Err(CompilationIssue::Error(
         String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
@@ -76,7 +71,7 @@ fn validate_band(
 }
 
 #[inline]
-fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), ThrushCompilerIssue> {
+fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
     if let (
         Type::S8
         | Type::S16
@@ -101,7 +96,7 @@ fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Th
         return Ok(());
     }
 
-    Err(ThrushCompilerIssue::Error(
+    Err(CompilationIssue::Error(
         String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
@@ -110,7 +105,7 @@ fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Th
 }
 
 #[inline]
-fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), ThrushCompilerIssue> {
+fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
     if let (
         Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
         Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
@@ -119,7 +114,7 @@ fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Th
         return Ok(());
     }
 
-    Err(ThrushCompilerIssue::Error(
+    Err(CompilationIssue::Error(
         String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
@@ -133,12 +128,12 @@ fn validate_binary_gate(
     a: &Type,
     b: &Type,
     span: Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     if let (Type::Bool, Type::Bool) = (a, b) {
         return Ok(());
     }
 
-    Err(ThrushCompilerIssue::Error(
+    Err(CompilationIssue::Error(
         String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
@@ -152,7 +147,7 @@ fn validate_binary_shift(
     a: &Type,
     b: &Type,
     span: Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     if let (
         Type::S8
         | Type::S16
@@ -177,7 +172,7 @@ fn validate_binary_shift(
         return Ok(());
     }
 
-    Err(ThrushCompilerIssue::Error(
+    Err(CompilationIssue::Error(
         String::from("Incompatible Type Operation"),
         format!("'{} {} {}' is not allowed.", a, op, b),
         None,
@@ -191,7 +186,7 @@ fn validate_binary_comparasion(
     a: &Type,
     b: &Type,
     span: Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     if let (
         Type::S8
         | Type::S16
@@ -223,7 +218,7 @@ fn validate_binary_comparasion(
         return Ok(());
     }
 
-    Err(ThrushCompilerIssue::Error(
+    Err(CompilationIssue::Error(
         String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
@@ -237,7 +232,7 @@ fn validate_binary_equality(
     a: &Type,
     b: &Type,
     span: Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     if matches!(
         (a, b),
         (
@@ -274,7 +269,7 @@ fn validate_binary_equality(
         return Ok(());
     }
 
-    Err(ThrushCompilerIssue::Error(
+    Err(CompilationIssue::Error(
         String::from("Incompatible Type Operation"),
         format!("'{} {} {}' isn't valid operation.", a, op, b),
         None,
@@ -288,7 +283,7 @@ fn validate_binary_arithmetic(
     a: &Type,
     b: &Type,
     span: Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     match (a, b) {
         (
             Type::S8
@@ -313,7 +308,7 @@ fn validate_binary_arithmetic(
         (Type::FX8680, Type::FX8680) => Ok(()),
         (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
 
-        _ => Err(ThrushCompilerIssue::Error(
+        _ => Err(CompilationIssue::Error(
             String::from("Incompatible Type Operation"),
             format!("'{} {} {}' isn't valid operation.", a, op, b),
             None,

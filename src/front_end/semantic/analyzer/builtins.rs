@@ -1,13 +1,13 @@
 use crate::back_end::llvm::compiler::builtins::Builtin;
 
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::analyzer::Analyzer;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
     builtin: &'analyzer Builtin,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     match builtin {
         Builtin::MemSet {
             destination,

@@ -1,9 +1,10 @@
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
@@ -11,7 +12,7 @@ use std::path::PathBuf;
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
     node: &'analyzer Ast,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     match node {
         Ast::LLI {
             name,
@@ -39,7 +40,7 @@ pub fn validate<'analyzer>(
             let span: Span = source.get_span();
 
             if source_type.is_address_type() {
-                analyzer.add_warning(ThrushCompilerIssue::Warning(
+                analyzer.add_warning(CompilationIssue::Warning(
                     "Undefined behavior".into(), 
                     "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
                     span
@@ -64,7 +65,7 @@ pub fn validate<'analyzer>(
         _ => {
             let span: Span = node.get_span();
 
-            analyzer.add_bug(ThrushCompilerIssue::FrontEndBug(
+            analyzer.add_bug(CompilationIssue::FrontEndBug(
                 "Expression not caught".into(),
                 "Expression could not be caught for processing.".into(),
                 span,

@@ -8,6 +8,7 @@ use crate::back_end::llvm::compiler::{abort, codegen, constgen, typegen};
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::types::parser::repr::UnaryOperation;
 use crate::front_end::typesystem::types::Type;
 

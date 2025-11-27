@@ -1,16 +1,17 @@
 use std::path::PathBuf;
 
-use crate::core::errors::{position::CompilationPosition, standard::ThrushCompilerIssue};
+use crate::core::errors::{position::CompilationPosition, standard::CompilationIssue};
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::{TypeChecker, checks};
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     node: &'type_checker Ast,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     match node {
         Ast::As {
             from,
@@ -31,7 +32,7 @@ pub fn validate<'type_checker>(
         _ => {
             let span: Span = node.get_span();
 
-            typechecker.add_bug(ThrushCompilerIssue::FrontEndBug(
+            typechecker.add_bug(CompilationIssue::FrontEndBug(
                 "Expression not caught".into(),
                 "Expression could not be caught for processing.".into(),
                 span,

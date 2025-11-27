@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, attributes, typegen};
@@ -9,7 +9,7 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn build_alloc<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let alloc_tk: &Token = ctx.consume(
         TokenType::Alloc,
         "Syntax error".into(),
@@ -35,7 +35,7 @@ pub fn build_alloc<'parser>(
         }
 
         _ => {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Expected site allocation attribute.".into(),
                 None,

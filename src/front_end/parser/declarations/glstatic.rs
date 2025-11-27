@@ -1,6 +1,4 @@
-use inkwell::{AtomicOrdering, ThreadLocalMode};
-
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -16,10 +14,12 @@ use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::types::Type;
 
+use inkwell::{AtomicOrdering, ThreadLocalMode};
+
 pub fn build_global_static<'parser>(
     ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Static,
         "Syntax error".into(),

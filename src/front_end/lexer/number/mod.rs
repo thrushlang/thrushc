@@ -1,12 +1,14 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    front_end::lexer::{Lexer, span::Span, token::Token, tokentype::TokenType},
-};
+use crate::core::errors::standard::CompilationIssue;
+
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::token::Token;
+use crate::front_end::lexer::tokentype::TokenType;
 
 pub mod float;
 pub mod integer;
 
-pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
+pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     let mut is_hexadecimal: bool = false;
     let mut is_binary: bool = false;
 
@@ -14,7 +16,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         if is_hexadecimal && lexer.previous() == '0' && lexer.peek() == 'x' {
             lexer.end_span();
 
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 String::from("Syntax error"),
                 String::from("Hexadecimal identifier '0x' cannot be repeated."),
                 None,
@@ -25,7 +27,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
         if is_binary && lexer.previous() == '0' && lexer.peek() == 'b' {
             lexer.end_span();
 
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 String::from("Syntax error"),
                 String::from("Binary identifier '0b' cannot be repeated."),
                 None,

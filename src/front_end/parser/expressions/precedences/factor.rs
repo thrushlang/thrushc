@@ -1,14 +1,13 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expressions::precedences::mutation;
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::{traits::CastTypeExtensions, types::Type};
 
-pub fn factor<'parser>(
-    ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
     let mut expression: Ast = mutation::equal_precedence(ctx)?;
 
     while ctx.match_token(TokenType::Slash)? || ctx.match_token(TokenType::Star)? {

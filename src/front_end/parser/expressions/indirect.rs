@@ -1,17 +1,18 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::traits::FunctionReferenceExtensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn build_indirect<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Indirect,
         "Syntax error".into(),

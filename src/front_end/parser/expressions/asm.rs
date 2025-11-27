@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, attributes, expr, typegen};
@@ -9,7 +9,7 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn build_asm_code_block<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let asm_tk: &Token = ctx.consume(
         TokenType::Asm,
         "Syntax error".into(),
@@ -71,7 +71,7 @@ pub fn build_asm_code_block<'parser>(
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Expected string literal value.".into(),
                 None,

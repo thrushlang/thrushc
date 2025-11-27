@@ -12,6 +12,7 @@ use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::typesystem::traits::LLVMTypeExtensions;
 use crate::front_end::typesystem::types::Type;
 

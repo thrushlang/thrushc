@@ -1,6 +1,6 @@
 use crate::back_end::llvm::compiler::conventions::CallConvention;
 
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -38,7 +38,7 @@ lazy_static! {
 pub fn build_attributes<'parser>(
     ctx: &mut ParserContext<'parser>,
     limits: &[TokenType],
-) -> Result<ThrushAttributes, ThrushCompilerIssue> {
+) -> Result<ThrushAttributes, CompilationIssue> {
     let mut attributes: ThrushAttributes = Vec::with_capacity(10);
 
     while !limits.contains(&ctx.peek().kind) {
@@ -97,7 +97,7 @@ pub fn build_attributes<'parser>(
 
 fn build_linkage_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<(ThrushLinkage, String), ThrushCompilerIssue> {
+) -> Result<(ThrushLinkage, String), CompilationIssue> {
     ctx.only_advance()?;
 
     ctx.consume(
@@ -126,7 +126,7 @@ fn build_linkage_attribute<'parser>(
 
 fn build_external_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<String, ThrushCompilerIssue> {
+) -> Result<String, CompilationIssue> {
     ctx.only_advance()?;
 
     ctx.consume(
@@ -154,7 +154,7 @@ fn build_external_attribute<'parser>(
 
 fn build_assembler_syntax_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<String, ThrushCompilerIssue> {
+) -> Result<String, CompilationIssue> {
     ctx.only_advance()?;
 
     ctx.consume(
@@ -180,7 +180,7 @@ fn build_assembler_syntax_attribute<'parser>(
     Ok(syntax)
 }
 
-fn build_call_convention_attribute(ctx: &mut ParserContext) -> Result<String, ThrushCompilerIssue> {
+fn build_call_convention_attribute(ctx: &mut ParserContext) -> Result<String, CompilationIssue> {
     ctx.only_advance()?;
 
     ctx.consume(

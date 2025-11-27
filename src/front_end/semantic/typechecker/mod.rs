@@ -11,7 +11,7 @@ pub mod validations;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::typechecker::symbols::TypeCheckerSymbolsTable;
 use crate::front_end::types::ast::Ast;
@@ -23,9 +23,9 @@ pub struct TypeChecker<'type_checker> {
     ast: &'type_checker [Ast<'type_checker>],
     position: usize,
 
-    bugs: Vec<ThrushCompilerIssue>,
-    errors: Vec<ThrushCompilerIssue>,
-    warnings: Vec<ThrushCompilerIssue>,
+    bugs: Vec<CompilationIssue>,
+    errors: Vec<CompilationIssue>,
+    warnings: Vec<CompilationIssue>,
 
     symbols: TypeCheckerSymbolsTable<'type_checker>,
     diagnostician: Diagnostician,
@@ -94,7 +94,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 }
 
 impl<'type_checker> TypeChecker<'type_checker> {
-    pub fn analyze_decl(&mut self, node: &'type_checker Ast) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_decl(&mut self, node: &'type_checker Ast) -> Result<(), CompilationIssue> {
         /* ######################################################################
 
 
@@ -150,7 +150,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         Ok(())
     }
 
-    pub fn analyze_stmt(&mut self, node: &'type_checker Ast) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_stmt(&mut self, node: &'type_checker Ast) -> Result<(), CompilationIssue> {
         /* ######################################################################
 
 
@@ -330,7 +330,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
         self.analyze_expr(node)
     }
 
-    pub fn analyze_expr(&mut self, node: &'type_checker Ast) -> Result<(), ThrushCompilerIssue> {
+    pub fn analyze_expr(&mut self, node: &'type_checker Ast) -> Result<(), CompilationIssue> {
         expressions::validate(self, node)
     }
 }
@@ -408,12 +408,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
 impl TypeChecker<'_> {
     #[inline]
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 
     #[inline]
-    pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_bug(&mut self, error: CompilationIssue) {
         self.bugs.push(error);
     }
 }

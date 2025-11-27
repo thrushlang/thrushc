@@ -2,7 +2,7 @@ use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::parser::attributes::INLINE_ASSEMBLER_SYNTAXES;
@@ -22,8 +22,8 @@ use ahash::AHashSet;
 pub struct AttributeChecker<'attr_checker> {
     ast: &'attr_checker [Ast<'attr_checker>],
 
-    errors: Vec<ThrushCompilerIssue>,
-    warnings: Vec<ThrushCompilerIssue>,
+    errors: Vec<CompilationIssue>,
+    warnings: Vec<CompilationIssue>,
 
     currrent: usize,
 
@@ -103,7 +103,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         {
             if body.is_some() && attributes.has_extern_attribute() {
                 if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
-                    self.add_error(ThrushCompilerIssue::Error(
+                    self.add_error(CompilationIssue::Error(
                         "Attribute error".into(),
                         "External functions cannot have a body. Remove it.".into(),
                         None,
@@ -113,7 +113,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
 
             if body.is_none() && !attributes.has_extern_attribute() {
-                self.add_error(ThrushCompilerIssue::Error(
+                self.add_error(CompilationIssue::Error(
                     "Missing error".into(),
                     "A function without body always need the external attribute. Add the '@extern' attribute.".into(),
                     None,
@@ -196,7 +196,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         } = ast
         {
             if !metadata.is_global() && attributes.has_public_attribute() {
-                self.add_error(ThrushCompilerIssue::Error(
+                self.add_error(CompilationIssue::Error(
                     "Attribute error".into(),
                     "Local constant cannot have public visibility.".into(),
                     None,
@@ -219,7 +219,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         } = ast
         {
             if !metadata.is_global() && attributes.has_public_attribute() {
-                self.add_error(ThrushCompilerIssue::Error(
+                self.add_error(CompilationIssue::Error(
                     "Attribute error".into(),
                     "Local static cannot have public visibility.".into(),
                     None,
@@ -270,7 +270,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.check_illogical_attributes(attributes);
 
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
-                    self.add_error(ThrushCompilerIssue::Error(
+                    self.add_error(CompilationIssue::Error(
                         "Repeated attribute".into(),
                         "Repetitive attributes are disallowed.".into(),
                         None,
@@ -284,7 +284,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.check_illogical_attributes(attributes);
 
                 if !attributes.has_public_attribute() {
-                    self.add_error(ThrushCompilerIssue::Error(
+                    self.add_error(CompilationIssue::Error(
                         "Attribute error".into(),
                         "Intrinsic qualities should always have public visibility.".into(),
                         None,
@@ -293,7 +293,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
-                    self.add_error(ThrushCompilerIssue::Error(
+                    self.add_error(CompilationIssue::Error(
                         "Repeated attribute".into(),
                         "Repetitive attributes are disallowed.".into(),
                         None,
@@ -307,7 +307,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.check_illogical_attributes(attributes);
 
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
-                    self.add_error(ThrushCompilerIssue::Error(
+                    self.add_error(CompilationIssue::Error(
                         "Repeated attribute".into(),
                         "Repetitive attributes are disallowed.".into(),
                         None,
@@ -322,7 +322,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
                 if !attributes.has_asmsyntax_attribute() {
                     if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
-                        self.add_error(ThrushCompilerIssue::Error(
+                        self.add_error(CompilationIssue::Error(
                             "Missing attribute".into(),
                             "A pure assembler function always have syntax mode. Add the '@asmsyntax' attribute.".into(),
                             None,
@@ -335,7 +335,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     attributes.get_attr(ThrushAttributeComparator::AsmSyntax)
                 {
                     if !INLINE_ASSEMBLER_SYNTAXES.contains(&syntax.as_str()) {
-                        self.add_error(ThrushCompilerIssue::Error(
+                        self.add_error(CompilationIssue::Error(
                             "Invalid attribute syntax".into(),
                             format!("Expected a valid assembler syntax, got '{}'.", syntax),
                             None,
@@ -348,7 +348,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     attributes.get_attr(ThrushAttributeComparator::Convention)
                 {
                     if !CALL_CONVENTIONS.contains_key(convention.as_bytes()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Invalid attribute syntax".into(),
                             "Unknown calling convention, setting C by default.".into(),
                             span,
@@ -357,7 +357,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
-                    self.add_error(ThrushCompilerIssue::Error(
+                    self.add_error(CompilationIssue::Error(
                         "Repeated attribute".into(),
                         "Repetitive attributes are disallowed.".into(),
                         None,
@@ -374,7 +374,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.check_illogical_attributes(attributes);
 
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
-                    self.add_error(ThrushCompilerIssue::Error(
+                    self.add_error(CompilationIssue::Error(
                         "Repeated attribute".into(),
                         "Repetitive attributes are disallowed.".into(),
                         None,
@@ -472,7 +472,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             AttributeCheckerAttributeApplicant::Function => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_FUNCTION_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for functions.".into(),
                             attr.get_span(),
@@ -483,7 +483,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             AttributeCheckerAttributeApplicant::Intrinsic => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_INTRINSIC_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for a intrinsic.".into(),
                             attr.get_span(),
@@ -494,7 +494,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             AttributeCheckerAttributeApplicant::Constant => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_CONSTANT_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for constants.".into(),
                             attr.get_span(),
@@ -505,7 +505,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             AttributeCheckerAttributeApplicant::AssemblerFunction => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_ASSEMBLER_FUNCTION_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for assembler functions.".into(),
                             attr.get_span(),
@@ -516,7 +516,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             AttributeCheckerAttributeApplicant::Enum => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_ENUM_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for enumerations.".into(),
                             attr.get_span(),
@@ -527,7 +527,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             AttributeCheckerAttributeApplicant::Static => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_STATIC_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for static symbols.".into(),
                             attr.get_span(),
@@ -538,7 +538,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             AttributeCheckerAttributeApplicant::Struct => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_STRUCTS_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for structures.".into(),
                             attr.get_span(),
@@ -549,7 +549,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             AttributeCheckerAttributeApplicant::Local => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_LOCAL_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
-                        self.add_warning(ThrushCompilerIssue::Warning(
+                        self.add_warning(CompilationIssue::Warning(
                             "Irrelevant attribute".into(),
                             "This attribute is not applicable for local variable.".into(),
                             attr.get_span(),
@@ -563,7 +563,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     fn check_illogical_attributes(&mut self, attributes: &ThrushAttributes) {
         if attributes.has_extern_attribute() && !attributes.has_public_attribute() {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
-                self.add_error(ThrushCompilerIssue::Error(
+                self.add_error(CompilationIssue::Error(
                     "Missing attribute".into(),
                     "A external symbol always have public visibility. Add the '@public' attribute."
                         .into(),
@@ -578,7 +578,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 attributes.get_attr(ThrushAttributeComparator::Linkage)
             {
                 if !linkage::LINKAGES.contains(&linkage_raw.as_str()) {
-                    self.add_warning(ThrushCompilerIssue::Warning(
+                    self.add_warning(CompilationIssue::Warning(
                         "Unknown linkage".into(),
                         "Unknown linking, assuming non-proprietary C (External) standard.".into(),
                         span,
@@ -586,7 +586,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_public_attribute() && linkage.is_standard() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
+                    self.add_warning(CompilationIssue::Warning(
                         "Irrelevant attribute".into(),
                         "This attribute is meaningless; the linkage is the same as @public.".into(),
                         span,
@@ -594,7 +594,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_public_attribute() && linkage.is_linker_private() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
+                    self.add_warning(CompilationIssue::Warning(
                         "Irrelevant attribute".into(),
                         "This will cause a linking failure; the '@public' attribute requires non-proprietary linking.".into(),
                         span,
@@ -602,7 +602,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_public_attribute() && linkage.is_linker_private_weak() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
+                    self.add_warning(CompilationIssue::Warning(
                         "Irrelevant attribute".into(),
                         "This will cause a linking failure; the '@public' attribute requires non-proprietary linking.".into(),
                         span,
@@ -610,7 +610,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_public_attribute() && linkage.is_internal() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
+                    self.add_warning(CompilationIssue::Warning(
                         "Irrelevant attribute".into(),
                         "This will cause a linking failure; the '@public' attribute requires non-proprietary linking.".into(),
                         span,
@@ -618,7 +618,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_extern_attribute() && linkage.is_linker_private() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
+                    self.add_warning(CompilationIssue::Warning(
                         "Irrelevant attribute".into(),
                         "This will cause a linking failure; the '@extern' attribute requires non-proprietary linking.".into(),
                         span,
@@ -626,7 +626,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_extern_attribute() && linkage.is_linker_private_weak() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
+                    self.add_warning(CompilationIssue::Warning(
                         "Irrelevant attribute".into(),
                         "This will cause a linking failure; the '@extern' attribute requires non-proprietary linking.".into(),
                         span,
@@ -634,7 +634,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 }
 
                 if attributes.has_extern_attribute() && linkage.is_internal() {
-                    self.add_warning(ThrushCompilerIssue::Warning(
+                    self.add_warning(CompilationIssue::Warning(
                         "Irrelevant attribute".into(),
                         "This will cause a linking failure; the '@extern' attribute requires non-proprietary linking.".into(),
                         span,
@@ -645,7 +645,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
         if !attributes.has_extern_attribute() && attributes.has_ignore_attribute() {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Ignore) {
-                self.add_error(ThrushCompilerIssue::Error(
+                self.add_error(CompilationIssue::Error(
                     "Attribute error".into(),
                     "The @ignore attribute requires the symbol to be annotated with @extern(\"something\").".into(),
                     None,
@@ -656,7 +656,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
         if attributes.has_inlinealways_attr() && attributes.has_inline_attr() {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::InlineHint) {
-                self.add_error(ThrushCompilerIssue::Error(
+                self.add_error(CompilationIssue::Error(
                     "Illogical attribute".into(),
                     "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.".into(),
                     None,
@@ -667,7 +667,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
         if attributes.has_inline_attr() && attributes.has_noinline_attr() {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::NoInline) {
-                self.add_error(ThrushCompilerIssue::Error(
+                self.add_error(CompilationIssue::Error(
                     "Illogical attribute".into(),
                     "The attribute is not valid. Use either '@noinline' or '@inline' attribute."
                         .into(),
@@ -679,7 +679,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
         if attributes.has_inlinealways_attr() && attributes.has_noinline_attr() {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::NoInline) {
-                self.add_error(ThrushCompilerIssue::Error(
+                self.add_error(CompilationIssue::Error(
                     "Illogical attribute".into(),
                     "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.".into(),
                     None,
@@ -731,12 +731,12 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
     #[inline]
-    fn add_error(&mut self, error: ThrushCompilerIssue) {
+    fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 
     #[inline]
-    fn add_warning(&mut self, warning: ThrushCompilerIssue) {
+    fn add_warning(&mut self, warning: CompilationIssue) {
         self.warnings.push(warning);
     }
 }

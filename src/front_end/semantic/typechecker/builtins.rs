@@ -1,16 +1,17 @@
 use crate::back_end::llvm::compiler::builtins::Builtin;
 
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
     builtin: &'type_checker Builtin,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     match builtin {
         Builtin::MemSet {
             destination,
@@ -43,7 +44,7 @@ pub fn validate_memmove<'type_checker>(
     destination: &'type_checker Ast,
     source: &'type_checker Ast,
     size: &'type_checker Ast,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     let source_type: &Type = source.get_value_type()?;
     let source_span: Span = source.get_span();
 
@@ -54,7 +55,7 @@ pub fn validate_memmove<'type_checker>(
     let size_span: Span = size.get_span();
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", source_type),
             None,
@@ -63,7 +64,7 @@ pub fn validate_memmove<'type_checker>(
     }
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", destination_type)
                 ,
@@ -73,7 +74,7 @@ pub fn validate_memmove<'type_checker>(
     }
 
     if !size_type.is_unsigned_integer_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!("Expected unsigned integer type, got '{}'.", size_type),
             None,
@@ -94,7 +95,7 @@ pub fn validate_memcpy<'type_checker>(
     destination: &'type_checker Ast,
     source: &'type_checker Ast,
     size: &'type_checker Ast,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     let source_type: &Type = source.get_value_type()?;
     let source_span: Span = source.get_span();
 
@@ -105,7 +106,7 @@ pub fn validate_memcpy<'type_checker>(
     let size_span: Span = size.get_span();
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr'  type, got '{}'.", source_type),
             None,
@@ -114,7 +115,7 @@ pub fn validate_memcpy<'type_checker>(
     }
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
                 .into(),
@@ -124,7 +125,7 @@ pub fn validate_memcpy<'type_checker>(
     }
 
     if size_type.is_unsigned_integer_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!("Expected unsigned integer type, got '{}'.", size_type),
             None,
@@ -145,7 +146,7 @@ pub fn validate_memset<'type_checker>(
     destination: &'type_checker Ast,
     new_size: &'type_checker Ast,
     size: &'type_checker Ast,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     let destination_type: &Type = destination.get_value_type()?;
     let destination_span: Span = destination.get_span();
 
@@ -156,7 +157,7 @@ pub fn validate_memset<'type_checker>(
     let size_span: Span = size.get_span();
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", size_type),
             None,
@@ -165,7 +166,7 @@ pub fn validate_memset<'type_checker>(
     }
 
     if !new_size_type.is_unsigned_integer_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!("Expected unsigned integer type, got '{}'.", new_size_type),
             None,
@@ -174,7 +175,7 @@ pub fn validate_memset<'type_checker>(
     }
 
     if !size_type.is_unsigned_integer_type() {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!("Expected unsigned integer type, got '{}'.", size_type),
             None,

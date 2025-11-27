@@ -8,7 +8,7 @@ pub mod declaration;
 pub mod declarations;
 pub mod expr;
 pub mod expressions;
-pub mod parse;
+pub mod interpret;
 pub mod statement;
 pub mod statements;
 pub mod symbols;
@@ -18,7 +18,7 @@ pub mod typegen;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -39,8 +39,8 @@ pub struct ParserContext<'parser> {
     tokens: &'parser [Token],
     ast: Vec<Ast<'parser>>,
 
-    errors: Vec<ThrushCompilerIssue>,
-    bugs: Vec<ThrushCompilerIssue>,
+    errors: Vec<CompilationIssue>,
+    bugs: Vec<CompilationIssue>,
 
     control_ctx: ParserControlContext,
     type_ctx: ParserTypeContext,
@@ -149,12 +149,12 @@ impl<'parser> ParserContext<'parser> {
 impl<'parser> ParserContext<'parser> {
     pub fn verify(&mut self) -> bool {
         if !self.errors.is_empty() || !self.bugs.is_empty() {
-            self.bugs.iter().for_each(|bug: &ThrushCompilerIssue| {
+            self.bugs.iter().for_each(|bug: &CompilationIssue| {
                 self.diagnostician
                     .dispatch_diagnostic(bug, LoggingType::Bug);
             });
 
-            self.errors.iter().for_each(|error: &ThrushCompilerIssue| {
+            self.errors.iter().for_each(|error: &CompilationIssue| {
                 self.diagnostician
                     .dispatch_diagnostic(error, LoggingType::Error);
             });
@@ -229,12 +229,12 @@ impl<'parser> ParserContext<'parser> {
         kind: TokenType,
         title: String,
         help: String,
-    ) -> Result<&'parser Token, ThrushCompilerIssue> {
+    ) -> Result<&'parser Token, CompilationIssue> {
         if self.peek().kind == kind {
             return self.advance();
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             title,
             help,
             None,
@@ -243,7 +243,7 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn match_token(&mut self, kind: TokenType) -> Result<bool, ThrushCompilerIssue> {
+    pub fn match_token(&mut self, kind: TokenType) -> Result<bool, CompilationIssue> {
         if self.peek().kind == kind {
             self.only_advance()?;
             return Ok(true);
@@ -253,13 +253,13 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn only_advance(&mut self) -> Result<(), ThrushCompilerIssue> {
+    pub fn only_advance(&mut self) -> Result<(), CompilationIssue> {
         if !self.is_eof() {
             self.current += 1;
             return Ok(());
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
             None,
@@ -268,13 +268,13 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn advance(&mut self) -> Result<&'parser Token, ThrushCompilerIssue> {
+    pub fn advance(&mut self) -> Result<&'parser Token, CompilationIssue> {
         if !self.is_eof() {
             self.current += 1;
             return Ok(self.previous());
         }
 
-        Err(ThrushCompilerIssue::Error(
+        Err(CompilationIssue::Error(
             String::from("Syntax error"),
             String::from("EOF has been reached."),
             None,
@@ -356,12 +356,12 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn add_error(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 
     #[inline]
-    pub fn add_bug(&mut self, error: ThrushCompilerIssue) {
+    pub fn add_bug(&mut self, error: CompilationIssue) {
         self.bugs.push(error);
     }
 }

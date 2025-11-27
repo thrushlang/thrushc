@@ -11,6 +11,7 @@ use crate::back_end::llvm::compiler::predicates;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::types::parser::repr::BinaryOperation;
 use crate::front_end::typesystem::types::Type;
 

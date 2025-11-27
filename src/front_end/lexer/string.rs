@@ -1,9 +1,11 @@
-use crate::{
-    core::errors::standard::ThrushCompilerIssue,
-    front_end::lexer::{Lexer, span::Span, token::Token, tokentype::TokenType},
-};
+use crate::core::errors::standard::CompilationIssue;
 
-pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::span::Span;
+use crate::front_end::lexer::token::Token;
+use crate::front_end::lexer::tokentype::TokenType;
+
+pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     lexer.start_span();
 
     let mut found_end_quote: bool = false;
@@ -32,7 +34,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), ThrushCompilerIssue> {
     Ok(())
 }
 
-fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue> {
+fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
     lexer.advance_only();
 
     if lexer.is_eof() {
@@ -40,7 +42,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue
 
         let span: Span = Span::new(lexer.line, lexer.span);
 
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Unexpected EOF after escape character.".into(),
             None,
@@ -64,7 +66,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue
 
             let span: Span = Span::new(lexer.line, lexer.span);
 
-            Err(ThrushCompilerIssue::Error(
+            Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Invalid escape sequence. Valid escapes are '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
                 None,
@@ -74,7 +76,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue
     }
 }
 
-fn advance_string_char(lexer: &mut Lexer) -> Result<char, ThrushCompilerIssue> {
+fn advance_string_char(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
     let current_char: char = lexer.peek();
 
     if current_char == '\\' {
@@ -91,9 +93,9 @@ fn validate_and_finalize_string(
     lexeme: String,
     ascii: String,
     bytes: Vec<u8>,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     if !found_end_quote {
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Syntax error".into(),
             "Unclosed literal string. Did you forget to close it with a '\"'?".into(),
             None,

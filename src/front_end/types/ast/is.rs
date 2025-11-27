@@ -1,11 +1,11 @@
 use crate::back_end::llvm::compiler::builtins::Builtin;
 
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{
-    AstCodeBlockEntensions, AstConstantExtensions, AstMemoryExtensions, AstMutabilityExtensions,
-    AstStandardExtensions, AstStatementExtentions,
+    AstCodeBlockEntensions, AstConstantExtensions, AstGetType, AstMemoryExtensions,
+    AstMutabilityExtensions, AstStandardExtensions, AstStatementExtentions,
 };
 
 impl AstStandardExtensions for Ast<'_> {
@@ -184,7 +184,7 @@ impl AstMemoryExtensions for Ast<'_> {
     }
 
     #[inline]
-    fn is_allocated_value(&self) -> Result<bool, ThrushCompilerIssue> {
+    fn is_allocated_value(&self) -> Result<bool, CompilationIssue> {
         if let Ast::Reference { metadata, .. } = self {
             return Ok(metadata.is_allocated());
         }

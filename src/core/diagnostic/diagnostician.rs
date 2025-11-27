@@ -5,7 +5,7 @@ use crate::core::compiler;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::{self, Diagnostic, printers};
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::span::Span;
 use crate::front_end::preprocessor::errors::PreprocessorIssue;
 
@@ -35,9 +35,9 @@ impl Diagnostician {
 }
 
 impl Diagnostician {
-    pub fn dispatch_diagnostic(&mut self, error: &ThrushCompilerIssue, logging_type: LoggingType) {
+    pub fn dispatch_diagnostic(&mut self, error: &CompilationIssue, logging_type: LoggingType) {
         match error {
-            ThrushCompilerIssue::Error(title, help, note, span) => {
+            CompilationIssue::Error(title, help, note, span) => {
                 let diagnostic: Diagnostic = diagnostic::build(
                     &self.code,
                     *span,
@@ -52,7 +52,7 @@ impl Diagnostician {
                 );
             }
 
-            ThrushCompilerIssue::Warning(title, help, span) => {
+            CompilationIssue::Warning(title, help, span) => {
                 let diagnostic: Diagnostic = diagnostic::build(
                     &self.code,
                     *span,
@@ -64,7 +64,7 @@ impl Diagnostician {
                 printers::print(&diagnostic, (title, &self.path, None, logging_type));
             }
 
-            ThrushCompilerIssue::FrontEndBug(title, info, span, position, path, line) => {
+            CompilationIssue::FrontEndBug(title, info, span, position, path, line) => {
                 let diagnostic: Diagnostic = diagnostic::build(
                     &self.code,
                     *span,
@@ -79,7 +79,7 @@ impl Diagnostician {
                 );
             }
 
-            ThrushCompilerIssue::BackenEndBug(title, info, span, position, path, line) => {
+            CompilationIssue::BackenEndBug(title, info, span, position, path, line) => {
                 let diagnostic: Diagnostic = diagnostic::build(
                     &self.code,
                     *span,

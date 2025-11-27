@@ -1,11 +1,11 @@
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 
 use std::path::PathBuf;
 
-pub fn parse_scapes(content: &str, span: Span) -> Result<Vec<u8>, ThrushCompilerIssue> {
+pub fn parse_scapes(content: &str, span: Span) -> Result<Vec<u8>, CompilationIssue> {
     let source: &[u8] = content.as_bytes();
 
     let mut parsed_string: Vec<u8> = Vec::with_capacity(source.len());
@@ -37,7 +37,7 @@ pub fn parse_scapes(content: &str, span: Span) -> Result<Vec<u8>, ThrushCompiler
 
             idx += 1;
         } else {
-            return Err(ThrushCompilerIssue::FrontEndBug(
+            return Err(CompilationIssue::FrontEndBug(
                 "Byte not caught".into(),
                 "Unable to get byte for determinate next byte to parse at scape sequence parsing."
                     .into(),

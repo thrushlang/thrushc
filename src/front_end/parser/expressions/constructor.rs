@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expr};
@@ -13,7 +13,7 @@ use crate::front_end::typesystem::modificators::StructureTypeModificator;
 
 pub fn build_constructor<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::New,
         "Syntax error".into(),
@@ -65,7 +65,7 @@ pub fn build_constructor<'parser>(
             )?;
 
             if !structure.contains_field(field_name) {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Syntax error".into(),
                     "Expected existing field name.".into(),
                     None,
@@ -74,7 +74,7 @@ pub fn build_constructor<'parser>(
             }
 
             if amount >= required {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Too many fields in structure".into(),
                     format!("Expected '{}' fields, not '{}' fields.", required, amount),
                     None,
@@ -105,7 +105,7 @@ pub fn build_constructor<'parser>(
                     "Expected ','.".into(),
                 )?;
             } else {
-                return Err(ThrushCompilerIssue::Error(
+                return Err(CompilationIssue::Error(
                     "Syntax error".into(),
                     "Expected identifier.".into(),
                     None,
@@ -113,7 +113,7 @@ pub fn build_constructor<'parser>(
                 ));
             }
         } else {
-            return Err(ThrushCompilerIssue::Error(
+            return Err(CompilationIssue::Error(
                 "Syntax error".into(),
                 "Expected field name.".into(),
                 None,
@@ -125,7 +125,7 @@ pub fn build_constructor<'parser>(
     let provided: usize = args.len();
 
     if provided != required {
-        return Err(ThrushCompilerIssue::Error(
+        return Err(CompilationIssue::Error(
             "Missing fields in structure".into(),
             format!(
                 "Expected '{}' arguments, but '{}' was gived.",

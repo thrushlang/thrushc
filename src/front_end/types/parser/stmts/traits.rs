@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -49,20 +49,17 @@ pub trait StructExtensions<'parser> {
 }
 
 pub trait FoundSymbolEither<'parser> {
-    fn expected_custom_type(
-        &self,
-        span: Span,
-    ) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
-    fn expected_constant(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
-    fn expected_static(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
-    fn expected_local(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
-    fn expected_lli(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
-    fn expected_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
-    fn expected_intrinsic(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
-    fn expected_enum(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
-    fn expected_struct(&self, span: Span) -> Result<(&'parser str, usize), ThrushCompilerIssue>;
-    fn expected_parameter(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
-    fn expected_asm_function(&self, span: Span) -> Result<&'parser str, ThrushCompilerIssue>;
+    fn expected_custom_type(&self, span: Span) -> Result<(&'parser str, usize), CompilationIssue>;
+    fn expected_constant(&self, span: Span) -> Result<(&'parser str, usize), CompilationIssue>;
+    fn expected_static(&self, span: Span) -> Result<(&'parser str, usize), CompilationIssue>;
+    fn expected_local(&self, span: Span) -> Result<(&'parser str, usize), CompilationIssue>;
+    fn expected_lli(&self, span: Span) -> Result<(&'parser str, usize), CompilationIssue>;
+    fn expected_function(&self, span: Span) -> Result<&'parser str, CompilationIssue>;
+    fn expected_intrinsic(&self, span: Span) -> Result<&'parser str, CompilationIssue>;
+    fn expected_enum(&self, span: Span) -> Result<(&'parser str, usize), CompilationIssue>;
+    fn expected_struct(&self, span: Span) -> Result<(&'parser str, usize), CompilationIssue>;
+    fn expected_parameter(&self, span: Span) -> Result<&'parser str, CompilationIssue>;
+    fn expected_asm_function(&self, span: Span) -> Result<&'parser str, CompilationIssue>;
 }
 
 pub trait StructFieldsExtensions {

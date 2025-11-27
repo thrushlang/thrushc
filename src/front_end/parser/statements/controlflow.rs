@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -10,7 +10,7 @@ use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_continue<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     self::check_state(ctx)?;
 
     let continue_tk: &Token = ctx.consume(
@@ -32,7 +32,7 @@ pub fn build_continue<'parser>(
 
 pub fn build_break<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     self::check_state(ctx)?;
 
     let break_tk: &Token = ctx.consume(
@@ -52,6 +52,6 @@ pub fn build_break<'parser>(
     Ok(Ast::Break { span })
 }
 
-fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+fn check_state(ctx: &mut ParserContext) -> Result<(), CompilationIssue> {
     checks::check_inside_function_state(ctx)
 }

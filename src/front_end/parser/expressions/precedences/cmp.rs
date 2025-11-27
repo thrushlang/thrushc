@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expressions::precedences::term};
@@ -7,7 +7,7 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn cmp_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let mut expression: Ast = term::term_precedence(ctx)?;
 
     if ctx.match_token(TokenType::Greater)?

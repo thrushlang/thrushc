@@ -1,11 +1,11 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::{
     TypeChecker, checks, metadata::TypeCheckerExprMetadata,
 };
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::types::ast::traits::{AstGetType, AstStandardExtensions};
 use crate::front_end::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
@@ -13,14 +13,14 @@ pub fn validate<'type_checker>(
     metadata: (&[Type], bool),
     args: &'type_checker [Ast],
     span: &Span,
-) -> Result<(), ThrushCompilerIssue> {
+) -> Result<(), CompilationIssue> {
     let (parameter_types, ignore_more_arguments) = metadata;
 
     let required_size: usize = parameter_types.len();
     let provided_size: usize = args.len();
 
     if required_size != provided_size && !ignore_more_arguments {
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!(
                 "Expected arguments total '{}', not '{}'. You should try to fill it in.",
@@ -30,7 +30,7 @@ pub fn validate<'type_checker>(
             *span,
         ));
 
-        typechecker.add_error(ThrushCompilerIssue::Error(
+        typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!(
                 "Arguments were expected in the order '{}'. You must reorder it.",

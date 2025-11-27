@@ -1,6 +1,6 @@
 use inkwell::AtomicOrdering;
 
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -19,7 +19,7 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn build_const<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     self::check_state(ctx)?;
 
     ctx.consume(
@@ -72,6 +72,6 @@ pub fn build_const<'parser>(
     })
 }
 
-fn check_state(ctx: &mut ParserContext) -> Result<(), ThrushCompilerIssue> {
+fn check_state(ctx: &mut ParserContext) -> Result<(), CompilationIssue> {
     checks::check_inside_function_state(ctx)
 }

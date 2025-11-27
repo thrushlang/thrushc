@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
@@ -10,7 +10,7 @@ use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_import<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     checks::check_main_scope_state(ctx)?;
 
     let import_tk: &Token = ctx.consume(

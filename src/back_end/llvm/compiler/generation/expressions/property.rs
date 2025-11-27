@@ -5,7 +5,7 @@ use crate::back_end::llvm::types::LLVMGEPIndexes;
 
 use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstMemoryExtensions;
+use crate::front_end::types::ast::traits::{AstLLVMGetType, AstMemoryExtensions};
 use crate::front_end::typesystem::traits::TypePointerExtensions;
 use crate::front_end::typesystem::types::Type;
 

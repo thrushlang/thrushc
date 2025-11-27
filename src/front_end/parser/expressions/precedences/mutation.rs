@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{span::Span, tokentype::TokenType};
 use crate::front_end::parser::expressions::precedences::cast;
@@ -8,7 +8,7 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn equal_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Ast<'parser>, ThrushCompilerIssue> {
+) -> Result<Ast<'parser>, CompilationIssue> {
     let mut expression: Ast = cast::cast_precedence(ctx)?;
 
     if ctx.match_token(TokenType::Eq)? {

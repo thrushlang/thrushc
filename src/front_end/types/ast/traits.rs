@@ -1,4 +1,16 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+
+use crate::core::errors::standard::CompilationIssue;
+use crate::front_end::typesystem::types::Type;
+
+pub trait AstLLVMGetType {
+    fn llvm_get_type(&self, context: &mut LLVMCodeGenContext<'_, '_>) -> &Type;
+}
+
+pub trait AstGetType {
+    fn get_any_type(&self) -> Result<&Type, CompilationIssue>;
+    fn get_value_type(&self) -> Result<&Type, CompilationIssue>;
+}
 
 pub trait AstStatementExtentions {
     fn is_statement(&self) -> bool;
@@ -30,7 +42,7 @@ pub trait AstCodeBlockEntensions {
 
 pub trait AstMemoryExtensions {
     fn is_allocated(&self) -> bool;
-    fn is_allocated_value(&self) -> Result<bool, ThrushCompilerIssue>;
+    fn is_allocated_value(&self) -> Result<bool, CompilationIssue>;
 }
 
 pub trait AstConstantExtensions {

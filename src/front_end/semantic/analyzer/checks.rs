@@ -1,4 +1,4 @@
-use crate::core::errors::standard::ThrushCompilerIssue;
+use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
@@ -21,7 +21,7 @@ pub fn check_for_multiple_terminators(analyzer: &mut Analyzer, node: &Ast) {
 
     if return_positions.len() > 1 {
         for (_, node) in &return_positions[1..] {
-            analyzer.add_error(ThrushCompilerIssue::Error(
+            analyzer.add_error(CompilationIssue::Error(
                 "Syntax Error".into(),
                 "Only one 'return' terminator is allowed per block. Previous 'return' at earlier position makes this unreachable and invalid.".into(),
                 None,
@@ -38,7 +38,7 @@ pub fn check_for_multiple_terminators(analyzer: &mut Analyzer, node: &Ast) {
 
     if break_positions.len() > 1 {
         for (_, node) in &break_positions[1..] {
-            analyzer.add_error(ThrushCompilerIssue::Error(
+            analyzer.add_error(CompilationIssue::Error(
                 "Syntax Error".into(),
                 "Only one 'break' terminator is allowed per loop block. Additional 'break' terminators are redundant and disallowed.".into(),
                 None,
@@ -55,7 +55,7 @@ pub fn check_for_multiple_terminators(analyzer: &mut Analyzer, node: &Ast) {
 
     if continue_positions.len() > 1 {
         for (_, node) in &continue_positions[1..] {
-            analyzer.add_error(ThrushCompilerIssue::Error(
+            analyzer.add_error(CompilationIssue::Error(
                 "Syntax Error".into(),
                 "Only one 'continue' terminator is allowed per loop block. Additional 'continue' terminators are redundant and disallowed.".into(),
                 None,
@@ -88,7 +88,7 @@ pub fn check_for_unreachable_code_instructions(analyzer: &mut Analyzer, node: &A
 
     for idx in unreachable_range {
         if let Some(unreachable_node) = stmts.get(idx) {
-            analyzer.add_error(ThrushCompilerIssue::Error(
+            analyzer.add_error(CompilationIssue::Error(
                 "Unreachable code".to_string(),
                 "This instruction will never be executed because of a previous terminator (return/break/continue).".to_string(),
                 None,
