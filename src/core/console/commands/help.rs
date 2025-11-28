@@ -112,10 +112,11 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n",
+            "{} {} [{}] {}\n",
             "•".bold(),
             "-clang-link".custom_color((141, 141, 142)).bold(),
-            "Enable embedded Clang for linking.",
+            "/usr/bin/clang",
+            "Specifies the path for use of an external Clang for linking purpose.",
         ),
     );
 
@@ -126,18 +127,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-gcc-link".custom_color((141, 141, 142)).bold(),
             "usr/bin/gcc",
-            "Specifies GNU Compiler Collection (GCC) for linking.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} [{}] {}\n",
-            "•".bold(),
-            "-custom-clang-link".custom_color((141, 141, 142)).bold(),
-            "/usr/bin/clang",
-            "Specifies the path for use of an external Clang for linking.",
+            "Specifies GNU Compiler Collection (GCC) for linking purpose.",
         ),
     );
 
@@ -365,28 +355,6 @@ pub fn show_help() -> ! {
             "•".bold(),
             "--enable-ansi-color".custom_color((141, 141, 142)).bold(),
             "It allows ANSI color formatting in compiler diagnostics.",
-        ),
-    );
-
-    logging::write(logging::OutputIn::Stderr, "\nSpecial flags:\n\n");
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "-llinker".custom_color((141, 141, 142)).bold(),
-            "Transform the compiler into the LLVM linker.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "-llinker-flavor".custom_color((141, 141, 142)).bold(),
-            "Specify the build flavor for the LLVM linker.",
         ),
     );
 

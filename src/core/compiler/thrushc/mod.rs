@@ -21,7 +21,6 @@ use crate::middle_end;
 
 use crate::front_end::preprocessor;
 use crate::front_end::preprocessor::Preprocessor;
-use crate::linkage::linkers::lld::LLVMLinker;
 
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::backends::llvm::jit;
@@ -82,16 +81,6 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
 impl ThrushCompiler<'_> {
     pub fn compile(&mut self) -> (u128, u128) {
-        if self.get_options().get_linker_mode().get_status()
-            && self
-                .get_options()
-                .get_linker_mode()
-                .get_linker_type()
-                .is_llvm_linker()
-        {
-            LLVMLinker::new(self.options).link();
-        }
-
         if self.get_options().uses_llvm() {
             Target::initialize_all(&InitializationConfig::default());
 

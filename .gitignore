@@ -3,7 +3,7 @@
 /guide
 /tests
 build
-builder/target
+compiler-builder/target
 dist
 embedded
 Cargo.lock

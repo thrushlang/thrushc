@@ -5,7 +5,6 @@ use std::path::PathBuf;
 
 use inkwell::OptimizationLevel;
 
-use crate::core::compiler::backends::linkers::LinkerMode;
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
 use crate::core::console::logging;
@@ -36,7 +35,6 @@ pub struct CompilerOptions {
     obfuscate_ir: bool,
 
     linking_compilers_config: LinkingCompilersConfiguration,
-    linker_mode: LinkerMode,
 }
 
 #[derive(Debug, Clone)]
@@ -146,7 +144,6 @@ impl CompilerOptions {
             obfuscate_ir: true,
 
             linking_compilers_config: LinkingCompilersConfiguration::new(),
-            linker_mode: LinkerMode::new(Vec::with_capacity(50)),
         }
     }
 }
@@ -343,11 +340,6 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn get_linker_mode(&self) -> &LinkerMode {
-        &self.linker_mode
-    }
-
-    #[inline]
     pub fn get_linking_compilers_configuration(&self) -> &LinkingCompilersConfiguration {
         &self.linking_compilers_config
     }
@@ -357,11 +349,6 @@ impl CompilerOptions {
     #[inline]
     pub fn get_mut_llvm_backend_options(&mut self) -> &mut LLVMBackend {
         &mut self.llvm_backend
-    }
-
-    #[inline]
-    pub fn get_mut_linker_mode(&mut self) -> &mut LinkerMode {
-        &mut self.linker_mode
     }
 
     #[inline]

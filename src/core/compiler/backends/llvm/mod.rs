@@ -1,5 +1,4 @@
 pub mod cpu;
-pub mod flavors;
 pub mod info;
 pub mod jit;
 pub mod passes;

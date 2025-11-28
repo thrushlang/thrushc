@@ -6,10 +6,7 @@ use std::path::PathBuf;
 use std::process;
 
 use crate::core::compiler;
-use crate::core::compiler::backends::linkers::LinkerConfiguration;
-use crate::core::compiler::backends::linkers::LinkerModeType;
 use crate::core::compiler::backends::llvm;
-use crate::core::compiler::backends::llvm::flavors::LLVMLinkerFlavor;
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
 use crate::core::compiler::options::CompilerOptions;
@@ -29,7 +26,7 @@ use inkwell::targets::TargetMachine;
 use inkwell::targets::TargetTriple;
 
 #[derive(Debug)]
-pub struct CLI {
+pub struct CommandLine {
     options: CompilerOptions,
     args: Vec<String>,
     current: usize,
@@ -70,11 +67,11 @@ impl ParsedArg {
     }
 }
 
-impl CLI {
-    pub fn parse(mut args: Vec<String>) -> CLI {
+impl CommandLine {
+    pub fn parse(mut args: Vec<String>) -> CommandLine {
         let processed_args: Vec<String> = Self::preprocess_args(&mut args);
 
-        let mut command_line: CLI = Self {
+        let mut command_line: CommandLine = Self {
             options: CompilerOptions::new(),
             args: processed_args,
             current: 0,
@@ -107,7 +104,7 @@ impl CLI {
     }
 }
 
-impl CLI {
+impl CommandLine {
     fn build(&mut self) {
         if self.args.is_empty() {
             commands::help::show_help();
@@ -187,33 +184,6 @@ impl CLI {
                 self.advance();
             }
 
-            "-llinker" => {
-                self.advance();
-                self.validate_llvm_required(arg);
-                self.validate_not_clang_active();
-                self.validate_not_gcc_active();
-
-                self.position = CommandLinePosition::InternalLinker;
-
-                self.get_mut_options()
-                    .get_mut_linker_mode()
-                    .turn_on(LinkerModeType::LLVMLinker);
-            }
-
-            "-llinker-flavor" => {
-                self.advance();
-                self.validate_llvm_required(arg);
-                self.validate_llvm_linker_required(arg);
-
-                let flavor: LLVMLinkerFlavor = LLVMLinkerFlavor::raw_to_lld_flavor(self.peek());
-
-                self.get_mut_options()
-                    .get_mut_linker_mode()
-                    .set_up_config(LinkerConfiguration::LLVMLinker(flavor));
-
-                self.advance();
-            }
-
             "-jit" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -281,24 +251,18 @@ impl CLI {
                 self.validate_llvm_required(arg);
                 self.validate_not_gcc_active();
 
-                self.get_mut_options()
-                    .get_mut_linking_compilers_configuration()
-                    .set_use_clang(true);
-            }
-
-            "-custom-clang-link" => {
-                self.advance();
-                self.validate_llvm_required(arg);
-
                 let path: PathBuf = self.peek().into();
 
                 if !self.validate_compiler_path(&path) {
                     self.report_error("Indicated external C & C++ compiler Clang doesn't exist.");
                 }
 
-                self.get_mut_options()
-                    .get_mut_linking_compilers_configuration()
-                    .set_custom_clang(path);
+                let compiler_config: &mut LinkingCompilersConfiguration = self
+                    .get_mut_options()
+                    .get_mut_linking_compilers_configuration();
+
+                compiler_config.set_custom_clang(path);
+                compiler_config.set_use_clang(true);
 
                 self.advance();
             }
@@ -578,7 +542,7 @@ impl CLI {
     }
 }
 
-impl CLI {
+impl CommandLine {
     #[inline]
     fn peek(&self) -> &str {
         if self.is_eof() {
@@ -603,7 +567,7 @@ impl CLI {
     }
 }
 
-impl CLI {
+impl CommandLine {
     fn handle_thrush_file(&mut self, file_path: &str) {
         let mut path: PathBuf = PathBuf::from(file_path);
 
@@ -655,12 +619,6 @@ impl CLI {
             return;
         }
 
-        if self.position.at_internal_linker() && self.options.get_linker_mode().get_status() {
-            self.options.get_mut_linker_mode().add_arg(arg.to_string());
-
-            return;
-        }
-
         logging::print_critical_error(
             LoggingType::Error,
             &format!("Unknown argument: \"{}\".", arg),
@@ -668,7 +626,7 @@ impl CLI {
     }
 }
 
-impl CLI {
+impl CommandLine {
     #[inline]
     fn parse_optimization_level(&self, opt: &str) -> ThrushOptimization {
         match opt {
@@ -746,7 +704,7 @@ impl CLI {
     }
 }
 
-impl CLI {
+impl CommandLine {
     fn validate_llvm_required(&self, arg: &str) {
         if !self.options.uses_llvm() {
             self.report_error(&format!(
@@ -769,21 +727,6 @@ impl CLI {
         if self.options.get_llvm_backend_options().is_jit() {
             self.report_error(&format!(
                 "Can't use '{}' if the '-jit' flag was enabled previously.",
-                arg
-            ));
-        }
-    }
-
-    fn validate_llvm_linker_required(&self, arg: &str) {
-        if !self
-            .options
-            .get_linker_mode()
-            .get_linker_type()
-            .is_llvm_linker()
-            && self.options.get_linker_mode().get_status()
-        {
-            self.report_error(&format!(
-                "Can't use '{}' without '-llinker' flag previously.",
                 arg
             ));
         }
@@ -845,7 +788,7 @@ impl CLI {
     }
 }
 
-impl CLI {
+impl CommandLine {
     fn check_extra_requirements(&self) {
         if !self.options.uses_llvm() {
             self.report_error("Compiler backend is not setted. Try again with '-llvm-backend'.");
@@ -860,7 +803,7 @@ impl CLI {
     }
 }
 
-impl CLI {
+impl CommandLine {
     fn is_thrush_file(&self, path: &str) -> bool {
         let path: PathBuf = PathBuf::from(path);
 
@@ -879,7 +822,7 @@ impl CLI {
     }
 }
 
-impl CLI {
+impl CommandLine {
     #[inline]
     pub fn get_options(&self) -> &CompilerOptions {
         &self.options

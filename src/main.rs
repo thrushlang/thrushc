@@ -5,7 +5,7 @@ mod linkage;
 mod middle_end;
 
 use crate::core::compiler::thrushc::ThrushCompiler;
-use crate::core::console::{self, cli::CLI, logging};
+use crate::core::console::{self, cli::CommandLine, logging};
 
 use std::env;
 use std::time::Instant;
@@ -13,7 +13,7 @@ use std::time::Instant;
 fn main() -> ! {
     console::set_up_basic();
 
-    let command_line: CLI = CLI::parse(env::args().collect());
+    let command_line: CommandLine = CommandLine::parse(env::args().collect());
 
     console::ansi(command_line.get_options());
 

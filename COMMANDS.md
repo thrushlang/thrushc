@@ -30,9 +30,8 @@ General flags:
 
 Linkage flags:
 
-• -clang-link Enable embedded Clang for linking.
-• -gcc-link [usr/bin/gcc] Specifies GNU Compiler Collection (GCC) for linking.
-• -custom-clang-link [/usr/bin/clang] Specifies the path for use of an external Clang for linking.
+• -clang-link [/usr/bin/clang] Specifies the path for use of an external Clang for linking purpose.
+• -gcc-link [usr/bin/gcc] Specifies GNU Compiler Collection (GCC) for linking purpose.
 • -start Marks the start of arguments to the active external or built-in linking compiler.
 • -end Marks the end of arguments to the active external or built-in linker compiler.
 
@@ -61,13 +60,8 @@ Extra compiler flags:
 • --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
 • --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
 • --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
-• --disable-default-opt Disable default optimization that occurs even without specified optimization.
+• --disable-default-opt It disable default optimization that occurs even without specified optimization.
 • --enable-ansi-color It allows ANSI color formatting in compiler diagnostics.
-
-Special flags:
-
-• -llinker Transform the compiler into the LLVM linker.
-• -llinker-flavor Specify the build flavor for the LLVM linker.
 
 Useful flags:
 

@@ -45,7 +45,7 @@ Among the dependencies required by the compiler is the LLVM-C API, which you can
 Automatically:
 
 ```console
-$ cd builder 
+$ cd compiler-builder 
 $ cargo run 
 $ cd ..
 ```
