@@ -9,18 +9,25 @@ The **Thrush Compiler** is a monolithic compiler that transfers the source code 
 
 # Getting Started
 
-## Compiler supported hosts
+## Compiler - Supported hosts
 
 This represents the target environment where it is fully known that Rust will have no problems compiling the compiler. If your operating system matches the target environment's convention, it will likely compile the compiler with all backends successfully.
 
-- ``x86-64-pc-linux-gnu``
-- ``x86-64-unknown-linux-gnu``
+### Windows
+
 - ``x86-64-pc-windows-msvc``
+- ``x86-64-pc-windows-libcmt``
+
+### Linux
+
+- ``x86-64-unknown-linux-gnu``
+
+## Compiler - Unstable hosts
 
 Unstable targets, which are under construction, designed to ensure that the backends and compiler are compiled for operating systems that follow the triple target convention. They are not yet available or are unstable.
 
-- ``x86_64-unknown-linux-musl``
 - ``x86_64-pc-windows-gnu``
+- ``x86_64-unknown-linux-musl``
 
 ## Start
 
