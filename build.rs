@@ -11,17 +11,7 @@ fn linux_link_gccjit_if_exist() {
     }
 }
 
-fn main() {
-    #[cfg(target_os = "linux")]
-    {
-        if self::exist_clang_installation() && self::exist_llvm_linker_installation() {
-            println!("cargo:rustc-linker=clang");
-            println!("cargo:rustc-link-arg=-fuse-ld=lld");
-        }
-
-        self::linux_link_gccjit_if_exist();
-    }
-}
+fn main() {}
 
 #[inline]
 fn exist_clang_installation() -> bool {

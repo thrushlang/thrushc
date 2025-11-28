@@ -178,6 +178,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         }
 
         let llvm_context: Context = Context::create();
+
         let llvm_builder: Builder = llvm_context.create_builder();
         let llvm_module: Module = llvm_context.create_module(file.get_name());
 

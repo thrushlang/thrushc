@@ -621,8 +621,7 @@ fn main() {
 
     let llvm_config_path: PathBuf = match locate_llvm_config(&llvm_path.join("bin/")) {
         None => {
-            println!("cargo:rustc-cfg=LLVM_SYS_NOT_FOUND");
-            return;
+            panic!("LLVM installation not found, ensure that exists in \"%HOME%/thrushlang/backends/llvm/build\".");
         }
         Some(llvm_config_path) => llvm_config_path,
     };
@@ -673,8 +672,6 @@ fn main() {
         println!("cargo:rustc-link-lib=msvcrtd");
     }
 
-    // Link libffi if the user requested this workaround.
-    // See https://bitbucket.org/tari/llvm-sys.rs/issues/12/
     let force_ffi = env::var_os(&*ENV_FORCE_FFI).is_some();
     if force_ffi {
         println!("cargo:rustc-link-lib=dylib=ffi");

@@ -215,6 +215,7 @@ impl CompilerBuilderDependencies<'_> {
 
         tar_command
             .arg("-xf")
+            .arg("--strip-components=1")
             .arg(file_path)
             .arg("-C")
             .arg(self.get_options().get_llvm_build_path());
