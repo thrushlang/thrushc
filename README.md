@@ -31,26 +31,26 @@ Unstable targets, which are under construction, designed to ensure that the back
 
 ## Start
 
-You must first clone the repository and access it locally. 
+### Build dependencies 
 
-```console
-$ git clone --depth 1 https://github.com/thrushlang/thrushc 
-$ cd thrushc
-```
-
-## Build dependencies 
-
-Among the dependencies required by the compiler is the LLVM-C API, which you can find pre-compiled for each operating system at **[Thrush Programming Language - Toolchains](https://github.com/thrushlang/toolchains)**.
+Among the dependencies required by the compiler is the LLVM-C API.
 
 Automatically:
 
 ```console
+$ git clone --depth=1 https://github.com/thrushlang/compiler-builder 
 $ cd compiler-builder 
 $ cargo run 
-$ cd ..
 ```
 
-## Build the Compiler
+You must first clone the repository and access it locally. 
+
+```console
+$ git clone --depth=1 https://github.com/thrushlang/thrushc 
+$ cd thrushc
+```
+
+### Build the Compiler
 
 Now you need to have Rust installed with a recent version.
 
