@@ -9,31 +9,11 @@ The **Thrush Compiler** is a monolithic compiler that transfers the source code 
 
 # Getting Started
 
-## Compiler - Supported hosts
-
-This represents the target environment where it is fully known that Rust will have no problems compiling the compiler. If your operating system matches the target environment's convention, it will likely compile the compiler with all backends successfully.
-
-### Windows
-
-- ``x86-64-pc-windows-msvc``
-- ``x86-64-pc-windows-libcmt``
-
-### Linux
-
-- ``x86-64-unknown-linux-gnu``
-
-## Compiler - Unstable hosts
-
-Unstable targets, which are under construction, designed to ensure that the backends and compiler are compiled for operating systems that follow the triple target convention. They are not yet available or are unstable.
-
-- ``x86_64-pc-windows-gnu``
-- ``x86_64-unknown-linux-musl``
-
 ## Start
 
 ### Build dependencies 
 
-Among the dependencies required by the compiler is the LLVM-C API.
+Among the dependencies required by the compiler is LLVM infrastructure.
 
 Automatically:
 
@@ -142,45 +122,6 @@ In the future, you will be able to use it with the ``-gcc-backend`` flag to use 
 However, it is only available on **GNU/Linux**.
 
 You must also have ``libgccjit.so`` dynamically installed in your distribution so that the compiler doesn't get scared at runtime when using GCC.
-
-### GCC JIT backend installation
-
-The GCC backend, which is completely embeddable, of the JIT compiler type, can practically only be built dynamically and not statically. For this reason, it has been distributed in many package managers of Linux distributions.
-
-If you need help finding a way to install libgccjit on your system, you can check: [GCC JIT - Documentation](https://gcc.gnu.org/onlinedocs/jit/internals/index.html#working-on-the-jit-library)
-
-### Fedora 
-
-```console
-$ sudo dnf install libgccjit-devel
-```
-
-### Arch
-
-```console
-$ sudo pacman -S libgccjit
-```
-
-### Debian
-
-```console
-$ sudo apt install libgccjit-0-dev
-```
-
-### Building from source
-
-```console
-$ git clone --depth 1 https://gcc.gnu.org/git/gcc.git
-$ cd gcc
-$ mkdir build && cd build
-$ ../configure \
-  --enable-languages=jit \
-  --enable-host-shared \
-  --disable-multilib \
-  --disable-bootstrap
-$ make -j$(nproc)
-$ make install
-```
 
 ### Notes
 
