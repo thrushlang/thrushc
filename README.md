@@ -7,9 +7,7 @@ The **Thrush Compiler** is a monolithic compiler that transfers the source code 
 > [!WARNING]  
 > The compiler is in an early development phase. It may contain bugs when testing certain syntax. Continue on your own.
 
-# Getting Started
-
-## Start
+## Getting Started
 
 ### Build dependencies 
 
