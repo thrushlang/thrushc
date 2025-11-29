@@ -617,11 +617,11 @@ fn main() {
         return;
     }
 
-    let llvm_path: PathBuf = home.join("thrushlang/backends/llvm/build");
+    let llvm_path: PathBuf = home.join(".thrushlang/backends/llvm/build");
 
-    let llvm_config_path: PathBuf = match locate_llvm_config(&llvm_path.join("bin/")) {
+    let llvm_config_path: PathBuf = match self::locate_llvm_config(&llvm_path.join("bin/")) {
         None => {
-            panic!("LLVM installation not found, ensure that exists in \"%HOME%/thrushlang/backends/llvm/build\".");
+            panic!("LLVM installation not found, ensure that exists in \"%HOME%/.thrushlang/backends/llvm/build\".");
         }
         Some(llvm_config_path) => llvm_config_path,
     };
