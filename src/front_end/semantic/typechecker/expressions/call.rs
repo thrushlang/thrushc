@@ -1,6 +1,6 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::{
     TypeChecker, checks, metadata::TypeCheckerExprMetadata,
 };
@@ -16,29 +16,31 @@ pub fn validate<'type_checker>(
 ) -> Result<(), CompilationIssue> {
     let (parameter_types, ignore_more_arguments) = metadata;
 
-    let required_size: usize = parameter_types.len();
-    let provided_size: usize = args.len();
+    let required_count: usize = parameter_types.len();
+    let provided_count: usize = args.len();
 
-    if required_size != provided_size && !ignore_more_arguments {
+    if required_count != provided_count && !ignore_more_arguments {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!(
                 "Expected arguments total '{}', not '{}'. You should try to fill it in.",
-                required_size, provided_size
+                required_count, provided_count
             ),
             None,
             *span,
         ));
 
+        let expected_types: String = parameter_types
+            .iter()
+            .map(|t| t.to_string())
+            .collect::<Vec<_>>()
+            .join(", ");
+
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
             format!(
                 "Arguments were expected in the order '{}'. You must reorder it.",
-                parameter_types
-                    .iter()
-                    .map(|t| t.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", ")
+                expected_types
             ),
             None,
             *span,
@@ -47,22 +49,16 @@ pub fn validate<'type_checker>(
         return Ok(());
     }
 
-    parameter_types
-        .iter()
-        .zip(args.iter())
-        .try_for_each(|(target_type, expr)| {
-            let from_type: &Type = expr.get_value_type()?;
+    for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
+        let from_type = expr.get_value_type()?;
+        let expr_metadata = TypeCheckerExprMetadata::new(expr.is_literal_value(), expr.get_span());
 
-            let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(expr.is_literal_value(), expr.get_span());
+        checks::check_types(target_type, from_type, Some(expr), None, expr_metadata)?;
+    }
 
-            checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
-
-            Ok(())
-        })?;
-
-    args.iter()
-        .try_for_each(|arg| typechecker.analyze_expr(arg))?;
+    for arg in args.iter() {
+        typechecker.analyze_expr(arg)?;
+    }
 
     Ok(())
 }

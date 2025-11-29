@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::{position::CompilationPosition, standard::CompilationIssue};
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
 
@@ -13,7 +13,7 @@ pub fn validate<'analyzer>(
     match node {
         Ast::For {
             local,
-            cond,
+            condition,
             actions,
             block,
             ..
@@ -21,7 +21,7 @@ pub fn validate<'analyzer>(
             analyzer.get_mut_context().increment_loop_depth();
 
             analyzer.analyze_stmt(local)?;
-            analyzer.analyze_expr(cond)?;
+            analyzer.analyze_expr(condition)?;
 
             analyzer.analyze_expr(actions)?;
             analyzer.analyze_stmt(block)?;
@@ -31,10 +31,12 @@ pub fn validate<'analyzer>(
             Ok(())
         }
 
-        Ast::While { cond, block, .. } => {
+        Ast::While {
+            condition, block, ..
+        } => {
             analyzer.get_mut_context().increment_loop_depth();
 
-            analyzer.analyze_expr(cond)?;
+            analyzer.analyze_expr(condition)?;
             analyzer.analyze_stmt(block)?;
 
             analyzer.get_mut_context().decrement_loop_depth();

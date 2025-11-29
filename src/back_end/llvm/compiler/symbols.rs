@@ -13,8 +13,7 @@ use crate::back_end::llvm::types::repr::LLVMLocalStatics;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
-
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 
 use std::fmt::Display;
 

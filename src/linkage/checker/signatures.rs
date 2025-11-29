@@ -1,6 +1,5 @@
-use crate::front_end::{
-    preprocessor::signatures,
-    types::{ast::Ast, attributes::traits::ThrushAttributesExtensions},
+use crate::{
+    front_end::types::ast::Ast, middle_end::mir::attributes::traits::ThrushAttributesExtensions,
 };
 
 #[derive(Debug)]

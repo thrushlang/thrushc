@@ -1,7 +1,7 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::Lexer;
-use crate::front_end::lexer::span::Span;
 
 const I8_MIN: isize = -128;
 const I8_MAX: isize = 127;
@@ -19,11 +19,11 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilati
     let span: Span = Span::new(lexer.line, lexer.span);
 
     if let Some(rest) = lexeme.strip_prefix("0x") {
-        return check_integer_radix_format(rest, 16, span);
+        return self::check_integer_radix_format(rest, 16, span);
     }
 
     if let Some(rest) = lexeme.strip_prefix("0b") {
-        return check_integer_radix_format(rest, 2, span);
+        return self::check_integer_radix_format(rest, 2, span);
     }
 
     let cleaned: String = lexeme.replace('_', "");

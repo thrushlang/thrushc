@@ -1,39 +1,11 @@
-use crate::back_end::llvm::compiler::conventions::CallConvention;
-
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::types::attributes::ThrushAttribute;
-use crate::front_end::types::attributes::linkage::ThrushLinkage;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
-
-use ahash::AHashMap as HashMap;
-use lazy_static::lazy_static;
-
-pub const INLINE_ASSEMBLER_SYNTAXES: [&str; 2] = ["Intel", "AT&T"];
-
-lazy_static! {
-    pub static ref CALL_CONVENTIONS: HashMap<&'static [u8], CallConvention> = {
-        let mut call_conventions: HashMap<&'static [u8], CallConvention> =
-            HashMap::with_capacity(10);
-
-        call_conventions.insert(b"C", CallConvention::Standard);
-        call_conventions.insert(b"fast", CallConvention::Fast);
-        call_conventions.insert(b"tail", CallConvention::Tail);
-        call_conventions.insert(b"cold", CallConvention::Cold);
-        call_conventions.insert(b"weakReg", CallConvention::PreserveMost);
-        call_conventions.insert(b"strongReg", CallConvention::PreserveAll);
-        call_conventions.insert(b"Swift", CallConvention::Swift);
-        call_conventions.insert(b"Haskell", CallConvention::GHC);
-        call_conventions.insert(b"Erlang", CallConvention::HiPE);
-
-        call_conventions
-    };
-}
+use crate::middle_end::mir::attributes::ThrushAttributes;
 
 pub fn build_attributes<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -43,41 +15,52 @@ pub fn build_attributes<'parser>(
 
     while !limits.contains(&ctx.peek().kind) {
         let current_tk: &Token = ctx.peek();
-        let span: Span = current_tk.span;
+        let span: Span = current_tk.get_span();
 
         match current_tk.kind {
             TokenType::Extern => {
-                attributes.push(ThrushAttribute::Extern(
+                attributes.push(crate::middle_end::mir::attributes::ThrushAttribute::Extern(
                     self::build_external_attribute(ctx)?,
                     span,
                 ));
             }
 
             TokenType::Convention => {
-                attributes.push(ThrushAttribute::Convention(
-                    self::build_call_convention_attribute(ctx)?,
-                    span,
-                ));
+                attributes.push(
+                    crate::middle_end::mir::attributes::ThrushAttribute::Convention(
+                        self::build_call_convention_attribute(ctx)?,
+                        span,
+                    ),
+                );
             }
 
             TokenType::Linkage => {
-                let result: (ThrushLinkage, String) = self::build_linkage_attribute(ctx)?;
+                let result: (
+                    crate::middle_end::mir::attributes::linkage::ThrushLinkage,
+                    String,
+                ) = self::build_linkage_attribute(ctx)?;
 
-                let linkage: ThrushLinkage = result.0;
+                let linkage: crate::middle_end::mir::attributes::linkage::ThrushLinkage = result.0;
                 let id: String = result.1;
 
-                attributes.push(ThrushAttribute::Linkage(linkage, id, span));
+                attributes.push(
+                    crate::middle_end::mir::attributes::ThrushAttribute::Linkage(linkage, id, span),
+                );
             }
 
             TokenType::Public => {
-                attributes.push(ThrushAttribute::Public(span));
+                attributes.push(crate::middle_end::mir::attributes::ThrushAttribute::Public(
+                    span,
+                ));
                 ctx.only_advance()?;
             }
 
-            TokenType::AsmSyntax => attributes.push(ThrushAttribute::AsmSyntax(
-                self::build_assembler_syntax_attribute(ctx)?,
-                span,
-            )),
+            TokenType::AsmSyntax => attributes.push(
+                crate::middle_end::mir::attributes::ThrushAttribute::AsmSyntax(
+                    self::build_assembler_syntax_attribute(ctx)?,
+                    span,
+                ),
+            ),
 
             attribute if attribute.is_attribute() => {
                 if let Some(compiler_attribute) = attribute.as_attribute(span) {
@@ -97,7 +80,13 @@ pub fn build_attributes<'parser>(
 
 fn build_linkage_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<(ThrushLinkage, String), CompilationIssue> {
+) -> Result<
+    (
+        crate::middle_end::mir::attributes::linkage::ThrushLinkage,
+        String,
+    ),
+    CompilationIssue,
+> {
     ctx.only_advance()?;
 
     ctx.consume(
@@ -113,7 +102,8 @@ fn build_linkage_attribute<'parser>(
     )?;
 
     let id: String = linkage_tk.get_ascii_lexeme().to_string();
-    let linkage: ThrushLinkage = ThrushLinkage::get_linkage(&id);
+    let linkage: crate::middle_end::mir::attributes::linkage::ThrushLinkage =
+        crate::middle_end::mir::attributes::linkage::ThrushLinkage::get_linkage(&id);
 
     ctx.consume(
         TokenType::RParen,

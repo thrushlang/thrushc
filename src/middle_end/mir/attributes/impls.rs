@@ -1,11 +1,12 @@
 use crate::back_end::llvm::types::repr::LLVMAttributes;
-use crate::front_end::lexer::span::Span;
 
-use crate::front_end::types::attributes::traits::ThrushAttributeComparatorExtensions;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
-use crate::front_end::types::attributes::ThrushAttribute;
-use crate::front_end::types::attributes::ThrushAttributeComparator;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
+use crate::core::diagnostic::span::Span;
+use crate::middle_end::mir::attributes::traits::{
+    ThrushAttributeComparatorExtensions, ThrushAttributesExtensions,
+};
+use crate::middle_end::mir::attributes::{
+    ThrushAttribute, ThrushAttributeComparator, ThrushAttributes,
+};
 
 impl ThrushAttributesExtensions for ThrushAttributes {
     #[inline]

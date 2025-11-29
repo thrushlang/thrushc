@@ -1,6 +1,6 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -26,14 +26,14 @@ pub fn build_for_loop<'parser>(
 
     let local: Ast = local::build_local(ctx)?;
 
-    let cond: Ast = expr::build_expression(ctx)?;
+    let condition: Ast = expr::build_expression(ctx)?;
     let actions: Ast = expr::build_expression(ctx)?;
 
     let body: Ast = block::build_block(ctx)?;
 
     Ok(Ast::For {
         local: local.into(),
-        cond: cond.into(),
+        condition: condition.into(),
         actions: actions.into(),
         block: body.into(),
         span,
@@ -74,11 +74,11 @@ pub fn build_while_loop<'parser>(
 
     let span: Span = while_tk.get_span();
 
-    let cond: Ast = expr::build_expr(ctx)?;
+    let condition: Ast = expr::build_expr(ctx)?;
     let block: Ast = block::build_block(ctx)?;
 
     Ok(Ast::While {
-        cond: cond.into(),
+        condition: condition.into(),
         block: block.into(),
         span,
     })

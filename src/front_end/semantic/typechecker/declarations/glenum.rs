@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::checks;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;

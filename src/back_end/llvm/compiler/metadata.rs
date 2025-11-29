@@ -39,7 +39,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             .const_int(7, false)
             .into();
 
-        if !llvm_backend.get_optimization().is_opt() && !llvm_backend.omit_frame_pointer() {
+        if !llvm_backend.get_optimization().is_high_opt() && !llvm_backend.omit_frame_pointer() {
             let frame_pointer: MetadataValue =
                 self.get_context().get_llvm_context().metadata_node(&[
                     lvl_max,

@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::linter::Linter;
 use crate::front_end::types::ast::Ast;
 
@@ -12,18 +12,20 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
         Ast::For {
             local,
             actions,
-            cond,
+            condition,
             block,
             ..
         } => {
             linter.analyze_stmt(local);
             linter.analyze_expr(actions);
-            linter.analyze_expr(cond);
+            linter.analyze_expr(condition);
             linter.analyze_stmt(block);
         }
 
-        Ast::While { cond, block, .. } => {
-            linter.analyze_expr(cond);
+        Ast::While {
+            condition, block, ..
+        } => {
+            linter.analyze_expr(condition);
             linter.analyze_stmt(block);
         }
 

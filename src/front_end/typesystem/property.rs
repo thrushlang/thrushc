@@ -1,6 +1,6 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstMemoryExtensions;

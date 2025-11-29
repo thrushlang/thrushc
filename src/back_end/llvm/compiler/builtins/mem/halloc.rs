@@ -1,6 +1,7 @@
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::{abort, typegen};
 
-use crate::{back_end::llvm::compiler::context::LLVMCodeGenContext, front_end::lexer::span::Span};
+use crate::core::diagnostic::span::Span;
 
 use crate::front_end::typesystem::types::Type;
 

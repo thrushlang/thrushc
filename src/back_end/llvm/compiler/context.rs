@@ -14,23 +14,23 @@ use crate::back_end::llvm::types::repr::LLVMFunction;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::metadata::staticvar::StaticMetadata;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::repr::GlobalConstant;
 use crate::front_end::types::parser::repr::GlobalStatic;
 use crate::front_end::types::parser::repr::Local;
 use crate::front_end::types::parser::repr::LocalConstant;
 use crate::front_end::types::parser::repr::LocalStatic;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::types::Type;
 
 use crate::logging;
 use crate::logging::LoggingType;
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 use std::fmt::Display;
 use std::path::PathBuf;

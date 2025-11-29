@@ -9,7 +9,7 @@ use crate::back_end::llvm::compiler::typegen;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::metadata::constant::LLVMConstantMetadata;
 use crate::front_end::types::ast::metadata::dereference::LLVMDereferenceMetadata;
 use crate::front_end::types::ast::metadata::local::LLVMLocalMetadata;

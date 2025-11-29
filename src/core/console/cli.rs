@@ -117,7 +117,9 @@ impl CommandLine {
 
         self.check_extra_requirements();
     }
+}
 
+impl CommandLine {
     fn analyze(&mut self, argument: String) {
         let arg: &str = argument.as_str();
 
@@ -136,42 +138,6 @@ impl CommandLine {
             "-llvm-backend" => {
                 self.advance();
                 self.get_mut_options().set_use_llvm_backend(true);
-            }
-
-            "llvm-print-targets" => {
-                self.advance();
-                llvm::targets::info::print_all_targets();
-                process::exit(0);
-            }
-
-            "llvm-print-host-target-triple" => {
-                self.advance();
-
-                logging::write(
-                    logging::OutputIn::Stdout,
-                    TargetMachine::get_default_triple()
-                        .as_str()
-                        .to_string_lossy()
-                        .trim(),
-                );
-
-                process::exit(0);
-            }
-
-            "llvm-print-supported-cpus" => {
-                self.advance();
-
-                llvm::targets::info::print_specific_cpu_support(
-                    self.get_options()
-                        .get_llvm_backend_options()
-                        .get_target()
-                        .get_arch(),
-                );
-            }
-
-            "llvm-print-opt-passes" => {
-                self.advance();
-                llvm::info::print_all_available_opt_passes();
             }
 
             "-build-dir" => {
@@ -529,6 +495,41 @@ impl CommandLine {
                 self.get_mut_options().set_enable_ansi_colors();
             }
 
+            "--print-targets" => {
+                self.advance();
+                llvm::targets::info::print_all_targets();
+            }
+
+            "--print-host-target-triple" => {
+                self.advance();
+
+                logging::write(
+                    logging::OutputIn::Stdout,
+                    TargetMachine::get_default_triple()
+                        .as_str()
+                        .to_string_lossy()
+                        .trim(),
+                );
+
+                process::exit(0);
+            }
+
+            "--print-supported-cpus" => {
+                self.advance();
+
+                llvm::targets::info::print_specific_cpu_support(
+                    self.get_options()
+                        .get_llvm_backend_options()
+                        .get_target()
+                        .get_arch(),
+                );
+            }
+
+            "--print-opt-passes" => {
+                self.advance();
+                llvm::info::print_all_available_opt_passes();
+            }
+
             possible_file_path if self.is_thrush_file(possible_file_path) => {
                 self.advance();
                 self.handle_thrush_file(possible_file_path);
@@ -633,11 +634,11 @@ impl CommandLine {
             "O0" => ThrushOptimization::None,
             "O1" => ThrushOptimization::Low,
             "O2" => ThrushOptimization::Mid,
-            "size" => ThrushOptimization::Size,
-            "mcqueen" => ThrushOptimization::Mcqueen,
+            "O3" => ThrushOptimization::High,
+            "Oz" => ThrushOptimization::Size,
 
             any => {
-                self.report_error(&format!("Unknown LLVM optimization level: '{}'.", any));
+                self.report_error(&format!("Unknown optimization level: '{}'.", any));
             }
         }
     }
@@ -684,7 +685,7 @@ impl CommandLine {
             "static" => RelocMode::Static,
 
             any => {
-                self.report_error(&format!("Unknown LLVM reloc mode: '{}'.", any));
+                self.report_error(&format!("Unknown reloc mode: '{}'.", any));
             }
         }
     }
@@ -698,7 +699,7 @@ impl CommandLine {
             "kernel" => CodeModel::Kernel,
 
             any => {
-                self.report_error(&format!("Unknown LLVM code model: '{}'.", any));
+                self.report_error(&format!("Unknown code model: '{}'.", any));
             }
         }
     }

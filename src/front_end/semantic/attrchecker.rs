@@ -2,19 +2,17 @@ use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
-use crate::front_end::parser::attributes::INLINE_ASSEMBLER_SYNTAXES;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::attributes::ThrushAttribute;
-use crate::front_end::types::attributes::ThrushAttributeComparator;
-use crate::front_end::types::attributes::callconventions::CALL_CONVENTIONS;
-use crate::front_end::types::attributes::linkage;
-use crate::front_end::types::attributes::traits::ThrushAttributeComparatorExtensions;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::semantic::attrchecker::types::AttributeCheckerAttributeApplicant;
+use crate::middle_end::mir::attributes::traits::{
+    ThrushAttributeComparatorExtensions, ThrushAttributesExtensions,
+};
+use crate::middle_end::mir::attributes::{
+    ThrushAttribute, ThrushAttributeComparator, ThrushAttributes,
+};
 
 use ahash::AHashSet;
 
@@ -86,174 +84,130 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
     fn analyze_ast(&mut self, ast: &'attr_checker Ast) {
-        /* ######################################################################
+        match ast {
+            Ast::Function {
+                attributes,
+                body,
+                span,
+                ..
+            } => {
+                if body.is_some() && attributes.has_extern_attribute() {
+                    if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
+                        self.add_error(CompilationIssue::Error(
+                            "Attribute error".into(),
+                            "External functions cannot have a body. Remove it.".into(),
+                            None,
+                            span,
+                        ));
+                    }
+                }
 
-
-            TYPE CHECKER DECLARATIONS - START
-
-
-        ########################################################################*/
-
-        if let Ast::Function {
-            attributes,
-            body,
-            span,
-            ..
-        } = ast
-        {
-            if body.is_some() && attributes.has_extern_attribute() {
-                if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Extern) {
+                if body.is_none() && !attributes.has_extern_attribute() {
                     self.add_error(CompilationIssue::Error(
-                        "Attribute error".into(),
-                        "External functions cannot have a body. Remove it.".into(),
+                        "Missing error".into(),
+                        "A function without body always need the external attribute. Add the '@extern' attribute.".into(),
                         None,
-                        span,
+                        *span,
                     ));
                 }
-            }
 
-            if body.is_none() && !attributes.has_extern_attribute() {
-                self.add_error(CompilationIssue::Error(
-                    "Missing error".into(),
-                    "A function without body always need the external attribute. Add the '@extern' attribute.".into(),
-                    None,
+                if let Some(body) = body {
+                    self.analyze_ast(body);
+                }
+
+                self.analyze_attrs(
+                    attributes,
+                    AttributeCheckerAttributeApplicant::Function,
                     *span,
-                ));
+                );
             }
-
-            if let Some(body) = body {
-                self.analyze_ast(body);
-            }
-
-            self.analyze_attrs(
-                attributes,
-                AttributeCheckerAttributeApplicant::Function,
-                *span,
-            );
-        }
-
-        if let Ast::Intrinsic {
-            attributes, span, ..
-        } = ast
-        {
-            self.analyze_attrs(
-                attributes,
-                AttributeCheckerAttributeApplicant::Intrinsic,
-                *span,
-            );
-        }
-
-        if let Ast::AssemblerFunction {
-            attributes, span, ..
-        } = ast
-        {
-            self.analyze_attrs(
-                attributes,
-                AttributeCheckerAttributeApplicant::AssemblerFunction,
-                *span,
-            );
-        }
-
-        if let Ast::Struct {
-            attributes, span, ..
-        } = ast
-        {
-            self.analyze_attrs(
-                attributes,
-                AttributeCheckerAttributeApplicant::Struct,
-                *span,
-            );
-        }
-
-        if let Ast::Enum {
-            attributes, span, ..
-        } = ast
-        {
-            self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Enum, *span);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER DECLARATIONS - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER STATEMENTS - START
-
-
-        ########################################################################*/
-
-        if let Ast::Const {
-            attributes,
-            metadata,
-            span,
-            ..
-        } = ast
-        {
-            if !metadata.is_global() && attributes.has_public_attribute() {
-                self.add_error(CompilationIssue::Error(
-                    "Attribute error".into(),
-                    "Local constant cannot have public visibility.".into(),
-                    None,
+            Ast::Intrinsic {
+                attributes, span, ..
+            } => {
+                self.analyze_attrs(
+                    attributes,
+                    AttributeCheckerAttributeApplicant::Intrinsic,
                     *span,
-                ));
+                );
             }
-
-            self.analyze_attrs(
-                attributes,
-                AttributeCheckerAttributeApplicant::Constant,
-                *span,
-            );
-        }
-
-        if let Ast::Static {
-            attributes,
-            metadata,
-            span,
-            ..
-        } = ast
-        {
-            if !metadata.is_global() && attributes.has_public_attribute() {
-                self.add_error(CompilationIssue::Error(
-                    "Attribute error".into(),
-                    "Local static cannot have public visibility.".into(),
-                    None,
+            Ast::AssemblerFunction {
+                attributes, span, ..
+            } => {
+                self.analyze_attrs(
+                    attributes,
+                    AttributeCheckerAttributeApplicant::AssemblerFunction,
                     *span,
-                ));
+                );
+            }
+            Ast::Struct {
+                attributes, span, ..
+            } => {
+                self.analyze_attrs(
+                    attributes,
+                    AttributeCheckerAttributeApplicant::Struct,
+                    *span,
+                );
+            }
+            Ast::Enum {
+                attributes, span, ..
+            } => {
+                self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Enum, *span);
+            }
+            Ast::Const {
+                attributes,
+                metadata,
+                span,
+                ..
+            } => {
+                if !metadata.is_global() && attributes.has_public_attribute() {
+                    self.add_error(CompilationIssue::Error(
+                        "Attribute error".into(),
+                        "Local constant cannot have public visibility.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                self.analyze_attrs(
+                    attributes,
+                    AttributeCheckerAttributeApplicant::Constant,
+                    *span,
+                );
+            }
+            Ast::Static {
+                attributes,
+                metadata,
+                span,
+                ..
+            } => {
+                if !metadata.is_global() && attributes.has_public_attribute() {
+                    self.add_error(CompilationIssue::Error(
+                        "Attribute error".into(),
+                        "Local static cannot have public visibility.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                self.analyze_attrs(
+                    attributes,
+                    AttributeCheckerAttributeApplicant::Static,
+                    *span,
+                );
+            }
+            Ast::Local {
+                attributes, span, ..
+            } => {
+                self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Local, *span);
+            }
+            Ast::Block { nodes, .. } => {
+                nodes.iter().for_each(|node| {
+                    self.analyze_ast(node);
+                });
             }
 
-            self.analyze_attrs(
-                attributes,
-                AttributeCheckerAttributeApplicant::Static,
-                *span,
-            );
+            _ => (),
         }
-
-        if let Ast::Local {
-            attributes, span, ..
-        } = ast
-        {
-            self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Local, *span);
-        }
-
-        if let Ast::Block { stmts, .. } = ast {
-            stmts.iter().for_each(|stmt| {
-                self.analyze_ast(stmt);
-            });
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER STATEMENTS - END
-
-
-        ########################################################################*/
     }
 }
 
@@ -334,7 +288,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if let Some(ThrushAttribute::AsmSyntax(syntax, span)) =
                     attributes.get_attr(ThrushAttributeComparator::AsmSyntax)
                 {
-                    if !INLINE_ASSEMBLER_SYNTAXES.contains(&syntax.as_str()) {
+                    if !crate::middle_end::mir::attributes::assembler::INLINE_ASSEMBLER_SYNTAXES
+                        .contains(&syntax.as_str())
+                    {
                         self.add_error(CompilationIssue::Error(
                             "Invalid attribute syntax".into(),
                             format!("Expected a valid assembler syntax, got '{}'.", syntax),
@@ -347,7 +303,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if let Some(ThrushAttribute::Convention(convention, span)) =
                     attributes.get_attr(ThrushAttributeComparator::Convention)
                 {
-                    if !CALL_CONVENTIONS.contains_key(convention.as_bytes()) {
+                    if !crate::middle_end::mir::attributes::callconventions::CALL_CONVENTIONS
+                        .contains_key(convention.as_bytes())
+                    {
                         self.add_warning(CompilationIssue::Warning(
                             "Invalid attribute syntax".into(),
                             "Unknown calling convention, setting C by default.".into(),
@@ -577,7 +535,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(ThrushAttribute::Linkage(linkage, linkage_raw, span)) =
                 attributes.get_attr(ThrushAttributeComparator::Linkage)
             {
-                if !linkage::LINKAGES.contains(&linkage_raw.as_str()) {
+                if !crate::middle_end::mir::attributes::linkage::LINKAGES
+                    .contains(&linkage_raw.as_str())
+                {
                     self.add_warning(CompilationIssue::Warning(
                         "Unknown linkage".into(),
                         "Unknown linking, assuming non-proprietary C (External) standard.".into(),

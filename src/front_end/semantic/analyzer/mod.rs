@@ -1,14 +1,12 @@
-use symbols::AnalyzerSymbolsTable;
-
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::analyzer::context::AnalyzerContext;
+use crate::front_end::semantic::analyzer::symbols::AnalyzerSymbolsTable;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstStandardExtensions;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 pub mod builtins;
 pub mod checks;
@@ -97,345 +95,157 @@ impl<'analyzer> Analyzer<'analyzer> {
 }
 
 impl<'analyzer> Analyzer<'analyzer> {
-    pub fn analyze_decl(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
-        /* ######################################################################
+    fn analyze_decl(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
+        match node {
+            Ast::Function { .. } => declarations::functions::validate(self, node),
+            Ast::Struct { .. } => Ok(()),
+            Ast::GlobalAssembler { .. } => declarations::glasm::validate(self, node),
+            Ast::CustomType { .. } => Ok(()),
+            Ast::Enum { .. } => declarations::glenum::validate(self, node),
+            Ast::Static { .. } => declarations::glstatic::validate(self, node),
+            Ast::Const { .. } => declarations::glconstant::validate(self, node),
 
-
-            TYPE CHECKER DECLARATIONS - START
-
-
-        ########################################################################*/
-
-        if let Ast::Function { .. } = node {
-            return declarations::functions::validate(self, node);
+            _ => Ok(()),
         }
-
-        if let Ast::Struct { .. } = node {
-            return Ok(());
-        }
-
-        if let Ast::GlobalAssembler { .. } = node {
-            return declarations::glasm::validate(self, node);
-        }
-
-        if let Ast::CustomType { .. } = node {
-            return Ok(());
-        }
-
-        if let Ast::Enum { .. } = node {
-            return declarations::glenum::validate(self, node);
-        }
-
-        if let Ast::Static { .. } = node {
-            return declarations::glstatic::validate(self, node);
-        }
-
-        if let Ast::Const { .. } = node {
-            return declarations::glconstant::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER DECLARATIONS - END
-
-
-        ########################################################################*/
-
-        Ok(())
     }
 
-    pub fn analyze_stmt(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
-        /* ######################################################################
+    fn analyze_stmt(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
+        match node {
+            Ast::Enum { .. } => statements::lenum::validate(self, node),
+            Ast::Static { .. } => statements::staticvar::validate(self, node),
+            Ast::Const { .. } => statements::constant::validate(self, node),
+            Ast::Local { .. } => statements::local::validate(self, node),
+            Ast::If { .. } | Ast::Elif { .. } | Ast::Else { .. } => {
+                statements::conditional::validate(self, node)
+            }
+            Ast::For { .. } | Ast::While { .. } | Ast::Loop { .. } => {
+                statements::loops::validate(self, node)
+            }
+            Ast::Continue { .. } | Ast::Break { .. } => {
+                if !self.get_context().is_inside_loop() {
+                    self.add_error(
+                        CompilationIssue::Error(
+                            "Syntax Error".into(),
+                            "Only loop control flow terminators can be inside a loop. The instruction inside a loop was expected.".into(),
+                            None,
+                            node.get_span(),
+                        )
+                    );
+                }
 
+                Ok(())
+            }
+            Ast::Mut { .. } => statements::mutation::validate(self, node),
+            Ast::Block { nodes, .. } => {
+                self.begin_scope();
 
-            TYPE CHECKER STATEMENTS - START
+                checks::check_for_multiple_terminators(self, node);
+                checks::check_for_unreachable_code_instructions(self, node);
 
+                nodes.iter().try_for_each(|node| self.analyze_stmt(node))?;
 
-        ########################################################################*/
+                self.end_scope();
 
-        if let Ast::CustomType { .. } = node {
-            return Ok(());
-        }
-
-        if let Ast::Struct { .. } = node {
-            return Ok(());
-        }
-
-        if let Ast::Enum { .. } = node {
-            return statements::lenum::validate(self, node);
-        }
-
-        if let Ast::Static { .. } = node {
-            return statements::staticvar::validate(self, node);
-        }
-
-        if let Ast::Const { .. } = node {
-            return statements::constant::validate(self, node);
-        }
-
-        if let Ast::Local { .. } = node {
-            return statements::local::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER STATEMENTS - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER CODE BLOCK - START
-
-
-        ########################################################################*/
-
-        if let Ast::Block { stmts, .. } = node {
-            self.begin_scope();
-
-            checks::check_for_multiple_terminators(self, node);
-            checks::check_for_unreachable_code_instructions(self, node);
-
-            stmts.iter().try_for_each(|stmt| self.analyze_stmt(stmt))?;
-
-            self.end_scope();
-
-            return Ok(());
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER CODE BLOCK - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER CONTROL FLOW - END
-
-
-        ########################################################################*/
-
-        if let Ast::If { .. } | Ast::Elif { .. } | Ast::Else { .. } = node {
-            statements::conditional::validate(self, node)?;
-
-            return Ok(());
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER CONTROL FLOW - START
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER LOOPS - START
-
-
-        ########################################################################*/
-
-        if let Ast::For { .. } = node {
-            return statements::loops::validate(self, node);
-        }
-
-        if let Ast::While { .. } = node {
-            return statements::loops::validate(self, node);
-        }
-
-        if let Ast::Loop { .. } = node {
-            return statements::loops::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER LOOPS - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER LOOP CONTROL FLOW - START
-
-
-        ########################################################################*/
-
-        if let Ast::Continue { .. } | Ast::Break { .. } = node {
-            if !self.get_context().is_inside_loop() {
-                self.add_error(
-                    CompilationIssue::Error(
-                        "Syntax Error".into(),
-                        "Only loop control flow terminators can be inside a loop. The instruction inside a loop was expected.".into(),
-                        None,
-                        node.get_span(),
-                    )
-                );
+                Ok(())
             }
 
-            return Ok(());
+            Ast::Return { .. } => statements::terminator::validate(self, node),
+
+            node => self.analyze_expr(node),
         }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER LOOP CONTROL FLOW - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER TERMINATOR - START
-
-
-        ########################################################################*/
-
-        if let Ast::Return { .. } = node {
-            return statements::terminator::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER TERMINATOR - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER MUTATION - START
-
-
-        ########################################################################*/
-
-        if let Ast::Mut { .. } = node {
-            return statements::mutation::validate(self, node);
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER MUTATION - END
-
-
-        ########################################################################*/
-
-        self.analyze_expr(node)
     }
 
-    pub fn analyze_expr(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
+    fn analyze_expr(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
         expressions::validate(self, node)
     }
 }
 
 impl<'analyzer> Analyzer<'analyzer> {
-    pub fn declare_forward(&mut self) {
-        self.ast
-            .iter()
-            .filter(|stmt| stmt.is_asm_function())
-            .for_each(|stmt| {
-                if let Ast::AssemblerFunction {
+    fn declare_forward(&mut self) {
+        for stmt in self.ast.iter() {
+            match stmt {
+                Ast::AssemblerFunction {
                     name,
                     parameters_types: types,
                     attributes,
                     ..
-                } = stmt
-                {
+                } => {
                     self.symbols
                         .new_asm_function(name, (types, attributes.has_public_attribute()));
                 }
-            });
 
-        self.ast
-            .iter()
-            .filter(|stmt| stmt.is_function())
-            .for_each(|stmt| {
-                if let Ast::Function {
+                Ast::Function {
                     name,
                     parameter_types: types,
                     attributes,
                     ..
-                } = stmt
-                {
+                } => {
                     self.symbols
                         .new_function(name, (types, attributes.has_ignore_attribute()));
                 }
-            });
+
+                _ => (),
+            }
+        }
     }
 }
 
 impl<'analyzer> Analyzer<'analyzer> {
     #[inline]
-    pub fn advance(&mut self) {
+    fn advance(&mut self) {
         if !self.is_eof() {
             self.position += 1;
         }
     }
 
     #[inline]
-    pub fn peek(&self) -> &'analyzer Ast<'analyzer> {
+    fn peek(&self) -> &'analyzer Ast<'analyzer> {
         &self.ast[self.position]
     }
 
     #[inline]
-    pub fn is_eof(&self) -> bool {
+    fn is_eof(&self) -> bool {
         self.position >= self.ast.len()
     }
 }
 
 impl Analyzer<'_> {
     #[inline]
-    pub fn add_warning(&mut self, warning: CompilationIssue) {
+    fn add_warning(&mut self, warning: CompilationIssue) {
         self.warnings.push(warning);
     }
 
     #[inline]
-    pub fn add_error(&mut self, error: CompilationIssue) {
+    fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 
     #[inline]
-    pub fn add_bug(&mut self, error: CompilationIssue) {
+    fn add_bug(&mut self, error: CompilationIssue) {
         self.bugs.push(error);
     }
 }
 
 impl Analyzer<'_> {
     #[inline]
-    pub fn begin_scope(&mut self) {
+    fn begin_scope(&mut self) {
         self.symbols.begin_scope();
     }
 
     #[inline]
-    pub fn end_scope(&mut self) {
+    fn end_scope(&mut self) {
         self.symbols.end_scope();
     }
 }
 
 impl Analyzer<'_> {
     #[inline]
-    pub fn get_context(&self) -> &AnalyzerContext {
+    fn get_context(&self) -> &AnalyzerContext {
         &self.context
     }
 
     #[inline]
-    pub fn get_mut_context(&mut self) -> &mut AnalyzerContext {
+    fn get_mut_context(&mut self) -> &mut AnalyzerContext {
         &mut self.context
     }
 }

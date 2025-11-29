@@ -1,10 +1,10 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::character;
 use crate::front_end::lexer::identifier;
 use crate::front_end::lexer::number;
-use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::string;
 use crate::front_end::lexer::tokentype::TokenType;
 

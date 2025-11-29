@@ -1,6 +1,6 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -10,9 +10,10 @@ use crate::front_end::parser::checks;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::{StructFieldsExtensions, TokenExtensions};
-use crate::front_end::types::parser::stmts::types::{StructFields, ThrushAttributes};
+use crate::front_end::types::parser::stmts::types::StructFields;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::attributes::ThrushAttributes;
 
 pub fn build_structure<'parser>(
     ctx: &mut ParserContext<'parser>,

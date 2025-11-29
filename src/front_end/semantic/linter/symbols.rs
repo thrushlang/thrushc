@@ -1,7 +1,6 @@
 use ahash::AHashMap as HashMap;
 
-use crate::front_end::lexer::span::Span;
-
+use crate::core::diagnostic::span::Span;
 use crate::front_end::semantic::linter::constants::LINTER_MINIMAL_GLOBAL_CAPACITY;
 use crate::front_end::semantic::linter::constants::LINTER_MINIMAL_LOCAL_CAPACITY;
 

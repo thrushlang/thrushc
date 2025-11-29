@@ -1,10 +1,10 @@
 use crate::back_end;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstGetType, AstLLVMGetType};
 use crate::front_end::typesystem::types::Type;

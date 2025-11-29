@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
-use crate::back_end::llvm::compiler::{abort, context::LLVMCodeGenContext};
-
-use crate::front_end::lexer::span::Span;
+use crate::{
+    back_end::llvm::compiler::{abort, context::LLVMCodeGenContext},
+    core::diagnostic::span::Span,
+};
 
 use inkwell::{types::BasicTypeEnum, values::PointerValue};
 

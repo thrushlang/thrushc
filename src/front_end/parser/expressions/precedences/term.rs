@@ -1,6 +1,7 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::{span::Span, token::Token, tokentype::TokenType};
+use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expressions::precedences::factor};
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};

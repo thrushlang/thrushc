@@ -8,9 +8,11 @@ use crate::back_end::llvm::compiler::typegen;
 use crate::back_end::llvm::types::repr::LLVMAttributes;
 use crate::back_end::llvm::types::traits::LLVMAttributesExtensions;
 
-use crate::front_end::lexer::span::Span;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
+
+use crate::core::diagnostic::span::Span;
+
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::repr::Intrinsic;
 use crate::front_end::typesystem::types::Type;
 

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 
 use super::position::CompilationPosition;
 

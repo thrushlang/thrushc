@@ -1,8 +1,8 @@
 use crate::back_end::llvm::compiler::builtins::Builtin;
 
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstGetType;

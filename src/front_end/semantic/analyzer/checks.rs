@@ -5,15 +5,15 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
 
 pub fn check_for_multiple_terminators(analyzer: &mut Analyzer, node: &Ast) {
-    let Ast::Block { stmts, .. } = node else {
+    let Ast::Block { nodes, .. } = node else {
         return;
     };
 
-    if stmts.is_empty() {
+    if nodes.is_empty() {
         return;
     }
 
-    let return_positions: Vec<(usize, &Ast)> = stmts
+    let return_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
         .filter(|(_, stmt)| stmt.is_terminator())
@@ -30,7 +30,7 @@ pub fn check_for_multiple_terminators(analyzer: &mut Analyzer, node: &Ast) {
         }
     }
 
-    let break_positions: Vec<(usize, &Ast)> = stmts
+    let break_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
         .filter(|(_, stmt)| stmt.is_break())
@@ -47,7 +47,7 @@ pub fn check_for_multiple_terminators(analyzer: &mut Analyzer, node: &Ast) {
         }
     }
 
-    let continue_positions: Vec<(usize, &Ast)> = stmts
+    let continue_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
         .filter(|(_, stmt)| stmt.is_continue())
@@ -66,17 +66,17 @@ pub fn check_for_multiple_terminators(analyzer: &mut Analyzer, node: &Ast) {
 }
 
 pub fn check_for_unreachable_code_instructions(analyzer: &mut Analyzer, node: &Ast) {
-    let Ast::Block { stmts, .. } = node else {
+    let Ast::Block { nodes, .. } = node else {
         return;
     };
 
-    let total_nodes: usize = stmts.len();
+    let total_nodes: usize = nodes.len();
 
     if total_nodes <= 1 {
         return;
     }
 
-    let Some((terminator_idx, _)) = stmts
+    let Some((terminator_idx, _)) = nodes
         .iter()
         .enumerate()
         .find(|(_, stmt)| stmt.is_terminator() || stmt.is_break() || stmt.is_continue())
@@ -87,7 +87,7 @@ pub fn check_for_unreachable_code_instructions(analyzer: &mut Analyzer, node: &A
     let unreachable_range: std::ops::Range<usize> = (terminator_idx + 1)..total_nodes;
 
     for idx in unreachable_range {
-        if let Some(unreachable_node) = stmts.get(idx) {
+        if let Some(unreachable_node) = nodes.get(idx) {
             analyzer.add_error(CompilationIssue::Error(
                 "Unreachable code".to_string(),
                 "This instruction will never be executed because of a previous terminator (return/break/continue).".to_string(),

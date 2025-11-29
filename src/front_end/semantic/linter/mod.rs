@@ -1,3 +1,16 @@
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::diagnostic::span::Span;
+use crate::core::errors::standard::CompilationIssue;
+
+use crate::front_end::semantic::linter::symbols::LinterSymbolsTable;
+use crate::front_end::types::ast::Ast;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
+
+use ahash::AHashMap as HashMap;
+
 pub mod builtins;
 pub mod constants;
 pub mod declarations;
@@ -6,28 +19,16 @@ pub mod marks;
 pub mod statements;
 pub mod symbols;
 
-use crate::core::compiler::options::CompilationUnit;
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
-use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::CompilationIssue;
-
-use crate::front_end::lexer::span::Span;
-use crate::front_end::semantic::linter::statements::mutation;
-use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstStandardExtensions;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
-
-use ahash::AHashMap as HashMap;
-use symbols::LinterSymbolsTable;
-
 #[derive(Debug)]
 pub struct Linter<'linter> {
     ast: &'linter [Ast<'linter>],
     current: usize,
+
     warnings: Vec<CompilationIssue>,
     bugs: Vec<CompilationIssue>,
+
     diagnostician: Diagnostician,
+
     symbols: LinterSymbolsTable<'linter>,
 }
 
@@ -70,282 +71,90 @@ impl<'linter> Linter<'linter> {
 }
 
 impl<'linter> Linter<'linter> {
-    pub fn analyze_decl(&mut self, node: &'linter Ast) {
-        /* ######################################################################
+    fn analyze_decl(&mut self, node: &'linter Ast) {
+        match node {
+            Ast::Enum { .. } => {
+                declarations::glenum::analyze(self, node);
+            }
+            Ast::Static { .. } => {
+                declarations::glstatic::analyze(self, node);
+            }
+            Ast::Const { .. } => {
+                declarations::glconstant::analyze(self, node);
+            }
+            Ast::Function { .. } => {
+                declarations::functions::analyze(self, node);
+            }
 
-
-            LINTER DECLARATIONS | START
-
-
-        ########################################################################*/
-
-        if let Ast::Enum { .. } = node {
-            declarations::glenum::analyze(self, node);
+            _ => (),
         }
-
-        if let Ast::Static { .. } = node {
-            declarations::glstatic::analyze(self, node);
-        }
-
-        if let Ast::Const { .. } = node {
-            declarations::glconstant::analyze(self, node);
-        }
-
-        if let Ast::Function { .. } = node {
-            declarations::functions::analyze(self, node);
-        }
-
-        /* ######################################################################
-
-
-            LINTER DECLARATIONS | END
-
-
-        ########################################################################*/
     }
 
-    pub fn analyze_stmt(&mut self, node: &'linter Ast) {
-        /* ######################################################################
+    fn analyze_stmt(&mut self, node: &'linter Ast) {
+        match node {
+            Ast::Local { .. } => statements::local::analyze(self, node),
+            Ast::Enum { .. } => statements::lenum::analyze(self, node),
+            Ast::Static { .. } => statements::staticvar::analyze(self, node),
+            Ast::Const { .. } => statements::constant::analyze(self, node),
+            Ast::CustomType { .. } | Ast::Struct { .. } => (),
+            Ast::Block { nodes, .. } => {
+                self.begin_scope();
 
+                nodes.iter().for_each(|node| {
+                    self.analyze_stmt(node);
+                });
 
-            LINTER STATEMENTS | START
+                self.generate_scoped_warnings();
 
+                self.end_scope();
+            }
 
-        ########################################################################*/
+            Ast::For { .. } | Ast::While { .. } | Ast::Loop { .. } => {
+                statements::loops::analyze(self, node);
+            }
 
-        if let Ast::CustomType { .. } = node {
-            return;
+            Ast::Continue { .. } | Ast::Break { .. } => (),
+
+            Ast::If { .. } | Ast::Elif { .. } | Ast::Else { .. } => {
+                statements::conditional::analyze(self, node);
+            }
+
+            Ast::Mut { .. } => statements::mutation::analyze(self, node),
+
+            Ast::Return { .. } => statements::terminator::analyze(self, node),
+
+            expr => self.analyze_expr(expr),
         }
-
-        if let Ast::Struct { .. } = node {
-            return;
-        }
-
-        if let Ast::Enum { .. } = node {
-            return statements::lenum::analyze(self, node);
-        }
-
-        if let Ast::Static { .. } = node {
-            return statements::staticvar::analyze(self, node);
-        }
-
-        if let Ast::Const { .. } = node {
-            return statements::constant::analyze(self, node);
-        }
-
-        if let Ast::Block { stmts, .. } = node {
-            self.begin_scope();
-
-            stmts.iter().for_each(|node| {
-                self.analyze_stmt(node);
-            });
-
-            self.generate_scoped_warnings();
-
-            self.end_scope();
-
-            return;
-        }
-
-        /* ######################################################################
-
-
-            LINTER VARIABLES | START
-
-
-        ########################################################################*/
-
-        if let Ast::Local { .. } = node {
-            return statements::local::analyze(self, node);
-        }
-
-        /* ######################################################################
-
-
-            LINTER VARIABLES | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER TERMINATOR | START
-
-
-        ########################################################################*/
-
-        if let Ast::Return { .. } = node {
-            return statements::terminator::analyze(self, node);
-        }
-
-        /* ######################################################################
-
-
-            LINTER TERMINATOR | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER CONDITIONALS | START
-
-
-        ########################################################################*/
-
-        if let Ast::If { .. } = node {
-            return statements::conditional::analyze(self, node);
-        }
-
-        if let Ast::Elif { .. } = node {
-            return statements::conditional::analyze(self, node);
-        }
-
-        if let Ast::Else { .. } = node {
-            return statements::conditional::analyze(self, node);
-        }
-
-        /* ######################################################################
-
-
-            LINTER CONDITIONALS | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER LOOPS | START
-
-
-        ########################################################################*/
-
-        if let Ast::For { .. } = node {
-            return statements::loops::analyze(self, node);
-        }
-
-        if let Ast::While { .. } = node {
-            return statements::loops::analyze(self, node);
-        }
-
-        if let Ast::Loop { .. } = node {
-            return statements::loops::analyze(self, node);
-        }
-
-        /* ######################################################################
-
-
-            LINTER LOOPS | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            MUTATION | START
-
-
-        ########################################################################*/
-
-        if let Ast::Mut { .. } = node {
-            return mutation::analyze(self, node);
-        }
-
-        /* ######################################################################
-
-
-            MUTATION | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            TYPE CHECKER LOOP CONTROL FLOW - START
-
-
-        ########################################################################*/
-
-        if let Ast::Continue { .. } | Ast::Break { .. } = node {
-            return;
-        }
-
-        /* ######################################################################
-
-
-            TYPE CHECKER LOOP CONTROL FLOW - END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER STATEMENTS | END
-
-
-        ########################################################################*/
-
-        /* ######################################################################
-
-
-            LINTER EXPRESSIONS | START
-
-
-        ########################################################################*/
-
-        self.analyze_expr(node);
     }
 
-    pub fn analyze_expr(&mut self, expr: &'linter Ast) {
+    fn analyze_expr(&mut self, expr: &'linter Ast) {
         expressions::analyze(self, expr);
     }
 }
 
 impl Linter<'_> {
-    pub fn declare_forward(&mut self) {
-        self.ast
-            .iter()
-            .filter(|ast| ast.is_static())
-            .for_each(|ast| {
-                if let Ast::Static {
+    fn declare_forward(&mut self) {
+        for ast in self.ast.iter() {
+            match ast {
+                Ast::Static {
                     name,
                     metadata,
                     span,
                     ..
-                } = ast
-                {
+                } => {
                     self.symbols
                         .new_global_static(name, (*span, false, !metadata.is_mutable()));
                 }
-            });
-
-        self.ast
-            .iter()
-            .filter(|ast| ast.is_constant())
-            .for_each(|ast| {
-                if let Ast::Const { name, span, .. } = ast {
+                Ast::Const { name, span, .. } => {
                     self.symbols.new_global_constant(name, (*span, false));
                 }
-            });
-
-        self.ast
-            .iter()
-            .filter(|ast| ast.is_struct())
-            .for_each(|ast| {
-                if let Ast::Struct {
+                Ast::Struct {
                     name,
                     fields,
                     span,
                     attributes,
                     ..
-                } = ast
-                {
+                } => {
                     let mut converted_fields: HashMap<&str, (Span, bool)> =
                         HashMap::with_capacity(100);
 
@@ -361,87 +170,72 @@ impl Linter<'_> {
                         (converted_fields, *span, attributes.has_public_attribute()),
                     );
                 }
-            });
 
-        self.ast.iter().filter(|ast| ast.is_enum()).for_each(|ast| {
-            if let Ast::Enum {
-                name, fields, span, ..
-            } = ast
-            {
-                let mut converted_fields: HashMap<&str, (Span, bool)> = HashMap::with_capacity(100);
+                Ast::Enum {
+                    name, fields, span, ..
+                } => {
+                    let mut converted_fields: HashMap<&str, (Span, bool)> =
+                        HashMap::with_capacity(100);
 
-                for field in fields.iter() {
-                    let field_name: &str = field.0;
-                    let expr_span: Span = field.2.get_span();
+                    for field in fields.iter() {
+                        let field_name: &str = field.0;
+                        let expr_span: Span = field.2.get_span();
 
-                    converted_fields.insert(field_name, (expr_span, false));
+                        converted_fields.insert(field_name, (expr_span, false));
+                    }
+
+                    self.symbols
+                        .new_enum(name, (converted_fields, *span, false));
                 }
 
-                self.symbols
-                    .new_enum(name, (converted_fields, *span, false));
-            }
-        });
-
-        self.ast
-            .iter()
-            .filter(|ast| ast.is_function())
-            .for_each(|ast| {
-                if let Ast::Function {
+                Ast::Function {
                     name,
                     span,
                     attributes,
                     ..
-                } = ast
-                {
+                } => {
                     self.symbols
                         .new_function(name, (*span, attributes.has_public_attribute()));
                 }
-            });
 
-        self.ast
-            .iter()
-            .filter(|ast| ast.is_intrinsic())
-            .for_each(|ast| {
-                if let Ast::Intrinsic {
+                Ast::Intrinsic {
                     name,
                     span,
                     attributes,
                     ..
-                } = ast
-                {
+                } => {
                     self.symbols
                         .new_intrinsic(name, (*span, attributes.has_public_attribute()));
                 }
-            });
 
-        self.ast
-            .iter()
-            .filter(|ast| ast.is_asm_function())
-            .for_each(|ast| {
-                if let Ast::AssemblerFunction {
+                Ast::AssemblerFunction {
                     name,
                     span,
                     attributes,
                     ..
-                } = ast
-                {
+                } => {
                     self.symbols
                         .new_asm_function(name, (*span, attributes.has_public_attribute()));
                 }
-            });
+
+                _ => (),
+            }
+        }
     }
 }
 
 impl Linter<'_> {
-    pub fn generate_scoped_warnings(&mut self) {
+    fn generate_scoped_warnings(&mut self) {
+        let mut warnings: Vec<CompilationIssue> = Vec::with_capacity(u8::MAX.into());
+
         if let Some(last_scope) = self.symbols.get_all_locals().last() {
-            last_scope.iter().for_each(|(name, info)| {
+            for (name, info) in last_scope.iter() {
                 let span: Span = info.0;
                 let used: bool = info.1;
                 let is_mutable_used: bool = info.2;
 
                 if !used {
-                    self.warnings.push(CompilationIssue::Warning(
+                    warnings.push(CompilationIssue::Warning(
                         String::from("Local not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -449,38 +243,38 @@ impl Linter<'_> {
                 }
 
                 if !is_mutable_used {
-                    self.warnings.push(CompilationIssue::Warning(
+                    warnings.push(CompilationIssue::Warning(
                         String::from("Mutable local not used"),
                         format!("'{}' not used.", name),
                         span,
                     ));
                 }
-            });
+            }
         }
 
         if let Some(last_scope) = self.symbols.get_all_local_constants().last() {
-            last_scope.iter().for_each(|(name, info)| {
+            for (name, info) in last_scope.iter() {
                 let span: Span = info.0;
                 let used: bool = info.1;
 
                 if !used {
-                    self.warnings.push(CompilationIssue::Warning(
+                    warnings.push(CompilationIssue::Warning(
                         String::from("Local constant not used"),
                         format!("'{}' not used.", name),
                         span,
                     ));
                 }
-            });
+            }
         }
 
         if let Some(last_scope) = self.symbols.get_all_locals_statics().last() {
-            last_scope.iter().for_each(|(name, info)| {
+            for (name, info) in last_scope.iter() {
                 let span: Span = info.0;
                 let used: bool = info.1;
                 let is_mutable_used: bool = info.2;
 
                 if !used {
-                    self.warnings.push(CompilationIssue::Warning(
+                    warnings.push(CompilationIssue::Warning(
                         String::from("Local Static not used"),
                         format!("'{}' not used.", name),
                         span,
@@ -488,184 +282,193 @@ impl Linter<'_> {
                 }
 
                 if !is_mutable_used {
-                    self.warnings.push(CompilationIssue::Warning(
+                    warnings.push(CompilationIssue::Warning(
                         String::from("Local mutable static not used"),
                         format!("'{}' not used.", name),
                         span,
                     ));
                 }
-            });
+            }
         }
 
         if let Some(last_scope) = self.symbols.get_all_llis().last() {
-            last_scope.iter().for_each(|(name, info)| {
+            for (name, info) in last_scope.iter() {
                 let span: Span = info.0;
                 let used: bool = info.1;
 
                 if !used {
-                    self.warnings.push(CompilationIssue::Warning(
+                    warnings.push(CompilationIssue::Warning(
                         String::from("LLI not used"),
                         format!("'{}' not used.", name),
                         span,
                     ));
                 }
-            });
+            }
         }
+
+        self.warnings.extend(warnings);
     }
 
-    pub fn generate_scoped_function_warnings(&mut self) {
-        self.symbols
-            .get_all_function_parameters()
-            .iter()
-            .for_each(|(name, info)| {
-                let span: Span = info.0;
-                let used: bool = info.1;
-                let is_mutable_used: bool = info.2;
+    fn generate_scoped_function_warnings(&mut self) {
+        let mut warnings: Vec<CompilationIssue> = Vec::with_capacity(u8::MAX.into());
 
-                if !used {
-                    self.warnings.push(CompilationIssue::Warning(
-                        String::from("Parameter not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
+        for (name, info) in self.symbols.get_all_function_parameters().iter() {
+            let span: Span = info.0;
+            let used: bool = info.1;
+            let is_mutable_used: bool = info.2;
 
-                if !is_mutable_used {
-                    self.warnings.push(CompilationIssue::Warning(
-                        String::from("Mutable parameter not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-            });
+            if !used {
+                warnings.push(CompilationIssue::Warning(
+                    String::from("Parameter not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+
+            if !is_mutable_used {
+                warnings.push(CompilationIssue::Warning(
+                    String::from("Mutable parameter not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        }
+
+        self.warnings.extend(warnings);
     }
 
-    pub fn generate_warnings(&mut self) {
-        self.symbols
-            .get_all_global_statics()
-            .iter()
-            .for_each(|(name, info)| {
-                let span: Span = info.0;
-                let used: bool = info.1;
+    fn generate_warnings(&mut self) {
+        let mut warnings: Vec<CompilationIssue> = Vec::with_capacity(u8::MAX.into());
+
+        for (name, info) in self.symbols.get_all_global_statics().iter() {
+            let span: Span = info.0;
+            let used: bool = info.1;
+
+            if !used {
+                warnings.push(CompilationIssue::Warning(
+                    "Static not used".into(),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        }
+
+        for (name, info) in self.symbols.get_all_global_constants().iter() {
+            let span: Span = info.0;
+            let used: bool = info.1;
+
+            if !used {
+                warnings.push(CompilationIssue::Warning(
+                    String::from("Constant not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        }
+
+        for (name, info) in self.symbols.get_all_functions().iter() {
+            let span: Span = info.0;
+            let used: bool = info.1;
+
+            if !used {
+                warnings.push(CompilationIssue::Warning(
+                    String::from("Function not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        }
+
+        for (name, info) in self.symbols.get_all_asm_functions().iter() {
+            let span: Span = info.0;
+            let used: bool = info.1;
+
+            if !used {
+                warnings.push(CompilationIssue::Warning(
+                    String::from("Assembler function not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        }
+
+        for (name, info) in self.symbols.get_all_enums().iter() {
+            let span: Span = info.1;
+            let used: bool = info.2;
+
+            if !used {
+                warnings.push(CompilationIssue::Warning(
+                    String::from("Enum not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+
+            let fields: &HashMap<&str, (Span, bool)> = &info.0;
+
+            for (field_name, field_info) in fields.iter() {
+                let span: Span = field_info.0;
+                let used: bool = field_info.1;
 
                 if !used {
-                    self.warnings.push(CompilationIssue::Warning(
-                        "Static not used".into(),
-                        format!("'{}' not used.", name),
+                    warnings.push(CompilationIssue::Warning(
+                        String::from("Enum field not used"),
+                        format!("'{}' not used.", field_name),
                         span,
                     ));
                 }
-            });
+            }
+        }
 
-        self.symbols
-            .get_all_global_constants()
-            .iter()
-            .for_each(|(name, info)| {
-                let span: Span = info.0;
-                let used: bool = info.1;
+        for (name, info) in self.symbols.get_all_intrinsics().iter() {
+            let span: Span = info.0;
+            let used: bool = info.1;
+
+            if !used {
+                warnings.push(CompilationIssue::Warning(
+                    String::from("Intrinsic not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+        }
+
+        for (name, info) in self.symbols.get_all_structs().iter() {
+            let span: Span = info.1;
+            let used: bool = info.2;
+
+            if !used {
+                warnings.push(CompilationIssue::Warning(
+                    String::from("Structure not used"),
+                    format!("'{}' not used.", name),
+                    span,
+                ));
+            }
+
+            let fields: &HashMap<&str, (Span, bool)> = &info.0;
+
+            for (field_name, field_info) in fields.iter() {
+                let span: Span = field_info.0;
+                let used: bool = field_info.1;
 
                 if !used {
-                    self.warnings.push(CompilationIssue::Warning(
-                        String::from("Constant not used"),
-                        format!("'{}' not used.", name),
+                    warnings.push(CompilationIssue::Warning(
+                        String::from("Structure field not used"),
+                        format!("'{}' not used.", field_name),
                         span,
                     ));
                 }
-            });
+            }
+        }
 
-        self.symbols
-            .get_all_functions()
-            .iter()
-            .for_each(|(name, info)| {
-                let span: Span = info.0;
-                let used: bool = info.1;
+        self.warnings.extend(warnings);
+    }
+}
 
-                if !used {
-                    self.warnings.push(CompilationIssue::Warning(
-                        String::from("Function not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-            });
-
-        self.symbols
-            .get_all_asm_functions()
-            .iter()
-            .for_each(|(name, info)| {
-                let span: Span = info.0;
-                let used: bool = info.1;
-
-                if !used {
-                    self.warnings.push(CompilationIssue::Warning(
-                        String::from("Assembler function not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-            });
-
-        self.symbols
-            .get_all_enums()
-            .iter()
-            .for_each(|(name, info)| {
-                let span: Span = info.1;
-                let used: bool = info.2;
-
-                if !used {
-                    self.warnings.push(CompilationIssue::Warning(
-                        String::from("Enum not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-
-                let fields: &HashMap<&str, (Span, bool)> = &info.0;
-
-                fields.iter().for_each(|(name, info)| {
-                    let span: Span = info.0;
-                    let used: bool = info.1;
-
-                    if !used {
-                        self.warnings.push(CompilationIssue::Warning(
-                            String::from("Enum field not used"),
-                            format!("'{}' not used.", name),
-                            span,
-                        ));
-                    }
-                });
-            });
-
-        self.symbols
-            .get_all_structs()
-            .iter()
-            .for_each(|(name, info)| {
-                let span: Span = info.1;
-                let used: bool = info.2;
-
-                if !used {
-                    self.warnings.push(CompilationIssue::Warning(
-                        String::from("Structure not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-
-                let fields: &HashMap<&str, (Span, bool)> = &info.0;
-
-                fields.iter().for_each(|(name, info)| {
-                    let span: Span = info.0;
-                    let used: bool = info.1;
-
-                    if !used {
-                        self.warnings.push(CompilationIssue::Warning(
-                            String::from("Structure field not used"),
-                            format!("'{}' not used.", name),
-                            span,
-                        ));
-                    }
-                });
-            });
+impl Linter<'_> {
+    #[inline]
+    pub fn add_warning(&mut self, warning: CompilationIssue) {
+        self.warnings.push(warning);
     }
 }
 

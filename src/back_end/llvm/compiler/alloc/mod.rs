@@ -1,18 +1,18 @@
+use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm::compiler::typegen;
+
+use crate::core::diagnostic::span::Span;
+use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
+
+use inkwell::{context::Context, types::BasicTypeEnum, values::PointerValue};
+
 pub mod atomic;
 pub mod memheap;
 pub mod memstack;
 pub mod memstatic;
-
-use inkwell::{context::Context, types::BasicTypeEnum, values::PointerValue};
-
-use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
-use crate::back_end::llvm::compiler::typegen;
-
-use crate::front_end::lexer::span::Span;
-use crate::front_end::types::ast::Ast;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
-use crate::front_end::typesystem::types::Type;
 
 pub fn local_variable<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,

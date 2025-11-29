@@ -1,5 +1,6 @@
-use crate::front_end::{
-    lexer::span::Span, preprocessor::signatures::ExternalSymbol, typesystem::types::Type,
+use crate::{
+    core::diagnostic::span::Span,
+    front_end::{preprocessor::signatures::ExternalSymbol, typesystem::types::Type},
 };
 
 use ahash::AHashMap as HashMap;

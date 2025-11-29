@@ -1,6 +1,6 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -25,17 +25,16 @@ pub fn build_block<'parser>(
     ctx.begin_scope();
     ctx.get_mut_symbols().begin_scope();
 
-    let mut stmts: Vec<Ast> = Vec::with_capacity(256);
+    let mut nodes: Vec<Ast> = Vec::with_capacity(256);
 
     while !ctx.match_token(TokenType::RBrace)? {
-        let stmt: Ast = statement::parse(ctx)?;
-        stmts.push(stmt)
+        nodes.push(statement::parse(ctx)?)
     }
 
     ctx.get_mut_symbols().end_scope();
     ctx.end_scope();
 
-    Ok(Ast::Block { stmts, span })
+    Ok(Ast::Block { nodes, span })
 }
 
 pub fn check_state(ctx: &mut ParserContext) -> Result<(), CompilationIssue> {

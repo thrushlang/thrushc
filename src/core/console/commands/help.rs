@@ -19,7 +19,7 @@ pub fn show_help() -> ! {
             "\n\n{} {} {}\n\n",
             "Usage:".bold(),
             "thrushc".custom_color((141, 141, 142)).bold(),
-            "[-flags | --flags] [files..]"
+            "[-flags|--flags] [files..]"
         ),
     );
 
@@ -49,53 +49,7 @@ pub fn show_help() -> ! {
         ),
     );
 
-    logging::write(logging::OutputIn::Stderr, "LLVM Commands:\n\n");
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "llvm-print-targets".custom_color((141, 141, 142)).bold(),
-            "Show the current LLVM target supported."
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "llvm-print-supported-cpus"
-                .custom_color((141, 141, 142))
-                .bold(),
-            "Show the current LLVM supported CPUs for the current LLVM target.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "llvm-print-host-target-triple"
-                .custom_color((141, 141, 142))
-                .bold(),
-            "Show the host LLVM target triple.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "llvm-print-opt-passes".custom_color((141, 141, 142)).bold(),
-            "Show all available optimization passes through '--opt-passes=p{passname, passname}' in the compiler for the LLVM backend.",
-        ),
-    );
-
-    logging::write(logging::OutputIn::Stderr, "\nGeneral flags:\n\n");
+    logging::write(logging::OutputIn::Stderr, "General flags:\n\n");
 
     logging::write(
         logging::OutputIn::Stderr,
@@ -103,7 +57,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-build-dir".custom_color((141, 141, 142)).bold(),
-            "Configure the build directory for the AOT compiler.",
+            "Configure the build directory for the AOT compiler mode.",
         ),
     );
 
@@ -235,7 +189,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-opt".custom_color((141, 141, 142)).bold(),
-            "O0|O1|O2|mcqueen",
+            "O0|O1|O2|O3|Oz",
             "Optimization level.",
         ),
     );
@@ -351,7 +305,7 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n",
+            "{} {} {}",
             "•".bold(),
             "--enable-ansi-color".custom_color((141, 141, 142)).bold(),
             "It allows ANSI color formatting in compiler diagnostics.",
@@ -455,10 +409,54 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n",
+            "{} {} {}\n\n",
             "•".bold(),
             "--no-obfuscate-ir".custom_color((141, 141, 142)).bold(),
             "Stop generating name obfuscation in the emitted IR code."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--print-targets".custom_color((141, 141, 142)).bold(),
+            "Show the current LLVM target supported."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--print-supported-cpus"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Show the current LLVM supported CPUs for the current LLVM target.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--print-host-target-triple"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Show the host LLVM target triple.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--print-opt-passes".custom_color((141, 141, 142)).bold(),
+            "Show all available optimization passes through '--opt-passes=p{passname, passname}' in the compiler for the LLVM backend.",
         ),
     );
 

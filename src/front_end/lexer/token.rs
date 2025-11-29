@@ -1,8 +1,6 @@
-use crate::front_end::{
-    lexer::tokentype::TokenType, types::parser::stmts::traits::TokenExtensions,
-};
-
-use super::span::Span;
+use crate::core::diagnostic::span::Span;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 #[derive(Debug)]
 pub struct Token {

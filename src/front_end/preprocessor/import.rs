@@ -3,10 +3,11 @@ use std::path::PathBuf;
 use crate::{
     core::{
         compiler::{self, options::CompilationUnit},
+        diagnostic::span::Span,
         errors::standard::CompilationIssue,
     },
     front_end::{
-        lexer::{Lexer, span::Span, token::Token, tokentype::TokenType},
+        lexer::{Lexer, token::Token, tokentype::TokenType},
         preprocessor::{context::PreprocessorContext, module::Module, parser::ModuleParser},
         types::parser::stmts::traits::TokenExtensions,
     },

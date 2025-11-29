@@ -18,27 +18,31 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
 
     let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
 
-    if let Ast::While { cond, block, .. } = node {
-        let condition: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+    if let Ast::While {
+        condition, block, ..
+    } = node
+    {
+        let cond: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
         let body: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
         let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
         llvm_builder
-            .build_unconditional_branch(condition)
+            .build_unconditional_branch(cond)
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     codegen.get_mut_context(),
                     "Failed to compile while loop terminator to condition!",
-                    cond.get_span(),
+                    condition.get_span(),
                     PathBuf::from(file!()),
                     line!(),
                 )
             });
 
-        llvm_builder.position_at_end(condition);
+        llvm_builder.position_at_end(cond);
 
         let comparison: IntValue =
-            codegen::compile(codegen.get_mut_context(), cond, Some(&Type::Bool)).into_int_value();
+            codegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
+                .into_int_value();
 
         llvm_builder
             .build_conditional_branch(comparison, body, exit)
@@ -46,7 +50,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
                 abort::abort_codegen(
                     codegen.get_mut_context(),
                     "Failed to compile while loop comparison to body!",
-                    cond.get_span(),
+                    condition.get_span(),
                     PathBuf::from(file!()),
                     line!(),
                 )
@@ -55,7 +59,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
         codegen
             .get_mut_context()
             .get_mut_loop_ctx()
-            .add_continue_branch(condition);
+            .add_continue_branch(cond);
 
         codegen
             .get_mut_context()
@@ -73,12 +77,12 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
             .is_none()
         {
             llvm_builder
-                .build_unconditional_branch(condition)
+                .build_unconditional_branch(cond)
                 .unwrap_or_else(|_| {
                     abort::abort_codegen(
                         codegen.get_mut_context(),
                         "Failed to compile while loop body terminator to comparison!",
-                        cond.get_span(),
+                        condition.get_span(),
                         PathBuf::from(file!()),
                         line!(),
                     )

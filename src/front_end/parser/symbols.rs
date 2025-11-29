@@ -1,7 +1,7 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::parser::constants::PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY;
 use crate::front_end::parser::constants::PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY;
 use crate::front_end::types::ast::Ast;

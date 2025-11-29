@@ -10,23 +10,16 @@ A list of the commands supported by the Thrush Compiler command line.
 ```console
 The Thrush Compiler
 
-Usage: thrushc [-flags | --flags] [files..]
+Usage: thrushc [-flags|--flags] [files..]
 
 General Commands:
 
 • -h, --help, help Show help message.
 • -v, --version, version Show the version.
 
-LLVM Commands:
-
-• llvm-print-targets Show the current LLVM target supported.
-• llvm-print-supported-cpus Show the current LLVM supported CPUs for the current LLVM target.
-• llvm-print-host-target-triple Show the host LLVM target triple.
-• llvm-print-opt-passes Show all available optimization passes through '--opt-passes=p{passname, passname}' in the compiler for the LLVM backend.
-
 General flags:
 
-• -build-dir Configure the build directory for the AOT compiler.
+• -build-dir Configure the build directory for the AOT compiler mode.
 
 Linkage flags:
 
@@ -44,7 +37,7 @@ Compiler flags:
 • -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify in LLVM the new features of the CPU to use.
 • -emit [llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens] Compile the code into specified representation.
 • -print [llvm-ir|raw-llvm-ir|tokens] Displays the final compilation on standard output.
-• -opt [O0|O1|O2|mcqueen] Optimization level.
+• -opt [O0|O1|O2|O3|Oz] Optimization level.
 
 JIT Compiler flags:
 
@@ -62,7 +55,6 @@ Extra compiler flags:
 • --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
 • --disable-default-opt It disable default optimization that occurs even without specified optimization.
 • --enable-ansi-color It allows ANSI color formatting in compiler diagnostics.
-
 Useful flags:
 
 • --debug-clang-command Displays the generated command for Clang in the phase of linking.
@@ -77,4 +69,9 @@ Useful flags:
 
 • --no-obfuscate-archive-names Stop generating name obfuscation for each file; this does not apply to the final build.
 • --no-obfuscate-ir Stop generating name obfuscation in the emitted IR code.
+
+• --print-targets Show the current LLVM target supported.
+• --print-supported-cpus Show the current LLVM supported CPUs for the current LLVM target.
+• --print-host-target-triple Show the host LLVM target triple.
+• --print-opt-passes Show all available optimization passes through '--opt-passes=p{passname, passname}' in the compiler for the LLVM backend.
 ```

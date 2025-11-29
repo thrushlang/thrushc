@@ -1,18 +1,19 @@
-use std::{fs::write, path::Path, time::Instant};
+use crate::core::compiler::emitters;
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::CompilerOptions;
+use crate::core::compiler::options::EmitableUnit;
+use crate::core::compiler::options::Emited;
+use crate::core::compiler::thrushc::ThrushCompiler;
+use crate::core::compiler::thrushc::interrupt;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+use crate::front_end::lexer;
 
-use inkwell::{module::Module, targets::TargetMachine};
+use inkwell::module::Module;
+use inkwell::targets::TargetMachine;
 
-use crate::{
-    core::{
-        compiler::{
-            emitters,
-            options::{CompilationUnit, CompilerOptions, EmitableUnit, Emited},
-            thrushc::{ThrushCompiler, interrupt},
-        },
-        console::logging::{self, LoggingType},
-    },
-    front_end::lexer,
-};
+use std::path::Path;
+use std::time::Instant;
 
 pub fn llvm_after_optimization(
     compiler: &mut ThrushCompiler,
@@ -173,7 +174,7 @@ pub fn after_frontend(
 
     if compiler_options.contains_emitable(EmitableUnit::AST) {
         if let Emited::Ast(stmts) = emited {
-            let _ = write(
+            let _ = std::fs::write(
                 build_dir.join(format!("{}.ast", file.get_name())),
                 format!("{:#?}", stmts),
             );

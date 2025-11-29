@@ -2,10 +2,10 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::modificators::GCCStructureTypeModificator;
 use crate::front_end::typesystem::modificators::LLVMStructureTypeModificator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
+use crate::middle_end::mir::attributes::ThrushAttributes;
 
 use inkwell::AtomicOrdering;
 use inkwell::ThreadLocalMode;

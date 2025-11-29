@@ -9,7 +9,7 @@ use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::generation::cast;
 use crate::back_end::llvm::compiler::predicates;
 
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::types::parser::repr::BinaryOperation;

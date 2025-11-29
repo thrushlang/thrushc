@@ -1,7 +1,7 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::types::ast::metadata::fnparam::FunctionParameterMetadata;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::metadata::staticvar::StaticMetadata;

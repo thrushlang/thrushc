@@ -2,7 +2,7 @@ use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::generation::cast;
 use crate::back_end::llvm::compiler::{abort, typegen};
 
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;

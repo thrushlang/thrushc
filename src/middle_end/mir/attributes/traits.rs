@@ -1,8 +1,7 @@
 use crate::back_end::llvm::types::repr::LLVMAttributes;
 
-use crate::front_end::lexer::span::Span;
-use crate::front_end::types::attributes::ThrushAttribute;
-use crate::front_end::types::attributes::ThrushAttributeComparator;
+use crate::core::diagnostic::span::Span;
+use crate::middle_end::mir::attributes::{ThrushAttribute, ThrushAttributeComparator};
 
 pub trait ThrushAttributesExtensions {
     fn has_extern_attribute(&self) -> bool;

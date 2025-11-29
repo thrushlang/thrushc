@@ -80,7 +80,7 @@ pub enum ThrushOptimization {
     Size,
     Low,
     Mid,
-    Mcqueen,
+    High,
 }
 
 impl ThrushOptimization {
@@ -90,17 +90,17 @@ impl ThrushOptimization {
             ThrushOptimization::None => OptimizationLevel::None,
             ThrushOptimization::Low => OptimizationLevel::Default,
             ThrushOptimization::Mid => OptimizationLevel::Less,
-            ThrushOptimization::Mcqueen | ThrushOptimization::Size => OptimizationLevel::Aggressive,
+            ThrushOptimization::High | ThrushOptimization::Size => OptimizationLevel::Aggressive,
         }
     }
 
     #[inline]
-    pub fn is_opt(self) -> bool {
+    pub fn is_high_opt(self) -> bool {
         matches!(
             self,
             ThrushOptimization::Low
                 | ThrushOptimization::Mid
-                | ThrushOptimization::Mcqueen
+                | ThrushOptimization::High
                 | ThrushOptimization::Size
         )
     }

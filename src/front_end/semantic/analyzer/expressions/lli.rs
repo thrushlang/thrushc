@@ -1,7 +1,7 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstGetType;
@@ -37,13 +37,12 @@ pub fn validate<'analyzer>(
             source, indexes, ..
         } => {
             let source_type: &Type = source.get_value_type()?;
-            let span: Span = source.get_span();
 
             if source_type.is_address_type() {
                 analyzer.add_warning(CompilationIssue::Warning(
                     "Undefined behavior".into(), 
                     "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
-                    span
+                     source.get_span()
                 ));
             }
 

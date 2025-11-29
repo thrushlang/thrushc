@@ -1,9 +1,12 @@
 use std::path::PathBuf;
 
 use crate::{
-    core::compiler::{self, options::CompilationUnit},
+    core::{
+        compiler::{self, options::CompilationUnit},
+        diagnostic::span::Span,
+    },
     front_end::{
-        lexer::{Lexer, span::Span, token::Token, tokentype::TokenType},
+        lexer::{Lexer, token::Token, tokentype::TokenType},
         preprocessor::{errors::PreprocessorIssue, module::Module, parser::ModuleParser},
         types::parser::stmts::traits::TokenExtensions,
     },

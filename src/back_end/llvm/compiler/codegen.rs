@@ -13,9 +13,9 @@ use crate::back_end::llvm::compiler::{ptr, statements};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::traits::{AstLLVMGetType, AstStandardExtensions};
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::typesystem::traits::DereferenceExtensions;
 use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 use std::path::PathBuf;
 
@@ -92,11 +92,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match node {
-            Ast::Block { stmts, .. } => {
+            Ast::Block { nodes, .. } => {
                 self.context.begin_scope();
 
-                stmts.iter().for_each(|stmt| {
-                    self.codegen_block(stmt);
+                nodes.iter().for_each(|node| {
+                    self.codegen_block(node);
                 });
 
                 self.context.end_scope();

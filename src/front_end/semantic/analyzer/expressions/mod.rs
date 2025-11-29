@@ -1,13 +1,7 @@
-pub mod cast;
-pub mod deref;
-pub mod index;
-pub mod lli;
-pub mod property;
-
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::semantic::analyzer::builtins;
 use crate::front_end::types::ast::Ast;
@@ -18,6 +12,12 @@ use crate::front_end::types::parser::stmts::types::Constructor;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
+
+pub mod cast;
+pub mod deref;
+pub mod index;
+pub mod lli;
+pub mod property;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,

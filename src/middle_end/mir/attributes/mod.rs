@@ -1,14 +1,16 @@
 use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
-use crate::front_end::lexer::span::Span;
-
-use crate::front_end::types::attributes::linkage::ThrushLinkage;
+use crate::core::diagnostic::span::Span;
+use crate::middle_end::mir::attributes::linkage::ThrushLinkage;
 
 use std::fmt::Display;
 
+pub mod assembler;
 pub mod callconventions;
 pub mod impls;
 pub mod linkage;
 pub mod traits;
+
+pub type ThrushAttributes = Vec<ThrushAttribute>;
 
 #[derive(Debug, Clone)]
 pub enum ThrushAttribute {

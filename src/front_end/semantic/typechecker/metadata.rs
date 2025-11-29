@@ -1,4 +1,4 @@
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 
 #[derive(Debug, Clone, Copy)]
 pub struct TypeCheckerExprMetadata {

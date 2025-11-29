@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 
 #[derive(Debug)]
 pub struct PreprocessorIssue {

@@ -1,7 +1,6 @@
-use crate::back_end::llvm::compiler::abort;
 use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::{back_end::llvm::compiler::abort, core::diagnostic::span::Span};
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::{context::Context, values::FloatValue};

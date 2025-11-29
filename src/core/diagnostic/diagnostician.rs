@@ -4,9 +4,9 @@ use std::path::Path;
 use crate::core::compiler;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::span::Span;
 use crate::core::diagnostic::{self, Diagnostic, printers};
 use crate::core::errors::standard::CompilationIssue;
-use crate::front_end::lexer::span::Span;
 use crate::front_end::preprocessor::errors::PreprocessorIssue;
 
 use {colored::Colorize, std::path::PathBuf};

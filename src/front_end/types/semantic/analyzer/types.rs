@@ -1,5 +1,4 @@
-use crate::front_end::lexer::span::Span;
-use crate::front_end::typesystem::types::Type;
+use crate::{core::diagnostic::span::Span, front_end::typesystem::types::Type};
 
 use ahash::AHashMap as HashMap;
 

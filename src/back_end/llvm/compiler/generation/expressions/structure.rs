@@ -4,7 +4,7 @@ use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 use crate::back_end::llvm::compiler::memory::{self, LLVMAllocationSite};
 use crate::back_end::llvm::compiler::typegen;
 
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
 use crate::front_end::types::parser::stmts::types::Constructor;
 use crate::front_end::typesystem::traits::TypeStructExtensions;
 use crate::front_end::typesystem::types::Type;

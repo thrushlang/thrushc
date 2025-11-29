@@ -1,11 +1,7 @@
-pub mod cast;
-pub mod deref;
-pub mod lli;
-
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::linter::Linter;
 use crate::front_end::semantic::linter::builtins;
 use crate::front_end::semantic::linter::expressions;
@@ -15,6 +11,10 @@ use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::parser::stmts::types::Constructor;
 
 use std::path::PathBuf;
+
+pub mod cast;
+pub mod deref;
+pub mod lli;
 
 pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
     match expr {

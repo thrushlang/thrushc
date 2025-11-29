@@ -86,11 +86,11 @@ impl Display for Ast<'_> {
 
                 Ok(())
             }
-            Ast::Block { stmts, .. } => {
+            Ast::Block { nodes, .. } => {
                 let _ = write!(f, "{{ ");
 
-                for stmt in stmts {
-                    let _ = write!(f, "{}", stmt);
+                for node in nodes {
+                    let _ = write!(f, "{}", node);
                 }
 
                 let _ = write!(f, " }}");
@@ -125,12 +125,12 @@ impl Display for Ast<'_> {
             }
             Ast::For {
                 local,
-                cond,
+                condition,
                 actions,
                 block,
                 ..
             } => {
-                write!(f, "for {} {} {} {}", local, cond, actions, block)
+                write!(f, "for {} {} {} {}", local, condition, actions, block)
             }
             Ast::Call { name, args, .. } => {
                 write!(f, "{}(", name)?;
@@ -212,8 +212,10 @@ impl Display for Ast<'_> {
                 write!(f, "loop {}", block)
             }
 
-            Ast::While { cond, block, .. } => {
-                write!(f, "while {} {}", cond, block)
+            Ast::While {
+                condition, block, ..
+            } => {
+                write!(f, "while {} {}", condition, block)
             }
 
             Ast::NullPtr { .. } => {

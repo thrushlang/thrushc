@@ -1,6 +1,6 @@
-use crate::front_end::lexer::span::Span;
-
 use ahash::AHashMap as HashMap;
+
+use crate::core::diagnostic::span::Span;
 
 pub type LinterStaticInfo = (Span, bool, bool);
 pub type LinterGlobalStatics<'linter> = HashMap<&'linter str, LinterStaticInfo>;

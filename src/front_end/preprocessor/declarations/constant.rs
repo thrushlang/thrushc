@@ -1,4 +1,7 @@
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
+
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 
@@ -7,9 +10,7 @@ use crate::front_end::preprocessor::parser::ModuleParser;
 use crate::front_end::preprocessor::signatures::{ExternalSymbol, Signature, Variant};
 use crate::front_end::preprocessor::typegen;
 
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::types::Type;
 
 pub fn build_constant(parser: &mut ModuleParser) -> Result<Option<ExternalSymbol>, ()> {

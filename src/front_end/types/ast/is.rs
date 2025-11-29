@@ -125,20 +125,20 @@ impl AstStatementExtentions for Ast<'_> {
 impl AstCodeBlockEntensions for Ast<'_> {
     #[inline]
     fn is_empty_block(&self) -> bool {
-        let Ast::Block { stmts, .. } = self else {
+        let Ast::Block { nodes, .. } = self else {
             return false;
         };
 
-        stmts.is_empty()
+        nodes.is_empty()
     }
 
     #[inline]
     fn has_terminator(&self) -> bool {
-        let Ast::Block { stmts, .. } = self else {
+        let Ast::Block { nodes, .. } = self else {
             return false;
         };
 
-        stmts.iter().any(|stmt| stmt.is_terminator())
+        nodes.iter().any(|node| node.is_terminator())
     }
 }
 

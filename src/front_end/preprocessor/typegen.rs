@@ -3,9 +3,7 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::preprocessor::attributes;
 use crate::front_end::preprocessor::parser::ModuleParser;
 
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::preprocessor::symbols::traits::FoundModuleSymbolEither;
 use crate::front_end::types::preprocessor::symbols::traits::FoundModuleSymbolEntension;
 use crate::front_end::typesystem::modificators::{
@@ -13,6 +11,8 @@ use crate::front_end::typesystem::modificators::{
     LLVMFunctionReferenceTypeModificator,
 };
 use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 pub fn build_type(parser: &mut ModuleParser) -> Result<Type, ()> {
     match parser.peek().kind {

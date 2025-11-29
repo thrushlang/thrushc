@@ -1,7 +1,7 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::checks;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;
@@ -19,32 +19,34 @@ pub fn validate<'type_checker>(
     match node {
         Ast::For {
             local,
-            cond,
+            condition,
             actions,
             block,
             ..
         } => {
             typechecker.analyze_stmt(local)?;
-            typechecker.analyze_expr(cond)?;
+            typechecker.analyze_expr(condition)?;
             typechecker.analyze_expr(actions)?;
             typechecker.analyze_stmt(block)?;
 
             Ok(())
         }
 
-        Ast::While { cond, block, .. } => {
+        Ast::While {
+            condition, block, ..
+        } => {
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(cond.is_literal_value(), cond.get_span());
+                TypeCheckerExprMetadata::new(condition.is_literal_value(), condition.get_span());
 
             checks::check_types(
                 &Type::Bool,
-                cond.get_value_type()?,
-                Some(cond),
+                condition.get_value_type()?,
+                Some(condition),
                 None,
                 metadata,
             )?;
 
-            typechecker.analyze_expr(cond)?;
+            typechecker.analyze_expr(condition)?;
             typechecker.analyze_stmt(block)?;
 
             Ok(())

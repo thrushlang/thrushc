@@ -2,16 +2,14 @@ pub mod diagnostician;
 pub mod errors;
 pub mod position;
 pub mod printers;
+pub mod span;
 pub mod traits;
 
 use colored::Colorize;
 
-use crate::{
-    core::{
-        console::logging::LoggingType,
-        diagnostic::{diagnostician::Notificator, position::CodePosition},
-    },
-    front_end::lexer::span::Span,
+use crate::core::{
+    console::logging::LoggingType,
+    diagnostic::{diagnostician::Notificator, position::CodePosition, span::Span},
 };
 
 #[derive(Debug)]

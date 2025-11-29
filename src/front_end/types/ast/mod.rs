@@ -1,17 +1,9 @@
 #![allow(clippy::upper_case_acronyms)]
 
-pub mod get;
-pub mod is;
-pub mod metadata;
-pub mod new;
-pub mod repr;
-pub mod traits;
-
-use std::rc::Rc;
-
 use crate::back_end::llvm::compiler::builtins::Builtin;
 
-use crate::front_end::lexer::span::Span;
+use crate::core::diagnostic::span::Span;
+
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::ast::metadata::cast::CastMetadata;
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
@@ -26,8 +18,17 @@ use crate::front_end::types::parser::stmts::sites::AllocationSite;
 use crate::front_end::types::parser::stmts::types::Constructor;
 use crate::front_end::types::parser::stmts::types::EnumFields;
 use crate::front_end::types::parser::stmts::types::StructFields;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::attributes::ThrushAttributes;
+
+use std::rc::Rc;
+
+pub mod get;
+pub mod is;
+pub mod metadata;
+pub mod new;
+pub mod repr;
+pub mod traits;
 
 #[derive(Debug, Clone)]
 pub enum Ast<'ctx> {
@@ -141,13 +142,13 @@ pub enum Ast<'ctx> {
     // Loops
     For {
         local: Rc<Ast<'ctx>>,
-        cond: Rc<Ast<'ctx>>,
+        condition: Rc<Ast<'ctx>>,
         actions: Rc<Ast<'ctx>>,
         block: Rc<Ast<'ctx>>,
         span: Span,
     },
     While {
-        cond: Rc<Ast<'ctx>>,
+        condition: Rc<Ast<'ctx>>,
         block: Rc<Ast<'ctx>>,
         span: Span,
     },
@@ -166,7 +167,7 @@ pub enum Ast<'ctx> {
 
     // Code block
     Block {
-        stmts: Vec<Ast<'ctx>>,
+        nodes: Vec<Ast<'ctx>>,
         span: Span,
     },
 

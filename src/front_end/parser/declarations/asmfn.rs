@@ -1,16 +1,16 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::{attributes, checks, expr, typegen};
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::attributes::traits::ThrushAttributesExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
-use crate::front_end::types::parser::stmts::types::ThrushAttributes;
 use crate::front_end::types::parser::symbols::types::ParametersTypes;
 use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 pub fn build_assembler_function<'parser>(
     ctx: &mut ParserContext<'parser>,

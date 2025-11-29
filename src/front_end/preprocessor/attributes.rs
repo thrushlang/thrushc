@@ -1,7 +1,10 @@
-use crate::front_end::{
-    lexer::{span::Span, token::Token, tokentype::TokenType},
-    preprocessor::parser::ModuleParser,
-    types::{attributes::ThrushAttribute, parser::stmts::types::ThrushAttributes},
+use crate::{
+    core::diagnostic::span::Span,
+    front_end::{
+        lexer::{token::Token, tokentype::TokenType},
+        preprocessor::parser::ModuleParser,
+    },
+    middle_end::mir::attributes::{ThrushAttribute, ThrushAttributes},
 };
 
 pub fn build_attributes(

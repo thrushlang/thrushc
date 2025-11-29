@@ -1,8 +1,10 @@
-use crate::front_end::{
-    lexer::span::Span,
-    preprocessor::types::{EnumFieldsSignature, FunctionParametersSignature},
-    types::parser::stmts::types::ThrushAttributes,
-    typesystem::types::Type,
+use crate::{
+    core::diagnostic::span::Span,
+    front_end::{
+        preprocessor::types::{EnumFieldsSignature, FunctionParametersSignature},
+        typesystem::types::Type,
+    },
+    middle_end::mir::attributes::ThrushAttributes,
 };
 
 #[derive(Debug)]

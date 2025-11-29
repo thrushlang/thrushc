@@ -2,10 +2,9 @@ use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
 
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
-
-use crate::front_end::lexer::span::Span;
 
 use std::path::PathBuf;
 use std::process;

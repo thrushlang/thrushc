@@ -1,6 +1,6 @@
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
-use crate::front_end::lexer::span::Span;
 use crate::front_end::typesystem::types::Type;
 
 pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), CompilationIssue> {

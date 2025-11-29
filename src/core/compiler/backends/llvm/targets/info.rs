@@ -48,6 +48,8 @@ x86         - 32-bit X86: Pentium-Pro and above
 x86-64      - 64-bit X86: EM64T and AMD64
 xcore       - XCore",
     );
+
+    process::exit(0);
 }
 
 #[inline]
