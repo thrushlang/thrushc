@@ -107,6 +107,31 @@ impl TokenType {
     }
 
     #[must_use]
+    pub fn is_attribute(self) -> bool {
+        matches!(
+            self,
+            TokenType::Ignore
+                | TokenType::MinSize
+                | TokenType::NoInline
+                | TokenType::AlwaysInline
+                | TokenType::InlineHint
+                | TokenType::Hot
+                | TokenType::SafeStack
+                | TokenType::WeakStack
+                | TokenType::StrongStack
+                | TokenType::PreciseFloats
+                | TokenType::Stack
+                | TokenType::Heap
+                | TokenType::AsmThrow
+                | TokenType::AsmSideEffects
+                | TokenType::AsmAlignStack
+                | TokenType::Packed
+                | TokenType::NoUnwind
+                | TokenType::OptFuzzing
+        )
+    }
+
+    #[must_use]
     pub fn is_identifier(&self) -> bool {
         matches!(self, TokenType::Identifier)
     }

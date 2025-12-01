@@ -1,5 +1,3 @@
-use crate::back_end::llvm_codegen::builtins::Builtin;
-
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::types::ast::Ast;
@@ -208,7 +206,8 @@ impl AstConstantExtensions for Ast<'_> {
                 | Ast::Str { .. }
                 | Ast::NullPtr { .. }
                 | Self::Builtin {
-                    builtin: Builtin::AlignOf { .. } | Builtin::SizeOf { .. },
+                    builtin: crate::middle_end::mir::builtins::ThrushBuiltin::AlignOf { .. }
+                        | crate::middle_end::mir::builtins::ThrushBuiltin::SizeOf { .. },
                     ..
                 }
         ) {
@@ -250,12 +249,6 @@ impl AstConstantExtensions for Ast<'_> {
         if let Ast::Constructor { args, .. } = self {
             return args.iter().all(|arg| arg.1.is_constant_value());
         }
-
-        if let Self::Builtin {
-            builtin: Builtin::AlignOf { .. } | Builtin::SizeOf { .. },
-            ..
-        } = self
-        {}
 
         false
     }

@@ -1,53 +1,43 @@
-use crate::back_end::llvm_codegen::builtins::Builtin;
-
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::analyzer::Analyzer;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,
-    builtin: &'analyzer Builtin,
+    builtin: &'analyzer crate::middle_end::mir::builtins::ThrushBuiltin,
 ) -> Result<(), CompilationIssue> {
     match builtin {
-        Builtin::MemSet {
-            destination,
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemSet {
+            dst,
             new_size,
             size,
             ..
         } => {
-            analyzer.analyze_expr(destination)?;
+            analyzer.analyze_expr(dst)?;
             analyzer.analyze_expr(new_size)?;
             analyzer.analyze_expr(size)?;
 
             Ok(())
         }
 
-        Builtin::MemMove {
-            destination,
-            source,
-            size,
-            ..
-        } => {
-            analyzer.analyze_expr(source)?;
-            analyzer.analyze_expr(destination)?;
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemMove { dst, src, size, .. } => {
+            analyzer.analyze_expr(dst)?;
+            analyzer.analyze_expr(src)?;
             analyzer.analyze_expr(size)?;
 
             Ok(())
         }
 
-        Builtin::MemCpy {
-            destination,
-            source,
-            size,
-            ..
-        } => {
-            analyzer.analyze_expr(source)?;
-            analyzer.analyze_expr(destination)?;
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemCpy { dst, src, size, .. } => {
+            analyzer.analyze_expr(dst)?;
+            analyzer.analyze_expr(src)?;
             analyzer.analyze_expr(size)?;
 
             Ok(())
         }
 
-        Builtin::Halloc { .. } | Builtin::AlignOf { .. } | Builtin::SizeOf { .. } => Ok(()),
+        crate::middle_end::mir::builtins::ThrushBuiltin::Halloc { .. }
+        | crate::middle_end::mir::builtins::ThrushBuiltin::AlignOf { .. }
+        | crate::middle_end::mir::builtins::ThrushBuiltin::SizeOf { .. } => Ok(()),
     }
 }

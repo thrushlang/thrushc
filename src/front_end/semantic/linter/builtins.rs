@@ -1,37 +1,29 @@
-use crate::back_end::llvm_codegen::builtins::Builtin;
 use crate::front_end::semantic::linter::Linter;
 
-pub fn analyze<'linter>(linter: &mut Linter<'linter>, builtin: &'linter Builtin) {
+pub fn analyze<'linter>(
+    linter: &mut Linter<'linter>,
+    builtin: &'linter crate::middle_end::mir::builtins::ThrushBuiltin,
+) {
     match builtin {
-        Builtin::MemCpy {
-            source,
-            destination,
-            size,
-            ..
-        } => {
-            linter.analyze_expr(source);
-            linter.analyze_expr(destination);
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemCpy { src, dst, size, .. } => {
+            linter.analyze_expr(src);
+            linter.analyze_expr(dst);
             linter.analyze_expr(size);
         }
 
-        Builtin::MemMove {
-            source,
-            destination,
-            size,
-            ..
-        } => {
-            linter.analyze_expr(source);
-            linter.analyze_expr(destination);
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemMove { src, dst, size, .. } => {
+            linter.analyze_expr(src);
+            linter.analyze_expr(dst);
             linter.analyze_expr(size);
         }
 
-        Builtin::MemSet {
-            destination,
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemSet {
+            dst,
             new_size,
             size,
             ..
         } => {
-            linter.analyze_expr(destination);
+            linter.analyze_expr(dst);
             linter.analyze_expr(new_size);
             linter.analyze_expr(size);
         }

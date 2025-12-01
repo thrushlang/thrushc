@@ -3,12 +3,13 @@ use std::path::PathBuf;
 use inkwell::AddressSpace;
 use inkwell::{context::Context, values::BasicValueEnum};
 
+use crate::back_end::llvm_codegen::builtins;
+use crate::back_end::llvm_codegen::builtins::LLVMBuiltin;
 use crate::back_end::llvm_codegen::constgen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::expressions::unary;
 use crate::back_end::llvm_codegen::generation::float;
 use crate::back_end::llvm_codegen::generation::integer;
-use crate::back_end::llvm_codegen::{self, builtins};
 use crate::back_end::llvm_codegen::{abort, ptr};
 use crate::back_end::llvm_codegen::{binaryop, generation};
 
@@ -166,7 +167,10 @@ pub fn compile<'ctx>(
         Ast::DirectRef { expr, .. } => ptr::compile(context, expr, None),
 
         // Builtins
-        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, Some(cast_type)),
+        Ast::Builtin { builtin, .. } => {
+            let llvm_builtin: LLVMBuiltin<'_> = builtin.to_llvm_builtin();
+            builtins::compile(context, llvm_builtin, Some(cast_type))
+        }
 
         // Enum Value Access
         Ast::EnumValue { value, .. } => self::compile(context, value, cast_type),

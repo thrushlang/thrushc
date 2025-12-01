@@ -11,7 +11,7 @@ use inkwell::{builder::Builder, context::Context, values::BasicValueEnum};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    alloc: &'ctx Type,
+    alloc: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();

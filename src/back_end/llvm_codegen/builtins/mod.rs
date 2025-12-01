@@ -4,76 +4,70 @@ use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::typesystem::types::Type;
 
-use std::rc::Rc;
-
 use inkwell::values::BasicValueEnum;
 
 pub mod mem;
 
 #[derive(Debug, Clone)]
-pub enum Builtin<'ctx> {
-    Halloc {
-        alloc: Type,
+pub enum LLVMBuiltin<'ctx> {
+    Malloc {
+        of: &'ctx Type,
         span: Span,
     },
     MemCpy {
-        source: Rc<Ast<'ctx>>,
-        destination: Rc<Ast<'ctx>>,
-        size: Rc<Ast<'ctx>>,
+        src: &'ctx Ast<'ctx>,
+        dst: &'ctx Ast<'ctx>,
+        size: &'ctx Ast<'ctx>,
         span: Span,
     },
     MemMove {
-        source: Rc<Ast<'ctx>>,
-        destination: Rc<Ast<'ctx>>,
-        size: Rc<Ast<'ctx>>,
+        src: &'ctx Ast<'ctx>,
+        dst: &'ctx Ast<'ctx>,
+        size: &'ctx Ast<'ctx>,
         span: Span,
     },
     MemSet {
-        destination: Rc<Ast<'ctx>>,
-        new_size: Rc<Ast<'ctx>>,
-        size: Rc<Ast<'ctx>>,
+        dst: &'ctx Ast<'ctx>,
+        new_size: &'ctx Ast<'ctx>,
+        size: &'ctx Ast<'ctx>,
         span: Span,
     },
     AlignOf {
-        align_of: Type,
+        of: &'ctx Type,
         span: Span,
     },
     SizeOf {
-        size_of: Type,
+        of: &'ctx Type,
         span: Span,
     },
 }
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    builtin: &'ctx Builtin<'ctx>,
+    builtin: LLVMBuiltin<'ctx>,
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     match builtin {
-        Builtin::AlignOf { align_of, span } => {
-            mem::alingof::compile(context, align_of, *span, cast_type)
-        }
-        Builtin::MemCpy {
-            source,
-            destination,
+        LLVMBuiltin::AlignOf { of, span } => mem::alingof::compile(context, of, span, cast_type),
+        LLVMBuiltin::MemCpy {
+            src,
+            dst,
             size,
             span,
-        } => mem::memcpy::compile(context, source, destination, size, *span),
-        Builtin::MemMove {
-            source,
-            destination,
+        } => mem::memcpy::compile(context, src, dst, size, span),
+        LLVMBuiltin::MemMove {
+            src,
+            dst,
             size,
             span,
-        } => mem::memmove::compile(context, source, destination, size, *span),
-        Builtin::MemSet {
-            destination,
+        } => mem::memmove::compile(context, src, dst, size, span),
+        LLVMBuiltin::MemSet {
+            dst,
             new_size,
             size,
             span,
-        } => mem::memset::compile(context, destination, new_size, size, *span),
-        Builtin::Halloc { alloc, span } => mem::halloc::compile(context, alloc, *span),
-        Builtin::SizeOf { size_of, span } => {
-            mem::sizeof::compile(context, size_of, cast_type, *span)
-        }
+        } => mem::memset::compile(context, dst, new_size, size, span),
+        LLVMBuiltin::Malloc { of, span } => mem::malloc::compile(context, of, span),
+        LLVMBuiltin::SizeOf { of, span } => mem::sizeof::compile(context, of, cast_type, span),
     }
 }

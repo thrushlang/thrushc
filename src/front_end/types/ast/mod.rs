@@ -1,7 +1,5 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use crate::back_end::llvm_codegen::builtins::Builtin;
-
 use crate::core::diagnostic::span::Span;
 
 use crate::front_end::lexer::tokentype::TokenType;
@@ -20,6 +18,7 @@ use crate::front_end::types::parser::stmts::types::EnumFields;
 use crate::front_end::types::parser::stmts::types::StructFields;
 use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::builtins::ThrushBuiltin;
 
 use std::rc::Rc;
 
@@ -401,7 +400,7 @@ pub enum Ast<'ctx> {
 
     // Builtins
     Builtin {
-        builtin: Builtin<'ctx>,
+        builtin: ThrushBuiltin<'ctx>,
         kind: Type,
         span: Span,
     },

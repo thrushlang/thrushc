@@ -1,5 +1,3 @@
-use crate::back_end::llvm_codegen::builtins::Builtin;
-
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
@@ -11,6 +9,7 @@ use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::builtins::ThrushBuiltin;
 
 pub fn build_halloc<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -38,8 +37,8 @@ pub fn build_halloc<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: Builtin::Halloc {
-            alloc: alloc.clone(),
+        builtin: ThrushBuiltin::Halloc {
+            of: alloc.clone(),
             span,
         },
         kind: Type::Ptr(Some(alloc.into())),
@@ -89,9 +88,9 @@ pub fn build_memcpy<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: Builtin::MemCpy {
-            source: source.into(),
-            destination: destination.into(),
+        builtin: ThrushBuiltin::MemCpy {
+            src: source.into(),
+            dst: destination.into(),
             size: size.into(),
             span,
         },
@@ -142,9 +141,9 @@ pub fn build_memmove<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: Builtin::MemMove {
-            source: source.into(),
-            destination: destination.into(),
+        builtin: ThrushBuiltin::MemMove {
+            src: source.into(),
+            dst: destination.into(),
             size: size.into(),
             span,
         },
@@ -195,8 +194,8 @@ pub fn build_memset<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: Builtin::MemSet {
-            destination: destination.into(),
+        builtin: ThrushBuiltin::MemSet {
+            dst: destination.into(),
             new_size: new_size.into(),
             size: size.into(),
             span,
@@ -232,8 +231,8 @@ pub fn build_alignof<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: Builtin::AlignOf {
-            align_of: alignof_type,
+        builtin: ThrushBuiltin::AlignOf {
+            of: alignof_type,
             span,
         },
         kind: Type::U32,
@@ -267,8 +266,8 @@ pub fn build_sizeof<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: Builtin::SizeOf {
-            size_of: sizeof_type,
+        builtin: ThrushBuiltin::SizeOf {
+            of: sizeof_type,
             span,
         },
         kind: Type::U64,

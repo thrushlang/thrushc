@@ -1,6 +1,7 @@
 #![allow(clippy::collapsible_if)]
 
 use crate::back_end::llvm_codegen::block;
+use crate::back_end::llvm_codegen::builtins::LLVMBuiltin;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::declarations::{self};
 use crate::back_end::llvm_codegen::generation::{cast, float, integer};
@@ -415,7 +416,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::Builtin { builtin, .. } => {
-                builtins::compile(self.context, builtin, None);
+                let llvm_builtin: LLVMBuiltin = builtin.to_llvm_builtin();
+
+                builtins::compile(self.context, llvm_builtin, None);
             }
 
             Ast::Unreachable { .. } => {
@@ -706,7 +709,11 @@ pub fn compile<'ctx>(
         }
 
         // Builtins
-        Ast::Builtin { builtin, .. } => builtins::compile(context, builtin, cast_type),
+        Ast::Builtin { builtin, .. } => {
+            let llvm_builtin: LLVMBuiltin = builtin.to_llvm_builtin();
+
+            builtins::compile(context, llvm_builtin, cast_type)
+        }
 
         // Low-Level Instructions
         ast if ast.is_lli() => lli::compile_advanced(context, expr, cast_type),

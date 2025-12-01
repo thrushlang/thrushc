@@ -5,13 +5,13 @@ use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
-use crate::middle_end::mir::attributes::ThrushAttributes;
 
 pub fn build_attributes<'parser>(
     ctx: &mut ParserContext<'parser>,
     limits: &[TokenType],
-) -> Result<ThrushAttributes, CompilationIssue> {
-    let mut attributes: ThrushAttributes = Vec::with_capacity(10);
+) -> Result<crate::middle_end::mir::attributes::ThrushAttributes, CompilationIssue> {
+    let mut attributes: crate::middle_end::mir::attributes::ThrushAttributes =
+        Vec::with_capacity(10);
 
     while !limits.contains(&ctx.peek().kind) {
         let current_tk: &Token = ctx.peek();
@@ -62,8 +62,10 @@ pub fn build_attributes<'parser>(
                 ),
             ),
 
-            attribute if attribute.is_attribute() => {
-                if let Some(compiler_attribute) = attribute.as_attribute(span) {
+            tk_type if tk_type.is_attribute() => {
+                if let Some(compiler_attribute) =
+                    crate::middle_end::mir::attributes::as_attribute(tk_type, span)
+                {
                     attributes.push(compiler_attribute);
                     ctx.only_advance()?;
                 }

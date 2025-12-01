@@ -10,7 +10,6 @@ pub mod printer;
 pub mod scapes;
 pub mod string;
 pub mod token;
-pub mod tokenattr;
 pub mod tokenis;
 pub mod tokentype;
 pub mod types;

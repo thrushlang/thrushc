@@ -1,5 +1,3 @@
-use crate::back_end::llvm_codegen::builtins::Builtin;
-
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
@@ -10,31 +8,27 @@ use crate::front_end::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    builtin: &'type_checker Builtin,
+    builtin: &'type_checker crate::middle_end::mir::builtins::ThrushBuiltin,
 ) -> Result<(), CompilationIssue> {
     match builtin {
-        Builtin::MemSet {
-            destination,
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemSet {
+            dst,
             new_size,
             size,
             ..
-        } => self::validate_memset(typechecker, destination, new_size, size),
+        } => self::validate_memset(typechecker, dst, new_size, size),
 
-        Builtin::MemMove {
-            destination,
-            source,
-            size,
-            ..
-        } => self::validate_memmove(typechecker, destination, source, size),
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemMove { dst, src, size, .. } => {
+            self::validate_memmove(typechecker, dst, src, size)
+        }
 
-        Builtin::MemCpy {
-            destination,
-            source,
-            size,
-            ..
-        } => self::validate_memcpy(typechecker, destination, source, size),
+        crate::middle_end::mir::builtins::ThrushBuiltin::MemCpy { dst, src, size, .. } => {
+            self::validate_memcpy(typechecker, dst, src, size)
+        }
 
-        Builtin::Halloc { .. } | Builtin::AlignOf { .. } | Builtin::SizeOf { .. } => Ok(()),
+        crate::middle_end::mir::builtins::ThrushBuiltin::Halloc { .. }
+        | crate::middle_end::mir::builtins::ThrushBuiltin::AlignOf { .. }
+        | crate::middle_end::mir::builtins::ThrushBuiltin::SizeOf { .. } => Ok(()),
     }
 }
 
