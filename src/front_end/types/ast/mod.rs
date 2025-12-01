@@ -1,6 +1,6 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use crate::back_end::llvm::compiler::builtins::Builtin;
+use crate::back_end::llvm_codegen::builtins::Builtin;
 
 use crate::core::diagnostic::span::Span;
 

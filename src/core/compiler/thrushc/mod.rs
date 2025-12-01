@@ -12,10 +12,10 @@ use std::process;
 use std::time::Duration;
 use std::time::Instant;
 
-use crate::back_end::llvm;
-use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
-use crate::back_end::llvm::compiler::jit::LLVMJITCompiler;
-use crate::back_end::llvm::compiler::optimization::LLVMOptimizerFlags;
+use crate::back_end::llvm_codegen;
+use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::jit::LLVMJITCompiler;
+use crate::back_end::llvm_codegen::optimization::LLVMOptimizerFlags;
 
 use crate::middle_end;
 
@@ -234,7 +234,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             self.options,
         );
 
-        llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, ast);
+        llvm_codegen::LLVMCompiler::compile(&mut llvm_codegen_context, ast);
 
         validate::llvm_codegen(&llvm_module, file)?;
 
@@ -253,7 +253,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation(self, file_time, file);
         }
 
-        llvm::compiler::optimization::LLVMOptimizer::new(
+        llvm_codegen::optimization::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
             LLVMOptimizerFlags::new(self.options.disable_default_opt()),
@@ -346,7 +346,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             };
 
             let llvm_jit: LLVMJITCompiler =
-                llvm::compiler::jit::LLVMJITCompiler::new(engine, config, modules);
+                llvm_codegen::jit::LLVMJITCompiler::new(engine, config, modules);
 
             let llvm_jit_result: i32 = llvm_jit.compile_and_run().unwrap_or(1);
 
@@ -465,7 +465,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             self.options,
         );
 
-        llvm::compiler::LLVMCompiler::compile(&mut llvm_codegen_context, ast);
+        llvm_codegen::LLVMCompiler::compile(&mut llvm_codegen_context, ast);
 
         validate::llvm_codegen(&llvm_module, file)?;
 
@@ -484,7 +484,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
 
-        llvm::compiler::optimization::LLVMOptimizer::new(
+        llvm_codegen::optimization::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
             LLVMOptimizerFlags::new(self.options.disable_default_opt()),

@@ -1,4 +1,4 @@
-use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::typesystem::types::Type;

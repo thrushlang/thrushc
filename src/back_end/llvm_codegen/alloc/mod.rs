@@ -1,0 +1,35 @@
+use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::typegen;
+
+use crate::core::diagnostic::span::Span;
+use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
+
+use inkwell::{context::Context, types::BasicTypeEnum, values::PointerValue};
+
+pub mod atomic;
+pub mod memheap;
+pub mod memstack;
+pub mod memstatic;
+
+pub fn local_variable<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    ascii_name: &str,
+    kind: &Type,
+    value: Option<&Ast>,
+    attributes: &ThrushAttributes,
+    span: Span,
+) -> PointerValue<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
+    let llvm_type: BasicTypeEnum = typegen::generate_local(llvm_context, kind, value);
+    let name: String = format!("local.{}", ascii_name);
+
+    if attributes.has_heap_attr() {
+        memheap::try_alloc_heap(context, llvm_type, &name, span)
+    } else {
+        memstack::try_alloc_stack(context, llvm_type, &name, span)
+    }
+}

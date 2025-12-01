@@ -1,2 +1,2 @@
-pub mod gcc;
-pub mod llvm;
+pub mod gcc_codegen;
+pub mod llvm_codegen;

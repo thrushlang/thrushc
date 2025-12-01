@@ -1,4 +1,4 @@
-use crate::back_end::llvm::types::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 
 use crate::core::diagnostic::span::Span;
 use crate::middle_end::mir::attributes::traits::{

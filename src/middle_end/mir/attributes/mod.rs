@@ -1,4 +1,4 @@
-use crate::back_end::llvm::compiler::attributes::LLVMAttribute;
+use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
 use crate::core::diagnostic::span::Span;
 use crate::middle_end::mir::attributes::linkage::ThrushLinkage;
 

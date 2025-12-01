@@ -1,10 +1,12 @@
-use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
-
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
 
 pub trait LLVMTypeExtensions {
-    fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool;
+    fn llvm_is_same_bit_size(
+        &self,
+        context: &crate::back_end::llvm_codegen::context::LLVMCodeGenContext<'_, '_>,
+        other: &Type,
+    ) -> bool;
     fn llvm_is_intrinsic_available(&self, name: &str) -> bool;
 }
 

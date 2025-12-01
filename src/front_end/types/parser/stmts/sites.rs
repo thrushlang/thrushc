@@ -1,4 +1,4 @@
-use crate::back_end::llvm::compiler::memory::LLVMAllocationSite;
+use crate::back_end::llvm_codegen::memory::LLVMAllocationSite;
 
 #[derive(Debug, Clone, Copy)]
 pub enum AllocationSite {

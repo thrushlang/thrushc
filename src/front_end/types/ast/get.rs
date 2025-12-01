@@ -1,5 +1,5 @@
 use crate::back_end;
-use crate::back_end::llvm::compiler::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
@@ -264,7 +264,7 @@ impl AstLLVMGetType for Ast<'_> {
             // Unreachable marker
             Ast::Unreachable { .. } => &Type::Void,
 
-            any => back_end::llvm::compiler::abort::abort_codegen(
+            any => back_end::llvm_codegen::abort::abort_codegen(
                 context,
                 "Failed to compile get the type!",
                 any.get_span(),

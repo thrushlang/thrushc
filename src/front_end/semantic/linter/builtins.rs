@@ -1,4 +1,4 @@
-use crate::back_end::llvm::compiler::builtins::Builtin;
+use crate::back_end::llvm_codegen::builtins::Builtin;
 use crate::front_end::semantic::linter::Linter;
 
 pub fn analyze<'linter>(linter: &mut Linter<'linter>, builtin: &'linter Builtin) {
