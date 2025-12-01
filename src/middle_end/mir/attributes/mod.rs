@@ -1,5 +1,5 @@
-use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
 use crate::core::diagnostic::span::Span;
+
 use crate::middle_end::mir::attributes::linkage::ThrushLinkage;
 
 use std::fmt::Display;
@@ -184,37 +184,83 @@ impl ThrushAttribute {
 
 impl ThrushAttribute {
     #[inline]
-    pub fn as_llvm_attribute(&self) -> Option<LLVMAttribute<'_>> {
+    pub fn as_llvm_attribute(
+        &self,
+    ) -> Option<crate::back_end::llvm_codegen::attributes::LLVMAttribute<'_>> {
         match self {
-            ThrushAttribute::Extern(external_name, ..) => {
-                Some(LLVMAttribute::Extern(external_name))
+            ThrushAttribute::Extern(external_name, ..) => Some(
+                crate::back_end::llvm_codegen::attributes::LLVMAttribute::Extern(external_name),
+            ),
+            ThrushAttribute::Linkage(linkage, ..) => Some(
+                crate::back_end::llvm_codegen::attributes::LLVMAttribute::Linkage(
+                    linkage.get_llvm_linkage(),
+                ),
+            ),
+            ThrushAttribute::Convention(name, ..) => Some(
+                crate::back_end::llvm_codegen::attributes::LLVMAttribute::Convention(
+                    callconventions::get_call_convention(name.as_bytes()),
+                ),
+            ),
+            ThrushAttribute::Public(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Public)
             }
-            ThrushAttribute::Linkage(linkage, ..) => {
-                Some(LLVMAttribute::Linkage(linkage.get_llvm_linkage()))
+            ThrushAttribute::Ignore(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Ignore)
             }
-            ThrushAttribute::Convention(name, ..) => Some(LLVMAttribute::Convention(
-                callconventions::get_call_convention(name.as_bytes()),
-            )),
-            ThrushAttribute::Public(..) => Some(LLVMAttribute::Public),
-            ThrushAttribute::Ignore(..) => Some(LLVMAttribute::Ignore),
-            ThrushAttribute::Hot(..) => Some(LLVMAttribute::Hot),
-            ThrushAttribute::NoInline(..) => Some(LLVMAttribute::NoInline),
-            ThrushAttribute::InlineHint(..) => Some(LLVMAttribute::InlineHint),
-            ThrushAttribute::MinSize(..) => Some(LLVMAttribute::MinSize),
-            ThrushAttribute::AlwaysInline(..) => Some(LLVMAttribute::AlwaysInline),
-            ThrushAttribute::SafeStack(..) => Some(LLVMAttribute::SafeStack),
-            ThrushAttribute::StrongStack(..) => Some(LLVMAttribute::StrongStack),
-            ThrushAttribute::WeakStack(..) => Some(LLVMAttribute::WeakStack),
-            ThrushAttribute::PreciseFloats(..) => Some(LLVMAttribute::PreciseFloats),
-            ThrushAttribute::AsmThrow(..) => Some(LLVMAttribute::AsmThrow),
-            ThrushAttribute::AsmSyntax(syntax, ..) => Some(LLVMAttribute::AsmSyntax(syntax)),
-            ThrushAttribute::AsmSideEffects(..) => Some(LLVMAttribute::AsmSideEffects),
-            ThrushAttribute::AsmAlignStack(..) => Some(LLVMAttribute::AsmAlignStack),
-            ThrushAttribute::Stack(..) => Some(LLVMAttribute::Stack),
-            ThrushAttribute::Heap(..) => Some(LLVMAttribute::Heap),
-            ThrushAttribute::Packed(..) => Some(LLVMAttribute::Packed),
-            ThrushAttribute::NoUnwind(..) => Some(LLVMAttribute::NoUnwind),
-            ThrushAttribute::OptFuzzing(..) => Some(LLVMAttribute::OptFuzzing),
+            ThrushAttribute::Hot(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Hot)
+            }
+            ThrushAttribute::NoInline(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::NoInline)
+            }
+            ThrushAttribute::InlineHint(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::InlineHint)
+            }
+            ThrushAttribute::MinSize(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::MinSize)
+            }
+            ThrushAttribute::AlwaysInline(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::AlwaysInline)
+            }
+            ThrushAttribute::SafeStack(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::SafeStack)
+            }
+            ThrushAttribute::StrongStack(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::StrongStack)
+            }
+            ThrushAttribute::WeakStack(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::WeakStack)
+            }
+            ThrushAttribute::PreciseFloats(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::PreciseFloats)
+            }
+            ThrushAttribute::AsmThrow(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::AsmThrow)
+            }
+            ThrushAttribute::AsmSyntax(syntax, ..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::AsmSyntax(syntax))
+            }
+            ThrushAttribute::AsmSideEffects(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::AsmSideEffects)
+            }
+            ThrushAttribute::AsmAlignStack(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::AsmAlignStack)
+            }
+            ThrushAttribute::Stack(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Stack)
+            }
+            ThrushAttribute::Heap(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Heap)
+            }
+            ThrushAttribute::Packed(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Packed)
+            }
+            ThrushAttribute::NoUnwind(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::NoUnwind)
+            }
+            ThrushAttribute::OptFuzzing(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::OptFuzzing)
+            }
         }
     }
 }

@@ -1,6 +1,5 @@
-use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
-
 use crate::core::diagnostic::span::Span;
+
 use crate::middle_end::mir::attributes::traits::{
     ThrushAttributeComparatorExtensions, ThrushAttributesExtensions,
 };
@@ -98,8 +97,9 @@ impl ThrushAttributesExtensions for ThrushAttributes {
     }
 
     #[inline]
-    fn as_llvm_attributes(&self) -> LLVMAttributes<'_> {
-        let mut llvm_attributes: LLVMAttributes = Vec::with_capacity(self.len());
+    fn as_llvm_attributes(&self) -> crate::back_end::llvm_codegen::types::repr::LLVMAttributes<'_> {
+        let mut llvm_attributes: crate::back_end::llvm_codegen::types::repr::LLVMAttributes =
+            Vec::with_capacity(self.len());
 
         for attribute in self {
             if let Some(llvm_attribute) = attribute.as_llvm_attribute() {
