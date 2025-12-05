@@ -1,8 +1,6 @@
 use crate::front_end::typesystem::modificators::FunctionReferenceTypeModificator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 
-use std::sync::Arc;
-
 #[derive(Debug, Clone, Default)]
 pub enum Type {
     // Signed Integer Type
@@ -32,25 +30,29 @@ pub enum Type {
     Char,
 
     // Constant Type
-    Const(Arc<Type>),
+    Const(std::boxed::Box<Type>),
 
     // Ptr Type
-    Ptr(Option<Arc<Type>>),
+    Ptr(Option<std::boxed::Box<Type>>),
 
     // Struct Type
-    Struct(String, Vec<Type>, StructureTypeModificator),
+    Struct(String, std::vec::Vec<Type>, StructureTypeModificator),
 
     // Fixed FixedArray
-    FixedArray(Arc<Type>, u32),
+    FixedArray(std::boxed::Box<Type>, u32),
 
     // Array Type
-    Array(Arc<Type>),
+    Array(std::boxed::Box<Type>),
 
     // Memory Address
     Addr,
 
     // Function Referece
-    Fn(Vec<Type>, Arc<Type>, FunctionReferenceTypeModificator),
+    Fn(
+        std::vec::Vec<Type>,
+        std::boxed::Box<Type>,
+        FunctionReferenceTypeModificator,
+    ),
 
     // Void Type
     #[default]

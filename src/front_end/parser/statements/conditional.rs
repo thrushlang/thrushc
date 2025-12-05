@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
@@ -32,36 +30,37 @@ pub fn build_conditional<'parser>(
     let mut elseif: Vec<Ast> = Vec::with_capacity(10);
 
     while ctx.match_token(TokenType::Elif)? {
-        let span: Span = ctx.previous().span;
+        let span: Span = ctx.previous().get_span();
 
         let condition: Ast = expr::build_expr(ctx)?;
-        let block: Ast = block::build_block(ctx)?;
+        let else_if_block: Ast = block::build_block(ctx)?;
 
-        if block.is_empty_block() {
-            continue;
+        if !else_if_block.is_empty_block() {
+            elseif.push(Ast::Elif {
+                condition: condition.into(),
+                block: else_if_block.into(),
+                span,
+            });
         }
-
-        elseif.push(Ast::Elif {
-            condition: condition.into(),
-            block: block.into(),
-            span,
-        });
     }
 
-    let mut anyway: Option<Rc<Ast>> = None;
-
     if ctx.match_token(TokenType::Else)? {
-        let span: Span = ctx.previous().span;
-        let block: Ast = block::build_block(ctx)?;
+        let span: Span = ctx.previous().get_span();
+        let else_block: Ast = block::build_block(ctx)?;
 
-        if !block.is_empty_block() {
-            anyway = Some(
-                Ast::Else {
-                    block: block.into(),
-                    span,
-                }
-                .into(),
-            );
+        if !else_block.is_empty_block() {
+            let else_node: Ast = Ast::Else {
+                block: else_block.into(),
+                span,
+            };
+
+            return Ok(Ast::If {
+                condition: condition.into(),
+                block: block.into(),
+                elseif,
+                anyway: Some(else_node.into()),
+                span,
+            });
         }
     }
 
@@ -69,7 +68,7 @@ pub fn build_conditional<'parser>(
         condition: condition.into(),
         block: block.into(),
         elseif,
-        anyway,
+        anyway: None,
         span,
     })
 }

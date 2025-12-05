@@ -2,6 +2,9 @@
 
 use crate::core::diagnostic::span::Span;
 
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::builtins::ThrushBuiltin;
+
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::ast::metadata::cast::CastMetadata;
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
@@ -17,10 +20,6 @@ use crate::front_end::types::parser::stmts::types::Constructor;
 use crate::front_end::types::parser::stmts::types::EnumFields;
 use crate::front_end::types::parser::stmts::types::StructFields;
 use crate::front_end::typesystem::types::Type;
-use crate::middle_end::mir::attributes::ThrushAttributes;
-use crate::middle_end::mir::builtins::ThrushBuiltin;
-
-use std::rc::Rc;
 
 pub mod get;
 pub mod is;
@@ -32,7 +31,7 @@ pub mod traits;
 #[derive(Debug, Clone)]
 pub enum Ast<'ctx> {
     Str {
-        bytes: Vec<u8>,
+        bytes: std::vec::Vec<u8>,
         kind: Type,
         span: Span,
     },
@@ -40,7 +39,6 @@ pub enum Ast<'ctx> {
     Char {
         kind: Type,
         byte: u64,
-
         span: Span,
     },
 
@@ -77,20 +75,20 @@ pub enum Ast<'ctx> {
 
     // Fixed Array
     FixedArray {
-        items: Vec<Ast<'ctx>>,
+        items: std::vec::Vec<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
 
     // Array
     Array {
-        items: Vec<Ast<'ctx>>,
+        items: std::vec::Vec<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
     Index {
-        source: Rc<Ast<'ctx>>,
-        index: Rc<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ctx>>,
+        index: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         metadata: IndexMetadata,
         span: Span,
@@ -113,8 +111,8 @@ pub enum Ast<'ctx> {
     },
 
     Property {
-        source: Rc<Ast<'ctx>>,
-        indexes: Vec<(Type, u32)>,
+        source: std::boxed::Box<Ast<'ctx>>,
+        indexes: std::vec::Vec<(Type, u32)>,
         metadata: PropertyMetadata,
         kind: Type,
         span: Span,
@@ -122,37 +120,37 @@ pub enum Ast<'ctx> {
 
     // Conditionals
     If {
-        condition: Rc<Ast<'ctx>>,
-        block: Rc<Ast<'ctx>>,
-        elseif: Vec<Ast<'ctx>>,
-        anyway: Option<Rc<Ast<'ctx>>>,
+        condition: std::boxed::Box<Ast<'ctx>>,
+        block: std::boxed::Box<Ast<'ctx>>,
+        elseif: std::vec::Vec<Ast<'ctx>>,
+        anyway: Option<std::boxed::Box<Ast<'ctx>>>,
         span: Span,
     },
     Elif {
-        condition: Rc<Ast<'ctx>>,
-        block: Rc<Ast<'ctx>>,
+        condition: std::boxed::Box<Ast<'ctx>>,
+        block: std::boxed::Box<Ast<'ctx>>,
         span: Span,
     },
     Else {
-        block: Rc<Ast<'ctx>>,
+        block: std::boxed::Box<Ast<'ctx>>,
         span: Span,
     },
 
     // Loops
     For {
-        local: Rc<Ast<'ctx>>,
-        condition: Rc<Ast<'ctx>>,
-        actions: Rc<Ast<'ctx>>,
-        block: Rc<Ast<'ctx>>,
+        local: std::boxed::Box<Ast<'ctx>>,
+        condition: std::boxed::Box<Ast<'ctx>>,
+        actions: std::boxed::Box<Ast<'ctx>>,
+        block: std::boxed::Box<Ast<'ctx>>,
         span: Span,
     },
     While {
-        condition: Rc<Ast<'ctx>>,
-        block: Rc<Ast<'ctx>>,
+        condition: std::boxed::Box<Ast<'ctx>>,
+        block: std::boxed::Box<Ast<'ctx>>,
         span: Span,
     },
     Loop {
-        block: Rc<Ast<'ctx>>,
+        block: std::boxed::Box<Ast<'ctx>>,
         span: Span,
     },
 
@@ -166,7 +164,7 @@ pub enum Ast<'ctx> {
 
     // Code block
     Block {
-        nodes: Vec<Ast<'ctx>>,
+        nodes: std::vec::Vec<Ast<'ctx>>,
         span: Span,
     },
 
@@ -185,7 +183,7 @@ pub enum Ast<'ctx> {
     },
     EnumValue {
         name: String,
-        value: Rc<Ast<'ctx>>,
+        value: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
@@ -194,8 +192,8 @@ pub enum Ast<'ctx> {
     Intrinsic {
         name: &'ctx str,
         external_name: &'ctx str,
-        parameters: Vec<Ast<'ctx>>,
-        parameters_types: Vec<Type>,
+        parameters: std::vec::Vec<Ast<'ctx>>,
+        parameters_types: std::vec::Vec<Type>,
         return_type: Type,
         attributes: ThrushAttributes,
         span: Span,
@@ -207,8 +205,8 @@ pub enum Ast<'ctx> {
     AssemblerFunction {
         name: &'ctx str,
         ascii_name: &'ctx str,
-        parameters: Vec<Ast<'ctx>>,
-        parameters_types: Vec<Type>,
+        parameters: std::vec::Vec<Ast<'ctx>>,
+        parameters_types: std::vec::Vec<Type>,
         assembler: String,
         constraints: String,
         return_type: Type,
@@ -224,9 +222,9 @@ pub enum Ast<'ctx> {
     Function {
         name: &'ctx str,
         ascii_name: &'ctx str,
-        parameters: Vec<Ast<'ctx>>,
-        parameter_types: Vec<Type>,
-        body: Option<Rc<Ast<'ctx>>>,
+        parameters: std::vec::Vec<Ast<'ctx>>,
+        parameter_types: std::vec::Vec<Type>,
+        body: Option<std::boxed::Box<Ast<'ctx>>>,
         return_type: Type,
         attributes: ThrushAttributes,
         span: Span,
@@ -240,7 +238,7 @@ pub enum Ast<'ctx> {
         span: Span,
     },
     Return {
-        expression: Option<Rc<Ast<'ctx>>>,
+        expression: Option<std::boxed::Box<Ast<'ctx>>>,
         kind: Type,
         span: Span,
     },
@@ -250,7 +248,7 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         ascii_name: &'ctx str,
         kind: Type,
-        value: Option<Rc<Ast<'ctx>>>,
+        value: Option<std::boxed::Box<Ast<'ctx>>>,
         attributes: ThrushAttributes,
         metadata: StaticMetadata,
         span: Span,
@@ -261,7 +259,7 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         ascii_name: &'ctx str,
         kind: Type,
-        value: Rc<Ast<'ctx>>,
+        value: std::boxed::Box<Ast<'ctx>>,
         attributes: ThrushAttributes,
         metadata: ConstantMetadata,
         span: Span,
@@ -272,7 +270,7 @@ pub enum Ast<'ctx> {
         name: &'ctx str,
         ascii_name: &'ctx str,
         kind: Type,
-        value: Option<Rc<Ast<'ctx>>>,
+        value: Option<std::boxed::Box<Ast<'ctx>>>,
         attributes: ThrushAttributes,
         metadata: LocalMetadata,
         span: Span,
@@ -288,8 +286,8 @@ pub enum Ast<'ctx> {
 
     // Mutation
     Mut {
-        source: Rc<Ast<'ctx>>,
-        value: Rc<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ctx>>,
+        value: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
@@ -298,7 +296,7 @@ pub enum Ast<'ctx> {
     LLI {
         name: &'ctx str,
         kind: Type,
-        expr: Rc<Ast<'ctx>>,
+        expr: std::boxed::Box<Ast<'ctx>>,
         span: Span,
     },
 
@@ -311,27 +309,27 @@ pub enum Ast<'ctx> {
     },
 
     Address {
-        source: Rc<Ast<'ctx>>,
-        indexes: Vec<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ctx>>,
+        indexes: std::vec::Vec<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
 
     Write {
-        source: Rc<Ast<'ctx>>,
-        write_value: Rc<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ctx>>,
+        write_value: std::boxed::Box<Ast<'ctx>>,
         write_type: Type,
         span: Span,
     },
     Load {
-        source: Rc<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
 
     // Pointer Manipulation
     Deref {
-        value: Rc<Ast<'ctx>>,
+        value: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         metadata: DereferenceMetadata,
         span: Span,
@@ -339,7 +337,7 @@ pub enum Ast<'ctx> {
 
     // Casts
     As {
-        from: Rc<Ast<'ctx>>,
+        from: std::boxed::Box<Ast<'ctx>>,
         cast: Type,
         metadata: CastMetadata,
         span: Span,
@@ -347,22 +345,22 @@ pub enum Ast<'ctx> {
 
     // Expressions
     DirectRef {
-        expr: Rc<Ast<'ctx>>,
+        expr: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
 
     Call {
         name: &'ctx str,
-        args: Vec<Ast<'ctx>>,
+        args: std::vec::Vec<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
 
     Indirect {
-        function: Rc<Ast<'ctx>>,
+        function: std::boxed::Box<Ast<'ctx>>,
         function_type: Type,
-        args: Vec<Ast<'ctx>>,
+        args: std::vec::Vec<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
@@ -370,16 +368,16 @@ pub enum Ast<'ctx> {
     AsmValue {
         assembler: String,
         constraints: String,
-        args: Vec<Ast<'ctx>>,
+        args: std::vec::Vec<Ast<'ctx>>,
         kind: Type,
         attributes: ThrushAttributes,
         span: Span,
     },
 
     BinaryOp {
-        left: Rc<Ast<'ctx>>,
+        left: std::boxed::Box<Ast<'ctx>>,
         operator: TokenType,
-        right: Rc<Ast<'ctx>>,
+        right: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
@@ -387,13 +385,13 @@ pub enum Ast<'ctx> {
     UnaryOp {
         operator: TokenType,
         kind: Type,
-        expression: Rc<Ast<'ctx>>,
+        expression: std::boxed::Box<Ast<'ctx>>,
         is_pre: bool,
         span: Span,
     },
 
     Group {
-        expression: Rc<Ast<'ctx>>,
+        expression: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },
