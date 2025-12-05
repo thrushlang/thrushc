@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: Thrush Compiler
+message: >-
+  If you use this software in your work, please cite it
+  using the following metadata...
+type: software
+authors:
+  - given-names: Stevens Benavides
+    family-names: DevCheckOG
+    email: foss.stevens.benavides@gmail.com
+repository-code: 'https://github.com/thrushlang/thrushc'
+url: 'https://github.com/thrushlang'
+abstract: >-
+  General-purpose systems programming language that provides
+  a new low-level development approach. 
+keywords:
+  - Compiler
+  - Programming Languague
+  - Thrush Programming Language
+license: GPL-3.0
