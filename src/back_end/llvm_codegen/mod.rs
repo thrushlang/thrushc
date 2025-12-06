@@ -26,6 +26,7 @@ pub mod ptr;
 pub mod reloc;
 pub mod statements;
 pub mod symbols;
+pub mod triple;
 pub mod typegen;
 pub mod types;
 

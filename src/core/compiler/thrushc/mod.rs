@@ -230,6 +230,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_context,
             &llvm_builder,
             target_machine.get_target_data(),
+            target_machine.get_triple(),
             Diagnostician::new(file),
             self.options,
         );
@@ -461,6 +462,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_context,
             &llvm_builder,
             target_machine.get_target_data(),
+            target_machine.get_triple(),
             Diagnostician::new(file),
             self.options,
         );

@@ -40,6 +40,7 @@ use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::targets::TargetData;
+use inkwell::targets::TargetTriple;
 use inkwell::values::BasicValueEnum;
 use inkwell::values::FunctionValue;
 use inkwell::values::PointerValue;
@@ -50,6 +51,7 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
     target_data: TargetData,
+    target_triple: TargetTriple,
 
     table: SymbolsTable<'ctx>,
 
@@ -68,6 +70,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         context: &'ctx Context,
         builder: &'ctx Builder<'ctx>,
         target_data: TargetData,
+        target_triple: TargetTriple,
         diagnostician: Diagnostician,
         options: &'ctx CompilerOptions,
     ) -> Self {
@@ -76,6 +79,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             context,
             builder,
             target_data,
+            target_triple,
 
             table: SymbolsTable::new(),
             loop_ctx: LoopContext::new(),
@@ -466,6 +470,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     #[inline]
     pub fn get_target_data(&self) -> &TargetData {
         &self.target_data
+    }
+
+    #[inline]
+    pub fn get_target_triple(&self) -> &TargetTriple {
+        &self.target_triple
     }
 
     #[inline]

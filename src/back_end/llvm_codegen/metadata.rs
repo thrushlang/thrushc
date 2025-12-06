@@ -2,6 +2,7 @@ use crate::back_end::llvm_codegen::codemodel::LLVMCodeModelExtensions;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::reloc::LLVMRelocModeExtensions;
 
+use crate::back_end::llvm_codegen::triple::LLVMTargetTriple;
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::constants::COMPILER_VERSION;
@@ -163,6 +164,28 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 .get_context()
                 .get_llvm_module()
                 .add_global_metadata("llvm.module.flags", &sdk_v);
+        }
+
+        {
+            let triple: LLVMTargetTriple =
+                LLVMTargetTriple::new(self.get_context().get_target_triple());
+
+            let abi: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
+                lvl_error,
+                self.get_context()
+                    .get_llvm_context()
+                    .metadata_string("target-abi")
+                    .into(),
+                self.get_context()
+                    .get_llvm_context()
+                    .metadata_string(triple.get_abi())
+                    .into(),
+            ]);
+
+            let _ = self
+                .get_context()
+                .get_llvm_module()
+                .add_global_metadata("llvm.module.flags", &abi);
         }
 
         if !llvm_backend.get_optimization().is_high_opt() && !llvm_backend.omit_frame_pointer() {
