@@ -1,4 +1,5 @@
 use crate::core::diagnostic::span::Span;
+
 use crate::front_end::types::ast::Ast;
 use crate::front_end::typesystem::types::Type;
 

@@ -22,6 +22,7 @@ use crate::front_end::types::parser::stmts::types::StructFields;
 use crate::front_end::typesystem::types::Type;
 
 pub mod get;
+pub mod impls;
 pub mod is;
 pub mod metadata;
 pub mod new;
