@@ -188,6 +188,29 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 .add_global_metadata("llvm.module.flags", &abi);
         }
 
+        {
+            if llvm_backend.get_reloc_mode().is_no_pic() || llvm_backend.is_jit() {
+                let direct_access_external_data: MetadataValue =
+                    self.get_context().get_llvm_context().metadata_node(&[
+                        lvl_max,
+                        self.get_context()
+                            .get_llvm_context()
+                            .metadata_string("direct-access-external-data")
+                            .into(),
+                        self.get_context()
+                            .get_llvm_context()
+                            .i32_type()
+                            .const_int(1, false)
+                            .into(),
+                    ]);
+
+                let _ = self
+                    .get_context()
+                    .get_llvm_module()
+                    .add_global_metadata("llvm.module.flags", &direct_access_external_data);
+            }
+        }
+
         if !llvm_backend.get_optimization().is_high_opt() && !llvm_backend.omit_frame_pointer() {
             let frame_pointer: MetadataValue =
                 self.get_context().get_llvm_context().metadata_node(&[

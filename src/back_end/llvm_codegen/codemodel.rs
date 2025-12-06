@@ -8,11 +8,11 @@ impl LLVMCodeModelExtensions for CodeModel {
     fn to_metadata_repr(&self) -> u64 {
         match self {
             CodeModel::Default => 0,
-            CodeModel::JITDefault => 1,
-            CodeModel::Small => 2,
-            CodeModel::Kernel => 3,
-            CodeModel::Medium => 4,
-            CodeModel::Large => 5,
+            CodeModel::JITDefault => 0,
+            CodeModel::Small => 0,
+            CodeModel::Kernel => 2,
+            CodeModel::Medium => 3,
+            CodeModel::Large => 4,
         }
     }
 }

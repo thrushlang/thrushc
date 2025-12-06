@@ -55,7 +55,7 @@ impl LLVMBackend {
             },
 
             optimization: ThrushOptimization::None,
-            reloc_mode: RelocMode::PIC,
+            reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),
