@@ -35,6 +35,7 @@ pub struct CompilerOptions {
     obfuscate_ir: bool,
 
     linking_compilers_config: LinkingCompilersConfiguration,
+    build_id: uuid::Uuid,
 }
 
 #[derive(Debug, Clone)]
@@ -144,6 +145,7 @@ impl CompilerOptions {
             obfuscate_ir: true,
 
             linking_compilers_config: LinkingCompilersConfiguration::new(),
+            build_id: uuid::Uuid::new_v4(),
         }
     }
 }
@@ -342,6 +344,11 @@ impl CompilerOptions {
     #[inline]
     pub fn get_linking_compilers_configuration(&self) -> &LinkingCompilersConfiguration {
         &self.linking_compilers_config
+    }
+
+    #[inline]
+    pub fn get_build_id(&self) -> &uuid::Uuid {
+        &self.build_id
     }
 }
 

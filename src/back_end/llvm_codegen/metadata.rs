@@ -1,13 +1,12 @@
 use crate::back_end::llvm_codegen::codemodel::LLVMCodeModelExtensions;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::reloc::LLVMRelocModeExtensions;
-
 use crate::back_end::llvm_codegen::triple::LLVMTargetTriple;
+
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::constants::COMPILER_VERSION;
 
-use inkwell::support;
 use inkwell::values::BasicMetadataValueEnum;
 use inkwell::values::MetadataValue;
 
@@ -29,6 +28,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
     fn setup_metadata(&self) {
         self.setup_llvm_module_flags();
         self.setup_compiler_info();
+        self.setup_build_id();
     }
 
     fn setup_llvm_module_flags(&self) {
@@ -54,13 +54,6 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             .get_llvm_context()
             .i32_type()
             .const_int(1, false)
-            .into();
-
-        let lvl_warning: BasicMetadataValueEnum = self
-            .get_context()
-            .get_llvm_context()
-            .i32_type()
-            .const_int(2, false)
             .into();
 
         {
@@ -129,10 +122,18 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 .add_global_metadata("llvm.module.flags", &code_level);
         }
 
+        #[cfg(target_os = "macos")]
         {
-            let llvm_major: u32 = support::get_llvm_version().0;
-            let llvm_minor: u32 = support::get_llvm_version().1;
-            let llvm_patch: u32 = support::get_llvm_version().2;
+            let lvl_warning: BasicMetadataValueEnum = self
+                .get_context()
+                .get_llvm_context()
+                .i32_type()
+                .const_int(2, false)
+                .into();
+
+            let llvm_major: u32 = inkwell::support::get_llvm_version().0;
+            let llvm_minor: u32 = inkwell::support::get_llvm_version().1;
+            let llvm_patch: u32 = inkwell::support::get_llvm_version().2;
 
             let sdk_v: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
                 lvl_warning,
@@ -170,22 +171,27 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             let triple: LLVMTargetTriple =
                 LLVMTargetTriple::new(self.get_context().get_target_triple());
 
-            let abi: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
-                lvl_error,
-                self.get_context()
-                    .get_llvm_context()
-                    .metadata_string("target-abi")
-                    .into(),
-                self.get_context()
-                    .get_llvm_context()
-                    .metadata_string(triple.get_abi())
-                    .into(),
-            ]);
+            let abi: &str = triple.get_abi();
 
-            let _ = self
-                .get_context()
-                .get_llvm_module()
-                .add_global_metadata("llvm.module.flags", &abi);
+            if abi != "unknown" {
+                let metadata: MetadataValue =
+                    self.get_context().get_llvm_context().metadata_node(&[
+                        lvl_error,
+                        self.get_context()
+                            .get_llvm_context()
+                            .metadata_string("target-abi")
+                            .into(),
+                        self.get_context()
+                            .get_llvm_context()
+                            .metadata_string(abi)
+                            .into(),
+                    ]);
+
+                let _ = self
+                    .get_context()
+                    .get_llvm_module()
+                    .add_global_metadata("llvm.module.flags", &metadata);
+            }
         }
 
         {
@@ -268,6 +274,35 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             .get_context()
             .get_llvm_module()
             .add_global_metadata("llvm.ident", &node);
+    }
+
+    fn setup_build_id(&self) {
+        let options: &CompilerOptions = self.get_context().get_compiler_options();
+        let id: String = options.get_build_id().to_string();
+
+        let build_id: MetadataValue = self.get_context().get_llvm_context().metadata_string(&id);
+
+        let llvm_major: u32 = inkwell::support::get_llvm_version().0;
+        let llvm_minor: u32 = inkwell::support::get_llvm_version().1;
+        let llvm_patch: u32 = inkwell::support::get_llvm_version().2;
+
+        let llvm_v: MetadataValue =
+            self.get_context()
+                .get_llvm_context()
+                .metadata_string(&format!(
+                    "LLVM {}.{}.{}",
+                    llvm_major, llvm_minor, llvm_patch
+                ));
+
+        let node: MetadataValue = self
+            .get_context()
+            .get_llvm_context()
+            .metadata_node(&[build_id.into(), llvm_v.into()]);
+
+        let _ = self
+            .get_context()
+            .get_llvm_module()
+            .add_global_metadata("build", &node);
     }
 }
 
