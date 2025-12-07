@@ -226,6 +226,72 @@ pub fn show_help() -> ! {
         ),
     );
 
+    logging::write(logging::OutputIn::Stderr, "\nOmission compiler flags:\n\n");
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--omit-frame-pointer".custom_color((141, 141, 142)).bold(),
+            "Regardless of the optimization level, it omits the emission of the frame pointer.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--omit-uwtable".custom_color((141, 141, 142)).bold(),
+            "It omits the unwind table required for exception handling and stack tracing.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--omit-direct-access-external-data"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Force all external data references through the Global Offset Table (required for strict PIC).",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--omit-default-opt".custom_color((141, 141, 142)).bold(),
+            "It omits default optimization that occurs even without specified optimization.",
+        ),
+    );
+
+    logging::write(logging::OutputIn::Stderr, "\nDebug compiler flags:\n\n");
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--debug-clang-command".custom_color((141, 141, 142)).bold(),
+            "Displays the generated command for Clang in the phase of linking."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--debug-gcc-commands".custom_color((141, 141, 142)).bold(),
+            "Displays the generated command for GCC in the phase of linking."
+        ),
+    );
+
     logging::write(logging::OutputIn::Stderr, "\nExtra compiler flags:\n\n");
 
     logging::write(
@@ -288,48 +354,6 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "--omit-frame-pointer".custom_color((141, 141, 142)).bold(),
-            "Regardless of the optimization level, it omits the emission of the frame pointer.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "--omit-uwtable".custom_color((141, 141, 142)).bold(),
-            "It omits the unwind table required for exception handling and stack tracing.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "--omit-direct-access-external-data"
-                .custom_color((141, 141, 142))
-                .bold(),
-            "Force all external data references through the Global Offset Table (required for strict PIC).",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "--disable-default-opt".custom_color((141, 141, 142)).bold(),
-            "It disable default optimization that occurs even without specified optimization.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
             "{} {} {}",
             "•".bold(),
             "--enable-ansi-color".custom_color((141, 141, 142)).bold(),
@@ -337,27 +361,7 @@ pub fn show_help() -> ! {
         ),
     );
 
-    logging::write(logging::OutputIn::Stderr, "\nUseful flags:\n\n");
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "--debug-clang-command".custom_color((141, 141, 142)).bold(),
-            "Displays the generated command for Clang in the phase of linking."
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "--debug-gcc-commands".custom_color((141, 141, 142)).bold(),
-            "Displays the generated command for GCC in the phase of linking.\n"
-        ),
-    );
+    logging::write(logging::OutputIn::Stderr, "\n\nUseful flags:\n\n");
 
     logging::write(
         logging::OutputIn::Stderr,

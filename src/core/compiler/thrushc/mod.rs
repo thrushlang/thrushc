@@ -257,7 +257,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         llvm_codegen::optimization::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
-            LLVMOptimizerFlags::new(self.options.disable_default_opt()),
+            LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
             &target_machine,
             llvm_opt,
             llvm_backend.get_opt_passes(),
@@ -489,7 +489,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         llvm_codegen::optimization::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
-            LLVMOptimizerFlags::new(self.options.disable_default_opt()),
+            LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
             &target_machine,
             llvm_opt,
             llvm_backend.get_opt_passes(),

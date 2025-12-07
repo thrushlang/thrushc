@@ -23,7 +23,7 @@ pub struct CompilerOptions {
     printable: Vec<PrintableUnit>,
 
     enable_ansi_colors: bool,
-    disable_default_opt: bool,
+    omit_default_optimizations: bool,
 
     clean_tokens: bool,
     clean_assembler: bool,
@@ -133,7 +133,7 @@ impl CompilerOptions {
             build_dir: PathBuf::new(),
 
             enable_ansi_colors: false,
-            disable_default_opt: false,
+            omit_default_optimizations: false,
 
             clean_tokens: false,
             clean_assembler: false,
@@ -215,8 +215,8 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn set_disable_default_opt(&mut self) {
-        self.disable_default_opt = true;
+    pub fn set_omit_default_optimizations(&mut self) {
+        self.omit_default_optimizations = true;
     }
 
     #[inline]
@@ -327,8 +327,8 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn disable_default_opt(&self) -> bool {
-        self.disable_default_opt
+    pub fn omit_default_optimizations(&self) -> bool {
+        self.omit_default_optimizations
     }
 
     #[inline]

@@ -45,6 +45,18 @@ JIT Compiler flags:
 • -jit-libc Specify the C runtime to link for code execution via the JIT Compiler.
 • -jit-link Specify, add, and link an external dynamic library for code execution via the JIT Compiler.
 
+Omission compiler flags:
+
+• --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
+• --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
+• --omit-direct-access-external-data Force all external data references through the Global Offset Table (required for strict PIC).
+• --omit-default-opt It omits default optimization that occurs even without specified optimization.
+
+Debug compiler flags:
+
+• --debug-clang-command Displays the generated command for Clang in the phase of linking.
+• --debug-gcc-commands Displays the generated command for GCC in the phase of linking.
+
 Extra compiler flags:
 
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
@@ -52,15 +64,9 @@ Extra compiler flags:
 • --reloc [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
 • --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
 • --target-triple-darwin-variant [arm64-apple-ios15.0-macabi] Specify the darwin target variant triple.
-• --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
-• --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
-• --omit-direct-access-external-data Force all external data references through the Global Offset Table (required for strict PIC).
-• --disable-default-opt It disable default optimization that occurs even without specified optimization.
 • --enable-ansi-color It allows ANSI color formatting in compiler diagnostics.
-Useful flags:
 
-• --debug-clang-command Displays the generated command for Clang in the phase of linking.
-• --debug-gcc-commands Displays the generated command for GCC in the phase of linking.
+Useful flags:
 
 • --clean-build Clean the compiler build folder that holds everything.
 • --clean-tokens Clean the compiler folder that holds the lexical analysis tokens.

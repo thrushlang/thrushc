@@ -397,11 +397,11 @@ impl CommandLine {
                     .set_omit_direct_access_external_data();
             }
 
-            "--disable-default-opt" => {
+            "--omit-default-opt" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                self.get_mut_options().set_disable_default_opt();
+                self.get_mut_options().set_omit_default_optimizations();
             }
 
             "--reloc" => {
