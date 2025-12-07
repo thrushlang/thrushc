@@ -545,6 +545,16 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     ));
                 }
 
+                if !attributes.has_public_attribute()
+                    && (linkage.is_linker_private() || linkage.is_linker_private_weak())
+                {
+                    self.add_warning(CompilationIssue::Warning(
+                        "Irrelevant attribute".into(),
+                        "This attribute is meaningless; The linkage is already private or private weak by default.".into(),
+                        span,
+                    ));
+                }
+
                 if attributes.has_public_attribute() && linkage.is_standard() {
                     self.add_warning(CompilationIssue::Warning(
                         "Irrelevant attribute".into(),

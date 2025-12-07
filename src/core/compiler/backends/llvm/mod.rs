@@ -27,6 +27,7 @@ pub struct LLVMBackend {
     opt_passes: String,
     omit_frame_pointer: bool,
     omit_uwtable: bool,
+    omit_direct_access_external_data: bool,
 
     use_jit: bool,
     jit_config: JITConfiguration,
@@ -47,13 +48,12 @@ impl LLVMBackend {
             target: LLVMTarget {
                 arch,
                 target_triple: TargetMachine::get_default_triple(),
+                target_triple_darwin_variant: None,
             },
-
             target_cpu: LLVMTargetCPU {
                 target_cpu: TargetMachine::get_host_cpu_name().to_string(),
                 target_cpu_feautures: TargetMachine::get_host_cpu_features().to_string(),
             },
-
             optimization: ThrushOptimization::None,
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
@@ -61,6 +61,7 @@ impl LLVMBackend {
             opt_passes: String::with_capacity(100),
             omit_frame_pointer: false,
             omit_uwtable: false,
+            omit_direct_access_external_data: false,
             use_jit: false,
             jit_config: JITConfiguration::new(),
         }
@@ -119,6 +120,11 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn omit_direct_access_external_data(&self) -> bool {
+        self.omit_direct_access_external_data
+    }
+
+    #[inline]
     pub fn is_jit(&self) -> bool {
         self.use_jit
     }
@@ -165,6 +171,11 @@ impl LLVMBackend {
     #[inline]
     pub fn set_omit_uwtable(&mut self) {
         self.omit_uwtable = true;
+    }
+
+    #[inline]
+    pub fn set_omit_direct_access_external_data(&mut self) {
+        self.omit_direct_access_external_data = true;
     }
 
     #[inline]

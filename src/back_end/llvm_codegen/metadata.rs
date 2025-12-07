@@ -122,7 +122,6 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 .add_global_metadata("llvm.module.flags", &code_level);
         }
 
-        #[cfg(target_os = "macos")]
         {
             let lvl_warning: BasicMetadataValueEnum = self
                 .get_context()
@@ -195,7 +194,9 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         }
 
         {
-            if llvm_backend.get_reloc_mode().is_no_pic() || llvm_backend.is_jit() {
+            if llvm_backend.get_reloc_mode().is_no_pic()
+                || llvm_backend.is_jit() && !llvm_backend.omit_direct_access_external_data()
+            {
                 let direct_access_external_data: MetadataValue =
                     self.get_context().get_llvm_context().metadata_node(&[
                         lvl_max,
@@ -214,6 +215,35 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                     .get_context()
                     .get_llvm_module()
                     .add_global_metadata("llvm.module.flags", &direct_access_external_data);
+            }
+        }
+
+        {
+            if let Some(target_triple_darwin_variant) =
+                llvm_backend.get_target().get_triple_darwin_variant()
+            {
+                let code_level: MetadataValue =
+                    self.get_context().get_llvm_context().metadata_node(&[
+                        lvl_error,
+                        self.get_context()
+                            .get_llvm_context()
+                            .metadata_string("darwin.target_variant.triple")
+                            .into(),
+                        self.get_context()
+                            .get_llvm_context()
+                            .metadata_string(
+                                target_triple_darwin_variant
+                                    .as_str()
+                                    .to_string_lossy()
+                                    .as_ref(),
+                            )
+                            .into(),
+                    ]);
+
+                let _ = self
+                    .get_context()
+                    .get_llvm_module()
+                    .add_global_metadata("llvm.module.flags", &code_level);
             }
         }
 

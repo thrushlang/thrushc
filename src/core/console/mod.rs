@@ -1,5 +1,5 @@
 pub mod cli;
-pub mod commands;
+pub mod help;
 pub mod logging;
 pub mod position;
 pub mod utils;

@@ -13,7 +13,7 @@ use crate::core::compiler::options::CompilerOptions;
 use crate::core::compiler::options::EmitableUnit;
 use crate::core::compiler::options::PrintableUnit;
 use crate::core::compiler::options::ThrushOptimization;
-use crate::core::console::commands;
+use crate::core::console;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::console::position::CommandLinePosition;
@@ -107,7 +107,7 @@ impl CommandLine {
 impl CommandLine {
     fn build(&mut self) {
         if self.args.is_empty() {
-            commands::help::show_help();
+            console::help::show_help();
         }
 
         while !self.is_eof() {
@@ -126,7 +126,7 @@ impl CommandLine {
         match arg {
             "-h" | "--help" | "help" => {
                 self.advance();
-                commands::help::show_help();
+                console::help::show_help();
             }
 
             "-v" | "--version" | "version" => {
@@ -354,6 +354,22 @@ impl CommandLine {
                 self.validate_aot_is_enable(arg);
             }
 
+            "--target-triple-darwin-variant" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let raw_target_triple: &str = self.peek();
+
+                let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target()
+                    .set_target_triple_darwin_variant(target_triple);
+
+                self.advance();
+            }
+
             "--omit-frame-pointer" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -370,6 +386,15 @@ impl CommandLine {
                 self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .set_omit_uwtable();
+            }
+
+            "--omit-direct-access-external-data" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_omit_direct_access_external_data();
             }
 
             "--disable-default-opt" => {

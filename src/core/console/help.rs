@@ -275,6 +275,19 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--target-triple-darwin-variant"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "[arm64-apple-ios15.0-macabi]",
+            "Specify the darwin target variant triple."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
             "{} {} {}\n",
             "•".bold(),
             "--omit-frame-pointer".custom_color((141, 141, 142)).bold(),
@@ -289,6 +302,18 @@ pub fn show_help() -> ! {
             "•".bold(),
             "--omit-uwtable".custom_color((141, 141, 142)).bold(),
             "It omits the unwind table required for exception handling and stack tracing.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--omit-direct-access-external-data"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Force all external data references through the Global Offset Table (required for strict PIC).",
         ),
     );
 
