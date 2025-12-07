@@ -49,6 +49,8 @@ impl LLVMBackend {
                 arch,
                 target_triple: TargetMachine::get_default_triple(),
                 target_triple_darwin_variant: None,
+                macos_version: None,
+                ios_version: None,
             },
             target_cpu: LLVMTargetCPU {
                 target_cpu: TargetMachine::get_host_cpu_name().to_string(),

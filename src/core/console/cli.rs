@@ -354,6 +354,40 @@ impl CommandLine {
                 self.validate_aot_is_enable(arg);
             }
 
+            "--macos-version" => {
+                self.advance();
+
+                let version: String = self.peek().to_string();
+
+                if !version.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                    self.report_error("MacOS version must contain only numbers and dots.");
+                }
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target()
+                    .set_macos_version(version);
+
+                self.advance();
+            }
+
+            "--ios-version" => {
+                self.advance();
+
+                let version: String = self.peek().to_string();
+
+                if !version.chars().all(|c| c.is_ascii_digit() || c == '.') {
+                    self.report_error("iOS version must contain only numbers and dots.");
+                }
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target()
+                    .set_ios_version(version);
+
+                self.advance();
+            }
+
             "--target-triple-darwin-variant" => {
                 self.advance();
                 self.validate_llvm_required(arg);

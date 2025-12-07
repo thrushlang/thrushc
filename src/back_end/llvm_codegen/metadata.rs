@@ -122,6 +122,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 .add_global_metadata("llvm.module.flags", &code_level);
         }
 
+        #[cfg(target_vendor = "apple")]
         {
             let lvl_warning: BasicMetadataValueEnum = self
                 .get_context()
@@ -130,40 +131,79 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 .const_int(2, false)
                 .into();
 
-            let llvm_major: u32 = inkwell::support::get_llvm_version().0;
-            let llvm_minor: u32 = inkwell::support::get_llvm_version().1;
-            let llvm_patch: u32 = inkwell::support::get_llvm_version().2;
+            if let Some(sdk_macos_version) = llvm_backend.get_target().get_macos_version() {
+                let major: u64 = sdk_macos_version.0;
+                let minor: u64 = sdk_macos_version.1;
+                let patch: u64 = sdk_macos_version.2;
 
-            let sdk_v: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
-                lvl_warning,
-                self.get_context()
-                    .get_llvm_context()
-                    .metadata_string("SDK Version")
-                    .into(),
-                self.get_context()
-                    .get_llvm_context()
-                    .i32_type()
-                    .const_array(&[
-                        self.get_context()
-                            .get_llvm_context()
-                            .i32_type()
-                            .const_int(llvm_major.into(), false),
-                        self.get_context()
-                            .get_llvm_context()
-                            .i32_type()
-                            .const_int(llvm_minor.into(), false),
-                        self.get_context()
-                            .get_llvm_context()
-                            .i32_type()
-                            .const_int(llvm_patch.into(), false),
-                    ])
-                    .into(),
-            ]);
+                let sdk_v: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
+                    lvl_warning,
+                    self.get_context()
+                        .get_llvm_context()
+                        .metadata_string("SDK Version")
+                        .into(),
+                    self.get_context()
+                        .get_llvm_context()
+                        .i32_type()
+                        .const_array(&[
+                            self.get_context()
+                                .get_llvm_context()
+                                .i32_type()
+                                .const_int(major, false),
+                            self.get_context()
+                                .get_llvm_context()
+                                .i32_type()
+                                .const_int(minor, false),
+                            self.get_context()
+                                .get_llvm_context()
+                                .i32_type()
+                                .const_int(patch, false),
+                        ])
+                        .into(),
+                ]);
 
-            let _ = self
-                .get_context()
-                .get_llvm_module()
-                .add_global_metadata("llvm.module.flags", &sdk_v);
+                let _ = self
+                    .get_context()
+                    .get_llvm_module()
+                    .add_global_metadata("llvm.module.flags", &sdk_v);
+            }
+
+            if let Some(sdk_ios_version) = llvm_backend.get_target().get_ios_version() {
+                let major: u64 = sdk_ios_version.0;
+                let minor: u64 = sdk_ios_version.1;
+                let patch: u64 = sdk_ios_version.2;
+
+                let sdk_v: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
+                    lvl_warning,
+                    self.get_context()
+                        .get_llvm_context()
+                        .metadata_string("SDK Version")
+                        .into(),
+                    self.get_context()
+                        .get_llvm_context()
+                        .i32_type()
+                        .const_array(&[
+                            self.get_context()
+                                .get_llvm_context()
+                                .i32_type()
+                                .const_int(major, false),
+                            self.get_context()
+                                .get_llvm_context()
+                                .i32_type()
+                                .const_int(minor, false),
+                            self.get_context()
+                                .get_llvm_context()
+                                .i32_type()
+                                .const_int(patch, false),
+                        ])
+                        .into(),
+                ]);
+
+                let _ = self
+                    .get_context()
+                    .get_llvm_module()
+                    .add_global_metadata("llvm.module.flags", &sdk_v);
+            }
         }
 
         {

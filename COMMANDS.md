@@ -45,6 +45,17 @@ JIT Compiler flags:
 • -jit-libc Specify the C runtime to link for code execution via the JIT Compiler.
 • -jit-link Specify, add, and link an external dynamic library for code execution via the JIT Compiler.
 
+Extra compiler flags:
+
+• --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
+• --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes to the LLVM backend.
+• --reloc [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
+• --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
+• --target-triple-darwin-variant [arm64-apple-ios15.0-macabi] Specify the darwin target variant triple.
+• --macos-version [15.0.0] Specify the MacOS SDK version.
+• --ios-version [17.4.0] Specify the iOS SDK version.
+• --enable-ansi-color It allows ANSI color formatting in compiler diagnostics.
+
 Omission compiler flags:
 
 • --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
@@ -56,15 +67,6 @@ Debug compiler flags:
 
 • --debug-clang-command Displays the generated command for Clang in the phase of linking.
 • --debug-gcc-commands Displays the generated command for GCC in the phase of linking.
-
-Extra compiler flags:
-
-• --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
-• --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes to the LLVM backend.
-• --reloc [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
-• --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
-• --target-triple-darwin-variant [arm64-apple-ios15.0-macabi] Specify the darwin target variant triple.
-• --enable-ansi-color It allows ANSI color formatting in compiler diagnostics.
 
 Useful flags:
 

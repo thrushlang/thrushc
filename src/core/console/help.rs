@@ -226,7 +226,101 @@ pub fn show_help() -> ! {
         ),
     );
 
-    logging::write(logging::OutputIn::Stderr, "\nOmission compiler flags:\n\n");
+    logging::write(logging::OutputIn::Stderr, "\nExtra compiler flags:\n\n");
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--opt-passes".custom_color((141, 141, 142)).bold(),
+            "[-p{passname,passname}]",
+            "Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--modificator-passes".custom_color((141, 141, 142)).bold(),
+            "[loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;]",
+            "Pass a list of custom modificator optimization passes to the LLVM backend.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--reloc".custom_color((141, 141, 142)).bold(),
+            "[static|pic|dynamic]",
+            "Indicate how references to memory addresses and linkage symbols are handled."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--codemodel".custom_color((141, 141, 142)).bold(),
+            "[small|medium|large|kernel]",
+            "Define how code is organized and accessed at machine code level."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--target-triple-darwin-variant"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "[arm64-apple-ios15.0-macabi]",
+            "Specify the darwin target variant triple."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--macos-version".custom_color((141, 141, 142)).bold(),
+            "[15.0.0]",
+            "Specify the MacOS SDK version."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--ios-version".custom_color((141, 141, 142)).bold(),
+            "[17.4.0]",
+            "Specify the iOS SDK version."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}",
+            "•".bold(),
+            "--enable-ansi-color".custom_color((141, 141, 142)).bold(),
+            "It allows ANSI color formatting in compiler diagnostics.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        "\n\nOmission compiler flags:\n\n",
+    );
 
     logging::write(
         logging::OutputIn::Stderr,
@@ -292,76 +386,7 @@ pub fn show_help() -> ! {
         ),
     );
 
-    logging::write(logging::OutputIn::Stderr, "\nExtra compiler flags:\n\n");
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {} {}\n",
-            "•".bold(),
-            "--opt-passes".custom_color((141, 141, 142)).bold(),
-            "[-p{passname,passname}]",
-            "Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {} {}\n",
-            "•".bold(),
-            "--modificator-passes".custom_color((141, 141, 142)).bold(),
-            "[loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;]",
-            "Pass a list of custom modificator optimization passes to the LLVM backend.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {} {}\n",
-            "•".bold(),
-            "--reloc".custom_color((141, 141, 142)).bold(),
-            "[static|pic|dynamic]",
-            "Indicate how references to memory addresses and linkage symbols are handled."
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {} {}\n",
-            "•".bold(),
-            "--codemodel".custom_color((141, 141, 142)).bold(),
-            "[small|medium|large|kernel]",
-            "Define how code is organized and accessed at machine code level."
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {} {}\n",
-            "•".bold(),
-            "--target-triple-darwin-variant"
-                .custom_color((141, 141, 142))
-                .bold(),
-            "[arm64-apple-ios15.0-macabi]",
-            "Specify the darwin target variant triple."
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}",
-            "•".bold(),
-            "--enable-ansi-color".custom_color((141, 141, 142)).bold(),
-            "It allows ANSI color formatting in compiler diagnostics.",
-        ),
-    );
-
-    logging::write(logging::OutputIn::Stderr, "\n\nUseful flags:\n\n");
+    logging::write(logging::OutputIn::Stderr, "\nUseful flags:\n\n");
 
     logging::write(
         logging::OutputIn::Stderr,
