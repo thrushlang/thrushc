@@ -51,8 +51,10 @@ Extra compiler flags:
 • --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes to the LLVM backend.
 • --reloc [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
 • --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
+• --target-triple-darwin-variant [arm64-apple-ios15.0-macabi] Specify the darwin target variant triple.
 • --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
 • --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
+• --omit-direct-access-external-data Force all external data references through the Global Offset Table (required for strict PIC).
 • --disable-default-opt It disable default optimization that occurs even without specified optimization.
 • --enable-ansi-color It allows ANSI color formatting in compiler diagnostics.
 Useful flags:
