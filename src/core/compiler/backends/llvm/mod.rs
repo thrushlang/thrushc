@@ -28,6 +28,7 @@ pub struct LLVMBackend {
     omit_frame_pointer: bool,
     omit_uwtable: bool,
     omit_direct_access_external_data: bool,
+    omit_rtlibusegot: bool,
 
     use_jit: bool,
     jit_config: JITConfiguration,
@@ -64,6 +65,7 @@ impl LLVMBackend {
             omit_frame_pointer: false,
             omit_uwtable: false,
             omit_direct_access_external_data: false,
+            omit_rtlibusegot: false,
             use_jit: false,
             jit_config: JITConfiguration::new(),
         }
@@ -127,6 +129,11 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn omit_rtlibusegot(&self) -> bool {
+        self.omit_rtlibusegot
+    }
+
+    #[inline]
     pub fn is_jit(&self) -> bool {
         self.use_jit
     }
@@ -178,6 +185,11 @@ impl LLVMBackend {
     #[inline]
     pub fn set_omit_direct_access_external_data(&mut self) {
         self.omit_direct_access_external_data = true;
+    }
+
+    #[inline]
+    pub fn set_omit_rtlibusegot(&mut self) {
+        self.omit_rtlibusegot = true;
     }
 
     #[inline]

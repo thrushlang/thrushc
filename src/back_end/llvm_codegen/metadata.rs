@@ -287,6 +287,37 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             }
         }
 
+        {
+            if !llvm_backend.omit_rtlibusegot() {
+                let triple: LLVMTargetTriple =
+                    LLVMTargetTriple::new(self.get_context().get_target_triple());
+
+                if triple.get_arch().contains("arm")
+                    && llvm_backend.get_reloc_mode().is_pic()
+                    && triple.has_posix_thread_model()
+                {
+                    let rt_lib_use_got: MetadataValue =
+                        self.get_context().get_llvm_context().metadata_node(&[
+                            lvl_error,
+                            self.get_context()
+                                .get_llvm_context()
+                                .metadata_string("RtLibUseGOT")
+                                .into(),
+                            self.get_context()
+                                .get_llvm_context()
+                                .i32_type()
+                                .const_int(1, false)
+                                .into(),
+                        ]);
+
+                    let _ = self
+                        .get_context()
+                        .get_llvm_module()
+                        .add_global_metadata("llvm.module.flags", &rt_lib_use_got);
+                }
+            }
+        }
+
         if !llvm_backend.get_optimization().is_high_opt() && !llvm_backend.omit_frame_pointer() {
             let frame_pointer: MetadataValue =
                 self.get_context().get_llvm_context().metadata_node(&[

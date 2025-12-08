@@ -431,6 +431,17 @@ impl CommandLine {
                     .set_omit_direct_access_external_data();
             }
 
+            "--omit-rtlib-got" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_omit_rtlibusegot();
+
+                self.advance();
+            }
+
             "--omit-default-opt" => {
                 self.advance();
                 self.validate_llvm_required(arg);

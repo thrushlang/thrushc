@@ -350,7 +350,17 @@ pub fn show_help() -> ! {
             "--omit-direct-access-external-data"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "Force all external data references through the Global Offset Table (required for strict PIC).",
+            "It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT)",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--omit-rtlib-got".custom_color((141, 141, 142)).bold(),
+            "It omits the runtime library dependency on the Global Offset Table (GOT), essential when generating non-Position Independent Code (PIC) with ARM.",
         ),
     );
 

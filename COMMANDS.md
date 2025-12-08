@@ -60,7 +60,8 @@ Omission compiler flags:
 
 • --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
 • --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
-• --omit-direct-access-external-data Force all external data references through the Global Offset Table (required for strict PIC).
+• --omit-direct-access-external-data It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT)
+• --omit-rtlib-got It omits the runtime library dependency on the Global Offset Table (GOT), essential when generating non-Position Independent Code (PIC) with ARM.
 • --omit-default-opt It omits default optimization that occurs even without specified optimization.
 
 Debug compiler flags:

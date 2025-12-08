@@ -53,3 +53,13 @@ impl LLVMTargetTriple {
         &self.vendor
     }
 }
+
+impl LLVMTargetTriple {
+    #[inline]
+    pub fn has_posix_thread_model(&self) -> bool {
+        matches!(
+            self.get_os(),
+            "linux" | "android" | "freebsd" | "netbsd" | "openbsd"
+        ) || matches!(self.get_abi(), "gnu")
+    }
+}
