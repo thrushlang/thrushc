@@ -9,7 +9,7 @@ use crate::back_end::llvm_codegen::statements::lli;
 use crate::back_end::llvm_codegen::{self, builtins, codegen, constgen};
 use crate::back_end::llvm_codegen::{abort, memory};
 use crate::back_end::llvm_codegen::{binaryop, generation};
-use crate::back_end::llvm_codegen::{ptr, statements};
+use crate::back_end::llvm_codegen::{refptr, statements};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
@@ -392,7 +392,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     source_type.clone()
                 };
 
-                let ptr: BasicValueEnum = ptr::compile(self.context, source, None);
+                let ptr: BasicValueEnum = refptr::compile(self.context, source, None);
 
                 let value: BasicValueEnum = codegen::compile(self.context, value, Some(&cast_type));
 
@@ -623,7 +623,7 @@ pub fn compile<'ctx>(
         ),
 
         // Direct Reference
-        Ast::DirectRef { expr, .. } => ptr::compile(context, expr, cast_type),
+        Ast::DirectRef { expr, .. } => refptr::compile(context, expr, cast_type),
 
         // Symbol/Property Access
         // Compiles a reference to a variable or symbol
@@ -648,7 +648,7 @@ pub fn compile<'ctx>(
             span,
             ..
         } => {
-            let value: BasicValueEnum = ptr::compile(context, value, Some(kind));
+            let value: BasicValueEnum = refptr::compile(context, value, Some(kind));
 
             let deref_value: BasicValueEnum = if value.is_pointer_value() {
                 memory::dereference(

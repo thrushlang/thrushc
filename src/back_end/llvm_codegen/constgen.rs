@@ -10,7 +10,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::expressions::unary;
 use crate::back_end::llvm_codegen::generation::float;
 use crate::back_end::llvm_codegen::generation::integer;
-use crate::back_end::llvm_codegen::{abort, ptr};
+use crate::back_end::llvm_codegen::{abort, refptr};
 use crate::back_end::llvm_codegen::{binaryop, generation};
 
 use crate::front_end::types::ast::Ast;
@@ -164,7 +164,7 @@ pub fn compile<'ctx>(
         } => unary::compile_const(context, (operator, kind, expression), cast_type),
 
         // Direct Reference
-        Ast::DirectRef { expr, .. } => ptr::compile(context, expr, None),
+        Ast::DirectRef { expr, .. } => refptr::compile(context, expr, None),
 
         // Builtins
         Ast::Builtin { builtin, .. } => {

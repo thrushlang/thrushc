@@ -2,8 +2,8 @@ use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::alloc;
 use crate::back_end::llvm_codegen::anchors::PointerAnchor;
 use crate::back_end::llvm_codegen::constgen;
-use crate::back_end::llvm_codegen::control::LoopContext;
 use crate::back_end::llvm_codegen::generation;
+use crate::back_end::llvm_codegen::loopcontrol::LoopContext;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
 use crate::back_end::llvm_codegen::memory::SymbolToAllocate;
 use crate::back_end::llvm_codegen::symbols::SymbolsTable;
@@ -13,8 +13,11 @@ use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::diagnostic::diagnostician::Diagnostician;
-
 use crate::core::diagnostic::span::Span;
+
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
+
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
@@ -29,8 +32,6 @@ use crate::front_end::typesystem::types::Type;
 
 use crate::logging;
 use crate::logging::LoggingType;
-use crate::middle_end::mir::attributes::ThrushAttributes;
-use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 use std::fmt::Display;
 use std::path::PathBuf;

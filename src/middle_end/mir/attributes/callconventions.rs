@@ -2,47 +2,307 @@ use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref CALL_CONVENTIONS: HashMap<&'static [u8], crate::back_end::llvm_codegen::conventions::CallConvention> = {
+    pub static ref CALL_CONVENTIONS: HashMap<&'static [u8], crate::back_end::llvm_codegen::callconventions::CallConvention> = {
         let mut call_conventions: HashMap<
             &'static [u8],
-            crate::back_end::llvm_codegen::conventions::CallConvention,
-        > = HashMap::with_capacity(10);
+            crate::back_end::llvm_codegen::callconventions::CallConvention,
+        > = HashMap::with_capacity(80);
 
         call_conventions.insert(
             b"C",
-            crate::back_end::llvm_codegen::conventions::CallConvention::Standard,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::Standard,
         );
         call_conventions.insert(
             b"fast",
-            crate::back_end::llvm_codegen::conventions::CallConvention::Fast,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::Fast,
         );
         call_conventions.insert(
             b"tail",
-            crate::back_end::llvm_codegen::conventions::CallConvention::Tail,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::Tail,
         );
         call_conventions.insert(
             b"cold",
-            crate::back_end::llvm_codegen::conventions::CallConvention::Cold,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::Cold,
         );
         call_conventions.insert(
             b"weakReg",
-            crate::back_end::llvm_codegen::conventions::CallConvention::PreserveMost,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::PreserveMost,
         );
         call_conventions.insert(
             b"strongReg",
-            crate::back_end::llvm_codegen::conventions::CallConvention::PreserveAll,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::PreserveAll,
         );
         call_conventions.insert(
             b"Swift",
-            crate::back_end::llvm_codegen::conventions::CallConvention::Swift,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::Swift,
         );
         call_conventions.insert(
             b"Haskell",
-            crate::back_end::llvm_codegen::conventions::CallConvention::GHC,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::GHC,
         );
         call_conventions.insert(
             b"Erlang",
-            crate::back_end::llvm_codegen::conventions::CallConvention::HiPE,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::HiPE,
+        );
+        call_conventions.insert(
+            b"GraalVM",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::GraalVM,
+        );
+        call_conventions.insert(
+            b"Win64",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::Win64,
+        );
+        call_conventions.insert(
+            b"X86_StdCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_StdCall,
+        );
+        call_conventions.insert(
+            b"X86_FastCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_FastCall,
+        );
+        call_conventions.insert(
+            b"X86_ThisCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_ThisCall,
+        );
+        call_conventions.insert(
+            b"X86_VectorCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_VectorCall,
+        );
+        call_conventions.insert(
+            b"X86_RegCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_RegCall,
+        );
+        call_conventions.insert(
+            b"X86_64_SysV",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_64_SysV,
+        );
+        call_conventions.insert(
+            b"ARM_APCS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM_APCS,
+        );
+        call_conventions.insert(
+            b"ARM_AAPCS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM_AAPCS,
+        );
+        call_conventions.insert(
+            b"ARM_AAPCS_VFP",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM_AAPCS_VFP,
+        );
+        call_conventions.insert(
+            b"AArch64_VectorCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_VectorCall,
+        );
+        call_conventions.insert(
+            b"AArch64_SVE_VectorCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_SVE_VectorCall,
+        );
+        call_conventions.insert(
+            b"SwiftTail",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::SwiftTail,
+        );
+        call_conventions.insert(
+            b"PreserveNone",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::PreserveNone,
+        );
+        call_conventions.insert(
+            b"AnyReg",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AnyReg,
+        );
+        call_conventions.insert(
+            b"PTX_Kernel",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::PTX_Kernel,
+        );
+        call_conventions.insert(
+            b"PTX_Device",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::PTX_Device,
+        );
+        call_conventions.insert(
+            b"AMDGPU_KERNEL",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_KERNEL,
+        );
+        call_conventions.insert(
+            b"AMDGPU_Gfx",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_Gfx,
+        );
+        call_conventions.insert(
+            b"RISCV_VectorCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VectorCall,
+        );
+        call_conventions.insert(
+            b"CXX_FAST_TLS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::CXX_FAST_TLS,
+        );
+        call_conventions.insert(
+            b"CFGuard_Check",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::CFGuard_Check,
+        );
+        call_conventions.insert(
+            b"MSP430_INTR",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::MSP430_INTR,
+        );
+        call_conventions.insert(
+            b"SPIR_FUNC",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::SPIR_FUNC,
+        );
+        call_conventions.insert(
+            b"SPIR_KERNEL",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::SPIR_KERNEL,
+        );
+        call_conventions.insert(
+            b"Intel_OCL_BI",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::Intel_OCL_BI,
+        );
+        call_conventions.insert(
+            b"X86_INTR",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_INTR,
+        );
+        call_conventions.insert(
+            b"AVR_INTR",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AVR_INTR,
+        );
+        call_conventions.insert(
+            b"AVR_SIGNAL",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AVR_SIGNAL,
+        );
+        call_conventions.insert(
+            b"AVR_BUILTIN",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AVR_BUILTIN,
+        );
+        call_conventions.insert(
+            b"AMDGPU_VS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_VS,
+        );
+        call_conventions.insert(
+            b"AMDGPU_GS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_GS,
+        );
+        call_conventions.insert(
+            b"AMDGPU_PS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_PS,
+        );
+        call_conventions.insert(
+            b"AMDGPU_CS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_CS,
+        );
+        call_conventions.insert(
+            b"AMDGPU_HS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_HS,
+        );
+        call_conventions.insert(
+            b"MSP430_BUILTIN",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::MSP430_BUILTIN,
+        );
+        call_conventions.insert(
+            b"AMDGPU_LS",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_LS,
+        );
+        call_conventions.insert(
+            b"AMDGPU_ES",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_ES,
+        );
+        call_conventions.insert(
+            b"WASM_EmscriptenInvoke",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::WASM_EmscriptenInvoke,
+        );
+        call_conventions.insert(
+            b"M68k_INTR",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::M68k_INTR,
+        );
+        call_conventions.insert(
+            b"AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0,
+        );
+        call_conventions.insert(
+            b"AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2,
+        );
+        call_conventions.insert(
+            b"AMDGPU_CS_Chain",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_CS_Chain,
+        );
+        call_conventions.insert(
+            b"AMDGPU_CS_ChainPreserve",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_CS_ChainPreserve,
+        );
+        call_conventions.insert(
+            b"M68k_RTD",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::M68k_RTD,
+        );
+        call_conventions.insert(
+            b"ARM64EC_Thunk_X64",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM64EC_Thunk_X64,
+        );
+        call_conventions.insert(
+            b"ARM64EC_Thunk_Native",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM64EC_Thunk_Native,
+        );
+        call_conventions.insert(
+            b"AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_32",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_32,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_64",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_64,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_128",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_128,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_256",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_256,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_512",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_512,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_1024",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_1024,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_2048",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_2048,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_4096",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_4096,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_8192",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_8192,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_16384",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_16384,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_32768",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_32768,
+        );
+        call_conventions.insert(
+            b"RISCV_VLSCall_65536",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_65536,
+        );
+        call_conventions.insert(
+            b"AMDGPU_Gfx_WholeWave",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_Gfx_WholeWave,
+        );
+        call_conventions.insert(
+            b"CHERIoT_CompartmentCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::CHERIoT_CompartmentCall,
+        );
+        call_conventions.insert(
+            b"CHERIoT_CompartmentCallee",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::CHERIoT_CompartmentCallee,
+        );
+        call_conventions.insert(
+            b"CHERIoT_LibraryCall",
+            crate::back_end::llvm_codegen::callconventions::CallConvention::CHERIoT_LibraryCall,
         );
 
         call_conventions
@@ -52,9 +312,9 @@ lazy_static! {
 #[inline]
 pub fn get_call_convention(
     name: &[u8],
-) -> crate::back_end::llvm_codegen::conventions::CallConvention {
+) -> crate::back_end::llvm_codegen::callconventions::CallConvention {
     CALL_CONVENTIONS
         .get(name)
         .copied()
-        .unwrap_or(crate::back_end::llvm_codegen::conventions::CallConvention::Standard)
+        .unwrap_or(crate::back_end::llvm_codegen::callconventions::CallConvention::Standard)
 }

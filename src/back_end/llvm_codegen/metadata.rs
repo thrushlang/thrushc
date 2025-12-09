@@ -1,7 +1,7 @@
 use crate::back_end::llvm_codegen::codemodel::LLVMCodeModelExtensions;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::reloc::LLVMRelocModeExtensions;
-use crate::back_end::llvm_codegen::triple::LLVMTargetTriple;
+use crate::back_end::llvm_codegen::relocmodel::LLVMRelocModeExtensions;
+use crate::back_end::llvm_codegen::targettriple::LLVMTargetTriple;
 
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::options::CompilerOptions;

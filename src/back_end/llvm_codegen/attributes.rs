@@ -2,7 +2,7 @@
 
 use inkwell::module::Linkage;
 
-use crate::back_end::llvm_codegen::conventions::CallConvention;
+use crate::back_end::llvm_codegen::callconventions::CallConvention;
 
 #[derive(Debug, Clone, Copy)]
 pub enum LLVMAttribute<'ctx> {

@@ -401,6 +401,10 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ThrushAttributeComparator::StrongStack,
             ThrushAttributeComparator::PreciseFloats,
             ThrushAttributeComparator::Linkage,
+            ThrushAttributeComparator::AsmAlignStack,
+            ThrushAttributeComparator::AsmSyntax,
+            ThrushAttributeComparator::AsmSideEffects,
+            ThrushAttributeComparator::AsmThrow,
         ];
 
         const VALID_STATIC_ATTRIBUTES: &[ThrushAttributeComparator] = &[

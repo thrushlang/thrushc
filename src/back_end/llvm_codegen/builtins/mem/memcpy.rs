@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::ptr;
+use crate::back_end::llvm_codegen::refptr;
 use crate::back_end::llvm_codegen::typegen;
 
 use crate::core::diagnostic::span::Span;
@@ -30,10 +30,10 @@ pub fn compile<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let src: PointerValue =
-        ptr::compile(context, source, Some(&Type::Ptr(None))).into_pointer_value();
+        refptr::compile(context, source, Some(&Type::Ptr(None))).into_pointer_value();
 
     let dest: PointerValue =
-        ptr::compile(context, destination, Some(&Type::Ptr(None))).into_pointer_value();
+        refptr::compile(context, destination, Some(&Type::Ptr(None))).into_pointer_value();
 
     let size: IntValue = codegen::compile(context, size, None).into_int_value();
 

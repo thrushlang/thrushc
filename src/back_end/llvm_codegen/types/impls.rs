@@ -1,6 +1,6 @@
 use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
 use crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator;
-use crate::back_end::llvm_codegen::conventions::CallConvention;
+use crate::back_end::llvm_codegen::callconventions::CallConvention;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::traits::AssemblerFunctionExtensions;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributeComparatorExtensions;
@@ -161,12 +161,83 @@ impl Display for CallConvention {
             CallConvention::Standard => write!(f, "C"),
             CallConvention::Fast => write!(f, "fast"),
             CallConvention::Cold => write!(f, "cold"),
-            CallConvention::GHC => write!(f, "haskell"),
+            CallConvention::GHC => write!(f, "Haskell"),
             CallConvention::PreserveAll => write!(f, "strongReg"),
             CallConvention::PreserveMost => write!(f, "weakReg"),
             CallConvention::Tail => write!(f, "tail"),
-            CallConvention::Swift => write!(f, "swift"),
-            CallConvention::HiPE => write!(f, "erlang"),
+            CallConvention::Swift => write!(f, "Swift"),
+            CallConvention::HiPE => write!(f, "Erlang"),
+            CallConvention::GraalVM => write!(f, "GraalVM"),
+            CallConvention::Win64 => write!(f, "Win64"),
+            CallConvention::X86_StdCall => write!(f, "X86_StdCall"),
+            CallConvention::X86_FastCall => write!(f, "X86_FastCall"),
+            CallConvention::X86_ThisCall => write!(f, "X86_ThisCall"),
+            CallConvention::X86_VectorCall => write!(f, "X86_VectorCall"),
+            CallConvention::X86_RegCall => write!(f, "X86_RegCall"),
+            CallConvention::X86_64_SysV => write!(f, "X86_64_SysV"),
+            CallConvention::ARM_APCS => write!(f, "ARM_APCS"),
+            CallConvention::ARM_AAPCS => write!(f, "ARM_AAPCS"),
+            CallConvention::ARM_AAPCS_VFP => write!(f, "ARM_AAPCS_VFP"),
+            CallConvention::AArch64_VectorCall => write!(f, "AArch64_VectorCall"),
+            CallConvention::AArch64_SVE_VectorCall => write!(f, "AArch64_SVE_VectorCall"),
+            CallConvention::SwiftTail => write!(f, "SwiftTail"),
+            CallConvention::PreserveNone => write!(f, "PreserveNone"),
+            CallConvention::AnyReg => write!(f, "AnyReg"),
+            CallConvention::PTX_Kernel => write!(f, "PTX_Kernel"),
+            CallConvention::PTX_Device => write!(f, "PTX_Device"),
+            CallConvention::AMDGPU_KERNEL => write!(f, "AMDGPU_KERNEL"),
+            CallConvention::AMDGPU_Gfx => write!(f, "AMDGPU_Gfx"),
+            CallConvention::RISCV_VectorCall => write!(f, "RISCV_VectorCall"),
+            CallConvention::CXX_FAST_TLS => write!(f, "CXX_FAST_TLS"),
+            CallConvention::CFGuard_Check => write!(f, "CFGuard_Check"),
+            CallConvention::MSP430_INTR => write!(f, "MSP430_INTR"),
+            CallConvention::X86_INTR => write!(f, "X86_INTR"),
+            CallConvention::AVR_INTR => write!(f, "AVR_INTR"),
+            CallConvention::AVR_SIGNAL => write!(f, "AVR_SIGNAL"),
+            CallConvention::AVR_BUILTIN => write!(f, "AVR_BUILTIN"),
+            CallConvention::AMDGPU_VS => write!(f, "AMDGPU_VS"),
+            CallConvention::AMDGPU_GS => write!(f, "AMDGPU_GS"),
+            CallConvention::AMDGPU_PS => write!(f, "AMDGPU_PS"),
+            CallConvention::AMDGPU_CS => write!(f, "AMDGPU_CS"),
+            CallConvention::AMDGPU_HS => write!(f, "AMDGPU_HS"),
+            CallConvention::MSP430_BUILTIN => write!(f, "MSP430_BUILTIN"),
+            CallConvention::AMDGPU_LS => write!(f, "AMDGPU_LS"),
+            CallConvention::AMDGPU_ES => write!(f, "AMDGPU_ES"),
+            CallConvention::WASM_EmscriptenInvoke => write!(f, "WASM_EmscriptenInvoke"),
+            CallConvention::M68k_INTR => write!(f, "M68k_INTR"),
+            CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0 => {
+                write!(f, "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0")
+            }
+            CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2 => {
+                write!(f, "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2")
+            }
+            CallConvention::AMDGPU_CS_Chain => write!(f, "AMDGPU_CS_Chain"),
+            CallConvention::AMDGPU_CS_ChainPreserve => write!(f, "AMDGPU_CS_ChainPreserve"),
+            CallConvention::M68k_RTD => write!(f, "M68k_RTD"),
+            CallConvention::ARM64EC_Thunk_X64 => write!(f, "ARM64EC_Thunk_X64"),
+            CallConvention::ARM64EC_Thunk_Native => write!(f, "ARM64EC_Thunk_Native"),
+            CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1 => {
+                write!(f, "AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1")
+            }
+            CallConvention::RISCV_VLSCall_32 => write!(f, "RISCV_VLSCall_32"),
+            CallConvention::RISCV_VLSCall_64 => write!(f, "RISCV_VLSCall_64"),
+            CallConvention::RISCV_VLSCall_128 => write!(f, "RISCV_VLSCall_128"),
+            CallConvention::RISCV_VLSCall_256 => write!(f, "RISCV_VLSCall_256"),
+            CallConvention::RISCV_VLSCall_512 => write!(f, "RISCV_VLSCall_512"),
+            CallConvention::RISCV_VLSCall_1024 => write!(f, "RISCV_VLSCall_1024"),
+            CallConvention::RISCV_VLSCall_2048 => write!(f, "RISCV_VLSCall_2048"),
+            CallConvention::RISCV_VLSCall_4096 => write!(f, "RISCV_VLSCall_4096"),
+            CallConvention::RISCV_VLSCall_8192 => write!(f, "RISCV_VLSCall_8192"),
+            CallConvention::RISCV_VLSCall_16384 => write!(f, "RISCV_VLSCall_16384"),
+            CallConvention::RISCV_VLSCall_32768 => write!(f, "RISCV_VLSCall_32768"),
+            CallConvention::RISCV_VLSCall_65536 => write!(f, "RISCV_VLSCall_65536"),
+            CallConvention::AMDGPU_Gfx_WholeWave => write!(f, "AMDGPU_Gfx_WholeWave"),
+            CallConvention::CHERIoT_CompartmentCall => write!(f, "CHERIoT_CompartmentCall"),
+            CallConvention::CHERIoT_CompartmentCallee => write!(f, "CHERIoT_CompartmentCallee"),
+            CallConvention::CHERIoT_LibraryCall => write!(f, "CHERIoT_LibraryCall"),
+            CallConvention::SPIR_FUNC => write!(f, "SPIR_FUNC"),
+            CallConvention::SPIR_KERNEL => write!(f, "SPIR_KERNEL"),
+            CallConvention::Intel_OCL_BI => write!(f, "Intel_OCL_BI"),
         }
     }
 }
@@ -178,7 +249,7 @@ impl AssemblerFunctionExtensions for str {
             "Intel" => InlineAsmDialect::Intel,
             "AT&T" => InlineAsmDialect::ATT,
 
-            _ => InlineAsmDialect::Intel,
+            _ => InlineAsmDialect::ATT,
         }
     }
 }
@@ -200,8 +271,9 @@ impl LLVMLinkageExtensions for Linkage {
             Linkage::WeakODR => "WeakODR",
             Linkage::DLLExport => "DLLExport",
             Linkage::DLLImport => "DLLImport",
-
-            _ => "unknown",
+            Linkage::Ghost => "Ghost",
+            Linkage::LinkerPrivate => "LinkerPrivate",
+            Linkage::LinkerPrivateWeak => "LinkerPrivateWeak",
         }
     }
 }

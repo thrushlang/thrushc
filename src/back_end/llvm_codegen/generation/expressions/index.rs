@@ -1,7 +1,7 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::indexes;
 use crate::back_end::llvm_codegen::memory;
-use crate::back_end::llvm_codegen::ptr;
+use crate::back_end::llvm_codegen::refptr;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -15,7 +15,7 @@ pub fn compile<'ctx>(
     source: &'ctx Ast<'ctx>,
     index: &'ctx Ast<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let ptr: PointerValue = ptr::compile(context, source, None).into_pointer_value();
+    let ptr: PointerValue = refptr::compile(context, source, None).into_pointer_value();
     let ptr_type: &Type = source.llvm_get_type(context);
 
     let ordered_indexes: Vec<IntValue> = indexes::compile(context, index, ptr_type);

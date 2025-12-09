@@ -4,8 +4,8 @@ use crate::back_end::llvm_codegen::attrbuilder::LLVMAttributeApplicant;
 use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
 use crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm_codegen::block;
+use crate::back_end::llvm_codegen::callconventions::CallConvention;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::conventions::CallConvention;
 use crate::back_end::llvm_codegen::obfuscation;
 use crate::back_end::llvm_codegen::typegen;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
@@ -13,10 +13,12 @@ use crate::back_end::llvm_codegen::types::traits::AssemblerFunctionExtensions;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
 
 use crate::core::diagnostic::span::Span;
+
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
+
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::repr::AssemblerFunction;
 use crate::front_end::typesystem::types::Type;
-use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 use std::path::PathBuf;
 

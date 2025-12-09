@@ -2,7 +2,7 @@
 
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::codegen;
-use crate::back_end::llvm_codegen::ptr;
+use crate::back_end::llvm_codegen::refptr;
 use crate::back_end::llvm_codegen::typegen;
 
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
@@ -389,7 +389,7 @@ pub fn compile<'ctx>(
     let abort_ptr = |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
 
     if lhs_type.is_ptr_type() && rhs.is_integer_type() {
-        let val: BasicValueEnum = ptr::compile(context, lhs, None);
+        let val: BasicValueEnum = refptr::compile(context, lhs, None);
 
         if val.is_pointer_value() {
             let integer_type: BasicTypeEnum = typegen::generate(llvm_context, rhs);
@@ -438,7 +438,7 @@ pub fn compile<'ctx>(
     }
 
     if rhs.is_ptr_type() {
-        let value: BasicValueEnum = ptr::compile(context, lhs, None);
+        let value: BasicValueEnum = refptr::compile(context, lhs, None);
 
         if value.is_pointer_value() {
             let to: PointerType = typegen::generate(llvm_context, rhs).into_pointer_type();
@@ -451,7 +451,7 @@ pub fn compile<'ctx>(
     }
 
     if lhs_type.is_ptr_type() && rhs.is_const_type() {
-        let value: BasicValueEnum = ptr::compile(context, lhs, None);
+        let value: BasicValueEnum = refptr::compile(context, lhs, None);
 
         if value.is_pointer_value() {
             let to: PointerType = typegen::generate(llvm_context, rhs).into_pointer_type();

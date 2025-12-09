@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::cast;
-use crate::back_end::llvm_codegen::{abort, ptr};
+use crate::back_end::llvm_codegen::{abort, refptr};
 use crate::back_end::llvm_codegen::{codegen, typegen};
 
 use crate::core::diagnostic::span::Span;
@@ -24,7 +24,7 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder<'_> = context.get_llvm_builder();
     let function_ptr: PointerValue<'_> =
-        ptr::compile(context, pointer, cast_type).into_pointer_value();
+        refptr::compile(context, pointer, cast_type).into_pointer_value();
 
     if let Type::Fn(parameters, kind, modificator) = function_type {
         let need_ignore: bool = modificator.llvm().has_ignore();
