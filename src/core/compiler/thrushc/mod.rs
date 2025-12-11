@@ -171,7 +171,19 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let mut intrinsic_checker: middle_end::llvm::intrinsic_checker::IntrinsicChecker =
             middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file);
 
-        intrinsic_checker.check()?;
+        let mut call_conv_checker: middle_end::llvm::callconventions_checker::CallConventionsChecker =
+            middle_end::llvm::callconventions_checker::CallConventionsChecker::new(
+                ast,
+                self.get_options(),
+                file,
+            );
+
+        let intrinsic_result: Result<(), ()> = intrinsic_checker.check();
+        let call_conv_result: Result<(), ()> = call_conv_checker.check();
+
+        if intrinsic_result.is_err() || call_conv_result.is_err() {
+            return Err(());
+        }
 
         if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
             return finisher::archive_compilation(self, file_time, file);
@@ -402,7 +414,19 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let mut intrinsic_checker: middle_end::llvm::intrinsic_checker::IntrinsicChecker =
             middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file);
 
-        intrinsic_checker.check()?;
+        let mut call_conv_checker: middle_end::llvm::callconventions_checker::CallConventionsChecker =
+            middle_end::llvm::callconventions_checker::CallConventionsChecker::new(
+                ast,
+                self.get_options(),
+                file,
+            );
+
+        let intrinsic_result: Result<(), ()> = intrinsic_checker.check();
+        let call_conv_result: Result<(), ()> = call_conv_checker.check();
+
+        if intrinsic_result.is_err() || call_conv_result.is_err() {
+            return Err(());
+        }
 
         if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);

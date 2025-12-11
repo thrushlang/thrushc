@@ -78,6 +78,10 @@ impl ThrushAttributesExtensions for ThrushAttributes {
         self.iter().any(|attr| attr.is_asmsyntax_attribute())
     }
 
+    fn has_convention_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_conv_attribute())
+    }
+
     #[inline]
     fn match_attr(&self, cmp: ThrushAttributeComparator) -> Option<Span> {
         if let Some(attr_found) = self.iter().find(|attr| attr.as_attr_cmp() == cmp) {

@@ -25,7 +25,7 @@ impl LLVMTarget {
         self.target_triple_darwin_variant.as_ref()
     }
 
-    #[inline]
+    #[cfg_attr(target_vendor = "apple", inline)]
     pub fn get_macos_version(&self) -> Option<(u64, u64, u64)> {
         let macos_version: &str = self.macos_version.as_ref()?;
         let mut split: std::str::Split<'_, char> = macos_version.split('.');
@@ -37,7 +37,7 @@ impl LLVMTarget {
         Some((major, minor, patch))
     }
 
-    #[inline]
+    #[cfg_attr(target_vendor = "apple", inline)]
     pub fn get_ios_version(&self) -> Option<(u64, u64, u64)> {
         let ios_version: &str = self.ios_version.as_ref()?;
         let mut split: std::str::Split<'_, char> = ios_version.split('.');
@@ -47,6 +47,19 @@ impl LLVMTarget {
         let patch: u64 = split.next()?.parse::<u64>().ok()?;
 
         Some((major, minor, patch))
+    }
+
+    #[inline]
+    pub fn dissamble_target_triple(&self) -> (String, String, String, String) {
+        let triple: std::borrow::Cow<'_, str> = self.target_triple.as_str().to_string_lossy();
+        let mut split: std::str::Split<'_, char> = triple.split('-');
+
+        let arch: String = split.next().unwrap_or_default().to_string();
+        let vendor: String = split.next().unwrap_or_default().to_string();
+        let os: String = split.next().unwrap_or_default().to_string();
+        let abi: String = split.next().unwrap_or_default().to_string();
+
+        (arch, vendor, os, abi)
     }
 }
 

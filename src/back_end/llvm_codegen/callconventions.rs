@@ -3,7 +3,7 @@
 // Call conventions: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/IR/CallingConv.h
 
 #[repr(u32)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CallConvention {
     // " Standard " call conventions.
     Standard = 0,
@@ -198,4 +198,55 @@ pub enum CallConvention {
 
     // CHERIoT library call
     CHERIoT_LibraryCall = 127,
+}
+
+impl CallConvention {
+    #[inline]
+    pub fn is_specific_target_conv(&self) -> bool {
+        matches!(
+            self,
+            CallConvention::AMDGPU_CS
+                | CallConvention::AMDGPU_CS_Chain
+                | CallConvention::AMDGPU_CS_ChainPreserve
+                | CallConvention::AMDGPU_ES
+                | CallConvention::AMDGPU_GS
+                | CallConvention::AMDGPU_Gfx
+                | CallConvention::AMDGPU_Gfx_WholeWave
+                | CallConvention::AMDGPU_HS
+                | CallConvention::AMDGPU_KERNEL
+                | CallConvention::AMDGPU_LS
+                | CallConvention::AMDGPU_PS
+                | CallConvention::AMDGPU_VS
+                | CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0
+                | CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1
+                | CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2
+                | CallConvention::AArch64_SVE_VectorCall
+                | CallConvention::AArch64_VectorCall
+                | CallConvention::RISCV_VLSCall_1024
+                | CallConvention::RISCV_VLSCall_128
+                | CallConvention::RISCV_VLSCall_16384
+                | CallConvention::RISCV_VLSCall_2048
+                | CallConvention::RISCV_VLSCall_256
+                | CallConvention::RISCV_VLSCall_32
+                | CallConvention::RISCV_VLSCall_32768
+                | CallConvention::RISCV_VLSCall_4096
+                | CallConvention::RISCV_VLSCall_512
+                | CallConvention::RISCV_VLSCall_64
+                | CallConvention::RISCV_VLSCall_65536
+                | CallConvention::RISCV_VLSCall_8192
+                | CallConvention::RISCV_VectorCall
+                | CallConvention::ARM_AAPCS
+                | CallConvention::ARM_AAPCS_VFP
+                | CallConvention::ARM_APCS
+                | CallConvention::ARM64EC_Thunk_Native
+                | CallConvention::ARM64EC_Thunk_X64
+                | CallConvention::X86_StdCall
+                | CallConvention::X86_FastCall
+                | CallConvention::X86_ThisCall
+                | CallConvention::X86_64_SysV
+                | CallConvention::X86_INTR
+                | CallConvention::X86_VectorCall
+                | CallConvention::X86_RegCall
+        )
+    }
 }

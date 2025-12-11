@@ -10,9 +10,7 @@ use inkwell::intrinsics::Intrinsic;
 #[derive(Debug)]
 pub struct IntrinsicChecker<'llvm> {
     ast: &'llvm [Ast<'llvm>],
-
     errors: Vec<CompilationIssue>,
-
     diagnostician: Diagnostician,
 }
 
@@ -60,7 +58,7 @@ impl<'llvm> IntrinsicChecker<'llvm> {
 
 impl IntrinsicChecker<'_> {
     #[inline]
-    pub fn verify(&mut self) -> Result<(), ()> {
+    fn verify(&mut self) -> Result<(), ()> {
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
                 self.diagnostician
@@ -76,7 +74,7 @@ impl IntrinsicChecker<'_> {
 
 impl<'llvm> IntrinsicChecker<'llvm> {
     #[inline]
-    pub fn add_error(&mut self, error: CompilationIssue) {
+    fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 }

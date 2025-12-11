@@ -150,6 +150,11 @@ impl ThrushAttribute {
     pub fn is_linkage_attribute(&self) -> bool {
         matches!(self, ThrushAttribute::Linkage(..))
     }
+
+    #[inline]
+    pub fn is_conv_attribute(&self) -> bool {
+        matches!(self, ThrushAttribute::Convention(..))
+    }
 }
 
 impl ThrushAttribute {

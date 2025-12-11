@@ -20,6 +20,7 @@ pub trait ThrushAttributesExtensions {
     fn has_asmthrow_attribute(&self) -> bool;
     fn has_asmsideffects_attribute(&self) -> bool;
     fn has_asmsyntax_attribute(&self) -> bool;
+    fn has_convention_attribute(&self) -> bool;
 
     fn match_attr(&self, cmp: ThrushAttributeComparator) -> Option<Span>;
     fn get_attr(&self, cmp: ThrushAttributeComparator) -> Option<ThrushAttribute>;

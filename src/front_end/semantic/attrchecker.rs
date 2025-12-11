@@ -535,6 +535,23 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             }
         }
 
+        if attributes.has_convention_attribute() {
+            if let Some(ThrushAttribute::Convention(conv, span)) =
+                attributes.get_attr(ThrushAttributeComparator::Convention)
+            {
+                if !crate::middle_end::mir::attributes::callconventions::CALL_CONVENTIONS
+                    .contains_key(&conv.as_bytes())
+                {
+                    self.add_warning(CompilationIssue::Warning(
+                        "Unknown call convention".into(),
+                        "Unknown call convention, assuming C standard call convention by default."
+                            .into(),
+                        span,
+                    ));
+                }
+            }
+        }
+
         if attributes.has_linkage_attribute() {
             if let Some(ThrushAttribute::Linkage(linkage, linkage_raw, span)) =
                 attributes.get_attr(ThrushAttributeComparator::Linkage)
