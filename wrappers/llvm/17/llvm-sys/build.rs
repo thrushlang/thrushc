@@ -5,6 +5,9 @@ extern crate lazy_static;
 extern crate regex_lite;
 extern crate semver;
 
+#[path = "logging.rs"]
+mod logging;
+
 use std::env;
 use std::ffi::OsStr;
 use std::io::{self, ErrorKind};
@@ -14,6 +17,8 @@ use std::process::{Command, Output};
 use anyhow::Context as _;
 use regex_lite::Regex;
 use semver::Version;
+
+use crate::logging::LoggingType;
 
 // Environment variables that can guide compilation
 //
@@ -587,22 +592,39 @@ fn is_llvm_debug(llvm_config_path: &Path) -> bool {
     llvm_config(llvm_config_path, ["--build-mode"]).contains("Debug")
 }
 
-fn main() {
-    let error = |_| {
-        println!("cargo:rustc-cfg=LLVM_SYS_NOT_FOUND");
-        unreachable!()
-    };
+fn get_backend_llvm_build_path() -> std::path::PathBuf {
+    match std::env::consts::FAMILY {
+        "unix" => std::path::PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| {
+            logging::log(LoggingType::Panic, "Missing $HOME environment variable.\n");
+            std::process::exit(1);
+        }))
+        .join(".thrushlang/backends/llvm/build"),
 
-    let home: PathBuf = match std::env::consts::OS {
-        "windows" => PathBuf::from(std::env::var("APPDATA").unwrap_or_else(error)),
-        "linux" => PathBuf::from(std::env::var("HOME").unwrap_or_else(error)),
+        "windows" => std::path::PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| {
+            logging::log(
+                LoggingType::Panic,
+                "Missing $APPDATA environment variable.\n",
+            );
+            std::process::exit(1);
+        }))
+        .join(".thrushlang/backends/llvm/build"),
+
         _ => {
-            println!("cargo:rustc-cfg=LLVM_SYS_NOT_FOUND");
-            return;
+            logging::log(
+                LoggingType::Panic,
+                "Unsopported operating system for installing the dependencies required to build the Thrush Compiler LLVM Backend.",
+            );
+
+            std::process::exit(1);
         }
-    };
+    }
+}
+
+fn main() {
+    let llvm_path: PathBuf = self::get_backend_llvm_build_path();
 
     println!("cargo:rerun-if-env-changed={}", &*ENV_LLVM_PREFIX);
+
     if let Ok(path) = env::var(&*ENV_LLVM_PREFIX) {
         println!("cargo:rerun-if-changed={}", path);
     }
@@ -617,17 +639,21 @@ fn main() {
         return;
     }
 
-    let llvm_path: PathBuf = home.join(".thrushlang/backends/llvm/build");
-
     let llvm_config_path: PathBuf = match self::locate_llvm_config(&llvm_path.join("bin/")) {
         None => {
-            panic!("LLVM installation not found, ensure that exists in \"%HOME%/.thrushlang/backends/llvm/build\".");
+            logging::log(
+                LoggingType::Panic,
+                "The LLVM libraries could not be found in '%HOME%/.thrushlang/backends/llvm/build/', compile and run the compiler-builder again.",
+            );
+
+            std::process::exit(1);
         }
         Some(llvm_config_path) => llvm_config_path,
     };
 
     if !cfg!(feature = "disable-alltargets-init") {
-        std::env::set_var("CFLAGS", get_llvm_cflags(&llvm_config_path));
+        unsafe { std::env::set_var("CFLAGS", get_llvm_cflags(&llvm_config_path)) };
+
         cc::Build::new()
             .file("wrappers/target.c")
             .compile("targetwrappers");
