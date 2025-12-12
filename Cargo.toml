@@ -28,7 +28,7 @@ fastrand = "2.3.0"
 libloading = "0.8.9"
 either = "1.15.0"
 uuid = { version = "1.19.0", features = ["v4"] }
-object = { version = "0.37.0", features = ["read"] }
+object = { version = "0.38.0", features = ["read"] }
 tar = "0.4.44"
 xz2 = "0.1.7"
 
