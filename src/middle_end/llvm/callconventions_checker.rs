@@ -1,6 +1,3 @@
-use crate::back_end::llvm_codegen::attributes::{LLVMAttribute, LLVMAttributeComparator};
-use crate::back_end::llvm_codegen::callconventions::CallConvention;
-use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
 
 use crate::core::compiler::backends::llvm::LLVMBackend;
@@ -80,7 +77,8 @@ impl CallConventionsChecker<'_> {
         attributes: &ThrushAttributes,
         applicant: CallConventionAplicant,
     ) {
-        let llvm_attributes: LLVMAttributes = attributes.as_llvm_attributes();
+        let llvm_attributes: crate::back_end::llvm_codegen::types::repr::LLVMAttributes =
+            attributes.as_llvm_attributes();
         let llvm_backend: &LLVMBackend = self.get_compiler_options().get_llvm_backend_options();
 
         let triple: (String, String, String, String) =
@@ -88,9 +86,11 @@ impl CallConventionsChecker<'_> {
 
         match applicant {
             CallConventionAplicant::Function => {
-                if let Some(LLVMAttribute::Convention(call_conv)) =
-                    llvm_attributes.get_attr(LLVMAttributeComparator::Convention)
-                {
+                if let Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Convention(
+                    call_conv,
+                )) = llvm_attributes.get_attr(
+                    crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator::Convention,
+                ) {
                     if let Some(ThrushAttribute::Convention(_, span)) =
                         attributes.get_attr(ThrushAttributeComparator::Convention)
                     {
@@ -99,9 +99,11 @@ impl CallConventionsChecker<'_> {
                 }
             }
             CallConventionAplicant::Instrinsic => {
-                if let Some(LLVMAttribute::Convention(call_conv)) =
-                    llvm_attributes.get_attr(LLVMAttributeComparator::Convention)
-                {
+                if let Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Convention(
+                    call_conv,
+                )) = llvm_attributes.get_attr(
+                    crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator::Convention,
+                ) {
                     if let Some(ThrushAttribute::Convention(_, span)) =
                         attributes.get_attr(ThrushAttributeComparator::Convention)
                     {
@@ -117,68 +119,76 @@ impl CallConventionsChecker<'_> {
     fn analyze_calling_convention(
         &mut self,
         target_triple: (String, String, String, String),
-        call_conv: CallConvention,
+        call_conv: crate::back_end::llvm_codegen::callconventions::CallConvention,
         applicant: CallConventionAplicant,
         span: Span,
     ) {
-        const X86_64_CALL_CONVENTIONS: &[CallConvention] = &[
-            CallConvention::X86_StdCall,
-            CallConvention::X86_FastCall,
-            CallConvention::X86_ThisCall,
-            CallConvention::X86_64_SysV,
-            CallConvention::X86_INTR,
-            CallConvention::X86_VectorCall,
-            CallConvention::X86_RegCall,
+        const X86_64_CALL_CONVENTIONS:
+            &[crate::back_end::llvm_codegen::callconventions::CallConvention] = &[
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_StdCall,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_FastCall,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_ThisCall,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_64_SysV,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_INTR,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_VectorCall,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::X86_RegCall,
         ];
 
-        const ARM_CALL_CONVENTIONS: &[CallConvention] = &[
-            CallConvention::ARM_AAPCS,
-            CallConvention::ARM_AAPCS_VFP,
-            CallConvention::ARM_APCS,
-            CallConvention::ARM64EC_Thunk_Native,
-            CallConvention::ARM64EC_Thunk_X64,
+        const ARM_CALL_CONVENTIONS:
+            &[crate::back_end::llvm_codegen::callconventions::CallConvention] = &[
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM_AAPCS,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM_AAPCS_VFP,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM_APCS,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM64EC_Thunk_Native,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::ARM64EC_Thunk_X64,
         ];
 
-        const RISCV_CALL_CONVENTIONS: &[CallConvention] = &[
-            CallConvention::RISCV_VLSCall_1024,
-            CallConvention::RISCV_VLSCall_128,
-            CallConvention::RISCV_VLSCall_16384,
-            CallConvention::RISCV_VLSCall_2048,
-            CallConvention::RISCV_VLSCall_256,
-            CallConvention::RISCV_VLSCall_32,
-            CallConvention::RISCV_VLSCall_32768,
-            CallConvention::RISCV_VLSCall_4096,
-            CallConvention::RISCV_VLSCall_512,
-            CallConvention::RISCV_VLSCall_64,
-            CallConvention::RISCV_VLSCall_65536,
-            CallConvention::RISCV_VLSCall_8192,
-            CallConvention::RISCV_VectorCall,
+        const RISCV_CALL_CONVENTIONS:
+            &[crate::back_end::llvm_codegen::callconventions::CallConvention] = &[
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_1024,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_128,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_16384,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_2048,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_256,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_32,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_32768,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_4096,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_512,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_64,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_65536,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VLSCall_8192,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::RISCV_VectorCall,
         ];
 
-        const AARCH64_CALL_CONVENTIONS: &[CallConvention] = &[
-            CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0,
-            CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1,
-            CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2,
-            CallConvention::AArch64_SVE_VectorCall,
-            CallConvention::AArch64_VectorCall,
+        const AARCH64_CALL_CONVENTIONS:
+            &[crate::back_end::llvm_codegen::callconventions::CallConvention] = &[
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_SVE_VectorCall,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AArch64_VectorCall,
         ];
 
-        const AMDGPU_CALL_CONVENTIONS: &[CallConvention] = &[
-            CallConvention::AMDGPU_CS,
-            CallConvention::AMDGPU_CS_Chain,
-            CallConvention::AMDGPU_CS_ChainPreserve,
-            CallConvention::AMDGPU_ES,
-            CallConvention::AMDGPU_GS,
-            CallConvention::AMDGPU_Gfx,
-            CallConvention::AMDGPU_Gfx_WholeWave,
-            CallConvention::AMDGPU_HS,
-            CallConvention::AMDGPU_KERNEL,
-            CallConvention::AMDGPU_LS,
-            CallConvention::AMDGPU_PS,
-            CallConvention::AMDGPU_VS,
+        const AMDGPU_CALL_CONVENTIONS:
+            &[crate::back_end::llvm_codegen::callconventions::CallConvention] = &[
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_CS,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_CS_Chain,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_CS_ChainPreserve,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_ES,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_GS,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_Gfx,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_Gfx_WholeWave,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_HS,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_KERNEL,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_LS,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_PS,
+            crate::back_end::llvm_codegen::callconventions::CallConvention::AMDGPU_VS,
         ];
 
-        const WASM_CALL_CONVENTIONS: &[CallConvention] = &[CallConvention::WASM_EmscriptenInvoke];
+        const WASM_CALL_CONVENTIONS:
+            &[crate::back_end::llvm_codegen::callconventions::CallConvention] = &[
+            crate::back_end::llvm_codegen::callconventions::CallConvention::WASM_EmscriptenInvoke,
+        ];
 
         let lower_arch: String = target_triple.0.to_lowercase();
         let arch: &str = lower_arch.trim();

@@ -4,7 +4,7 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::{attributes, checks, typegen};
+use crate::front_end::parser::{attributes, typegen};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
@@ -17,8 +17,6 @@ pub fn build_intrinsic<'parser>(
     ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    checks::check_main_scope_state(ctx)?;
-
     let intrinsic_tk: &Token = ctx.consume(
         TokenType::Intrinsic,
         "Syntax error".into(),

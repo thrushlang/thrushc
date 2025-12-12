@@ -25,7 +25,7 @@ pub struct AttributeChecker<'attr_checker> {
 
     currrent: usize,
 
-    dignostician: Diagnostician,
+    diagnostician: Diagnostician,
 }
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
@@ -41,7 +41,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
             currrent: 0,
 
-            dignostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file),
         }
     }
 }
@@ -64,7 +64,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     fn check(&mut self) -> bool {
         if !self.errors.is_empty() {
             self.errors.iter().for_each(|error| {
-                self.dignostician
+                self.diagnostician
                     .dispatch_diagnostic(error, LoggingType::Error);
             });
 
@@ -73,7 +73,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
         if !self.warnings.is_empty() {
             self.warnings.iter().for_each(|warning| {
-                self.dignostician
+                self.diagnostician
                     .dispatch_diagnostic(warning, LoggingType::Warning);
             });
         }

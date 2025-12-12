@@ -4,7 +4,6 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::checks;
 use crate::front_end::parser::expr;
 use crate::front_end::parser::statements::block;
 use crate::front_end::parser::statements::local;
@@ -14,8 +13,6 @@ use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 pub fn build_for_loop<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    self::check_state(ctx)?;
-
     let for_tk: &Token = ctx.consume(
         TokenType::For,
         "Syntax error".into(),
@@ -43,8 +40,6 @@ pub fn build_for_loop<'parser>(
 pub fn build_loop<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    self::check_state(ctx)?;
-
     let loop_tk: &Token = ctx.consume(
         TokenType::Loop,
         "Syntax error".into(),
@@ -64,8 +59,6 @@ pub fn build_loop<'parser>(
 pub fn build_while_loop<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    self::check_state(ctx)?;
-
     let while_tk: &Token = ctx.consume(
         TokenType::While,
         "Syntax error".into(),
@@ -82,8 +75,4 @@ pub fn build_while_loop<'parser>(
         block: block.into(),
         span,
     })
-}
-
-fn check_state(ctx: &mut ParserContext) -> Result<(), CompilationIssue> {
-    checks::check_inside_function_state(ctx)
 }

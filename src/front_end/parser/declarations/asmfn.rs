@@ -4,7 +4,7 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::{attributes, checks, expr, typegen};
+use crate::front_end::parser::{attributes, expr, typegen};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::symbols::types::ParametersTypes;
@@ -16,8 +16,6 @@ pub fn build_assembler_function<'parser>(
     ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    checks::check_main_scope_state(ctx)?;
-
     ctx.consume(
         TokenType::AsmFn,
         "Syntax error".into(),

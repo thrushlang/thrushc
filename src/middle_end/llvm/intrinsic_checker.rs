@@ -27,12 +27,12 @@ impl<'llvm> IntrinsicChecker<'llvm> {
 
 impl<'llvm> IntrinsicChecker<'llvm> {
     pub fn check(&mut self) -> Result<(), ()> {
-        for ast in self.ast {
+        for node in self.ast {
             if let Ast::Intrinsic {
                 external_name,
                 span,
                 ..
-            } = ast
+            } = node
             {
                 let intrinsic: Option<Intrinsic> = Intrinsic::find(external_name);
 
@@ -41,11 +41,11 @@ impl<'llvm> IntrinsicChecker<'llvm> {
                         && external_name.split(".").count() <= 2)
                 {
                     self.add_error(CompilationIssue::Error(
-                        "Intrinsic not found".into(),
-                        "This intrinsic is not recognized by the compiler as existing. Try another name.".into(),
-                        None,
-                        *span,
-                    ));
+                    "Intrinsic not found".into(),
+                    "This intrinsic is not recognized by the compiler as existing. Try another.".into(),
+                    None,
+                    *span,
+                ));
                 }
             }
         }

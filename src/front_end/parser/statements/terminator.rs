@@ -4,7 +4,6 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::checks;
 use crate::front_end::parser::expr;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
@@ -13,8 +12,6 @@ use crate::front_end::typesystem::types::Type;
 pub fn build_return<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    self::check_state(ctx)?;
-
     let return_tk: &Token = ctx.consume(
         TokenType::Return,
         "Syntax error".into(),
@@ -44,8 +41,4 @@ pub fn build_return<'parser>(
         kind: ctx.get_type_ctx().get_function_type().clone(),
         span,
     })
-}
-
-fn check_state(ctx: &mut ParserContext) -> Result<(), CompilationIssue> {
-    checks::check_inside_function_state(ctx)
 }

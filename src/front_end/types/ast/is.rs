@@ -3,7 +3,7 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{
     AstCodeBlockEntensions, AstConstantExtensions, AstGetType, AstMemoryExtensions,
-    AstMutabilityExtensions, AstStandardExtensions, AstStatementExtentions,
+    AstMutabilityExtensions, AstScopeExtensions, AstStandardExtensions, AstStatementExtentions,
 };
 
 impl AstStandardExtensions for Ast<'_> {
@@ -83,6 +83,21 @@ impl AstStandardExtensions for Ast<'_> {
     }
 
     #[inline]
+    fn is_custom_type(&self) -> bool {
+        matches!(self, Ast::CustomType { .. })
+    }
+
+    #[inline]
+    fn is_global_asm(&self) -> bool {
+        matches!(self, Ast::GlobalAssembler { .. })
+    }
+
+    #[inline]
+    fn is_import(&self) -> bool {
+        matches!(self, Ast::Import { .. })
+    }
+
+    #[inline]
     fn is_lli(&self) -> bool {
         matches!(
             self,
@@ -97,26 +112,19 @@ impl AstStatementExtentions for Ast<'_> {
             self,
             Ast::Block { .. }
                 | Ast::If { .. }
+                | Ast::Else { .. }
+                | Ast::Elif { .. }
                 | Ast::While { .. }
                 | Ast::For { .. }
+                | Ast::Loop { .. }
                 | Ast::Return { .. }
                 | Ast::Break { .. }
                 | Ast::Continue { .. }
                 | Ast::Local { .. }
-                | Ast::FunctionParameter { .. }
-                | Ast::Index { .. }
-                | Ast::Reference { .. }
-                | Ast::Property { .. }
                 | Ast::Struct { .. }
-                | Ast::Enum { .. }
                 | Ast::Const { .. }
                 | Ast::Static { .. }
-                | Ast::Integer { .. }
-                | Ast::Function { .. }
-                | Ast::Intrinsic { .. }
-                | Ast::AssemblerFunction { .. }
-                | Ast::Builtin { .. }
-        ) || self.is_lli()
+        )
     }
 }
 
@@ -251,5 +259,24 @@ impl AstConstantExtensions for Ast<'_> {
         }
 
         false
+    }
+}
+
+impl AstScopeExtensions for Ast<'_> {
+    #[inline]
+    fn is_compatible_with_main_scope(&self) -> bool {
+        matches!(
+            self,
+            Ast::CustomType { .. }
+                | Ast::Struct { .. }
+                | Ast::Enum { .. }
+                | Ast::Intrinsic { .. }
+                | Ast::Function { .. }
+                | Ast::AssemblerFunction { .. }
+                | Ast::GlobalAssembler { .. }
+                | Ast::Const { .. }
+                | Ast::Static { .. }
+                | Ast::Import { .. }
+        )
     }
 }

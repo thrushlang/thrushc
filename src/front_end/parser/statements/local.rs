@@ -8,7 +8,6 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::attributes;
 use crate::front_end::parser::builder;
-use crate::front_end::parser::checks;
 use crate::front_end::parser::expr;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
@@ -20,8 +19,6 @@ use crate::middle_end::mir::attributes::ThrushAttributes;
 pub fn build_local<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    self::check_state(ctx)?;
-
     ctx.consume(
         TokenType::Local,
         "Syntax error".into(),
@@ -95,8 +92,4 @@ pub fn build_local<'parser>(
     };
 
     Ok(local)
-}
-
-fn check_state(ctx: &mut ParserContext<'_>) -> Result<(), CompilationIssue> {
-    checks::check_inside_function_state(ctx)
 }

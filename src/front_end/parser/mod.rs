@@ -1,7 +1,6 @@
 pub mod attributes;
 pub mod builder;
 pub mod builtins;
-pub mod checks;
 pub mod constants;
 pub mod contexts;
 pub mod declaration;

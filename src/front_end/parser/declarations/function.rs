@@ -5,7 +5,6 @@ use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::attributes;
-use crate::front_end::parser::checks;
 use crate::front_end::parser::statements::block;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
@@ -20,8 +19,6 @@ pub fn build_function<'parser>(
     ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    checks::check_main_scope_state(ctx)?;
-
     ctx.consume(
         TokenType::Fn,
         "Syntax error".into(),

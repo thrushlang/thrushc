@@ -6,7 +6,6 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::attributes;
 use crate::front_end::parser::builder;
-use crate::front_end::parser::checks;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::{StructFieldsExtensions, TokenExtensions};
@@ -19,8 +18,6 @@ pub fn build_structure<'parser>(
     ctx: &mut ParserContext<'parser>,
     declare_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    checks::check_main_scope_state(ctx)?;
-
     ctx.consume(
         TokenType::Struct,
         "Syntax error".into(),

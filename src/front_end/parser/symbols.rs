@@ -202,14 +202,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(CompilationIssue::FrontEndBug(
-            String::from("Low level instruction not caught"),
-            String::from("The final scope was not obtained."),
-            span,
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ));
+        Ok(())
     }
 
     pub fn new_local(
@@ -233,14 +226,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(CompilationIssue::FrontEndBug(
-            String::from("Last scope not caught"),
-            String::from("The last scope could not be obtained."),
-            span,
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ));
+        Ok(())
     }
 
     pub fn new_global_static(
@@ -284,14 +270,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(CompilationIssue::FrontEndBug(
-            String::from("Last scope not caught"),
-            String::from("The last scope could not be obtained."),
-            span,
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ));
+        Ok(())
     }
 
     pub fn new_global_constant(
@@ -335,14 +314,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(CompilationIssue::FrontEndBug(
-            String::from("Last scope not caught"),
-            String::from("The last scope could not be obtained."),
-            span,
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ));
+        Ok(())
     }
 
     pub fn new_global_custom_type(
@@ -386,14 +358,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(CompilationIssue::FrontEndBug(
-            String::from("Last scope not caught"),
-            String::from("The last scope could not be obtained."),
-            span,
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ));
+        Ok(())
     }
 
     pub fn new_global_struct(
@@ -437,14 +402,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(CompilationIssue::FrontEndBug(
-            String::from("Last scope not caught"),
-            String::from("The last scope could not be obtained."),
-            span,
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ));
+        Ok(())
     }
 
     pub fn new_global_enum(
@@ -488,14 +446,7 @@ impl<'parser> SymbolsTable<'parser> {
             return Ok(());
         }
 
-        return Err(CompilationIssue::FrontEndBug(
-            String::from("Last scope not caught"),
-            String::from("The last scope could not be obtained."),
-            span,
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ));
+        Ok(())
     }
 
     pub fn new_asm_function(

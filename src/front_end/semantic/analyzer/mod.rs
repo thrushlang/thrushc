@@ -8,19 +8,17 @@ use crate::front_end::semantic::analyzer::symbols::AnalyzerSymbolsTable;
 use crate::front_end::types::ast::Ast;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
-pub mod builtins;
-pub mod checks;
-pub mod constants;
-pub mod context;
-pub mod declarations;
-pub mod expressions;
-pub mod statements;
-pub mod symbols;
+mod builtins;
+mod constants;
+mod context;
+mod declarations;
+mod expressions;
+mod statements;
+mod symbols;
 
 #[derive(Debug)]
 pub struct Analyzer<'analyzer> {
     ast: &'analyzer [Ast<'analyzer>],
-    position: usize,
 
     bugs: Vec<CompilationIssue>,
     errors: Vec<CompilationIssue>,
@@ -37,7 +35,6 @@ impl<'analyzer> Analyzer<'analyzer> {
     pub fn new(ast: &'analyzer [Ast<'analyzer>], file: &'analyzer CompilationUnit) -> Self {
         Self {
             ast,
-            position: 0,
 
             bugs: Vec::with_capacity(100),
             errors: Vec::with_capacity(100),
@@ -55,14 +52,10 @@ impl<'analyzer> Analyzer<'analyzer> {
     pub fn start(&mut self) -> bool {
         self.declare_forward();
 
-        while !self.is_eof() {
-            let node: &Ast = self.peek();
-
+        for node in self.ast.iter() {
             if let Err(error) = self.analyze_decl(node) {
                 self.add_error(error);
             }
-
-            self.advance();
         }
 
         self.check()
@@ -121,26 +114,10 @@ impl<'analyzer> Analyzer<'analyzer> {
             Ast::For { .. } | Ast::While { .. } | Ast::Loop { .. } => {
                 statements::loops::validate(self, node)
             }
-            Ast::Continue { .. } | Ast::Break { .. } => {
-                if !self.get_context().is_inside_loop() {
-                    self.add_error(
-                        CompilationIssue::Error(
-                            "Syntax Error".into(),
-                            "Only loop control flow terminators can be inside a loop. The instruction inside a loop was expected.".into(),
-                            None,
-                            node.get_span(),
-                        )
-                    );
-                }
-
-                Ok(())
-            }
+            Ast::Continue { .. } | Ast::Break { .. } => Ok(()),
             Ast::Mut { .. } => statements::mutation::validate(self, node),
             Ast::Block { nodes, .. } => {
                 self.begin_scope();
-
-                checks::check_for_multiple_terminators(self, node);
-                checks::check_for_unreachable_code_instructions(self, node);
 
                 nodes.iter().try_for_each(|node| self.analyze_stmt(node))?;
 
@@ -187,25 +164,6 @@ impl<'analyzer> Analyzer<'analyzer> {
                 _ => (),
             }
         }
-    }
-}
-
-impl<'analyzer> Analyzer<'analyzer> {
-    #[inline]
-    fn advance(&mut self) {
-        if !self.is_eof() {
-            self.position += 1;
-        }
-    }
-
-    #[inline]
-    fn peek(&self) -> &'analyzer Ast<'analyzer> {
-        &self.ast[self.position]
-    }
-
-    #[inline]
-    fn is_eof(&self) -> bool {
-        self.position >= self.ast.len()
     }
 }
 
