@@ -18,7 +18,7 @@ build = "build.rs"
 [dependencies]
 inkwell = { path = "wrappers/llvm/inkwell", optional = true }
 gcc = { path = "wrappers/gcc/gccjit",  optional = true }
-clang = { path = "wrappers/llvm/clang", optional = true }
+clang = { path = "wrappers/llvm/clang-rs", optional = true }
 
 unicode_categories = "0.1.1"
 colored = "3.0.0"
