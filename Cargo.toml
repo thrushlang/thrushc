@@ -16,8 +16,9 @@ repository = "https://github.com/thrushlang/thrushc"
 build = "build.rs"
 
 [dependencies]
-llvm-sys = { path = "wrappers/llvm/17/llvm-sys", features = ["force-static"] }
-inkwell = { path = "wrappers/llvm/inkwell", features = ["llvm17-0", "llvm17-0-force-static"] }
+inkwell = { path = "wrappers/llvm/inkwell", optional = true }
+gcc = { path = "wrappers/gcc/gccjit",  optional = true }
+clang = { path = "wrappers/llvm/clang", optional = true }
 
 unicode_categories = "0.1.1"
 colored = "3.0.0"
@@ -28,11 +29,6 @@ libloading = "0.8.9"
 either = "1.15.0"
 uuid = { version = "1.19.0", features = ["v4"] }
 object = { version = "0.37.0", features = ["read"] }
-
-
-[target.'cfg(target_os = "linux")'.dependencies]
-gcc = { path = "wrappers/gcc/gccjit",  optional = true }
-
 tar = "0.4.44"
 xz2 = "0.1.7"
 
@@ -40,8 +36,15 @@ xz2 = "0.1.7"
 zip = "2.3.0"
 
 [features]
-gcc_enabled = ["gcc"] 
-gcc_disabled = [] 
+default = ["llvm_backend_static"]
+
+llvm_backend_dynamic = ["inkwell/llvm17-0", "inkwell/llvm17-0-force-dynamic"]
+llvm_backend_static = ["inkwell/llvm17-0", "inkwell/llvm17-0-force-static"]
+
+gcc_backend_dynamic = ["gcc"]
+
+cbindgen_static = ["clang/static"]
+cbindgen_dynamic = ["clang"]
 
 [build-dependencies]
 libloading = "0.8.9"
