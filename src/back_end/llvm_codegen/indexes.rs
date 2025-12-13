@@ -3,6 +3,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::integer;
 
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::typesystem::traits::TypePointerExtensions;
 use crate::front_end::typesystem::types::Type;
 

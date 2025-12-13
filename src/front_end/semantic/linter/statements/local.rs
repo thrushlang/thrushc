@@ -6,6 +6,7 @@ use crate::front_end::semantic::linter::Linter;
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 
 use std::path::PathBuf;
 

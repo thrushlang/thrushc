@@ -5,7 +5,7 @@ use crate::core::errors::{position::CompilationPosition, standard::CompilationIs
 
 use crate::front_end::semantic::typechecker::{TypeChecker, checks};
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstGetType;
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstGetType};
 use crate::front_end::typesystem::types::Type;
 
 pub fn validate<'type_checker>(

@@ -6,7 +6,7 @@ use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::{AstGetType, AstLLVMGetType};
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstGetType, AstLLVMGetType};
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
@@ -104,6 +104,8 @@ impl AstGetType for Ast<'_> {
 
             // Module Import
             Ast::Import { .. } => Ok(&Type::Void),
+            // C Import
+            Ast::ImportC { .. } => Ok(&Type::Void),
 
             // Ignored
             Ast::Pass { .. } => Ok(&Type::Void),
@@ -316,8 +318,8 @@ impl Ast<'_> {
     }
 }
 
-impl Ast<'_> {
-    pub fn get_span(&self) -> Span {
+impl AstCodeLocation for Ast<'_> {
+    fn get_span(&self) -> Span {
         match self {
             // Primitive values and literals
             Ast::Integer { span, .. } => *span,
@@ -407,6 +409,8 @@ impl Ast<'_> {
 
             // Module Import
             Ast::Import { span, .. } => *span,
+            // C Import
+            Ast::ImportC { span, .. } => *span,
 
             // Indirect Call
             Ast::Indirect { span, .. } => *span,

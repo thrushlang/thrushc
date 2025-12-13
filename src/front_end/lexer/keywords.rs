@@ -47,6 +47,7 @@ lazy_static! {
         keywords.insert(b"unreachable", TokenType::Unreachable);
         keywords.insert(b"intrinsic", TokenType::Intrinsic);
         keywords.insert(b"import", TokenType::Import);
+        keywords.insert(b"importC", TokenType::ImportC);
         keywords.insert(b"new", TokenType::New);
 
         keywords

@@ -5,6 +5,7 @@ use crate::core::errors::{position::CompilationPosition, standard::CompilationIs
 
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 
 pub fn validate<'analyzer>(
     analyzer: &mut Analyzer<'analyzer>,

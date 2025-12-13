@@ -36,7 +36,7 @@ xz2 = "0.1.7"
 zip = "2.3.0"
 
 [features]
-default = ["llvm_backend_static"]
+default = ["llvm_backend_static", "cbindgen_static"]
 
 llvm_backend_dynamic = ["inkwell/llvm17-0", "inkwell/llvm17-0-force-dynamic"]
 llvm_backend_static = ["inkwell/llvm17-0", "inkwell/llvm17-0-force-static"]

@@ -3,7 +3,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstGetType;
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstGetType};
 use crate::front_end::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
@@ -54,7 +54,7 @@ pub fn validate_memmove<'type_checker>(
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
-            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", source_type),
+            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}' type.", source_type),
             None,
             source_span,
         ));
@@ -63,7 +63,7 @@ pub fn validate_memmove<'type_checker>(
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
-            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", destination_type)
+            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}' type.", destination_type)
                 ,
             None,
             destination_span,
@@ -73,7 +73,7 @@ pub fn validate_memmove<'type_checker>(
     if !size_type.is_unsigned_integer_type() {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
-            format!("Expected unsigned integer type, got '{}'.", size_type),
+            format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
             size_span,
         ));
@@ -105,7 +105,7 @@ pub fn validate_memcpy<'type_checker>(
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
-            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr'  type, got '{}'.", source_type),
+            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr'  type, got '{}' type.", source_type),
             None,
             source_span,
         ));
@@ -124,7 +124,7 @@ pub fn validate_memcpy<'type_checker>(
     if size_type.is_unsigned_integer_type() {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
-            format!("Expected unsigned integer type, got '{}'.", size_type),
+            format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
             size_span,
         ));
@@ -156,7 +156,7 @@ pub fn validate_memset<'type_checker>(
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
-            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}'.", size_type),
+            format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}' type.", size_type),
             None,
             destination_span,
         ));
@@ -165,7 +165,10 @@ pub fn validate_memset<'type_checker>(
     if !new_size_type.is_unsigned_integer_type() {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
-            format!("Expected unsigned integer type, got '{}'.", new_size_type),
+            format!(
+                "Expected unsigned integer type, got '{}' type.",
+                new_size_type
+            ),
             None,
             new_size_span,
         ));
@@ -174,7 +177,7 @@ pub fn validate_memset<'type_checker>(
     if !size_type.is_unsigned_integer_type() {
         typechecker.add_error(CompilationIssue::Error(
             "Type error".into(),
-            format!("Expected unsigned integer type, got '{}'.", size_type),
+            format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
             size_span,
         ));

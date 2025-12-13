@@ -5,6 +5,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::scoper::context::ScoperContext;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstScopeExtensions;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
 

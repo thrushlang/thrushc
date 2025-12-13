@@ -4,6 +4,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::{position::CompilationPosition, standard::CompilationIssue};
 
 use crate::front_end::semantic::analyzer::Analyzer;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::{Ast, metadata::local::LocalMetadata};
 
 pub fn validate<'analyzer>(

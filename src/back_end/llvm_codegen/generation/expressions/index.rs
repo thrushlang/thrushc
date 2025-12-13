@@ -5,6 +5,7 @@ use crate::back_end::llvm_codegen::refptr;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::typesystem::types::Type;
 

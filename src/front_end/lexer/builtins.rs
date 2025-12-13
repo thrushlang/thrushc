@@ -8,7 +8,7 @@ lazy_static! {
         let mut builtins: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
 
         builtins.insert(b"halloc", TokenType::Halloc);
-        builtins.insert(b"sizeof", TokenType::SizeOf);
+        builtins.insert(b"size_of", TokenType::SizeOf);
         builtins.insert(b"memset", TokenType::MemSet);
         builtins.insert(b"memmove", TokenType::MemMove);
         builtins.insert(b"memcpy", TokenType::MemCpy);

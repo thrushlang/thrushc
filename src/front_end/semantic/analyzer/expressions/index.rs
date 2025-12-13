@@ -5,7 +5,7 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{
-    AstGetType, AstMemoryExtensions, AstStandardExtensions,
+    AstCodeLocation, AstGetType, AstMemoryExtensions, AstStandardExtensions,
 };
 use crate::front_end::typesystem::traits::TypeExtensions;
 use crate::front_end::typesystem::types::Type;

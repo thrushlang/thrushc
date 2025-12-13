@@ -4,7 +4,7 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, attributes, expr, typegen};
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstStandardExtensions};
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::ThrushAttributes;

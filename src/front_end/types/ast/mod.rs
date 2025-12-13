@@ -408,6 +408,10 @@ pub enum Ast<'ctx> {
     Import {
         span: Span,
     },
+    // C Import
+    ImportC {
+        span: Span,
+    },
 
     // Extra
     Pass {

@@ -6,6 +6,7 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::{attributes, expr, typegen};
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::symbols::types::ParametersTypes;
 use crate::front_end::typesystem::types::Type;

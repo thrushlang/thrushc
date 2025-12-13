@@ -6,6 +6,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::linter::symbols::LinterSymbolsTable;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 use ahash::AHashMap as HashMap;

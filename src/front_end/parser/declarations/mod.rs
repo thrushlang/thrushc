@@ -7,4 +7,5 @@ pub mod glenum;
 pub mod glstatic;
 pub mod glstructure;
 pub mod import;
+pub mod import_c;
 pub mod intrinsic;

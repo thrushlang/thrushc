@@ -2,7 +2,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::scoper::Scoper;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstStandardExtensions};
 
 pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     let Ast::Block { nodes, .. } = node else {

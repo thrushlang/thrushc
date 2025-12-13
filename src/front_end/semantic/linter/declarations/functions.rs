@@ -5,6 +5,7 @@ use crate::core::errors::{position::CompilationPosition, standard::CompilationIs
 
 use crate::front_end::semantic::linter::Linter;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 
 pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {

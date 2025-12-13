@@ -109,6 +109,7 @@ pub enum TokenType {
     New,
     Fixed,
     Import,
+    ImportC,
     Mut,
     Type,
     Enum,

@@ -14,7 +14,7 @@ use crate::back_end::llvm_codegen::{abort, refptr};
 use crate::back_end::llvm_codegen::{binaryop, generation};
 
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstLLVMGetType;
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstLLVMGetType};
 use crate::front_end::typesystem::traits::TypeStructExtensions;
 use crate::front_end::typesystem::types::Type;
 

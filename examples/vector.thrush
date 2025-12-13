@@ -29,7 +29,7 @@ fn main(argc: u32, argv: ptr[array[char]]) s32 @public {
     for local mut idx: u32 = 0; idx < 10; idx++; {
         if (deref vector.size) >= (deref vector.capacity) {
             vector.capacity = (deref vector.capacity) * 2;
-            vector.data = realloc((deref vector.data) as ptr, sizeof(u32) * (deref vector.capacity));
+            vector.data = realloc((deref vector.data) as ptr, size_of(u32) * (deref vector.capacity));
         } 
 
         (deref vector.data)[deref vector.size] = idx;

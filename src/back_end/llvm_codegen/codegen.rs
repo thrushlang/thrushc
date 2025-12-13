@@ -13,7 +13,9 @@ use crate::back_end::llvm_codegen::{refptr, statements};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
-use crate::front_end::types::ast::traits::{AstLLVMGetType, AstStandardExtensions};
+use crate::front_end::types::ast::traits::{
+    AstCodeLocation, AstLLVMGetType, AstStandardExtensions,
+};
 use crate::front_end::typesystem::traits::DereferenceExtensions;
 use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;

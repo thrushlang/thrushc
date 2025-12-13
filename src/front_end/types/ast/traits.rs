@@ -1,5 +1,6 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
+use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::typesystem::types::Type;
 
@@ -10,6 +11,10 @@ pub trait AstLLVMGetType {
 pub trait AstGetType {
     fn get_any_type(&self) -> Result<&Type, CompilationIssue>;
     fn get_value_type(&self) -> Result<&Type, CompilationIssue>;
+}
+
+pub trait AstCodeLocation {
+    fn get_span(&self) -> Span;
 }
 
 pub trait AstStatementExtentions {

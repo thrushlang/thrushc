@@ -6,6 +6,7 @@ use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::checks;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
 

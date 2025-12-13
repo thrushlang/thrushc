@@ -3,6 +3,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expr};
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::types::Type;
 

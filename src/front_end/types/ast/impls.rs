@@ -373,6 +373,10 @@ impl std::fmt::Display for Ast<'_> {
             Ast::Import { .. } => {
                 write!(f, "import")
             }
+
+            Ast::ImportC { .. } => {
+                write!(f, "importC")
+            }
         }
     }
 }

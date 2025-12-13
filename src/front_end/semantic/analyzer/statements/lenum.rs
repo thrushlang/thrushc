@@ -4,7 +4,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstConstantExtensions;
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstConstantExtensions};
 
 use std::path::PathBuf;
 
