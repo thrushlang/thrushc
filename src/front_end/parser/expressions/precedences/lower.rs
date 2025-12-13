@@ -36,11 +36,12 @@ pub fn lower_precedence<'parser>(
 
         TokenType::SizeOf => builtins::build_sizeof(ctx)?,
         TokenType::AlignOf => builtins::build_alignof(ctx)?,
-
         TokenType::Halloc => builtins::build_halloc(ctx)?,
         TokenType::MemSet => builtins::build_memset(ctx)?,
         TokenType::MemMove => builtins::build_memmove(ctx)?,
         TokenType::MemCpy => builtins::build_memcpy(ctx)?,
+        TokenType::AbiSizeOf => builtins::build_abisizeof(ctx)?,
+        TokenType::BitSizeOf => builtins::build_bitsizeof(ctx)?,
 
         TokenType::Asm => asm::build_asm_code_block(ctx)?,
 
@@ -153,13 +154,11 @@ pub fn lower_precedence<'parser>(
             }
         }
 
-        TokenType::True => Ast::new_boolean(Type::Bool, 1, ctx.advance()?.span),
-        TokenType::False => Ast::new_boolean(Type::Bool, 0, ctx.advance()?.span),
-
+        TokenType::True => Ast::new_boolean(Type::Bool, 1, ctx.advance()?.get_span()),
+        TokenType::False => Ast::new_boolean(Type::Bool, 0, ctx.advance()?.get_span()),
         TokenType::Pass => Ast::Pass {
             span: ctx.advance()?.get_span(),
         },
-
         TokenType::Unreachable => Ast::Unreachable {
             span: ctx.advance()?.get_span(),
         },

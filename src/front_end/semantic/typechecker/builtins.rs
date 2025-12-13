@@ -28,7 +28,9 @@ pub fn validate<'type_checker>(
 
         crate::middle_end::mir::builtins::ThrushBuiltin::Halloc { .. }
         | crate::middle_end::mir::builtins::ThrushBuiltin::AlignOf { .. }
-        | crate::middle_end::mir::builtins::ThrushBuiltin::SizeOf { .. } => Ok(()),
+        | crate::middle_end::mir::builtins::ThrushBuiltin::SizeOf { .. }
+        | crate::middle_end::mir::builtins::ThrushBuiltin::AbiSizeOf { .. }
+        | crate::middle_end::mir::builtins::ThrushBuiltin::BitSizeOf { .. } => Ok(()),
     }
 }
 

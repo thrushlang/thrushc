@@ -109,7 +109,6 @@ pub enum TokenType {
     New,
     Fixed,
     Import,
-    SizeOf,
     Mut,
     Type,
     Enum,
@@ -138,6 +137,9 @@ pub enum TokenType {
     // -- Builtins --
     AlignOf,
     Halloc,
+    AbiSizeOf,
+    BitSizeOf,
+    SizeOf,
     MemCpy,
     MemMove,
     MemSet,

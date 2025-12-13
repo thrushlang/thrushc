@@ -10,21 +10,29 @@ pub enum ThrushBuiltin<'mir> {
         span: Span,
     },
     MemCpy {
-        src: std::rc::Rc<Ast<'mir>>,
-        dst: std::rc::Rc<Ast<'mir>>,
-        size: std::rc::Rc<Ast<'mir>>,
+        src: std::boxed::Box<Ast<'mir>>,
+        dst: std::boxed::Box<Ast<'mir>>,
+        size: std::boxed::Box<Ast<'mir>>,
         span: Span,
     },
     MemMove {
-        src: std::rc::Rc<Ast<'mir>>,
-        dst: std::rc::Rc<Ast<'mir>>,
-        size: std::rc::Rc<Ast<'mir>>,
+        src: std::boxed::Box<Ast<'mir>>,
+        dst: std::boxed::Box<Ast<'mir>>,
+        size: std::boxed::Box<Ast<'mir>>,
         span: Span,
     },
     MemSet {
-        dst: std::rc::Rc<Ast<'mir>>,
-        new_size: std::rc::Rc<Ast<'mir>>,
-        size: std::rc::Rc<Ast<'mir>>,
+        dst: std::boxed::Box<Ast<'mir>>,
+        new_size: std::boxed::Box<Ast<'mir>>,
+        size: std::boxed::Box<Ast<'mir>>,
+        span: Span,
+    },
+    BitSizeOf {
+        of: Type,
+        span: Span,
+    },
+    AbiSizeOf {
+        of: Type,
         span: Span,
     },
     AlignOf {
@@ -83,6 +91,12 @@ impl<'mir> ThrushBuiltin<'mir> {
             }
             ThrushBuiltin::SizeOf { of, span } => {
                 crate::back_end::llvm_codegen::builtins::LLVMBuiltin::SizeOf { of, span: *span }
+            }
+            ThrushBuiltin::BitSizeOf { of, span } => {
+                crate::back_end::llvm_codegen::builtins::LLVMBuiltin::BitSizeOf { of, span: *span }
+            }
+            ThrushBuiltin::AbiSizeOf { of, span } => {
+                crate::back_end::llvm_codegen::builtins::LLVMBuiltin::AbiSizeOf { of, span: *span }
             }
         }
     }

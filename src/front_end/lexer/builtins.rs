@@ -13,6 +13,8 @@ lazy_static! {
         builtins.insert("memmove", TokenType::MemMove);
         builtins.insert("memcpy", TokenType::MemCpy);
         builtins.insert("alignof", TokenType::AlignOf);
+        builtins.insert("abisizeof", TokenType::AbiSizeOf);
+        builtins.insert("bitsizeof", TokenType::BitSizeOf);
 
         builtins
     };

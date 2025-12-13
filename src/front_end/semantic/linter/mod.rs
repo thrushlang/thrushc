@@ -1,5 +1,4 @@
 use crate::core::compiler::options::CompilationUnit;
-use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
@@ -11,18 +10,17 @@ use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 use ahash::AHashMap as HashMap;
 
-pub mod builtins;
-pub mod constants;
-pub mod declarations;
-pub mod expressions;
-pub mod marks;
-pub mod statements;
-pub mod symbols;
+mod builtins;
+mod constants;
+mod declarations;
+mod expressions;
+mod marks;
+mod statements;
+mod symbols;
 
 #[derive(Debug)]
 pub struct Linter<'linter> {
     ast: &'linter [Ast<'linter>],
-    current: usize,
 
     warnings: Vec<CompilationIssue>,
     bugs: Vec<CompilationIssue>,
@@ -36,7 +34,6 @@ impl<'linter> Linter<'linter> {
     pub fn new(ast: &'linter [Ast], file: &'linter CompilationUnit) -> Self {
         Self {
             ast,
-            current: 0,
             warnings: Vec::with_capacity(100),
             bugs: Vec::with_capacity(100),
             diagnostician: Diagnostician::new(file),
@@ -49,11 +46,8 @@ impl<'linter> Linter<'linter> {
     pub fn check(&mut self) {
         self.declare_forward();
 
-        while !self.is_eof() {
-            let current_node: &Ast = self.peek();
-
-            self.analyze_decl(current_node);
-            self.advance();
+        for node in self.ast.iter() {
+            self.analyze_decl(node);
         }
 
         self.generate_warnings();
@@ -306,7 +300,7 @@ impl Linter<'_> {
             }
         }
 
-        self.warnings.extend(warnings);
+        self.add_bulk_warnings(warnings);
     }
 
     fn generate_scoped_function_warnings(&mut self) {
@@ -334,7 +328,7 @@ impl Linter<'_> {
             }
         }
 
-        self.warnings.extend(warnings);
+        self.add_bulk_warnings(warnings);
     }
 
     fn generate_warnings(&mut self) {
@@ -461,14 +455,14 @@ impl Linter<'_> {
             }
         }
 
-        self.warnings.extend(warnings);
+        self.add_bulk_warnings(warnings);
     }
 }
 
 impl Linter<'_> {
     #[inline]
-    pub fn add_warning(&mut self, warning: CompilationIssue) {
-        self.warnings.push(warning);
+    pub fn add_bulk_warnings(&mut self, warnings: Vec<CompilationIssue>) {
+        self.warnings.extend(warnings);
     }
 }
 
@@ -488,29 +482,6 @@ impl<'linter> Linter<'linter> {
     #[inline]
     fn end_scope(&mut self) {
         self.symbols.end_scope();
-    }
-}
-
-impl<'linter> Linter<'linter> {
-    fn advance(&mut self) {
-        if !self.is_eof() {
-            self.current += 1;
-        }
-    }
-
-    #[inline]
-    fn peek(&self) -> &'linter Ast<'linter> {
-        self.ast.get(self.current).unwrap_or_else(|| {
-            logging::print_frontend_panic(
-                LoggingType::FrontEndPanic,
-                "Attempting to get ast in invalid current position.",
-            );
-        })
-    }
-
-    #[inline]
-    fn is_eof(&self) -> bool {
-        self.current >= self.ast.len()
     }
 }
 
