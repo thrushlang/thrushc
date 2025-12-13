@@ -6,9 +6,9 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::declarations::{self};
 use crate::back_end::llvm_codegen::generation::{cast, float, integer};
 use crate::back_end::llvm_codegen::statements::lli;
-use crate::back_end::llvm_codegen::{self, builtins, codegen, constgen};
 use crate::back_end::llvm_codegen::{abort, memory};
 use crate::back_end::llvm_codegen::{binaryop, generation};
+use crate::back_end::llvm_codegen::{builtins, codegen, constgen};
 use crate::back_end::llvm_codegen::{refptr, statements};
 
 use crate::front_end::types::ast::Ast;
@@ -517,7 +517,7 @@ pub fn compile<'ctx>(
             let float: BasicValueEnum =
                 float::generate(context, kind, *value, *signed, *span).into();
 
-            cast::try_cast(context, cast_type, kind, float, *span).unwrap_or(float)
+            cast::try_cast(context, cast_type, kind, float, *span)
         }
 
         Ast::Integer {
@@ -530,7 +530,7 @@ pub fn compile<'ctx>(
             let integer: BasicValueEnum =
                 integer::generate(context, kind, *value, *signed, *span).into();
 
-            cast::try_cast(context, cast_type, kind, integer, *span).unwrap_or(integer)
+            cast::try_cast(context, cast_type, kind, integer, *span)
         }
 
         Ast::NullPtr { .. } => context
@@ -662,7 +662,7 @@ pub fn compile<'ctx>(
                 value
             };
 
-            cast::try_cast(context, cast_type, kind, deref_value, *span).unwrap_or(deref_value)
+            cast::try_cast(context, cast_type, kind, deref_value, *span)
         }
 
         // Array Operations

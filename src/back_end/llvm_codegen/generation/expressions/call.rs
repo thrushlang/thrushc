@@ -68,5 +68,5 @@ pub fn compile<'ctx>(
         ),
     };
 
-    cast::try_cast(context, cast, kind, fn_value, span).unwrap_or(fn_value)
+    cast::try_cast(context, cast, kind, fn_value, span)
 }

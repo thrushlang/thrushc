@@ -40,8 +40,8 @@ pub fn lower_precedence<'parser>(
         TokenType::MemSet => builtins::build_memset(ctx)?,
         TokenType::MemMove => builtins::build_memmove(ctx)?,
         TokenType::MemCpy => builtins::build_memcpy(ctx)?,
-        TokenType::AbiSizeOf => builtins::build_abisizeof(ctx)?,
-        TokenType::BitSizeOf => builtins::build_bitsizeof(ctx)?,
+        TokenType::AbiSizeOf => builtins::build_abi_size_of(ctx)?,
+        TokenType::BitSizeOf => builtins::build_bit_size_of(ctx)?,
 
         TokenType::Asm => asm::build_asm_code_block(ctx)?,
 

@@ -4,23 +4,23 @@ use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref ATOMIC: HashMap<&'static str, TokenType> = {
-        let mut atomic: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
+    pub static ref ATOMIC: HashMap<&'static [u8], TokenType> = {
+        let mut atomic: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
 
-        atomic.insert("volatile", TokenType::Volatile);
-        atomic.insert("lazythread", TokenType::LazyThread);
+        atomic.insert(b"volatile", TokenType::Volatile);
+        atomic.insert(b"lazythread", TokenType::LazyThread);
 
-        atomic.insert("atomnone", TokenType::AtomNone);
-        atomic.insert("atomfree", TokenType::AtomFree);
-        atomic.insert("atomrelax", TokenType::AtomRelax);
-        atomic.insert("atomgrab", TokenType::AtomGrab);
-        atomic.insert("atomdrop", TokenType::AtomDrop);
-        atomic.insert("atomsync", TokenType::AtomSync);
-        atomic.insert("atomstrict", TokenType::AtomStrict);
+        atomic.insert(b"atomnone", TokenType::AtomNone);
+        atomic.insert(b"atomfree", TokenType::AtomFree);
+        atomic.insert(b"atomrelax", TokenType::AtomRelax);
+        atomic.insert(b"atomgrab", TokenType::AtomGrab);
+        atomic.insert(b"atomdrop", TokenType::AtomDrop);
+        atomic.insert(b"atomsync", TokenType::AtomSync);
+        atomic.insert(b"atomstrict", TokenType::AtomStrict);
 
-        atomic.insert("threadinit", TokenType::ThreadInit);
-        atomic.insert("threaddyn", TokenType::ThreadDynamic);
-        atomic.insert("threadexec", TokenType::ThreadExec);
+        atomic.insert(b"threadinit", TokenType::ThreadInit);
+        atomic.insert(b"threaddyn", TokenType::ThreadDynamic);
+        atomic.insert(b"threadexec", TokenType::ThreadExec);
 
         atomic
     };

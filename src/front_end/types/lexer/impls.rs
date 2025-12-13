@@ -165,8 +165,9 @@ impl std::fmt::Display for TokenType {
             TokenType::MemSet => write!(f, "memset"),
             TokenType::MemMove => write!(f, "memmove"),
             TokenType::MemCpy => write!(f, "memcpy"),
-            TokenType::AbiSizeOf => write!(f, "abisizeof"),
-            TokenType::BitSizeOf => write!(f, "bitsizeof"),
+            TokenType::AbiSizeOf => write!(f, "abi_size_of"),
+            TokenType::BitSizeOf => write!(f, "bit_size_of"),
+            TokenType::AbiAlignOf => write!(f, "abi_align_of"),
         }
     }
 }

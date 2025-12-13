@@ -139,6 +139,7 @@ pub enum TokenType {
     Halloc,
     AbiSizeOf,
     BitSizeOf,
+    AbiAlignOf,
     SizeOf,
     MemCpy,
     MemMove,

@@ -135,8 +135,7 @@ fn compile_increment_decrement_ref<'ctx>(
                 ),
             };
 
-            let result: BasicValueEnum =
-                cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
+            let result: BasicValueEnum = cast::try_cast(context, cast_type, kind, result, span);
 
             symbol.store(context, result);
 
@@ -184,8 +183,7 @@ fn compile_increment_decrement_ref<'ctx>(
                 ),
             };
 
-            let result: BasicValueEnum =
-                cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
+            let result: BasicValueEnum = cast::try_cast(context, cast_type, kind, result, span);
 
             symbol.store(context, result);
 
@@ -249,7 +247,7 @@ fn compile_increment_decrement<'ctx>(
                 ),
             };
 
-            cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result)
+            cast::try_cast(context, cast_type, kind, result, span)
         }
         _ => {
             let float: FloatValue = value.into_float_value();
@@ -292,7 +290,7 @@ fn compile_increment_decrement<'ctx>(
                 ),
             };
 
-            cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result)
+            cast::try_cast(context, cast_type, kind, result, span)
         }
     }
 }
@@ -316,7 +314,7 @@ fn compile_logical_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_not(int, "") {
                 let result: BasicValueEnum = result.into();
 
-                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span);
             }
 
             int.into()
@@ -351,7 +349,7 @@ fn compile_arithmetic_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_int_neg(int, "") {
                 let result: BasicValueEnum = result.into();
 
-                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span);
             }
 
             int.into()
@@ -363,7 +361,7 @@ fn compile_arithmetic_negation<'ctx>(
             if let Ok(result) = llvm_builder.build_float_neg(float, "") {
                 let result: BasicValueEnum = result.into();
 
-                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span);
             }
 
             float.into()
@@ -390,7 +388,7 @@ fn compile_bitwise_not<'ctx>(
             if let Ok(result) = llvm_builder.build_not(int, "") {
                 let result: BasicValueEnum = result.into();
 
-                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span);
             }
 
             int.into()
@@ -402,7 +400,7 @@ fn compile_bitwise_not<'ctx>(
             if let Ok(result) = llvm_builder.build_not(ptr, "") {
                 let result: BasicValueEnum = result.into();
 
-                return cast::try_cast(context, cast_type, kind, result, span).unwrap_or(result);
+                return cast::try_cast(context, cast_type, kind, result, span);
             }
 
             ptr.into()

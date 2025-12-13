@@ -43,6 +43,10 @@ pub enum LLVMBuiltin<'ctx> {
         of: &'ctx Type,
         span: Span,
     },
+    AbiAlignOf {
+        of: &'ctx Type,
+        span: Span,
+    },
     AlignOf {
         of: &'ctx Type,
         span: Span,
@@ -89,7 +93,7 @@ pub fn compile<'ctx>(
                 .const_int(abi_size, false)
                 .into();
 
-            cast::try_cast(context, cast_type, &Type::U64, size, span).unwrap_or(size)
+            cast::try_cast(context, cast_type, &Type::U64, size, span)
         }
         LLVMBuiltin::BitSizeOf { of, span } => {
             let llvm_type: BasicTypeEnum = typegen::generate(context.get_llvm_context(), of);
@@ -100,7 +104,18 @@ pub fn compile<'ctx>(
                 .const_int(bit_size, false)
                 .into();
 
-            cast::try_cast(context, cast_type, &Type::U64, size, span).unwrap_or(size)
+            cast::try_cast(context, cast_type, &Type::U64, size, span)
+        }
+        LLVMBuiltin::AbiAlignOf { of, span } => {
+            let llvm_type: BasicTypeEnum = typegen::generate(context.get_llvm_context(), of);
+            let abi_align: u32 = context.get_target_data().get_abi_alignment(&llvm_type);
+            let align: BasicValueEnum = context
+                .get_llvm_context()
+                .i32_type()
+                .const_int(abi_align.into(), false)
+                .into();
+
+            cast::try_cast(context, cast_type, &Type::U32, align, span)
         }
     }
 }

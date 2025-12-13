@@ -331,20 +331,20 @@ pub fn try_cast<'ctx>(
     from_type: &Type,
     from: BasicValueEnum<'ctx>,
     span: Span,
-) -> Option<BasicValueEnum<'ctx>> {
+) -> BasicValueEnum<'ctx> {
     if from.is_float_value() && target_type.is_some() {
         if let Some(target_type) = target_type {
-            return self::float(context, target_type, from_type, from, span);
+            return self::float(context, target_type, from_type, from, span).unwrap_or(from);
         }
     }
 
     if from.is_int_value() && target_type.is_some() {
         if let Some(target_type) = target_type {
-            return self::integer(context, target_type, from_type, from, span);
+            return self::integer(context, target_type, from_type, from, span).unwrap_or(from);
         }
     }
 
-    None
+    from
 }
 
 #[inline]

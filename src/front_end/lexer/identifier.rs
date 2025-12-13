@@ -13,18 +13,17 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         lexer.advance_only();
     }
 
-    let lexeme: String = lexer.lexeme();
-    let content: &str = lexeme.as_str();
+    let bytes: Vec<u8> = lexer.lexeme_bytes();
 
-    if let Some(keyword) = KEYWORDS.get(content) {
+    if let Some(keyword) = KEYWORDS.get(bytes.as_slice()) {
         lexer.make(*keyword);
-    } else if let Some(atomic_stuff) = ATOMIC.get(content) {
+    } else if let Some(atomic_stuff) = ATOMIC.get(bytes.as_slice()) {
         lexer.make(*atomic_stuff);
-    } else if let Some(attribute) = ATTRIBUTES.get(content) {
+    } else if let Some(attribute) = ATTRIBUTES.get(bytes.as_slice()) {
         lexer.make(*attribute);
-    } else if let Some(builtin) = BUILTINS.get(content) {
+    } else if let Some(builtin) = BUILTINS.get(bytes.as_slice()) {
         lexer.make(*builtin);
-    } else if let Some(r#type) = TYPES.get(content) {
+    } else if let Some(r#type) = TYPES.get(bytes.as_slice()) {
         lexer.make(*r#type);
     } else {
         lexer.make(TokenType::Identifier);

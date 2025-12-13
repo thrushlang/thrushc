@@ -1,4 +1,5 @@
 mod back_end;
+mod cbindgen;
 mod core;
 mod front_end;
 mod linkage;

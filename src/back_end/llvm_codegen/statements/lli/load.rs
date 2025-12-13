@@ -21,5 +21,5 @@ pub fn compile<'ctx>(
     let ptr: PointerValue = refptr::compile(context, source, None).into_pointer_value();
     let value: BasicValueEnum = memory::load_anon(context, ptr, kind, span);
 
-    cast::try_cast(context, cast_type, kind, value, span).unwrap_or(value)
+    cast::try_cast(context, cast_type, kind, value, span)
 }

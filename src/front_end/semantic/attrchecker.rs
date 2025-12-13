@@ -1,5 +1,4 @@
 use crate::core::compiler::options::CompilationUnit;
-use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
@@ -23,8 +22,6 @@ pub struct AttributeChecker<'attr_checker> {
     errors: Vec<CompilationIssue>,
     warnings: Vec<CompilationIssue>,
 
-    currrent: usize,
-
     diagnostician: Diagnostician,
 }
 
@@ -39,8 +36,6 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             errors: Vec::with_capacity(100),
             warnings: Vec::with_capacity(100),
 
-            currrent: 0,
-
             diagnostician: Diagnostician::new(file),
         }
     }
@@ -48,12 +43,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
     pub fn start(&mut self) -> bool {
-        while !self.is_eof() {
-            let ast: &Ast = self.peek();
-
-            self.analyze_ast(ast);
-
-            self.advance();
+        for node in self.ast.iter() {
+            self.analyze_ast(node);
         }
 
         self.check()
@@ -693,30 +684,6 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         });
 
         repeated_attrs
-    }
-}
-
-impl<'attr_checker> AttributeChecker<'attr_checker> {
-    #[inline]
-    fn advance(&mut self) {
-        if !self.is_eof() {
-            self.currrent += 1;
-        }
-    }
-
-    #[inline]
-    fn peek(&self) -> &'attr_checker Ast<'attr_checker> {
-        self.ast.get(self.currrent).unwrap_or_else(|| {
-            logging::print_frontend_panic(
-                LoggingType::FrontEndPanic,
-                "Attemping to get a statement in invalid position at attribute checker.",
-            );
-        })
-    }
-
-    #[inline]
-    fn is_eof(&self) -> bool {
-        self.currrent >= self.ast.len()
     }
 }
 

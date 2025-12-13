@@ -26,5 +26,5 @@ pub fn compile<'ctx>(
         .const_int(alignment.into(), false)
         .into();
 
-    cast::try_cast(context, cast_type, alingof_type, alignment, span).unwrap_or(alignment)
+    cast::try_cast(context, cast_type, alingof_type, alignment, span)
 }

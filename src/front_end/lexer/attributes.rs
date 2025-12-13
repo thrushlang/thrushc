@@ -4,33 +4,33 @@ use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref ATTRIBUTES: HashMap<&'static str, TokenType> = {
-        let mut attributes: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
+    pub static ref ATTRIBUTES: HashMap<&'static [u8], TokenType> = {
+        let mut attributes: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
 
-        attributes.insert("@asmalignstack", TokenType::AsmAlignStack);
-        attributes.insert("@asmsyntax", TokenType::AsmSyntax);
-        attributes.insert("@asmthrow", TokenType::AsmThrow);
-        attributes.insert("@asmeffects", TokenType::AsmSideEffects);
+        attributes.insert(b"@asmalignstack", TokenType::AsmAlignStack);
+        attributes.insert(b"@asmsyntax", TokenType::AsmSyntax);
+        attributes.insert(b"@asmthrow", TokenType::AsmThrow);
+        attributes.insert(b"@asmeffects", TokenType::AsmSideEffects);
 
-        attributes.insert("@optfuzzing", TokenType::OptFuzzing);
-        attributes.insert("@nounwind", TokenType::NoUnwind);
-        attributes.insert("@packed", TokenType::Packed);
-        attributes.insert("@heap", TokenType::Heap);
-        attributes.insert("@stack", TokenType::Stack);
-        attributes.insert("@public", TokenType::Public);
-        attributes.insert("@linkage", TokenType::Linkage);
-        attributes.insert("@extern", TokenType::Extern);
-        attributes.insert("@ignore", TokenType::Ignore);
-        attributes.insert("@hot", TokenType::Hot);
-        attributes.insert("@minsize", TokenType::MinSize);
-        attributes.insert("@alwaysinline", TokenType::AlwaysInline);
-        attributes.insert("@noinline", TokenType::NoInline);
-        attributes.insert("@inline", TokenType::InlineHint);
-        attributes.insert("@safestack", TokenType::SafeStack);
-        attributes.insert("@weakstack", TokenType::WeakStack);
-        attributes.insert("@strongstack", TokenType::StrongStack);
-        attributes.insert("@precisefp", TokenType::PreciseFloats);
-        attributes.insert("@convention", TokenType::Convention);
+        attributes.insert(b"@optfuzzing", TokenType::OptFuzzing);
+        attributes.insert(b"@nounwind", TokenType::NoUnwind);
+        attributes.insert(b"@packed", TokenType::Packed);
+        attributes.insert(b"@heap", TokenType::Heap);
+        attributes.insert(b"@stack", TokenType::Stack);
+        attributes.insert(b"@public", TokenType::Public);
+        attributes.insert(b"@linkage", TokenType::Linkage);
+        attributes.insert(b"@extern", TokenType::Extern);
+        attributes.insert(b"@ignore", TokenType::Ignore);
+        attributes.insert(b"@hot", TokenType::Hot);
+        attributes.insert(b"@minsize", TokenType::MinSize);
+        attributes.insert(b"@alwaysinline", TokenType::AlwaysInline);
+        attributes.insert(b"@noinline", TokenType::NoInline);
+        attributes.insert(b"@inline", TokenType::InlineHint);
+        attributes.insert(b"@safestack", TokenType::SafeStack);
+        attributes.insert(b"@weakstack", TokenType::WeakStack);
+        attributes.insert(b"@strongstack", TokenType::StrongStack);
+        attributes.insert(b"@precisefp", TokenType::PreciseFloats);
+        attributes.insert(b"@convention", TokenType::Convention);
 
         attributes
     };

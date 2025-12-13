@@ -71,7 +71,7 @@ pub fn compile<'ctx>(
                 ),
             };
 
-        cast::try_cast(context, cast_type, kind, fn_value, span).unwrap_or(fn_value)
+        cast::try_cast(context, cast_type, kind, fn_value, span)
     } else {
         abort::abort_codegen(
             context,

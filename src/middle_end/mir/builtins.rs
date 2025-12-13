@@ -35,6 +35,10 @@ pub enum ThrushBuiltin<'mir> {
         of: Type,
         span: Span,
     },
+    AbiAlignOf {
+        of: Type,
+        span: Span,
+    },
     AlignOf {
         of: Type,
         span: Span,
@@ -46,7 +50,7 @@ pub enum ThrushBuiltin<'mir> {
 }
 
 impl<'mir> ThrushBuiltin<'mir> {
-    pub fn to_llvm_builtin(&self) -> crate::back_end::llvm_codegen::builtins::LLVMBuiltin {
+    pub fn to_llvm_builtin(&self) -> crate::back_end::llvm_codegen::builtins::LLVMBuiltin<'_> {
         match self {
             ThrushBuiltin::Halloc { of, span } => {
                 crate::back_end::llvm_codegen::builtins::LLVMBuiltin::Malloc { of, span: *span }
@@ -73,7 +77,6 @@ impl<'mir> ThrushBuiltin<'mir> {
                 size,
                 span: *span,
             },
-
             ThrushBuiltin::MemSet {
                 dst,
                 new_size,
@@ -85,7 +88,6 @@ impl<'mir> ThrushBuiltin<'mir> {
                 size,
                 span: *span,
             },
-
             ThrushBuiltin::AlignOf { of, span } => {
                 crate::back_end::llvm_codegen::builtins::LLVMBuiltin::AlignOf { of, span: *span }
             }
@@ -97,6 +99,9 @@ impl<'mir> ThrushBuiltin<'mir> {
             }
             ThrushBuiltin::AbiSizeOf { of, span } => {
                 crate::back_end::llvm_codegen::builtins::LLVMBuiltin::AbiSizeOf { of, span: *span }
+            }
+            ThrushBuiltin::AbiAlignOf { of, span } => {
+                crate::back_end::llvm_codegen::builtins::LLVMBuiltin::AbiAlignOf { of, span: *span }
             }
         }
     }

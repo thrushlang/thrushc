@@ -202,7 +202,7 @@ impl CallConventionsChecker<'_> {
                         if !X86_64_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
                                 "Unsupported Call Convention".into(),
-                                "This calling convention is not supported on the 'x86_64' target architecture. Select another one or change the target architecture.".into(),
+                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
                                 None,
                                 span,
                             ));
@@ -211,52 +211,52 @@ impl CallConventionsChecker<'_> {
                     arch if arch.contains("arm") => {
                         if !ARM_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                            "Unsupported Call Convention".into(),
-                            "This calling convention is not supported on the 'arm' target architecture. Select another one or change the target architecture.".into(),
-                            None,
-                            span,
-                        ));
+                                "Unsupported Call Convention".into(),
+                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                None,
+                                span,
+                            ));
                         }
                     }
                     arch if arch.contains("riscv") => {
                         if !RISCV_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                            "Unsupported Call Convention".into(),
-                            "This calling convention is not supported on the 'riscv' target architecture. Select another one or change the target architecture.".into(),
-                            None,
-                            span,
-                        ));
+                                "Unsupported Call Convention".into(),
+                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                None,
+                                span,
+                            ));
                         }
                     }
                     arch if arch.contains("aarch64") => {
                         if !AARCH64_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
                             "Unsupported Call Convention".into(),
-                            "This calling convention is not supported on the 'aarch64' target architecture. Select another one or change the target architecture.".into(),
-                            None,
-                            span,
-                        ));
+                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                None,
+                                span,
+                            ));
                         }
                     }
                     arch if arch.starts_with("amd") => {
                         if !AMDGPU_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                            "Unsupported Call Convention".into(),
-                            "This calling convention is not supported on the 'amd' target architecture. Select another one or change the target architecture.".into(),
-                            None,
-                            span,
-                        ));
+                                "Unsupported Call Convention".into(),
+                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                None,
+                                span,
+                            ));
                         }
                     }
 
                     arch if arch.contains("wasm") => {
                         if !WASM_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                            "Unsupported Call Convention".into(),
-                            "This calling convention is not supported on the 'wasm' target architecture. Select another one or change the target architecture.".into(),
-                            None,
-                            span,
-                        ));
+                                "Unsupported Call Convention".into(),
+                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                None,
+                                span,
+                            ));
                         }
                     }
 

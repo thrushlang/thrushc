@@ -36,5 +36,5 @@ pub fn compile<'ctx>(
         })
         .into();
 
-    cast::try_cast(context, cast, sizeof_type, sizeof_value, span).unwrap_or(sizeof_value)
+    cast::try_cast(context, cast, sizeof_type, sizeof_value, span)
 }

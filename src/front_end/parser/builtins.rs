@@ -223,7 +223,7 @@ pub fn build_alignof<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let alignof_type: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -232,10 +232,7 @@ pub fn build_alignof<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrushBuiltin::AlignOf {
-            of: alignof_type,
-            span,
-        },
+        builtin: ThrushBuiltin::AlignOf { of, span },
         kind: Type::U32,
         span,
     })
@@ -276,13 +273,13 @@ pub fn build_sizeof<'parser>(
     })
 }
 
-pub fn build_bitsizeof<'parser>(
+pub fn build_bit_size_of<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::BitSizeOf,
         String::from("Syntax error"),
-        String::from("Expected 'bitsizeof' keyword."),
+        String::from("Expected 'bit_size_of' keyword."),
     )?;
 
     let span: Span = sizeof_tk.get_span();
@@ -293,7 +290,7 @@ pub fn build_bitsizeof<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let sizeof_type: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -302,22 +299,19 @@ pub fn build_bitsizeof<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrushBuiltin::BitSizeOf {
-            of: sizeof_type,
-            span,
-        },
+        builtin: ThrushBuiltin::BitSizeOf { of, span },
         kind: Type::U64,
         span,
     })
 }
 
-pub fn build_abisizeof<'parser>(
+pub fn build_abi_size_of<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::AbiSizeOf,
         "Syntax error".into(),
-        "Expected 'abisizeof' keyword.".into(),
+        "Expected 'abi_size_of' keyword.".into(),
     )?;
 
     let span: Span = sizeof_tk.get_span();
@@ -328,7 +322,7 @@ pub fn build_abisizeof<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let sizeof_type: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -337,11 +331,40 @@ pub fn build_abisizeof<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrushBuiltin::AbiSizeOf {
-            of: sizeof_type,
-            span,
-        },
+        builtin: ThrushBuiltin::AbiSizeOf { of, span },
         kind: Type::U64,
+        span,
+    })
+}
+
+pub fn build_abi_align_of<'parser>(
+    ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, CompilationIssue> {
+    let sizeof_tk: &Token = ctx.consume(
+        TokenType::AbiAlignOf,
+        "Syntax error".into(),
+        "Expected 'abi_align_of' keyword.".into(),
+    )?;
+
+    let span: Span = sizeof_tk.get_span();
+
+    ctx.consume(
+        TokenType::LParen,
+        "Syntax error".into(),
+        "Expected '('.".into(),
+    )?;
+
+    let of: Type = typegen::build_type(ctx)?;
+
+    ctx.consume(
+        TokenType::RParen,
+        "Syntax error".into(),
+        "Expected ')'.".into(),
+    )?;
+
+    Ok(Ast::Builtin {
+        builtin: ThrushBuiltin::AbiAlignOf { of, span },
+        kind: Type::U32,
         span,
     })
 }
