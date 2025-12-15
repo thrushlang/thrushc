@@ -4,6 +4,7 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
+use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_attributes<'parser>(

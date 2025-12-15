@@ -78,13 +78,16 @@ impl Type {
     pub fn is_unsigned_integer_type(&self) -> bool {
         matches!(
             self,
-            Type::U8 | Type::U16 | Type::U32 | Type::U64 | Type::U128
+            Type::U8 | Type::U16 | Type::U32 | Type::U64 | Type::U128 | Type::USize
         )
     }
 
     #[inline(always)]
     pub fn is_signed_integer_type(&self) -> bool {
-        matches!(self, Type::S8 | Type::S16 | Type::S32 | Type::S64)
+        matches!(
+            self,
+            Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::SSize
+        )
     }
 
     #[inline(always)]
@@ -100,11 +103,13 @@ impl Type {
                 | Type::S16
                 | Type::S32
                 | Type::S64
+                | Type::SSize
                 | Type::U8
                 | Type::U16
                 | Type::U32
                 | Type::U64
                 | Type::U128
+                | Type::USize
                 | Type::Char
         )
     }
@@ -129,11 +134,13 @@ impl IndexExtensions for Type {
             | Type::S16
             | Type::S32
             | Type::S64
+            | Type::SSize
             | Type::U8
             | Type::U16
             | Type::U32
             | Type::U64
             | Type::U128
+            | Type::USize
             | Type::F32
             | Type::F64
             | Type::F128
@@ -183,11 +190,13 @@ impl TypeExtensions for Type {
             | Type::S16
             | Type::S32
             | Type::S64
+            | Type::SSize
             | Type::U8
             | Type::U16
             | Type::U32
             | Type::U64
             | Type::U128
+            | Type::USize
             | Type::F32
             | Type::F64
             | Type::F128
@@ -242,18 +251,20 @@ impl PartialEq for Type {
             (Type::S16, Type::S16) => true,
             (Type::S32, Type::S32) => true,
             (Type::S64, Type::S64) => true,
+            (Type::SSize, Type::SSize) => true,
             (Type::U8, Type::U8) => true,
             (Type::U16, Type::U16) => true,
             (Type::U32, Type::U32) => true,
             (Type::U64, Type::U64) => true,
             (Type::U128, Type::U128) => true,
+            (Type::USize, Type::USize) => true,
             (Type::F32, Type::F32) => true,
             (Type::F64, Type::F64) => true,
             (Type::F128, Type::F128) => true,
             (Type::FX8680, Type::FX8680) => true,
             (Type::FPPC128, Type::FPPC128) => true,
             (Type::Ptr(None), Type::Ptr(None)) => true,
-            (Type::Ptr(Some(target)), Type::Ptr(Some(from))) => target == from,
+            (Type::Ptr(Some(lhs)), Type::Ptr(Some(rhs))) => lhs == rhs,
             (Type::Ptr(..) | Type::NullPtr, Type::Ptr(..) | Type::NullPtr) => true,
             (Type::Void, Type::Void) => true,
             (Type::Bool, Type::Bool) => true,

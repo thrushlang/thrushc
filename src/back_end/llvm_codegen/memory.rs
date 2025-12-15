@@ -154,7 +154,6 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
 impl<'ctx> SymbolAllocated<'ctx> {
     pub fn load(&self, context: &mut LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-        let llvm_context: &Context = context.get_llvm_context();
         let llvm_builder: &Builder = context.get_llvm_builder();
 
         let target_data: &TargetData = context.get_target_data();
@@ -163,7 +162,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             return self.get_ptr().into();
         }
 
-        let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, self.get_type());
+        let llvm_type: BasicTypeEnum = typegen::generate(context, self.get_type());
         let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
 
         if let Self::Local { ptr, metadata, .. } = self {
@@ -377,10 +376,9 @@ pub fn load_anon<'ctx>(
     ptr_type: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegen::generate(context, ptr_type);
 
     let alignment: u32 = context
         .get_target_data()
@@ -410,10 +408,9 @@ pub fn dereference<'ctx>(
     metadata: LLVMDereferenceMetadata,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegen::generate(context, ptr_type);
 
     let alignment: u32 = context
         .get_target_data()
@@ -451,10 +448,9 @@ pub fn alloc_anon<'ctx>(
     span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
-    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate(llvm_context, kind);
+    let llvm_type: BasicTypeEnum = typegen::generate(context, kind);
 
     let alignment: u32 = context
         .get_target_data()
@@ -506,15 +502,11 @@ pub fn gep_struct_anon<'ctx>(
     index: u32,
     span: Span,
 ) -> PointerValue<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if let Ok(ptr) = llvm_builder.build_struct_gep(
-        typegen::generate_gep(llvm_context, ptr_type),
-        ptr,
-        index,
-        "",
-    ) {
+    if let Ok(ptr) =
+        llvm_builder.build_struct_gep(typegen::generate_gep(context, ptr_type), ptr, index, "")
+    {
         return ptr;
     }
 
@@ -534,16 +526,10 @@ pub fn gep_anon<'ctx>(
     indexes: &[IntValue<'ctx>],
     span: Span,
 ) -> PointerValue<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let Ok(ptr) = unsafe {
-        llvm_builder.build_in_bounds_gep(
-            typegen::generate_gep(llvm_context, ptr_type),
-            ptr,
-            indexes,
-            "",
-        )
+        llvm_builder.build_in_bounds_gep(typegen::generate_gep(context, ptr_type), ptr, indexes, "")
     } {
         return ptr;
     }

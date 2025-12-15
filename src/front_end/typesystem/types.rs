@@ -8,6 +8,7 @@ pub enum Type {
     S16,
     S32,
     S64,
+    SSize,
 
     // Unsigned Integer Type
     U8,
@@ -15,6 +16,7 @@ pub enum Type {
     U32,
     U64,
     U128,
+    USize,
 
     // Floating Point Type
     F32,

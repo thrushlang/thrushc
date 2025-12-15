@@ -89,7 +89,6 @@ fn compile_increment_decrement_ref<'ctx>(
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
-    let llvm_context: &Context = context.get_llvm_context();
 
     let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
@@ -144,7 +143,7 @@ fn compile_increment_decrement_ref<'ctx>(
         _ => {
             let float: FloatValue = symbol.load(context).into_float_value();
 
-            let modifier: FloatValue = typegen::generate(llvm_context, kind)
+            let modifier: FloatValue = typegen::generate(context, kind)
                 .into_float_type()
                 .const_float(1.0);
 

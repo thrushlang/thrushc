@@ -12,6 +12,34 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::types::Type;
 
+pub fn build_builtin<'parser>(
+    ctx: &mut ParserContext<'parser>,
+    tk_type: TokenType,
+) -> Result<Ast<'parser>, CompilationIssue> {
+    match tk_type {
+        TokenType::SizeOf => self::build_sizeof(ctx),
+        TokenType::AlignOf => self::build_alignof(ctx),
+        TokenType::Halloc => self::build_halloc(ctx),
+        TokenType::MemSet => self::build_memset(ctx),
+        TokenType::MemMove => self::build_memmove(ctx),
+        TokenType::MemCpy => self::build_memcpy(ctx),
+        TokenType::AbiSizeOf => self::build_abi_size_of(ctx),
+        TokenType::BitSizeOf => self::build_bit_size_of(ctx),
+        TokenType::AbiAlignOf => self::build_abi_align_of(ctx),
+
+        _ => {
+            let span: Span = ctx.peek().get_span();
+
+            Err(CompilationIssue::Error(
+                "Syntax error".into(),
+                format!("Unknown '{}' compiler builtin.", span),
+                None,
+                span,
+            ))
+        }
+    }
+}
+
 pub fn build_halloc<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
@@ -268,7 +296,7 @@ pub fn build_sizeof<'parser>(
             of: sizeof_type,
             span,
         },
-        kind: Type::U32,
+        kind: Type::USize,
         span,
     })
 }

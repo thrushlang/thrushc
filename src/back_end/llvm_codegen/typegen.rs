@@ -30,17 +30,17 @@ pub fn generate_fn_type<'ctx>(
 
     parameters.iter().for_each(|parameter| {
         if let Ast::FunctionParameter { kind, .. } = parameter {
-            let llvm_type: BasicMetadataTypeEnum = self::generate(llvm_context, kind).into();
+            let llvm_type: BasicMetadataTypeEnum = self::generate(context, kind).into();
             parameters_types.push(llvm_type);
         }
 
         if let Ast::IntrinsicParameter { kind, .. } = parameter {
-            let llvm_type: BasicMetadataTypeEnum = self::generate(llvm_context, kind).into();
+            let llvm_type: BasicMetadataTypeEnum = self::generate(context, kind).into();
             parameters_types.push(llvm_type);
         }
 
         if let Ast::AssemblerFunctionParameter { kind, .. } = parameter {
-            let llvm_type: BasicMetadataTypeEnum = self::generate(llvm_context, kind).into();
+            let llvm_type: BasicMetadataTypeEnum = self::generate(context, kind).into();
             parameters_types.push(llvm_type);
         }
     });
@@ -51,7 +51,7 @@ pub fn generate_fn_type<'ctx>(
             .fn_type(&parameters_types, is_var_args);
     }
 
-    self::generate(llvm_context, kind).fn_type(&parameters_types, is_var_args)
+    self::generate(context, kind).fn_type(&parameters_types, is_var_args)
 }
 
 #[inline]
@@ -66,7 +66,7 @@ pub fn generate_fn_type_from_type<'ctx>(
     let mut parameters_types: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(parameters.len());
 
     parameters.iter().for_each(|parameter_type| {
-        parameters_types.push(self::generate(llvm_context, parameter_type).into());
+        parameters_types.push(self::generate(context, parameter_type).into());
     });
 
     if kind.is_void_type() {
@@ -75,20 +75,22 @@ pub fn generate_fn_type_from_type<'ctx>(
             .fn_type(&parameters_types, is_var_args);
     }
 
-    self::generate(llvm_context, kind).fn_type(&parameters_types, is_var_args)
+    self::generate(context, kind).fn_type(&parameters_types, is_var_args)
 }
 
 #[inline]
-pub fn generate<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
+pub fn generate<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>, kind: &Type) -> BasicTypeEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
     match kind {
         t if t.is_integer_type() || t.is_char_type() || t.is_bool_type() => {
-            self::integer(llvm_context, kind).into()
+            self::generate_integer_type(context, kind).into()
         }
+        t if t.is_float_type() => self::generate_float_type(context, kind).into(),
 
-        t if t.is_float_type() => self::float(llvm_context, kind).into(),
         t if t.is_ptr_like_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
 
-        Type::Const(any) => self::generate(llvm_context, any),
+        Type::Const(any) => self::generate(context, any),
 
         Type::Struct(_, fields, modificator) => {
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(10);
@@ -96,14 +98,14 @@ pub fn generate<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum
             let packed: bool = modificator.llvm().is_packed();
 
             fields.iter().for_each(|field| {
-                field_types.push(self::generate(llvm_context, field));
+                field_types.push(self::generate(context, field));
             });
 
             llvm_context.struct_type(&field_types, packed).into()
         }
 
         Type::FixedArray(kind, size) => {
-            let arraytype: BasicTypeEnum = self::generate(llvm_context, kind);
+            let arraytype: BasicTypeEnum = self::generate(context, kind);
             arraytype.array_type(*size).into()
         }
 
@@ -114,28 +116,33 @@ pub fn generate<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum
 }
 
 #[inline]
-pub fn generate_gep<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> BasicTypeEnum<'ctx> {
+pub fn generate_gep<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    kind: &Type,
+) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Const(subtype) => self::generate_gep(llvm_context, subtype),
-        Type::Array(subtype) => self::generate(llvm_context, subtype),
-        Type::Ptr(Some(subtype)) => self::generate(llvm_context, subtype),
+        Type::Const(subtype) => self::generate_gep(context, subtype),
+        Type::Array(subtype) => self::generate(context, subtype),
+        Type::Ptr(Some(subtype)) => self::generate(context, subtype),
 
-        _ => self::generate(llvm_context, kind),
+        _ => self::generate(context, kind),
     }
 }
 
 #[inline]
 pub fn generate_local<'ctx>(
-    llvm_context: &'ctx Context,
+    context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     value: Option<&Ast>,
 ) -> BasicTypeEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
     match kind {
-        Type::Const(subtype) => self::generate_local(llvm_context, subtype, value),
+        Type::Const(subtype) => self::generate_local(context, subtype, value),
         Type::Array(subtype) if matches!(value, Some(Ast::Array { .. })) => {
             if let Some(Ast::Array { items, .. }) = value {
                 self::generate_local(
-                    llvm_context,
+                    context,
                     &Type::FixedArray(subtype.clone(), items.len() as u32),
                     value,
                 )
@@ -144,22 +151,30 @@ pub fn generate_local<'ctx>(
             }
         }
 
-        _ => self::generate(llvm_context, kind),
+        _ => self::generate(context, kind),
     }
 }
 
 #[inline]
-pub fn integer<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> IntType<'ctx> {
+fn generate_integer_type<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    kind: &Type,
+) -> IntType<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
     match kind {
         Type::S8 | Type::U8 | Type::Char => llvm_context.i8_type(),
         Type::S16 | Type::U16 => llvm_context.i16_type(),
         Type::S32 | Type::U32 => llvm_context.i32_type(),
         Type::S64 | Type::U64 => llvm_context.i64_type(),
         Type::U128 => llvm_context.i128_type(),
+        Type::USize | Type::SSize => {
+            llvm_context.ptr_sized_int_type(context.get_target_data(), None)
+        }
 
         Type::Bool => llvm_context.bool_type(),
 
-        Type::Const(any) => self::integer(llvm_context, any),
+        Type::Const(any) => self::generate_integer_type(context, any),
 
         any => {
             self::codegen_abort(format!(
@@ -171,7 +186,12 @@ pub fn integer<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> IntType<'ctx> 
 }
 
 #[inline]
-pub fn float<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> FloatType<'ctx> {
+fn generate_float_type<'ctx>(
+    context: &LLVMCodeGenContext<'_, 'ctx>,
+    kind: &Type,
+) -> FloatType<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
     match kind {
         Type::F32 => llvm_context.f32_type(),
         Type::F64 => llvm_context.f64_type(),
@@ -179,7 +199,7 @@ pub fn float<'ctx>(llvm_context: &'ctx Context, kind: &Type) -> FloatType<'ctx> 
         Type::FX8680 => llvm_context.x86_f80_type(),
         Type::FPPC128 => llvm_context.ppc_f128_type(),
 
-        Type::Const(any) => self::float(llvm_context, any),
+        Type::Const(any) => self::generate_float_type(context, any),
 
         any => {
             self::codegen_abort(format!(

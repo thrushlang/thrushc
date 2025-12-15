@@ -9,11 +9,13 @@ impl CastTypeExtensions for Type {
             Type::U16 => Type::S16,
             Type::U32 => Type::S32,
             Type::U64 => Type::S64,
+            Type::USize => Type::SSize,
 
             Type::S8 => Type::U8,
             Type::S16 => Type::U16,
             Type::S32 => Type::U32,
             Type::S64 => Type::U64,
+            Type::SSize => Type::USize,
 
             _ => self.clone(),
         }
@@ -22,11 +24,13 @@ impl CastTypeExtensions for Type {
     #[inline]
     fn precompute(&self, other: &Type) -> Type {
         match (self, other) {
+            (Type::SSize, _) | (_, Type::SSize) => Type::SSize,
             (Type::S64, _) | (_, Type::S64) => Type::S64,
             (Type::S32, _) | (_, Type::S32) => Type::S32,
             (Type::S16, _) | (_, Type::S16) => Type::S16,
             (Type::S8, _) | (_, Type::S8) => Type::S8,
 
+            (Type::USize, _) | (_, Type::USize) => Type::USize,
             (Type::U64, _) | (_, Type::U64) => Type::U64,
             (Type::U32, _) | (_, Type::U32) => Type::U32,
             (Type::U16, _) | (_, Type::U16) => Type::U16,

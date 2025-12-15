@@ -11,7 +11,6 @@ use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
 
-use inkwell::context::Context;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::PointerValue;
 use inkwell::{builder::Builder, values::BasicValueEnum};
@@ -79,7 +78,6 @@ fn compile_gep_property<'ctx>(
     source: &'ctx Ast<'ctx>,
     indexes: LLVMGEPIndexes<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let span: Span = source.get_span();
@@ -91,7 +89,7 @@ fn compile_gep_property<'ctx>(
         memory::gep_struct_anon(context, ptr, ptr_type, indexes[0].1, span);
 
     for idx in indexes.iter().skip(1) {
-        let idx_type: BasicTypeEnum = typegen::generate(llvm_context, &idx.0);
+        let idx_type: BasicTypeEnum = typegen::generate(context, &idx.0);
 
         property = llvm_builder
             .build_struct_gep(idx_type, property, idx.1, "")

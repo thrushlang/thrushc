@@ -114,7 +114,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = alloc::memstatic::local_constant(
             self,
             ascii_name,
-            typegen::generate(self.context, kind),
+            typegen::generate(self, kind),
             value,
             metadata,
         );
@@ -156,7 +156,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = alloc::memstatic::global_constant(
             self,
             ascii_name,
-            typegen::generate(self.context, kind),
+            typegen::generate(self, kind),
             value,
             &attributes,
             metadata,
@@ -196,7 +196,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             let ptr: PointerValue = alloc::memstatic::local_static(
                 self,
                 ascii_name,
-                typegen::generate(self.context, kind),
+                typegen::generate(self, kind),
                 Some(value),
                 metadata,
             );
@@ -226,7 +226,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = alloc::memstatic::local_static(
             self,
             ascii_name,
-            typegen::generate(self.context, kind),
+            typegen::generate(self, kind),
             None,
             metadata,
         );
@@ -269,7 +269,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             let ptr: PointerValue = alloc::memstatic::global_static(
                 self,
                 ascii_name,
-                typegen::generate(self.context, kind),
+                typegen::generate(self, kind),
                 Some(value),
                 &attributes,
                 metadata,
@@ -293,7 +293,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let ptr: PointerValue = alloc::memstatic::global_static(
             self,
             ascii_name,
-            typegen::generate(self.context, kind),
+            typegen::generate(self, kind),
             None,
             &attributes,
             metadata,

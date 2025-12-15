@@ -12,6 +12,7 @@ use crate::back_end::llvm_codegen::predicates;
 use crate::core::diagnostic::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
+use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::parser::repr::BinaryOperation;
 use crate::front_end::typesystem::types::Type;
 

@@ -7,7 +7,6 @@ pub trait LLVMTypeExtensions {
         context: &crate::back_end::llvm_codegen::context::LLVMCodeGenContext<'_, '_>,
         other: &Type,
     ) -> bool;
-    fn llvm_is_intrinsic_available(&self, name: &str) -> bool;
 }
 
 pub trait FunctionReferenceExtensions {

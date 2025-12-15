@@ -1,4 +1,5 @@
 use crate::core::diagnostic::span::Span;
+
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
@@ -39,6 +40,6 @@ impl TokenExtensions for Token {
 
     #[inline]
     fn get_lexeme_first_byte(&self) -> u64 {
-        self.lexeme.as_bytes()[0] as u64
+        *self.lexeme.as_bytes().first().unwrap_or(&b'\0') as u64
     }
 }

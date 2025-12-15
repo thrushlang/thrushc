@@ -29,7 +29,10 @@ pub fn validate_binary(
 
         _ => Err(CompilationIssue::Error(
             String::from("Unknown Type Operation"),
-            format!("'{}{}' isn't valid operation.", op, a),
+            format!(
+                "'{}{}' isn't a valid arithmetic or logical operation.",
+                op, a
+            ),
             None,
             span,
         )),
@@ -38,88 +41,105 @@ pub fn validate_binary(
 
 #[inline]
 fn validate_band(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
-    if let (
-        Type::S8
-        | Type::S16
-        | Type::S32
-        | Type::S64
-        | Type::U8
-        | Type::U16
-        | Type::U32
-        | Type::U64
-        | Type::U128,
-        Type::S8
-        | Type::S16
-        | Type::S32
-        | Type::S64
-        | Type::U8
-        | Type::U16
-        | Type::U32
-        | Type::U64
-        | Type::U128,
-    ) = (a, b)
-    {
-        return Ok(());
-    }
+    match (a, b) {
+        (
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+        ) => Ok(()),
+        (Type::SSize, Type::SSize) => Ok(()),
+        (Type::USize, Type::USize) => Ok(()),
 
-    Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
-        format!("'{} {} {}' isn't valid operation.", a, op, b),
-        None,
-        span,
-    ))
+        _ => Err(CompilationIssue::Error(
+            String::from("Incompatible Operation"),
+            format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
+            None,
+            span,
+        )),
+    }
 }
 
 #[inline]
 fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
-    if let (
-        Type::S8
-        | Type::S16
-        | Type::S32
-        | Type::S64
-        | Type::U8
-        | Type::U16
-        | Type::U32
-        | Type::U64
-        | Type::U128,
-        Type::S8
-        | Type::S16
-        | Type::S32
-        | Type::S64
-        | Type::U8
-        | Type::U16
-        | Type::U32
-        | Type::U64
-        | Type::U128,
-    ) = (a, b)
-    {
-        return Ok(());
-    }
+    match (a, b) {
+        (
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+        ) => Ok(()),
+        (Type::SSize, Type::SSize) => Ok(()),
+        (Type::USize, Type::USize) => Ok(()),
 
-    Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
-        format!("'{} {} {}' isn't valid operation.", a, op, b),
-        None,
-        span,
-    ))
+        _ => Err(CompilationIssue::Error(
+            String::from("Incompatible Operation"),
+            format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
+            None,
+            span,
+        )),
+    }
 }
 
 #[inline]
 fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
-    if let (
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-        Type::S8 | Type::S16 | Type::S32 | Type::S64 | Type::U8 | Type::U16 | Type::U32 | Type::U64,
-    ) = (a, b)
-    {
-        return Ok(());
-    }
+    match (a, b) {
+        (
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64,
+        ) => Ok(()),
+        (Type::SSize, Type::SSize) => Ok(()),
+        (Type::USize, Type::USize) => Ok(()),
 
-    Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
-        format!("'{} {} {}' isn't valid operation.", a, op, b),
-        None,
-        span,
-    ))
+        _ => Err(CompilationIssue::Error(
+            String::from("Incompatible Operation"),
+            format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
+            None,
+            span,
+        )),
+    }
 }
 
 #[inline]
@@ -129,16 +149,16 @@ fn validate_binary_gate(
     b: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    if let (Type::Bool, Type::Bool) = (a, b) {
-        return Ok(());
-    }
+    match (a, b) {
+        (Type::Bool, Type::Bool) => Ok(()),
 
-    Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
-        format!("'{} {} {}' isn't valid operation.", a, op, b),
-        None,
-        span,
-    ))
+        _ => Err(CompilationIssue::Error(
+            String::from("Incompatible Operation"),
+            format!("'{} {} {}' isn't a valid logical operation.", a, op, b),
+            None,
+            span,
+        )),
+    }
 }
 
 #[inline]
@@ -148,36 +168,37 @@ fn validate_binary_shift(
     b: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    if let (
-        Type::S8
-        | Type::S16
-        | Type::S32
-        | Type::S64
-        | Type::U8
-        | Type::U16
-        | Type::U32
-        | Type::U64
-        | Type::U128,
-        Type::S8
-        | Type::S16
-        | Type::S32
-        | Type::S64
-        | Type::U8
-        | Type::U16
-        | Type::U32
-        | Type::U64
-        | Type::U128,
-    ) = (a, b)
-    {
-        return Ok(());
-    }
+    match (a, b) {
+        (
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+        ) => Ok(()),
+        (Type::SSize, Type::SSize) => Ok(()),
+        (Type::USize, Type::USize) => Ok(()),
 
-    Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
-        format!("'{} {} {}' is not allowed.", a, op, b),
-        None,
-        span,
-    ))
+        _ => Err(CompilationIssue::Error(
+            String::from("Incompatible Operation"),
+            format!("'{} {} {}' isn't a valid arithmetic operation.", a, op, b),
+            None,
+            span,
+        )),
+    }
 }
 
 #[inline]
@@ -187,43 +208,40 @@ fn validate_binary_comparasion(
     b: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    if let (
-        Type::S8
-        | Type::S16
-        | Type::S32
-        | Type::S64
-        | Type::U8
-        | Type::U16
-        | Type::U32
-        | Type::U64
-        | Type::U128,
-        Type::S8
-        | Type::S16
-        | Type::S32
-        | Type::S64
-        | Type::U8
-        | Type::U16
-        | Type::U32
-        | Type::U64
-        | Type::U128,
-    ) = (a, b)
-    {
-        return Ok(());
-    } else if let (Type::FPPC128, Type::FPPC128) = (a, b) {
-        return Ok(());
-    } else if let (Type::FX8680, Type::FX8680) = (a, b) {
-        return Ok(());
-    } else if let (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) = (a, b)
-    {
-        return Ok(());
-    }
+    match (a, b) {
+        (
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+        ) => Ok(()),
+        (Type::SSize, Type::SSize) => Ok(()),
+        (Type::USize, Type::USize) => Ok(()),
+        (Type::FPPC128, Type::FPPC128) => Ok(()),
+        (Type::FX8680, Type::FX8680) => Ok(()),
+        (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
 
-    Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
-        format!("'{} {} {}' isn't valid operation.", a, op, b),
-        None,
-        span,
-    ))
+        _ => Err(CompilationIssue::Error(
+            String::from("Incompatible Operation"),
+            format!("'{} {} {}' isn't a valid relational operation.", a, op, b),
+            None,
+            span,
+        )),
+    }
 }
 
 #[inline]
@@ -233,48 +251,44 @@ fn validate_binary_equality(
     b: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    if matches!(
-        (a, b),
+    match (a, b) {
         (
             Type::S8
-                | Type::S16
-                | Type::S32
-                | Type::S64
-                | Type::U8
-                | Type::U16
-                | Type::U32
-                | Type::U64
-                | Type::U128,
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
             Type::S8
-                | Type::S16
-                | Type::S32
-                | Type::S64
-                | Type::U8
-                | Type::U16
-                | Type::U32
-                | Type::U64
-                | Type::U128,
-        ) | (
-            Type::F32 | Type::F64 | Type::F128,
-            Type::F32 | Type::F64 | Type::F128
-        ) | (Type::Bool, Type::Bool)
-            | (Type::Char, Type::Char)
-            | (Type::FX8680, Type::FX8680)
-            | (Type::FPPC128, Type::FPPC128)
-    ) {
-        return Ok(());
-    }
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128,
+        ) => Ok(()),
+        (Type::SSize, Type::SSize) => Ok(()),
+        (Type::USize, Type::USize) => Ok(()),
+        (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
+        (Type::Bool, Type::Bool) => Ok(()),
+        (Type::Char, Type::Char) => Ok(()),
+        (Type::FX8680, Type::FX8680) => Ok(()),
+        (Type::FPPC128, Type::FPPC128) => Ok(()),
 
-    if a.is_ptr_type() && b.is_ptr_type() {
-        return Ok(());
-    }
+        _ if a.is_ptr_type() && b.is_ptr_type() => Ok(()),
 
-    Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
-        format!("'{} {} {}' isn't valid operation.", a, op, b),
-        None,
-        span,
-    ))
+        _ => Err(CompilationIssue::Error(
+            String::from("Incompatible Operation"),
+            format!("'{} {} {}' isn't a valid relational operation.", a, op, b),
+            None,
+            span,
+        )),
+    }
 }
 
 #[inline]
@@ -303,14 +317,15 @@ fn validate_binary_arithmetic(
             | Type::U32
             | Type::U64,
         ) => Ok(()),
-
+        (Type::SSize, Type::SSize) => Ok(()),
+        (Type::USize, Type::USize) => Ok(()),
         (Type::FPPC128, Type::FPPC128) => Ok(()),
         (Type::FX8680, Type::FX8680) => Ok(()),
         (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Type Operation"),
-            format!("'{} {} {}' isn't valid operation.", a, op, b),
+            String::from("Incompatible Operation"),
+            format!("'{} {} {}' isn't a valid arithmetic operation.", a, op, b),
             None,
             span,
         )),

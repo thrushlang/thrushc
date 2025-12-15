@@ -20,6 +20,7 @@ use crate::front_end::parser::expressions::reference;
 use crate::front_end::parser::interpret;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstGetType;
+use crate::front_end::types::lexer::traits::TokenTypeBuiltinExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::traits::TypeExtensions;
 use crate::front_end::typesystem::types::Type;
@@ -34,14 +35,7 @@ pub fn lower_precedence<'parser>(
         TokenType::LBracket => array::build_array(ctx)?,
         TokenType::Deref => deref::build_dereference(ctx)?,
 
-        TokenType::SizeOf => builtins::build_sizeof(ctx)?,
-        TokenType::AlignOf => builtins::build_alignof(ctx)?,
-        TokenType::Halloc => builtins::build_halloc(ctx)?,
-        TokenType::MemSet => builtins::build_memset(ctx)?,
-        TokenType::MemMove => builtins::build_memmove(ctx)?,
-        TokenType::MemCpy => builtins::build_memcpy(ctx)?,
-        TokenType::AbiSizeOf => builtins::build_abi_size_of(ctx)?,
-        TokenType::BitSizeOf => builtins::build_bit_size_of(ctx)?,
+        tk_type if tk_type.is_builtin() => builtins::build_builtin(ctx, *tk_type)?,
 
         TokenType::Asm => asm::build_asm_code_block(ctx)?,
 

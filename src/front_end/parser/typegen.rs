@@ -10,6 +10,8 @@ use crate::front_end::types::ast::Ast;
 
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::types::lexer::traits::TokenTypeExtensions;
+use crate::front_end::types::lexer::traits::TokenTypeTypeTransform;
 use crate::front_end::types::parser::stmts::traits::FoundSymbolEither;
 use crate::front_end::types::parser::stmts::traits::FoundSymbolExtension;
 use crate::front_end::types::parser::stmts::traits::StructExtensions;
@@ -22,6 +24,7 @@ use crate::front_end::typesystem::modificators::FunctionReferenceTypeModificator
 use crate::front_end::typesystem::modificators::GCCFunctionReferenceTypeModificator;
 use crate::front_end::typesystem::modificators::LLVMFunctionReferenceTypeModificator;
 use crate::front_end::typesystem::types::Type;
+
 use crate::middle_end::mir::attributes::ThrushAttributes;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 

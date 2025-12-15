@@ -10,7 +10,6 @@ pub mod printer;
 pub mod scapes;
 pub mod string;
 pub mod token;
-pub mod tokenis;
 pub mod tokentype;
 pub mod types;
 
@@ -23,6 +22,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::lexer::types::Tokens;
 
 use std::{mem, process};

@@ -249,6 +249,27 @@ pub fn check_types(
         ) => Ok(()),
 
         (
+            Type::SSize,
+            Type::SSize | Type::S64 | Type::S32 | Type::S16 | Type::S8,
+            Some(
+                TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Slash
+                | TokenType::Arith
+                | TokenType::Star
+                | TokenType::LShift
+                | TokenType::RShift
+                | TokenType::PlusPlus
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not
+                | TokenType::BAnd,
+            )
+            | None,
+        ) => Ok(()),
+
+        (
             Type::U8,
             Type::U8,
             Some(
@@ -335,6 +356,27 @@ pub fn check_types(
         (
             Type::U128,
             Type::U128 | Type::U64 | Type::U32 | Type::U16 | Type::U8,
+            Some(
+                TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Slash
+                | TokenType::Star
+                | TokenType::Arith
+                | TokenType::LShift
+                | TokenType::RShift
+                | TokenType::PlusPlus
+                | TokenType::MinusMinus
+                | TokenType::Xor
+                | TokenType::Bor
+                | TokenType::Not
+                | TokenType::BAnd,
+            )
+            | None,
+        ) => Ok(()),
+
+        (
+            Type::USize,
+            Type::USize | Type::U64 | Type::U32 | Type::U16 | Type::U8,
             Some(
                 TokenType::Plus
                 | TokenType::Minus

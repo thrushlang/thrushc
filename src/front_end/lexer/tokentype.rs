@@ -151,12 +151,14 @@ pub enum TokenType {
     S16,
     S32,
     S64,
+    Ssize,
 
     U8,
     U16,
     U32,
     U64,
     U128,
+    Usize,
 
     F32,
     F64,

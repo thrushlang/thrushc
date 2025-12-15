@@ -9,6 +9,7 @@ use crate::front_end::semantic::linter::marks;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::parser::stmts::types::Constructor;
 
 use std::path::PathBuf;

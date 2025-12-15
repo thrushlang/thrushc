@@ -3,6 +3,7 @@ use crate::{
     front_end::{
         lexer::{token::Token, tokentype::TokenType},
         preprocessor::parser::ModuleParser,
+        types::lexer::traits::TokenTypeExtensions,
     },
 };
 

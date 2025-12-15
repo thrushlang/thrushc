@@ -3,6 +3,8 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::preprocessor::attributes;
 use crate::front_end::preprocessor::parser::ModuleParser;
 
+use crate::front_end::types::lexer::traits::TokenTypeExtensions;
+use crate::front_end::types::lexer::traits::TokenTypeTypeTransform;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::preprocessor::symbols::traits::FoundModuleSymbolEither;
 use crate::front_end::types::preprocessor::symbols::traits::FoundModuleSymbolEntension;

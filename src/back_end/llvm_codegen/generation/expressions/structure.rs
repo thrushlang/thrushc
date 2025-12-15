@@ -34,7 +34,7 @@ fn compile_with_anchor<'ctx>(
     span: Span,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let ptr_type: BasicTypeEnum<'_> = typegen::generate(context.get_llvm_context(), struct_type);
+    let ptr_type: BasicTypeEnum<'_> = typegen::generate(context, struct_type);
     let ptr: PointerValue<'_> = anchor.get_pointer();
 
     context.set_pointer_anchor(PointerAnchor::new(ptr, true));
@@ -65,7 +65,7 @@ fn compile_without_anchor<'ctx>(
     struct_type: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let ptr_type: BasicTypeEnum<'_> = typegen::generate(context.get_llvm_context(), struct_type);
+    let ptr_type: BasicTypeEnum<'_> = typegen::generate(context, struct_type);
     let ptr: PointerValue<'_> =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, struct_type, span);
 

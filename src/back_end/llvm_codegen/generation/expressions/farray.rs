@@ -25,10 +25,8 @@ pub fn compile_const<'ctx>(
     items: &'ctx [Ast],
     array_type: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
     let base_type: &Type = array_type.get_fixed_array_base_type();
-    let array_type: BasicTypeEnum = typegen::generate(llvm_context, base_type);
+    let array_type: BasicTypeEnum = typegen::generate(context, base_type);
 
     let values: Vec<BasicValueEnum> = items
         .iter()

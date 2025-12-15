@@ -21,7 +21,6 @@ use std::fmt::Display;
 use std::path::PathBuf;
 
 use inkwell::builder::Builder;
-use inkwell::context::Context;
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::FloatType;
 use inkwell::types::PointerType;
@@ -239,7 +238,6 @@ pub fn integer<'ctx>(
     span: Span,
 ) -> Option<BasicValueEnum<'ctx>> {
     let llvm_builder: &Builder = context.get_llvm_builder();
-    let llvm_context: &Context = context.get_llvm_context();
 
     if !from_type.is_integer_type() || !target_type.is_integer_type() {
         return None;
@@ -253,7 +251,7 @@ pub fn integer<'ctx>(
         llvm_builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
-                typegen::generate(llvm_context, target_type).into_int_type(),
+                typegen::generate(context, target_type).into_int_type(),
                 from_type.is_signed_integer_type(),
                 "",
             )
@@ -286,7 +284,6 @@ pub fn float<'ctx>(
     span: Span,
 ) -> Option<BasicValueEnum<'ctx>> {
     let llvm_builder: &Builder = context.get_llvm_builder();
-    let llvm_context: &Context = context.get_llvm_context();
 
     if !from_type.is_float_type() || !target_type.is_float_type() {
         return None;
@@ -300,7 +297,7 @@ pub fn float<'ctx>(
         llvm_builder
             .build_float_cast(
                 from.into_float_value(),
-                typegen::generate(llvm_context, target_type).into_float_type(),
+                typegen::generate(context, target_type).into_float_type(),
                 "",
             )
             .unwrap_or_else(|_| {
@@ -378,7 +375,6 @@ pub fn compile<'ctx>(
     lhs: &'ctx Ast,
     rhs: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let lhs_type: &Type = lhs.llvm_get_type(context);
@@ -392,7 +388,7 @@ pub fn compile<'ctx>(
         let val: BasicValueEnum = refptr::compile(context, lhs, None);
 
         if val.is_pointer_value() {
-            let integer_type: BasicTypeEnum = typegen::generate(llvm_context, rhs);
+            let integer_type: BasicTypeEnum = typegen::generate(context, rhs);
 
             return llvm_builder
                 .build_ptr_to_int(val.into_pointer_value(), integer_type.into_int_type(), "")
@@ -408,7 +404,7 @@ pub fn compile<'ctx>(
 
     if rhs.is_numeric_type() {
         let value: BasicValueEnum = codegen::compile(context, lhs, None);
-        let target_type: BasicTypeEnum = typegen::generate(llvm_context, rhs);
+        let target_type: BasicTypeEnum = typegen::generate(context, rhs);
 
         if lhs_type.llvm_is_same_bit_size(context, rhs) {
             return llvm_builder
@@ -441,7 +437,7 @@ pub fn compile<'ctx>(
         let value: BasicValueEnum = refptr::compile(context, lhs, None);
 
         if value.is_pointer_value() {
-            let to: PointerType = typegen::generate(llvm_context, rhs).into_pointer_type();
+            let to: PointerType = typegen::generate(context, rhs).into_pointer_type();
 
             return llvm_builder
                 .build_pointer_cast(value.into_pointer_value(), to, "")
@@ -454,7 +450,7 @@ pub fn compile<'ctx>(
         let value: BasicValueEnum = refptr::compile(context, lhs, None);
 
         if value.is_pointer_value() {
-            let to: PointerType = typegen::generate(llvm_context, rhs).into_pointer_type();
+            let to: PointerType = typegen::generate(context, rhs).into_pointer_type();
 
             return llvm_builder
                 .build_pointer_cast(value.into_pointer_value(), to, "")
@@ -481,32 +477,33 @@ pub fn const_numeric_cast<'ctx>(
     target: &Type,
     is_signed: bool,
 ) -> BasicValueEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
+    let cast_type: BasicTypeEnum = typegen::generate(context, target);
 
-    let cast: BasicTypeEnum = typegen::generate(llvm_context, target);
-
-    if value.is_int_value() && cast.is_int_type() {
+    if value.is_int_value() && cast_type.is_int_type() {
         let integer: IntValue = value.into_int_value();
-        let default_v: IntValue = cast.into_int_type().const_int(0, false);
+        let default_v: IntValue = cast_type.into_int_type().const_int(0, false);
 
         if is_signed {
             if let Some(n) = integer.get_sign_extended_constant() {
                 let transmuted_n: u64 = unsafe { std::mem::transmute::<i64, u64>(n) };
-                return cast.into_int_type().const_int(transmuted_n, true).into();
+                return cast_type
+                    .into_int_type()
+                    .const_int(transmuted_n, true)
+                    .into();
             }
         }
 
         if let Some(number) = integer.get_zero_extended_constant() {
-            return cast.into_int_type().const_int(number, false).into();
+            return cast_type.into_int_type().const_int(number, false).into();
         }
 
         return default_v.into();
     }
 
-    if value.is_float_value() && cast.is_float_type() {
+    if value.is_float_value() && cast_type.is_float_type() {
         let float: FloatValue = value.into_float_value();
 
-        return cast
+        return cast_type
             .into_float_type()
             .const_float(float.get_constant().unwrap_or((0.0, false)).0)
             .into();

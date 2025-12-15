@@ -1,8 +1,9 @@
 use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::types::lexer::traits::{TokenTypeBuiltinExtensions, TokenTypeExtensions};
 
-impl TokenType {
-    #[must_use]
-    pub fn is_logical_operator(&self) -> bool {
+impl TokenTypeExtensions for TokenType {
+    #[inline]
+    fn is_logical_operator(&self) -> bool {
         matches!(
             self,
             TokenType::BangEq
@@ -14,48 +15,48 @@ impl TokenType {
         )
     }
 
-    #[must_use]
-    pub fn is_logical_gate(&self) -> bool {
+    #[inline]
+    fn is_logical_gate(&self) -> bool {
         matches!(self, TokenType::And | TokenType::Or)
     }
 
-    #[must_use]
-    pub fn is_minus_minus_operator(&self) -> bool {
+    #[inline]
+    fn is_minus_minus_operator(&self) -> bool {
         matches!(self, TokenType::MinusMinus)
     }
 
-    #[must_use]
-    pub fn is_plus_plus_operator(&self) -> bool {
+    #[inline]
+    fn is_plus_plus_operator(&self) -> bool {
         matches!(self, TokenType::PlusPlus)
     }
 
-    #[must_use]
-    pub fn is_address(&self) -> bool {
+    #[inline]
+    fn is_address(&self) -> bool {
         matches!(self, TokenType::Addr)
     }
 
-    #[must_use]
-    pub fn is_void(&self) -> bool {
+    #[inline]
+    fn is_void(&self) -> bool {
         matches!(self, TokenType::Void)
     }
 
-    #[must_use]
-    pub fn is_bool(&self) -> bool {
+    #[inline]
+    fn is_bool(&self) -> bool {
         matches!(self, TokenType::Bool)
     }
 
-    #[must_use]
-    pub fn is_array(&self) -> bool {
+    #[inline]
+    fn is_array(&self) -> bool {
         matches!(self, TokenType::Array)
     }
 
-    #[must_use]
-    pub fn is_ptr(&self) -> bool {
+    #[inline]
+    fn is_ptr(&self) -> bool {
         matches!(self, TokenType::Ptr)
     }
 
-    #[must_use]
-    pub fn is_float(&self) -> bool {
+    #[inline]
+    fn is_float(&self) -> bool {
         matches!(
             self,
             TokenType::F32
@@ -66,35 +67,37 @@ impl TokenType {
         )
     }
 
-    #[must_use]
-    pub fn is_const(&self) -> bool {
+    #[inline]
+    fn is_const(&self) -> bool {
         matches!(self, TokenType::Const)
     }
 
-    #[must_use]
-    pub fn is_fn_ref(&self) -> bool {
+    #[inline]
+    fn is_fn_ref(&self) -> bool {
         matches!(self, TokenType::FnRef)
     }
 
-    #[must_use]
-    pub fn is_integer(&self) -> bool {
+    #[inline]
+    fn is_integer(&self) -> bool {
         matches!(
             self,
             TokenType::S8
                 | TokenType::S16
                 | TokenType::S32
                 | TokenType::S64
+                | TokenType::Ssize
                 | TokenType::U8
                 | TokenType::U16
                 | TokenType::U32
                 | TokenType::U64
                 | TokenType::U128
+                | TokenType::Usize
                 | TokenType::Char
         )
     }
 
-    #[must_use]
-    pub fn is_type(&self) -> bool {
+    #[inline]
+    fn is_type(&self) -> bool {
         self.is_integer()
             || self.is_float()
             || self.is_bool()
@@ -106,8 +109,8 @@ impl TokenType {
             || self.is_fn_ref()
     }
 
-    #[must_use]
-    pub fn is_attribute(self) -> bool {
+    #[inline]
+    fn is_attribute(&self) -> bool {
         matches!(
             self,
             TokenType::Ignore
@@ -131,8 +134,25 @@ impl TokenType {
         )
     }
 
-    #[must_use]
-    pub fn is_identifier(&self) -> bool {
+    #[inline]
+    fn is_identifier(&self) -> bool {
         matches!(self, TokenType::Identifier)
+    }
+}
+
+impl TokenTypeBuiltinExtensions for TokenType {
+    fn is_builtin(&self) -> bool {
+        matches!(
+            self,
+            TokenType::Halloc
+                | TokenType::MemCpy
+                | TokenType::MemMove
+                | TokenType::MemSet
+                | TokenType::AlignOf
+                | TokenType::SizeOf
+                | TokenType::BitSizeOf
+                | TokenType::AbiSizeOf
+                | TokenType::AbiAlignOf
+        )
     }
 }

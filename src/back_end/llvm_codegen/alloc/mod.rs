@@ -7,7 +7,7 @@ use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::ThrushAttributes;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
-use inkwell::{context::Context, types::BasicTypeEnum, values::PointerValue};
+use inkwell::{types::BasicTypeEnum, values::PointerValue};
 
 pub mod atomic;
 pub mod memheap;
@@ -22,9 +22,7 @@ pub fn local_variable<'ctx>(
     attributes: &ThrushAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    let llvm_type: BasicTypeEnum = typegen::generate_local(llvm_context, kind, value);
+    let llvm_type: BasicTypeEnum = typegen::generate_local(context, kind, value);
     let name: String = format!("local.{}", ascii_name);
 
     if attributes.has_heap_attr() {
