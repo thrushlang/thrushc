@@ -3,8 +3,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::types::Type;
@@ -28,7 +27,7 @@ pub fn build_return<'parser>(
         });
     }
 
-    let value: Ast = expr::build_expr(ctx)?;
+    let value: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::SemiColon,

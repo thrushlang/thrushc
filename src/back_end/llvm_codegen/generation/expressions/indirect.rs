@@ -29,7 +29,7 @@ pub fn compile<'ctx>(
     if let Type::Fn(parameters, kind, modificator) = function_type {
         let need_ignore: bool = modificator.llvm().has_ignore();
         let function_type: FunctionType<'_> =
-            typegen::generate_fn_type_from_type(context, kind, parameters, need_ignore);
+            typegen::generate_function_type_from_type(context, kind, parameters, need_ignore);
 
         let compiled_args: Vec<BasicMetadataValueEnum> = args
             .iter()

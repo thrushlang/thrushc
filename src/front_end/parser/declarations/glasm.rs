@@ -3,8 +3,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
@@ -12,13 +11,13 @@ use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 pub fn build_global_assembler<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let glasm_keyword_tk: &Token = ctx.consume(
+    let tk: &Token = ctx.consume(
         TokenType::GlobalAsm,
         "Syntax error".into(),
-        "Expected 'glasm' keyword.".into(),
+        "Expected 'global_asm' keyword.".into(),
     )?;
 
-    let span: Span = glasm_keyword_tk.get_span();
+    let span: Span = tk.get_span();
 
     ctx.consume(
         TokenType::LParen,
@@ -26,7 +25,7 @@ pub fn build_global_assembler<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let assembler: Ast = expr::build_expr(ctx)?;
+    let assembler: Ast = expressions::build_expr(ctx)?;
     let asssembler_span: Span = assembler.get_span();
 
     ctx.consume(

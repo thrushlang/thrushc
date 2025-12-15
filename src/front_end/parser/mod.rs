@@ -3,12 +3,9 @@ pub mod builder;
 pub mod builtins;
 pub mod constants;
 pub mod contexts;
-pub mod declaration;
 pub mod declarations;
-pub mod expr;
 pub mod expressions;
 pub mod interpret;
-pub mod statement;
 pub mod statements;
 pub mod symbols;
 pub mod sync;
@@ -80,10 +77,10 @@ impl<'parser> Parser<'parser> {
     fn start(&mut self) -> (ParserContext<'parser>, bool) {
         let mut ctx: ParserContext = ParserContext::new(self.tokens, self.file);
 
-        declaration::parse_forward(&mut ctx);
+        declarations::parse_forward(&mut ctx);
 
         while !ctx.is_eof() {
-            match declaration::decl(&mut ctx) {
+            match declarations::parse(&mut ctx) {
                 Ok(ast) => ctx.add_ast(ast),
                 Err(error) => {
                     let total_issues: usize = ctx.errors.len() + ctx.bugs.len();

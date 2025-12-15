@@ -49,8 +49,8 @@ Extra compiler flags:
 
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
 • --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes to the LLVM backend.
-• --reloc [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
-• --codemodel [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
+• --reloc-mode [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
+• --code-model [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
 • --target-triple-darwin-variant [arm64-apple-ios15.0-macabi] Specify the darwin target variant triple.
 • --macos-version [15.0.0] Specify the MacOS SDK version.
 • --ios-version [17.4.0] Specify the iOS SDK version.

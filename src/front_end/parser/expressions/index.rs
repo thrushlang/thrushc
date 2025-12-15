@@ -3,7 +3,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::expressions;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::index::IndexMetadata;
 use crate::front_end::types::ast::traits::AstGetType;
@@ -19,7 +19,7 @@ pub fn build_index<'parser>(
     let index_type: &Type = source.get_value_type()?;
     let is_mutable: bool = source.is_mutable();
 
-    let index: Ast = expr::build_expr(ctx)?;
+    let index: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::RBracket,

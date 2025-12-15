@@ -3,8 +3,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
@@ -36,7 +35,7 @@ pub fn build_fixed_array<'parser>(
             break;
         }
 
-        let item: Ast = expr::build_expr(ctx)?;
+        let item: Ast = expressions::build_expr(ctx)?;
 
         items.push(item);
 

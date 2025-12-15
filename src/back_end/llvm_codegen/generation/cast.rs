@@ -12,6 +12,7 @@ use crate::core::console::logging::LoggingType;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::typesystem::traits::LLVMTypeExtensions;
 use crate::front_end::typesystem::types::Type;
@@ -384,7 +385,7 @@ pub fn compile<'ctx>(
 
     let abort_ptr = |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
 
-    if lhs_type.is_ptr_type() && rhs.is_integer_type() {
+    if lhs_type.is_ptr_like_type() && rhs.is_integer_type() {
         let val: BasicValueEnum = refptr::compile(context, lhs, None);
 
         if val.is_pointer_value() {
@@ -446,7 +447,7 @@ pub fn compile<'ctx>(
         };
     }
 
-    if lhs_type.is_ptr_type() && rhs.is_const_type() {
+    if rhs.is_const_type() {
         let value: BasicValueEnum = refptr::compile(context, lhs, None);
 
         if value.is_pointer_value() {
@@ -459,10 +460,13 @@ pub fn compile<'ctx>(
         };
     }
 
-    self::codegen_abort(format!(
-        "Unsupported cast from '{}' to '{}'.",
-        lhs_type, lhs_type
-    ));
+    abort::abort_codegen(
+        context,
+        &format!("Failed to cast '{}' type to '{}' type.", lhs_type, rhs),
+        lhs.get_span(),
+        PathBuf::from(file!()),
+        line!(),
+    );
 }
 
 /* ######################################################################

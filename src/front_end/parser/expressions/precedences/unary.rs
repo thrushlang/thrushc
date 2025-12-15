@@ -3,7 +3,7 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::expressions::precedences::lower;
-use crate::front_end::parser::{ParserContext, expr};
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::{traits::CastTypeExtensions, types::Type};
@@ -68,7 +68,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = expr::build_expr(ctx)?;
+        let expression: Ast = expressions::build_expr(ctx)?;
 
         let expression_type: &Type = expression.get_value_type()?;
 
@@ -88,7 +88,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = expr::build_expr(ctx)?;
+        let expression: Ast = expressions::build_expr(ctx)?;
         let expression_type: &Type = expression.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {

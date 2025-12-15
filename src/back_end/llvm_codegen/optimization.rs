@@ -1,7 +1,7 @@
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
+use crate::core::compiler::options::ThrushOptimization;
 use crate::core::console::logging;
 
-use inkwell::OptimizationLevel;
 use inkwell::attributes::Attribute;
 use inkwell::attributes::AttributeLoc;
 use inkwell::basic_block::BasicBlock;
@@ -22,7 +22,7 @@ pub struct LLVMOptimizer<'a, 'ctx> {
     context: &'ctx Context,
     flags: LLVMOptimizerFlags,
     target_machine: &'a TargetMachine,
-    opt_level: OptimizationLevel,
+    opt_level: ThrushOptimization,
     custom_passes: &'ctx str,
     modicator_passes: &'ctx [LLVMModificatorPasses],
 }
@@ -33,7 +33,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
         context: &'ctx Context,
         flags: LLVMOptimizerFlags,
         target_machine: &'a TargetMachine,
-        opt_level: OptimizationLevel,
+        opt_level: ThrushOptimization,
         custom_passes: &'ctx str,
         modicator_passes: &'ctx [LLVMModificatorPasses],
     ) -> Self {
@@ -73,7 +73,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
         }
 
         match self.opt_level {
-            OptimizationLevel::None => {
+            ThrushOptimization::None => {
                 if !self.get_flags().get_disable_default_opt() {
                     let mut param_opt: LLVMParameterOptimizer =
                         LLVMParameterOptimizer::new(self.get_module(), self.get_context());
@@ -82,7 +82,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                 }
             }
 
-            OptimizationLevel::Default => {
+            ThrushOptimization::Low => {
                 if let Err(error) = self.get_module().run_passes(
                     "default<O1>",
                     self.target_machine,
@@ -98,7 +98,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                 }
             }
 
-            OptimizationLevel::Less => {
+            ThrushOptimization::Mid => {
                 if let Err(error) = self.get_module().run_passes(
                     "default<O2>",
                     self.target_machine,
@@ -114,9 +114,25 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                 }
             }
 
-            OptimizationLevel::Aggressive => {
+            ThrushOptimization::High => {
                 if let Err(error) = self.get_module().run_passes(
                     "default<O3>",
+                    self.target_machine,
+                    self.create_passes_builder(),
+                ) {
+                    logging::print_warn(
+                        logging::LoggingType::Warning,
+                        &format!(
+                            "Some optimizations passes couldn't be performed because: '{:?}'.",
+                            error
+                        ),
+                    );
+                }
+            }
+
+            ThrushOptimization::Size => {
+                if let Err(error) = self.get_module().run_passes(
+                    "default<Oz>",
                     self.target_machine,
                     self.create_passes_builder(),
                 ) {

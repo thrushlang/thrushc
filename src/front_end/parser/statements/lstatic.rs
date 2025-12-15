@@ -8,13 +8,14 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::attributes;
 use crate::front_end::parser::builder;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::expressions;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::staticvar::StaticMetadata;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 pub fn build_static<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -50,20 +51,45 @@ pub fn build_static<'parser>(
         "Expected ':'.".into(),
     )?;
 
-    let static_type: Type = typegen::build_type(ctx)?;
+    let static_type: Type = typegen::build_type(ctx, false)?;
 
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Eq])?;
+    let external: bool = attributes.has_extern_attribute();
+
+    if ctx.match_token(TokenType::SemiColon)? {
+        let metadata: StaticMetadata = StaticMetadata::new(
+            true,
+            is_mutable,
+            true,
+            thread_local,
+            is_volatile,
+            external,
+            atomic_ord,
+            thread_mode,
+        );
+
+        return Ok(Ast::Static {
+            name,
+            ascii_name,
+            kind: static_type,
+            value: None,
+            attributes,
+            metadata,
+            span,
+        });
+    }
 
     ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-    let value: Ast = expr::build_expression(ctx)?;
+    let value: Ast = expressions::build_expression(ctx)?;
 
     let metadata: StaticMetadata = StaticMetadata::new(
-        false,
+        true,
         is_mutable,
         false,
         thread_local,
         is_volatile,
+        external,
         atomic_ord,
         thread_mode,
     );

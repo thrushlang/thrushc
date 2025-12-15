@@ -4,7 +4,7 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::expressions;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
@@ -34,11 +34,11 @@ pub fn build_lli<'parser>(
         "Expected ':'.".into(),
     )?;
 
-    let instr_type: Type = typegen::build_type(ctx)?;
+    let instr_type: Type = typegen::build_type(ctx, false)?;
 
     ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
 
-    let expr: Ast = expr::build_expr(ctx)?;
+    let expr: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::SemiColon,

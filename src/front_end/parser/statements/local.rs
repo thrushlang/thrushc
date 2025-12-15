@@ -8,7 +8,7 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::attributes;
 use crate::front_end::parser::builder;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::expressions;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
@@ -46,7 +46,7 @@ pub fn build_local<'parser>(
         String::from("Expected ':'."),
     )?;
 
-    let local_type: Type = typegen::build_type(ctx)?;
+    let local_type: Type = typegen::build_type(ctx, false)?;
 
     let attributes: ThrushAttributes =
         attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
@@ -79,7 +79,7 @@ pub fn build_local<'parser>(
         String::from("Expected '='."),
     )?;
 
-    let value: Ast = expr::build_expression(ctx)?;
+    let value: Ast = expressions::build_expression(ctx)?;
 
     let local: Ast = Ast::Local {
         name,

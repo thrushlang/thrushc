@@ -27,6 +27,7 @@ impl StaticMetadata {
         is_unitialized: bool,
         thread_local: bool,
         volatile: bool,
+        external: bool,
         atomic_ord: Option<AtomicOrdering>,
         thread_mode: Option<ThreadLocalMode>,
     ) -> Self {
@@ -36,7 +37,7 @@ impl StaticMetadata {
             is_unitialized,
 
             llvm_metadata: LLVMStaticMetadata {
-                unnamed_addr: !is_mutable,
+                unnamed_addr: !is_mutable && !external,
                 constant: !is_mutable,
                 thread_local,
                 thread_mode,

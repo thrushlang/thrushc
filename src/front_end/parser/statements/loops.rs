@@ -4,7 +4,7 @@ use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::expressions;
 use crate::front_end::parser::statements::block;
 use crate::front_end::parser::statements::local;
 use crate::front_end::types::ast::Ast;
@@ -23,8 +23,8 @@ pub fn build_for_loop<'parser>(
 
     let local: Ast = local::build_local(ctx)?;
 
-    let condition: Ast = expr::build_expression(ctx)?;
-    let actions: Ast = expr::build_expression(ctx)?;
+    let condition: Ast = expressions::build_expression(ctx)?;
+    let actions: Ast = expressions::build_expression(ctx)?;
 
     let body: Ast = block::build_block(ctx)?;
 
@@ -67,7 +67,7 @@ pub fn build_while_loop<'parser>(
 
     let span: Span = while_tk.get_span();
 
-    let condition: Ast = expr::build_expr(ctx)?;
+    let condition: Ast = expressions::build_expr(ctx)?;
     let block: Ast = block::build_block(ctx)?;
 
     Ok(Ast::While {

@@ -2,7 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
-use crate::front_end::parser::{ParserContext, expr};
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::{traits::TypeArrayEntensions, types::Type};
@@ -10,13 +10,13 @@ use crate::front_end::typesystem::{traits::TypeArrayEntensions, types::Type};
 pub fn build_array<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let array_start_tk: &Token = ctx.consume(
+    let tk: &Token = ctx.consume(
         TokenType::LBracket,
         "Syntax error".into(),
         "Expected '['.".into(),
     )?;
 
-    let span: Span = array_start_tk.get_span();
+    let span: Span = tk.get_span();
 
     let mut array_type: Type = Type::Void;
     let mut items: Vec<Ast> = Vec::with_capacity(100);
@@ -26,7 +26,7 @@ pub fn build_array<'parser>(
             break;
         }
 
-        let item: Ast = expr::build_expr(ctx)?;
+        let item: Ast = expressions::build_expr(ctx)?;
 
         items.push(item);
 

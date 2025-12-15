@@ -51,7 +51,7 @@ pub fn build_alloc<'parser>(
         "Expected '{'.".into(),
     )?;
 
-    let mut alloc_type: Type = typegen::build_type(ctx)?;
+    let mut alloc_type: Type = typegen::build_type(ctx, false)?;
 
     alloc_type = Type::Ptr(Some(alloc_type.into()));
 

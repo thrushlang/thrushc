@@ -2,8 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
@@ -21,7 +20,7 @@ pub fn build_indirect<'parser>(
 
     let span: Span = ctx.previous().get_span();
 
-    let expression: Ast = expr::build_expr(ctx)?;
+    let expression: Ast = expressions::build_expr(ctx)?;
     let expression_type: &Type = expression.get_value_type()?;
 
     let mut args: Vec<Ast> = Vec::with_capacity(10);
@@ -37,7 +36,7 @@ pub fn build_indirect<'parser>(
             break;
         }
 
-        let expr: Ast = expr::build_expr(ctx)?;
+        let expr: Ast = expressions::build_expr(ctx)?;
 
         args.push(expr);
 

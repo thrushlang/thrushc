@@ -151,114 +151,72 @@ impl AstCodeBlockEntensions for Ast<'_> {
 impl AstMutabilityExtensions for Ast<'_> {
     #[inline]
     fn is_mutable(&self) -> bool {
-        if let Ast::Local { metadata, .. } = self {
-            return metadata.is_mutable();
-        }
+        match self {
+            Ast::Local { metadata, .. } => metadata.is_mutable(),
+            Ast::FunctionParameter { metadata, .. } => metadata.is_mutable(),
+            Ast::Index { metadata, .. } => metadata.is_mutable(),
+            Ast::Reference { metadata, .. } => metadata.is_mutable(),
+            Ast::Property { source, .. } => source.is_reference(),
 
-        if let Ast::FunctionParameter { metadata, .. } = self {
-            return metadata.is_mutable();
+            _ => false,
         }
-
-        if let Ast::Index { metadata, .. } = self {
-            return metadata.is_mutable();
-        }
-
-        if let Ast::Reference { metadata, .. } = self {
-            return metadata.is_mutable();
-        }
-
-        if let Ast::Property { source, .. } = self {
-            return source.is_reference();
-        }
-
-        false
     }
 }
 
 impl AstMemoryExtensions for Ast<'_> {
     #[inline]
     fn is_allocated(&self) -> bool {
-        if let Ast::Reference { metadata, .. } = self {
-            return metadata.is_allocated();
-        }
+        match self {
+            Ast::Reference { metadata, .. } => metadata.is_allocated(),
+            Ast::Property { metadata, .. } => metadata.is_allocated(),
 
-        if let Ast::Property { metadata, .. } = self {
-            return metadata.is_allocated();
+            _ => false,
         }
-
-        false
     }
 
     #[inline]
     fn is_allocated_value(&self) -> Result<bool, CompilationIssue> {
-        if let Ast::Reference { metadata, .. } = self {
-            return Ok(metadata.is_allocated());
-        }
+        match self {
+            Ast::Reference { metadata, .. } => Ok(metadata.is_allocated()),
+            Ast::Property { metadata, .. } => Ok(metadata.is_allocated()),
 
-        if let Ast::Property { metadata, .. } = self {
-            return Ok(metadata.is_allocated());
+            _ => Ok(self.get_value_type()?.is_ptr_like_type()),
         }
-
-        Ok(self.get_value_type()?.is_ptr_like_type())
     }
 }
 
 impl AstConstantExtensions for Ast<'_> {
     fn is_constant_value(&self) -> bool {
-        if matches!(
-            self,
+        match self {
             Ast::Integer { .. }
-                | Ast::Float { .. }
-                | Ast::Boolean { .. }
-                | Ast::Char { .. }
-                | Ast::Str { .. }
-                | Ast::NullPtr { .. }
-                | Self::Builtin {
-                    builtin: crate::middle_end::mir::builtins::ThrushBuiltin::AlignOf { .. }
-                        | crate::middle_end::mir::builtins::ThrushBuiltin::SizeOf { .. },
-                    ..
-                }
-        ) {
-            return true;
-        }
+            | Ast::Float { .. }
+            | Ast::Boolean { .. }
+            | Ast::Char { .. }
+            | Ast::Str { .. }
+            | Ast::NullPtr { .. }
+            | Self::Builtin {
+                builtin:
+                    crate::middle_end::mir::builtins::ThrushBuiltin::AlignOf { .. }
+                    | crate::middle_end::mir::builtins::ThrushBuiltin::SizeOf { .. }
+                    | crate::middle_end::mir::builtins::ThrushBuiltin::AbiSizeOf { .. }
+                    | crate::middle_end::mir::builtins::ThrushBuiltin::AbiAlignOf { .. }
+                    | crate::middle_end::mir::builtins::ThrushBuiltin::BitSizeOf { .. },
+                ..
+            } => true,
+            Ast::EnumValue { value, .. } => value.is_constant_value(),
+            Ast::DirectRef { expr, .. } => expr.is_constant_value(),
+            Ast::Group { expression, .. } => expression.is_constant_value(),
+            Ast::BinaryOp { left, right, .. } => {
+                left.is_constant_value() && right.is_constant_value()
+            }
+            Ast::UnaryOp { expression, .. } => expression.is_constant_value(),
+            Ast::Reference { metadata, .. } => metadata.is_constant(),
+            Ast::As { metadata, .. } => metadata.is_constant(),
+            Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_constant_value()),
+            Ast::Constructor { args, .. } => args.iter().all(|arg| arg.1.is_constant_value()),
 
-        if let Ast::EnumValue { value, .. } = self {
-            return value.is_constant_value();
+            _ => false,
         }
-
-        if let Ast::DirectRef { expr, .. } = self {
-            return expr.is_constant_value();
-        }
-
-        if let Ast::Group { expression, .. } = self {
-            return expression.is_constant_value();
-        }
-
-        if let Ast::BinaryOp { left, right, .. } = self {
-            return left.is_constant_value() && right.is_constant_value();
-        }
-
-        if let Ast::UnaryOp { expression, .. } = self {
-            return expression.is_constant_value();
-        }
-
-        if let Ast::Reference { metadata, .. } = self {
-            return metadata.is_constant();
-        }
-
-        if let Ast::As { metadata, .. } = self {
-            return metadata.is_constant();
-        }
-
-        if let Ast::FixedArray { items, .. } = self {
-            return items.iter().all(|item| item.is_constant_value());
-        }
-
-        if let Ast::Constructor { args, .. } = self {
-            return args.iter().all(|arg| arg.1.is_constant_value());
-        }
-
-        false
     }
 }
 

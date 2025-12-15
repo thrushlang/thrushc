@@ -37,7 +37,7 @@ pub fn build_custom_type<'parser>(
 
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
 
-    let custom_type: Type = typegen::build_type(ctx)?;
+    let custom_type: Type = typegen::build_type(ctx, false)?;
 
     ctx.consume(
         TokenType::SemiColon,

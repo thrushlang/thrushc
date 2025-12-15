@@ -2,7 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
-use crate::front_end::parser::{ParserContext, expr};
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
 use crate::front_end::typesystem::types::Type;
@@ -13,7 +13,7 @@ pub fn build_address<'parser>(
     let address_tk: &Token = ctx.advance()?;
     let address_span: Span = address_tk.get_span();
 
-    let source: Ast = expr::build_expr(ctx)?;
+    let source: Ast = expressions::build_expr(ctx)?;
     let expr_span: Span = source.get_span();
 
     let indexes: Vec<Ast> = self::build_address_indexes(ctx, expr_span)?;
@@ -43,7 +43,7 @@ fn build_address_indexes<'parser>(
             break;
         }
 
-        let index: Ast = expr::build_expr(ctx)?;
+        let index: Ast = expressions::build_expr(ctx)?;
 
         indexes.push(index);
 

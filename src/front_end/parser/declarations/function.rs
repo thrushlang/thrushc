@@ -71,7 +71,7 @@ pub fn build_function<'parser>(
             "Expected ':'.".into(),
         )?;
 
-        let parameter_type: Type = typegen::build_type(ctx)?;
+        let parameter_type: Type = typegen::build_type(ctx, false)?;
 
         parameters_types.push(parameter_type.clone());
 
@@ -103,7 +103,7 @@ pub fn build_function<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    let return_type: Type = typegen::build_type(ctx)?;
+    let return_type: Type = typegen::build_type(ctx, false)?;
 
     let attributes: ThrushAttributes =
         attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::LBrace])?;

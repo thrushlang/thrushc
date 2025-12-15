@@ -5,7 +5,7 @@ use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::attributes;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::expressions;
 use crate::front_end::types::ast::Ast;
 
 use crate::front_end::types::ast::traits::AstGetType;
@@ -18,7 +18,11 @@ use crate::front_end::types::parser::stmts::traits::StructExtensions;
 use crate::front_end::types::parser::stmts::traits::StructFieldsExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::stmts::types::StructFields;
+use crate::front_end::types::parser::symbols::types::ConstantSymbol;
 use crate::front_end::types::parser::symbols::types::CustomTypeSymbol;
+use crate::front_end::types::parser::symbols::types::LocalSymbol;
+use crate::front_end::types::parser::symbols::types::ParameterSymbol;
+use crate::front_end::types::parser::symbols::types::StaticSymbol;
 use crate::front_end::types::parser::symbols::types::Struct;
 use crate::front_end::typesystem::modificators::FunctionReferenceTypeModificator;
 use crate::front_end::typesystem::modificators::GCCFunctionReferenceTypeModificator;
@@ -28,27 +32,25 @@ use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::ThrushAttributes;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
-pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue> {
+pub fn build_type(
+    ctx: &mut ParserContext<'_>,
+    include_expr: bool,
+) -> Result<Type, CompilationIssue> {
     match ctx.peek().kind {
         tk_kind if tk_kind.is_type() => {
             let tk: &Token = ctx.advance()?;
-            let span: Span = tk.span;
+            let span: Span = tk.get_span();
 
-            if tk_kind.is_array() {
-                return self::build_array_type(ctx, span);
-            }
-            if tk_kind.is_const() {
-                return self::build_const_type(ctx);
-            }
-            if tk_kind.is_fn_ref() {
-                return self::build_fn_ref_type(ctx);
-            }
-
-            match tk_kind.as_type(span)? {
-                ty if ty.is_ptr_type() && ctx.check(TokenType::LBracket) => {
-                    self::build_recursive_type(ctx, Type::Ptr(None))
-                }
-                ty => Ok(ty),
+            match tk_kind {
+                _ if tk_kind.is_array() => self::build_array_type(ctx, span),
+                _ if tk_kind.is_const() => self::build_const_type(ctx),
+                _ if tk_kind.is_fn_ref() => self::build_fn_ref_type(ctx),
+                _ => match tk_kind.as_type(span)? {
+                    ty if ty.is_ptr_type() && ctx.check(TokenType::LBracket) => {
+                        self::build_recursive_type(ctx, Type::Ptr(None))
+                    }
+                    ty => Ok(ty),
+                },
             }
         }
 
@@ -59,34 +61,59 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue>
             let span: Span = identifier_tk.get_span();
 
             if let Ok(object) = ctx.get_symbols().get_symbols_id(name, span) {
-                if object.is_structure() {
-                    let structure_id: (&str, usize) = object.expected_struct(span)?;
-                    let id: &str = structure_id.0;
-                    let scope_idx: usize = structure_id.1;
+                match object {
+                    _ if object.is_structure() => {
+                        let (id, scope_idx) = object.expected_struct(span)?;
+                        let structure: Struct =
+                            ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
+                        let fields: StructFields = structure.get_fields();
 
-                    let structure: Struct =
-                        ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
+                        Ok(fields.get_type())
+                    }
+                    _ if object.is_custom_type() => {
+                        let (id, scope_idx) = object.expected_custom_type(span)?;
+                        let custom: CustomTypeSymbol = ctx
+                            .get_symbols()
+                            .get_custom_type_by_id(id, scope_idx, span)?;
 
-                    let fields: StructFields = structure.get_fields();
+                        Ok(custom.0)
+                    }
+                    _ if object.is_parameter() => {
+                        let parameter_id: &str = object.expected_parameter(span)?;
+                        let parameter: ParameterSymbol =
+                            ctx.get_symbols().get_parameter_by_id(parameter_id, span)?;
 
-                    Ok(fields.get_type())
-                } else if object.is_custom_type() {
-                    let custom_id: (&str, usize) = object.expected_custom_type(span)?;
-                    let id: &str = custom_id.0;
-                    let scope_idx: usize = custom_id.1;
+                        Ok(parameter.0)
+                    }
+                    _ if object.is_local() => {
+                        let (id, scope_idx) = object.expected_local(span)?;
+                        let local: LocalSymbol = ctx
+                            .get_symbols()
+                            .get_local_by_id(id, scope_idx, span)?
+                            .clone();
 
-                    let custom: CustomTypeSymbol = ctx
-                        .get_symbols()
-                        .get_custom_type_by_id(id, scope_idx, span)?;
+                        Ok(local.0)
+                    }
+                    _ if object.is_static() => {
+                        let (id, scope_idx) = object.expected_static(span)?;
+                        let staticvar: StaticSymbol =
+                            ctx.get_symbols().get_static_by_id(id, scope_idx, span)?;
 
-                    Ok(custom.0)
-                } else {
-                    Err(CompilationIssue::Error(
+                        Ok(staticvar.0)
+                    }
+                    _ if object.is_constant() => {
+                        let (id, scope_idx) = object.expected_constant(span)?;
+                        let constant: ConstantSymbol =
+                            ctx.get_symbols().get_const_by_id(id, scope_idx, span)?;
+
+                        Ok(constant.0)
+                    }
+                    _ => Err(CompilationIssue::Error(
                         "Syntax error".into(),
                         format!("Not found type '{}'.", name),
                         None,
                         span,
-                    ))
+                    )),
                 }
             } else {
                 Err(CompilationIssue::Error(
@@ -97,6 +124,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue>
                 ))
             }
         }
+
+        _ if include_expr => expressions::build_expr(ctx)?.get_value_type().cloned(),
 
         what_heck => Err(CompilationIssue::Error(
             "Syntax error".into(),
@@ -121,7 +150,7 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIss
             break;
         }
 
-        parameter_types.push(self::build_type(ctx)?);
+        parameter_types.push(self::build_type(ctx, false)?);
 
         if ctx.check(TokenType::RBracket) {
             break;
@@ -149,7 +178,7 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIss
         "Expected '->'.".into(),
     )?;
 
-    let return_type: Type = build_type(ctx)?;
+    let return_type: Type = self::build_type(ctx, false)?;
 
     Ok(Type::Fn(
         parameter_types,
@@ -162,7 +191,7 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIss
 }
 
 fn build_const_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue> {
-    Ok(Type::Const(self::build_type(ctx)?.into()))
+    Ok(Type::Const(self::build_type(ctx, false)?.into()))
 }
 
 fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
@@ -172,7 +201,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         "Expected '['.".into(),
     )?;
 
-    let array_type: Type = build_type(ctx)?;
+    let array_type: Type = self::build_type(ctx, false)?;
 
     if ctx.check(TokenType::SemiColon) {
         ctx.consume(
@@ -181,7 +210,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
             "Expected ';'.".into(),
         )?;
 
-        let size: Ast = expr::build_expr(ctx)?;
+        let size: Ast = expressions::build_expr(ctx)?;
         let size_type: &Type = size.get_value_type()?;
 
         if !size.is_integer() {
@@ -241,7 +270,7 @@ fn build_recursive_type(
     )?;
 
     if let Type::Ptr(_) = &mut before_type {
-        let mut inner_type: Type = build_type(ctx)?;
+        let mut inner_type: Type = self::build_type(ctx, false)?;
 
         while ctx.check(TokenType::LBracket) {
             inner_type = build_recursive_type(ctx, inner_type)?;

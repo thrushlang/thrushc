@@ -65,7 +65,7 @@ pub fn build_structure<'parser>(
                 "Expected ':'.".into(),
             )?;
 
-            let field_type: Type = typegen::build_type(ctx)?;
+            let field_type: Type = typegen::build_type(ctx, false)?;
 
             fields_types
                 .1

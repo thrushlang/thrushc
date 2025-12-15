@@ -3,8 +3,8 @@ use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::{attributes, expr, typegen};
+use crate::front_end::parser::{ParserContext, expressions};
+use crate::front_end::parser::{attributes, typegen};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
@@ -59,7 +59,7 @@ pub fn build_assembler_function<'parser>(
         let parameter_name: &str = parameter_name_tk.get_lexeme();
         let parameter_span: Span = parameter_name_tk.get_span();
 
-        let parameter_type: Type = typegen::build_type(ctx)?;
+        let parameter_type: Type = typegen::build_type(ctx, false)?;
 
         parameters_types.push(parameter_type.clone());
 
@@ -89,7 +89,7 @@ pub fn build_assembler_function<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    let return_type: Type = typegen::build_type(ctx)?;
+    let return_type: Type = typegen::build_type(ctx, false)?;
 
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
 
@@ -109,7 +109,7 @@ pub fn build_assembler_function<'parser>(
             break;
         }
 
-        let raw_str: Ast = expr::build_expr(ctx)?;
+        let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let assembly: &str = raw_str.get_str_literal_content(raw_str_span)?;
@@ -153,7 +153,7 @@ pub fn build_assembler_function<'parser>(
             break;
         }
 
-        let raw_str: Ast = expr::build_expr(ctx)?;
+        let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let constraint: &str = raw_str.get_str_literal_content(raw_str_span)?;

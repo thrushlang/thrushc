@@ -90,8 +90,8 @@ impl ThrushOptimization {
         match self {
             ThrushOptimization::None => OptimizationLevel::None,
             ThrushOptimization::Low => OptimizationLevel::Default,
-            ThrushOptimization::Mid => OptimizationLevel::Less,
-            ThrushOptimization::High | ThrushOptimization::Size => OptimizationLevel::Aggressive,
+            ThrushOptimization::Mid | ThrushOptimization::Size => OptimizationLevel::Less,
+            ThrushOptimization::High => OptimizationLevel::Aggressive,
         }
     }
 

@@ -255,7 +255,7 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {} {}\n",
             "•".bold(),
-            "--reloc".custom_color((141, 141, 142)).bold(),
+            "--reloc-mode".custom_color((141, 141, 142)).bold(),
             "[static|pic|dynamic]",
             "Indicate how references to memory addresses and linkage symbols are handled."
         ),
@@ -266,7 +266,7 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {} {}\n",
             "•".bold(),
-            "--codemodel".custom_color((141, 141, 142)).bold(),
+            "--code-model".custom_color((141, 141, 142)).bold(),
             "[small|medium|large|kernel]",
             "Define how code is organized and accessed at machine code level."
         ),

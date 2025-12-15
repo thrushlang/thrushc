@@ -271,7 +271,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_context,
             LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
             &target_machine,
-            llvm_opt,
+            thrush_opt,
             llvm_backend.get_opt_passes(),
             llvm_backend.get_modificator_passes(),
         )
@@ -515,7 +515,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_context,
             LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
             &target_machine,
-            llvm_opt,
+            thrush_opt,
             llvm_backend.get_opt_passes(),
             llvm_backend.get_modificator_passes(),
         )

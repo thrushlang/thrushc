@@ -5,7 +5,7 @@ use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::builder;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::expressions;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::dereference::DereferenceMetadata;
 use crate::front_end::types::ast::traits::AstGetType;
@@ -30,13 +30,13 @@ pub fn build_dereference<'parser>(
             ctx.consume(
                 TokenType::Deref,
                 "Syntax error".into(),
-                "Expected 'defer' keyword.".into(),
+                "Expected 'deref' keyword.".into(),
             )?;
 
             deref_count += 1;
         }
 
-        let expr: Ast = expr::build_expr(ctx)?;
+        let expr: Ast = expressions::build_expr(ctx)?;
 
         expr
     };

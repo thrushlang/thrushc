@@ -55,7 +55,7 @@ pub fn generate_fn_type<'ctx>(
 }
 
 #[inline]
-pub fn generate_fn_type_from_type<'ctx>(
+pub fn generate_function_type_from_type<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     parameters: &[Type],

@@ -2,7 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
-use crate::front_end::parser::{ParserContext, attributes, expr, typegen};
+use crate::front_end::parser::{ParserContext, attributes, expressions, typegen};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstStandardExtensions};
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
@@ -18,7 +18,7 @@ pub fn build_asm_code_block<'parser>(
         "Expected 'asm' keyword.".into(),
     )?;
 
-    let asm_type: Type = typegen::build_type(ctx)?;
+    let asm_type: Type = typegen::build_type(ctx, false)?;
 
     let span: Span = asm_tk.get_span();
 
@@ -33,7 +33,7 @@ pub fn build_asm_code_block<'parser>(
                 break;
             }
 
-            let expr: Ast = expr::build_expression(ctx)?;
+            let expr: Ast = expressions::build_expression(ctx)?;
 
             args.push(expr);
 
@@ -69,7 +69,7 @@ pub fn build_asm_code_block<'parser>(
             break;
         }
 
-        let raw_str: Ast = expr::build_expr(ctx)?;
+        let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
@@ -122,7 +122,7 @@ pub fn build_asm_code_block<'parser>(
             break;
         }
 
-        let raw_str: Ast = expr::build_expr(ctx)?;
+        let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         let constraint: &str = raw_str.get_str_literal_content(raw_str_span)?;

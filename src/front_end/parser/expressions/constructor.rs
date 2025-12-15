@@ -2,7 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
-use crate::front_end::parser::{ParserContext, expr};
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::FoundSymbolEither;
 use crate::front_end::types::parser::stmts::{
@@ -61,8 +61,8 @@ pub fn build_constructor<'parser>(
 
             ctx.consume(
                 TokenType::Colon,
-                String::from("Syntax error"),
-                String::from("Expected ':'."),
+                "Syntax error".into(),
+                "Expected ':'.".into(),
             )?;
 
             if !structure.contains_field(field_name) {
@@ -83,7 +83,7 @@ pub fn build_constructor<'parser>(
                 ));
             }
 
-            let expression: Ast = expr::build_expr(ctx)?;
+            let expression: Ast = expressions::build_expr(ctx)?;
 
             if let Some(target_type) = structure.get_field_type(field_name) {
                 args.push((field_name, expression, target_type, amount as u32));

@@ -449,7 +449,7 @@ impl CommandLine {
                 self.get_mut_options().set_omit_default_optimizations();
             }
 
-            "--reloc" => {
+            "--reloc-mode" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 

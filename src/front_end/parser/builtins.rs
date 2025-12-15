@@ -1,12 +1,12 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::front_end::parser::expressions;
 use crate::middle_end::mir::builtins::ThrushBuiltin;
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
-use crate::front_end::parser::expr;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
@@ -57,7 +57,7 @@ pub fn build_halloc<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let alloc: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -67,10 +67,10 @@ pub fn build_halloc<'parser>(
 
     Ok(Ast::Builtin {
         builtin: ThrushBuiltin::Halloc {
-            of: alloc.clone(),
+            of: of.clone(),
             span,
         },
-        kind: Type::Ptr(Some(alloc.into())),
+        kind: Type::Ptr(Some(of.into())),
         span,
     })
 }
@@ -92,7 +92,7 @@ pub fn build_memcpy<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: Ast = expr::build_expr(ctx)?;
+    let source: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -100,7 +100,7 @@ pub fn build_memcpy<'parser>(
         "Expected ','.".into(),
     )?;
 
-    let destination: Ast = expr::build_expr(ctx)?;
+    let destination: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -108,7 +108,7 @@ pub fn build_memcpy<'parser>(
         "Expected ','.".into(),
     )?;
 
-    let size: Ast = expr::build_expr(ctx)?;
+    let size: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -145,7 +145,7 @@ pub fn build_memmove<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: Ast = expr::build_expr(ctx)?;
+    let source: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -153,7 +153,7 @@ pub fn build_memmove<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let destination: Ast = expr::build_expr(ctx)?;
+    let destination: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -161,7 +161,7 @@ pub fn build_memmove<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expr::build_expr(ctx)?;
+    let size: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -198,7 +198,7 @@ pub fn build_memset<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let destination: Ast = expr::build_expr(ctx)?;
+    let destination: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -206,7 +206,7 @@ pub fn build_memset<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let new_size: Ast = expr::build_expr(ctx)?;
+    let new_size: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -214,7 +214,7 @@ pub fn build_memset<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expr::build_expr(ctx)?;
+    let size: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -251,7 +251,7 @@ pub fn build_alignof<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -283,7 +283,7 @@ pub fn build_sizeof<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let sizeof_type: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -292,10 +292,7 @@ pub fn build_sizeof<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrushBuiltin::SizeOf {
-            of: sizeof_type,
-            span,
-        },
+        builtin: ThrushBuiltin::SizeOf { of, span },
         kind: Type::USize,
         span,
     })
@@ -318,7 +315,7 @@ pub fn build_bit_size_of<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -350,7 +347,7 @@ pub fn build_abi_size_of<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -382,7 +379,7 @@ pub fn build_abi_align_of<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx)?;
+    let of: Type = typegen::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,

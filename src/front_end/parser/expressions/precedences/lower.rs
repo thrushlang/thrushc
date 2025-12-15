@@ -6,7 +6,7 @@ use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::builtins;
-use crate::front_end::parser::expr;
+use crate::front_end::parser::expressions;
 use crate::front_end::parser::expressions::array;
 use crate::front_end::parser::expressions::asm;
 use crate::front_end::parser::expressions::call;
@@ -49,7 +49,7 @@ pub fn lower_precedence<'parser>(
         TokenType::LParen => {
             let span: Span = ctx.advance()?.get_span();
 
-            let expr: Ast = expr::build_expr(ctx)?;
+            let expr: Ast = expressions::build_expr(ctx)?;
             let expr_type: &Type = expr.get_value_type()?;
 
             ctx.consume(
@@ -138,7 +138,7 @@ pub fn lower_precedence<'parser>(
         TokenType::DirectRef => {
             let span: Span = ctx.advance()?.get_span();
 
-            let expr: Ast = expr::build_expr(ctx)?;
+            let expr: Ast = expressions::build_expr(ctx)?;
             let expr_type: &Type = expr.get_value_type()?;
 
             Ast::DirectRef {

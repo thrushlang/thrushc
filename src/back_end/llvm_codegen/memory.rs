@@ -21,7 +21,6 @@ use std::path::PathBuf;
 
 use inkwell::AddressSpace;
 use inkwell::builder::Builder;
-use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::targets::TargetData;
 use inkwell::types::BasicTypeEnum;

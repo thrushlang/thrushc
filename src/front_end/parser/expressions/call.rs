@@ -2,7 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::parser::{ParserContext, expr};
+use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::stmts::traits::{FoundSymbolEither, FoundSymbolExtension};
 use crate::front_end::types::parser::symbols::traits::FunctionExtensions;
@@ -42,7 +42,7 @@ pub fn build_call<'parser>(
             break;
         }
 
-        let expression: Ast = expr::build_expr(ctx)?;
+        let expression: Ast = expressions::build_expr(ctx)?;
 
         args.push(expression);
 
