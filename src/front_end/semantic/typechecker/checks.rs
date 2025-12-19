@@ -5,7 +5,6 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::cast::CastMetadata;
-use crate::front_end::typesystem::traits::TypeExtensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn check_types(
@@ -91,7 +90,7 @@ pub fn check_types(
 
             if mod1 != mod2 {
                 return Err(CompilationIssue::Error(
-                    "Mismatched function reference type modificator".into(),
+                    "Function Ref Attributes Mismatch".into(),
                     format!(
                         "Expected function reference type with '{}' attributes but found '{}'.",
                         mod1, mod2
@@ -572,69 +571,100 @@ pub fn check_type_cast(
 ) -> Result<(), CompilationIssue> {
     let is_allocated: bool = metadata.is_allocated();
 
-    let abort_cast = || {
-        Err(CompilationIssue::Error(
-            "Type error".into(),
-            format!("Cannot cast '{}' to '{}'.", from_type, cast_type),
+    match (from_type, cast_type) {
+        // Integer to integer casting
+        (
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128
+            | Type::USize
+            | Type::SSize
+            | Type::Char,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128
+            | Type::USize
+            | Type::SSize
+            | Type::Char,
+        ) => Ok(()),
+
+        (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
+
+        (Type::FX8680, Type::FX8680) => Ok(()),
+        (Type::FPPC128, Type::FPPC128) => Ok(()),
+
+        // Pointer to integer casting
+        (
+            Type::Ptr(_) | Type::Addr,
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128
+            | Type::USize
+            | Type::SSize,
+        ) => Ok(()),
+
+        (Type::Ptr(_) | Type::Addr, Type::Ptr(_) | Type::Addr) => Ok(()),
+
+        (
+            Type::S8
+            | Type::S16
+            | Type::S32
+            | Type::S64
+            | Type::U8
+            | Type::U16
+            | Type::U32
+            | Type::U64
+            | Type::U128
+            | Type::USize
+            | Type::SSize
+            | Type::Char
+            | Type::F32
+            | Type::F64
+            | Type::F128
+            | Type::FX8680
+            | Type::FPPC128
+            | Type::Bool
+            | Type::Struct(..)
+            | Type::Array(..)
+            | Type::FixedArray(..)
+            | Type::Fn(..),
+            Type::Ptr(_) | Type::Addr,
+        ) if is_allocated => Ok(()),
+
+        // Const type unwrapping
+        (Type::Const(inner_type), to) => self::check_type_cast(to, inner_type, metadata, span),
+
+        // Pointer to const type
+        (Type::Ptr(_) | Type::Addr, Type::Const(inner_type)) => {
+            self::check_type_cast(inner_type, from_type, metadata, span)
+        }
+
+        _ => Err(CompilationIssue::Error(
+            "Cast Error".into(),
+            format!(
+                "Cannot cast type '{}' to '{}'. Types are incompatible.",
+                from_type, cast_type
+            ),
             None,
             *span,
-        ))
-    };
-
-    if from_type.is_ptr_type() && cast_type.is_integer_type() {
-        return Ok(());
+        )),
     }
-
-    if from_type.is_integer_type() && cast_type.is_integer_type() {
-        return Ok(());
-    }
-
-    if from_type.is_float_type() && cast_type.is_float_type() {
-        return Ok(());
-    }
-
-    if from_type.is_ptr_type() && cast_type.is_ptr_type() {
-        return Ok(());
-    }
-
-    if (from_type.is_numeric_type()
-        || from_type.is_struct_type()
-        || from_type.is_array_type()
-        || from_type.is_fixed_array_type())
-        && is_allocated
-        && cast_type.is_ptr_type()
-    {
-        return Ok(());
-    }
-
-    if from_type.is_const_type()
-        && (cast_type.is_numeric_type()
-            || cast_type.is_struct_type()
-            || cast_type.is_array_type()
-            || cast_type.is_fixed_array_type())
-    {
-        let rhs: &Type = from_type.get_type_with_depth(1);
-
-        self::check_type_cast(cast_type, rhs, metadata, span)?;
-
-        return Ok(());
-    }
-
-    if from_type.is_ptr_type() && cast_type.is_const_type() {
-        let lhs: &Type = cast_type.get_type_with_depth(1);
-
-        self::check_type_cast(lhs, from_type, metadata, span)?;
-
-        return Ok(());
-    }
-
-    if from_type.is_const_type() && cast_type.is_ptr_type() {
-        let rhs: &Type = from_type.get_type_with_depth(1);
-
-        self::check_type_cast(cast_type, rhs, metadata, span)?;
-
-        return Ok(());
-    }
-
-    abort_cast()
 }

@@ -5,8 +5,8 @@ pub struct LinkingCompilersConfiguration {
     use_clang: bool,
     use_gcc: bool,
     compiler_args: Vec<String>,
-    custom_gcc: Option<PathBuf>,
     custom_clang: Option<PathBuf>,
+    custom_gcc: Option<PathBuf>,
     debug_clang_commands: bool,
     debug_gcc_commands: bool,
 }
@@ -15,13 +15,13 @@ impl LinkingCompilersConfiguration {
     #[inline]
     pub fn new() -> Self {
         Self {
-            use_clang: false,
+            use_clang: true,
             use_gcc: false,
 
             compiler_args: Vec::with_capacity(50),
 
+            custom_clang: Some("clang".into()),
             custom_gcc: None,
-            custom_clang: None,
 
             debug_clang_commands: false,
             debug_gcc_commands: false,
