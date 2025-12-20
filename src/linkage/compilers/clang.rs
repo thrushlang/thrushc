@@ -40,10 +40,7 @@ impl<'clang> Clang<'clang> {
             return Err(());
         }
 
-        let clang_path: &PathBuf = match self.config.get_custom_clang() {
-            Some(p) => p,
-            None => return Err(()),
-        };
+        let clang_path: &Path = self.config.get_custom_clang();
 
         let mut cmd: Command = self.build_clang_command(clang_path);
 

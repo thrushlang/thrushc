@@ -11,6 +11,7 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::typesystem::traits::TypeCodeLocation;
 use crate::front_end::typesystem::types::Type;
 
 pub fn validate<'type_checker>(
@@ -30,7 +31,7 @@ pub fn validate<'type_checker>(
 
             checks::check_types(
                 target_type,
-                &Type::Const(from_type.clone().into()),
+                &Type::Const(from_type.clone().into(), from_type.get_span()),
                 Some(value),
                 None,
                 metadata,

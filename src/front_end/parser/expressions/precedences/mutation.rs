@@ -20,7 +20,7 @@ pub fn equal_precedence<'parser>(
         expression = Ast::Mut {
             source: expression.into(),
             value: expr.into(),
-            kind: Type::Void,
+            kind: Type::Void(span),
             span,
         };
     }

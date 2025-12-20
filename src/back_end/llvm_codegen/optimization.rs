@@ -20,44 +20,44 @@ use inkwell::values::InstructionValue;
 pub struct LLVMOptimizer<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
+    machine: &'a TargetMachine,
     flags: LLVMOptimizerFlags,
-    target_machine: &'a TargetMachine,
+    passes: LLVMOptimizerPasses<'ctx>,
     opt_level: ThrushOptimization,
-    custom_passes: &'ctx str,
-    modicator_passes: &'ctx [LLVMModificatorPasses],
 }
 
 impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
     pub fn new(
         module: &'a Module<'ctx>,
         context: &'ctx Context,
+        machine: &'a TargetMachine,
         flags: LLVMOptimizerFlags,
-        target_machine: &'a TargetMachine,
+        passes: LLVMOptimizerPasses<'ctx>,
         opt_level: ThrushOptimization,
-        custom_passes: &'ctx str,
-        modicator_passes: &'ctx [LLVMModificatorPasses],
     ) -> Self {
         Self {
             module,
-            flags,
             context,
-            target_machine,
+            machine,
+            flags,
+            passes,
             opt_level,
-            custom_passes,
-            modicator_passes,
         }
     }
 }
 
-impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
+impl LLVMOptimizer<'_, '_> {
     #[inline]
     pub fn optimize(&self) {
-        if !self.custom_passes.is_empty() {
-            if let Err(error) = self.get_module().run_passes(
-                self.custom_passes,
-                self.target_machine,
-                self.create_passes_builder(),
-            ) {
+        let custom_passes: &str = self.get_passes().get_llvm_custom_passes();
+        let machine: &TargetMachine = self.get_machine();
+        let options: PassBuilderOptions = self.create_passes_builder();
+
+        if !custom_passes.is_empty() {
+            if let Err(error) = self
+                .get_module()
+                .run_passes(custom_passes, machine, options)
+            {
                 logging::print_warn(
                     logging::LoggingType::Warning,
                     &format!(
@@ -65,87 +65,120 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
                         error
                     ),
                 );
-
-                return;
             }
+        } else {
+            match self.opt_level {
+                ThrushOptimization::None => {
+                    if !self.get_flags().get_disable_default_opt() {
+                        let mut param_opt: LLVMParameterOptimizer =
+                            LLVMParameterOptimizer::new(self.get_module(), self.get_context());
 
-            return;
-        }
-
-        match self.opt_level {
-            ThrushOptimization::None => {
-                if !self.get_flags().get_disable_default_opt() {
-                    let mut param_opt: LLVMParameterOptimizer =
-                        LLVMParameterOptimizer::new(self.get_module(), self.get_context());
-
-                    param_opt.start();
+                        param_opt.start();
+                    }
                 }
-            }
 
-            ThrushOptimization::Low => {
-                if let Err(error) = self.get_module().run_passes(
-                    "default<O1>",
-                    self.target_machine,
-                    self.create_passes_builder(),
-                ) {
-                    logging::print_warn(
-                        logging::LoggingType::Warning,
-                        &format!(
-                            "Some optimizations passes couldn't be performed because: '{}'.",
-                            error
-                        ),
-                    );
+                ThrushOptimization::Low => {
+                    if let Err(error) =
+                        self.get_module()
+                            .run_passes("default<O1>", machine, options)
+                    {
+                        logging::print_warn(
+                            logging::LoggingType::Warning,
+                            &format!(
+                                "Some optimizations passes couldn't be performed because: '{}'.",
+                                error
+                            ),
+                        );
+                    }
                 }
-            }
 
-            ThrushOptimization::Mid => {
-                if let Err(error) = self.get_module().run_passes(
-                    "default<O2>",
-                    self.target_machine,
-                    self.create_passes_builder(),
-                ) {
-                    logging::print_warn(
-                        logging::LoggingType::Warning,
-                        &format!(
-                            "Some optimizations passes couldn't be performed because: '{}'.",
-                            error
-                        ),
-                    );
+                ThrushOptimization::Mid => {
+                    if let Err(error) =
+                        self.get_module()
+                            .run_passes("default<O2>", machine, options)
+                    {
+                        logging::print_warn(
+                            logging::LoggingType::Warning,
+                            &format!(
+                                "Some optimizations passes couldn't be performed because: '{}'.",
+                                error
+                            ),
+                        );
+                    }
                 }
-            }
 
-            ThrushOptimization::High => {
-                if let Err(error) = self.get_module().run_passes(
-                    "default<O3>",
-                    self.target_machine,
-                    self.create_passes_builder(),
-                ) {
-                    logging::print_warn(
-                        logging::LoggingType::Warning,
-                        &format!(
-                            "Some optimizations passes couldn't be performed because: '{:?}'.",
-                            error
-                        ),
-                    );
+                ThrushOptimization::High => {
+                    if let Err(error) =
+                        self.get_module()
+                            .run_passes("default<O3>", machine, options)
+                    {
+                        logging::print_warn(
+                            logging::LoggingType::Warning,
+                            &format!(
+                                "Some optimizations passes couldn't be performed because: '{:?}'.",
+                                error
+                            ),
+                        );
+                    }
                 }
-            }
 
-            ThrushOptimization::Size => {
-                if let Err(error) = self.get_module().run_passes(
-                    "default<Oz>",
-                    self.target_machine,
-                    self.create_passes_builder(),
-                ) {
-                    logging::print_warn(
-                        logging::LoggingType::Warning,
-                        &format!(
-                            "Some optimizations passes couldn't be performed because: '{:?}'.",
-                            error
-                        ),
-                    );
+                ThrushOptimization::Size => {
+                    if let Err(error) =
+                        self.get_module()
+                            .run_passes("default<Oz>", machine, options)
+                    {
+                        logging::print_warn(
+                            logging::LoggingType::Warning,
+                            &format!(
+                                "Some optimizations passes couldn't be performed because: '{:?}'.",
+                                error
+                            ),
+                        );
+                    }
                 }
             }
         }
+    }
+}
+
+impl LLVMOptimizer<'_, '_> {
+    fn create_passes_builder(&self) -> PassBuilderOptions {
+        let passes_builder: PassBuilderOptions = PassBuilderOptions::create();
+
+        self.get_passes()
+            .get_llvm_modificator_passes()
+            .iter()
+            .for_each(|pass| match pass {
+                LLVMModificatorPasses::LoopVectorization => {
+                    passes_builder.set_loop_vectorization(true);
+                }
+                LLVMModificatorPasses::LoopUnroll => {
+                    passes_builder.set_loop_unrolling(true);
+                }
+                LLVMModificatorPasses::LoopInterleaving => {
+                    passes_builder.set_loop_interleaving(true);
+                }
+                LLVMModificatorPasses::LoopSimplifyVectorization => {
+                    passes_builder.set_loop_slp_vectorization(true);
+                }
+                LLVMModificatorPasses::MergeFunctions => {
+                    passes_builder.set_merge_functions(true);
+                }
+                LLVMModificatorPasses::CallGraphProfile => {
+                    passes_builder.set_call_graph_profile(true);
+                }
+                LLVMModificatorPasses::ForgetAllScevInLoopUnroll => {
+                    passes_builder.set_forget_all_scev_in_loop_unroll(true);
+                }
+                LLVMModificatorPasses::LicmMssaNoAccForPromotionCap(value) => {
+                    passes_builder.set_licm_mssa_no_acc_for_promotion_cap(*value);
+                }
+                LLVMModificatorPasses::LicmMssaOptCap(value) => {
+                    passes_builder.set_licm_mssa_opt_cap(*value);
+                }
+            });
+
+        passes_builder
     }
 }
 
@@ -164,43 +197,42 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
     pub fn get_flags(&self) -> &LLVMOptimizerFlags {
         &self.flags
     }
+
+    #[inline]
+    pub fn get_passes(&self) -> &LLVMOptimizerPasses<'_> {
+        &self.passes
+    }
+
+    #[inline]
+    pub fn get_machine(&self) -> &TargetMachine {
+        self.machine
+    }
 }
 
-impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
-    fn create_passes_builder(&self) -> PassBuilderOptions {
-        let passes_builder: PassBuilderOptions = PassBuilderOptions::create();
+#[derive(Debug, Clone, Copy)]
+pub struct LLVMOptimizerPasses<'ctx> {
+    custom_passes: &'ctx str,
+    modicator_passes: &'ctx [LLVMModificatorPasses],
+}
 
-        self.modicator_passes.iter().for_each(|pass| match pass {
-            LLVMModificatorPasses::LoopVectorization => {
-                passes_builder.set_loop_vectorization(true);
-            }
-            LLVMModificatorPasses::LoopUnroll => {
-                passes_builder.set_loop_unrolling(true);
-            }
-            LLVMModificatorPasses::LoopInterleaving => {
-                passes_builder.set_loop_interleaving(true);
-            }
-            LLVMModificatorPasses::LoopSimplifyVectorization => {
-                passes_builder.set_loop_slp_vectorization(true);
-            }
-            LLVMModificatorPasses::MergeFunctions => {
-                passes_builder.set_merge_functions(true);
-            }
-            LLVMModificatorPasses::CallGraphProfile => {
-                passes_builder.set_call_graph_profile(true);
-            }
-            LLVMModificatorPasses::ForgetAllScevInLoopUnroll => {
-                passes_builder.set_forget_all_scev_in_loop_unroll(true);
-            }
-            LLVMModificatorPasses::LicmMssaNoAccForPromotionCap(value) => {
-                passes_builder.set_licm_mssa_no_acc_for_promotion_cap(*value);
-            }
-            LLVMModificatorPasses::LicmMssaOptCap(value) => {
-                passes_builder.set_licm_mssa_opt_cap(*value);
-            }
-        });
+impl<'ctx> LLVMOptimizerPasses<'ctx> {
+    pub fn new(custom_passes: &'ctx str, modicator_passes: &'ctx [LLVMModificatorPasses]) -> Self {
+        Self {
+            custom_passes,
+            modicator_passes,
+        }
+    }
+}
 
-        passes_builder
+impl<'ctx> LLVMOptimizerPasses<'ctx> {
+    #[inline]
+    pub fn get_llvm_custom_passes(&self) -> &str {
+        self.custom_passes
+    }
+
+    #[inline]
+    pub fn get_llvm_modificator_passes(&self) -> &[LLVMModificatorPasses] {
+        self.modicator_passes
     }
 }
 

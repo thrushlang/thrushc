@@ -1,67 +1,63 @@
+use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::modificators::FunctionReferenceTypeModificator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub enum Type {
     // Signed Integer Type
-    S8,
-    S16,
-    S32,
-    S64,
-    SSize,
+    S8(Span),
+    S16(Span),
+    S32(Span),
+    S64(Span),
+    SSize(Span),
 
     // Unsigned Integer Type
-    U8,
-    U16,
-    U32,
-    U64,
-    U128,
-    USize,
+    U8(Span),
+    U16(Span),
+    U32(Span),
+    U64(Span),
+    U128(Span),
+    USize(Span),
 
     // Floating Point Type
-    F32,
-    F64,
-    F128,
-    FX8680,
-    FPPC128,
+    F32(Span),
+    F64(Span),
+    F128(Span),
+    FX8680(Span),
+    FPPC128(Span),
 
     // Boolean Type
-    Bool,
+    Bool(Span),
 
     // Char Type
-    Char,
+    Char(Span),
 
     // Constant Type
-    Const(std::boxed::Box<Type>),
+    Const(std::boxed::Box<Type>, Span),
 
     // Ptr Type
-    Ptr(Option<std::boxed::Box<Type>>),
+    Ptr(Option<std::boxed::Box<Type>>, Span),
 
     // Struct Type
-    Struct(String, std::vec::Vec<Type>, StructureTypeModificator),
+    Struct(String, std::vec::Vec<Type>, StructureTypeModificator, Span),
 
     // Fixed FixedArray
-    FixedArray(std::boxed::Box<Type>, u32),
+    FixedArray(std::boxed::Box<Type>, u32, Span),
 
     // Array Type
-    Array(std::boxed::Box<Type>),
+    Array(std::boxed::Box<Type>, Span),
 
     // Memory Address
-    Addr,
+    Addr(Span),
 
     // Function Referece
     Fn(
         std::vec::Vec<Type>,
         std::boxed::Box<Type>,
         FunctionReferenceTypeModificator,
+        Span,
     ),
 
     // Void Type
-    #[default]
-    Void,
-
-    // Internal Compiler Types
-
-    // NullPtr
-    NullPtr,
+    Void(Span),
 }

@@ -56,5 +56,14 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
     )
     .add_function_attributes();
 
-    context.new_function(name, (llvm_function, parameters_types, convention, span));
+    context.new_function(
+        name,
+        (
+            llvm_function,
+            return_type,
+            parameters_types,
+            convention,
+            span,
+        ),
+    );
 }

@@ -15,6 +15,7 @@ pub type Struct<'parser> = (
     Vec<(&'parser str, Type, u32, Span)>,
     ThrushAttributes,
     StructureTypeModificator,
+    Span,
 );
 
 pub type Function<'parser> = (Type, ParametersTypes, bool);

@@ -3,7 +3,7 @@ use crate::front_end::typesystem::types::Type;
 
 impl DereferenceExtensions for Type {
     fn dereference(&self) -> Type {
-        if let Type::Ptr(Some(any)) = self {
+        if let Type::Ptr(Some(any), ..) = self {
             return (**any).clone();
         }
 

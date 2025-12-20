@@ -51,9 +51,9 @@ pub fn check_types(
     }
 
     match (lhs, rhs, op) {
-        (Type::Char, Type::Char, None) => Ok(()),
+        (Type::Char(..), Type::Char(..), None) => Ok(()),
 
-        (Type::Struct(_, lhs, mod1), Type::Struct(_, rhs, mod2), None) => {
+        (Type::Struct(_, lhs, mod1, ..), Type::Struct(_, rhs, mod2, ..), None) => {
             if lhs.len() != rhs.len() {
                 return Err(error);
             }
@@ -77,9 +77,9 @@ pub fn check_types(
             Ok(())
         }
 
-        (Type::Addr, Type::Addr, None) => Ok(()),
+        (Type::Addr(..), Type::Addr(..), None) => Ok(()),
 
-        (Type::Fn(lhs, ret1, mod1), Type::Fn(rhs, ret2, mod2), None) => {
+        (Type::Fn(lhs, ret1, mod1, ..), Type::Fn(rhs, ret2, mod2, ..), None) => {
             if lhs.len() != rhs.len() {
                 return Err(error);
             }
@@ -107,13 +107,13 @@ pub fn check_types(
             Ok(())
         }
 
-        (Type::Const(lhs), Type::Const(rhs), None) => {
+        (Type::Const(lhs, ..), Type::Const(rhs, ..), None) => {
             self::check_types(lhs, rhs, None, None, metadata)
         }
 
-        (Type::Const(lhs), rhs, None) => self::check_types(lhs, rhs, None, None, metadata),
+        (Type::Const(lhs, ..), rhs, None) => self::check_types(lhs, rhs, None, None, metadata),
 
-        (Type::FixedArray(lhs, lhs_size), Type::FixedArray(rhs, rhs_size), None) => {
+        (Type::FixedArray(lhs, lhs_size, ..), Type::FixedArray(rhs, rhs_size, ..), None) => {
             if lhs_size == rhs_size {
                 self::check_types(lhs, rhs, None, None, metadata)?;
                 return Ok(());
@@ -122,33 +122,31 @@ pub fn check_types(
             Err(error)
         }
 
-        (Type::Array(lhs), Type::Array(rhs), None) => {
+        (Type::Array(lhs, ..), Type::Array(rhs, ..), None) => {
             self::check_types(lhs, rhs, None, None, metadata)?;
             Ok(())
         }
 
-        (Type::Ptr(None), Type::Ptr(None), Some(TokenType::EqEq | TokenType::BangEq) | None) => {
-            Ok(())
-        }
+        (
+            Type::Ptr(None, ..),
+            Type::Ptr(None, ..),
+            Some(TokenType::EqEq | TokenType::BangEq) | None,
+        ) => Ok(()),
 
         (
-            Type::Ptr(Some(lhs)),
-            Type::Ptr(Some(rhs)),
+            Type::Ptr(Some(lhs), ..),
+            Type::Ptr(Some(rhs), ..),
             Some(TokenType::EqEq | TokenType::BangEq) | None,
         ) => {
             self::check_types(lhs, rhs, expr, op, metadata)?;
             Ok(())
         }
 
-        (
-            Type::Ptr(..) | Type::NullPtr,
-            Type::Ptr(..) | Type::NullPtr,
-            Some(TokenType::EqEq | TokenType::BangEq) | None,
-        ) => Ok(()),
+        (Type::Ptr(..), Type::Ptr(..), Some(TokenType::EqEq | TokenType::BangEq) | None) => Ok(()),
 
         (
-            Type::Bool,
-            Type::Bool,
+            Type::Bool(..),
+            Type::Bool(..),
             Some(
                 TokenType::BangEq
                 | TokenType::EqEq
@@ -164,8 +162,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::S8,
-            Type::S8,
+            Type::S8(..),
+            Type::S8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -185,8 +183,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::S16,
-            Type::S16 | Type::S8,
+            Type::S16(..),
+            Type::S16(..) | Type::S8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -206,8 +204,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::S32,
-            Type::S32 | Type::S16 | Type::S8,
+            Type::S32(..),
+            Type::S32(..) | Type::S16(..) | Type::S8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -227,8 +225,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::S64,
-            Type::S64 | Type::S32 | Type::S16 | Type::S8,
+            Type::S64(..),
+            Type::S64(..) | Type::S32(..) | Type::S16(..) | Type::S8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -248,8 +246,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::SSize,
-            Type::SSize | Type::S64 | Type::S32 | Type::S16 | Type::S8,
+            Type::SSize(..),
+            Type::SSize(..) | Type::S64(..) | Type::S32(..) | Type::S16(..) | Type::S8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -269,8 +267,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::U8,
-            Type::U8,
+            Type::U8(..),
+            Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -290,8 +288,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::U16,
-            Type::U16 | Type::U8,
+            Type::U16(..),
+            Type::U16(..) | Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -311,8 +309,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::U32,
-            Type::U32 | Type::U16 | Type::U8,
+            Type::U32(..),
+            Type::U32(..) | Type::U16(..) | Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -332,8 +330,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::U64,
-            Type::U64 | Type::U32 | Type::U16 | Type::U8,
+            Type::U64(..),
+            Type::U64(..) | Type::U32(..) | Type::U16(..) | Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -353,8 +351,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::U128,
-            Type::U128 | Type::U64 | Type::U32 | Type::U16 | Type::U8,
+            Type::U128(..),
+            Type::U128(..) | Type::U64(..) | Type::U32(..) | Type::U16(..) | Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -374,8 +372,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::USize,
-            Type::USize | Type::U64 | Type::U32 | Type::U16 | Type::U8,
+            Type::USize(..),
+            Type::USize(..) | Type::U64(..) | Type::U32(..) | Type::U16(..) | Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -395,8 +393,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::F32,
-            Type::F32,
+            Type::F32(..),
+            Type::F32(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -410,8 +408,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::F64,
-            Type::F64 | Type::F32,
+            Type::F64(..),
+            Type::F64(..) | Type::F32(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -425,8 +423,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::F128,
-            Type::F128 | Type::F64 | Type::F32,
+            Type::F128(..),
+            Type::F128(..) | Type::F64(..) | Type::F32(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -440,25 +438,8 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::FX8680,
-            Type::FX8680,
-            Some(
-                TokenType::Plus
-                | TokenType::Minus
-                | TokenType::Slash
-                | TokenType::Star
-                | TokenType::Arith
-                | TokenType::LShift
-                | TokenType::RShift
-                | TokenType::PlusPlus
-                | TokenType::MinusMinus,
-            )
-            | None,
-        ) => Ok(()),
-
-        (
-            Type::FPPC128,
-            Type::FPPC128,
+            Type::FX8680(..),
+            Type::FX8680(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -474,8 +455,25 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::S8,
-            Type::U8,
+            Type::FPPC128(..),
+            Type::FPPC128(..),
+            Some(
+                TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Slash
+                | TokenType::Star
+                | TokenType::Arith
+                | TokenType::LShift
+                | TokenType::RShift
+                | TokenType::PlusPlus
+                | TokenType::MinusMinus,
+            )
+            | None,
+        ) => Ok(()),
+
+        (
+            Type::S8(..),
+            Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -495,8 +493,8 @@ pub fn check_types(
         ) if metadata.is_literal() => Ok(()),
 
         (
-            Type::S16,
-            Type::U16 | Type::U8,
+            Type::S16(..),
+            Type::U16(..) | Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -516,8 +514,8 @@ pub fn check_types(
         ) if metadata.is_literal() => Ok(()),
 
         (
-            Type::S32,
-            Type::U32 | Type::U16 | Type::U8,
+            Type::S32(..),
+            Type::U32(..) | Type::U16(..) | Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -537,8 +535,8 @@ pub fn check_types(
         ) if metadata.is_literal() => Ok(()),
 
         (
-            Type::S64,
-            Type::U64 | Type::U32 | Type::U16 | Type::U8,
+            Type::S64(..),
+            Type::U64(..) | Type::U32(..) | Type::U16(..) | Type::U8(..),
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -557,7 +555,7 @@ pub fn check_types(
             | None,
         ) if metadata.is_literal() => Ok(()),
 
-        (Type::Void, Type::Void, None) => Ok(()),
+        (Type::Void(..), Type::Void(..), None) => Ok(()),
 
         _ => Err(error),
     }
@@ -574,86 +572,89 @@ pub fn check_type_cast(
     match (from_type, cast_type) {
         // Integer to integer casting
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128
-            | Type::USize
-            | Type::SSize
-            | Type::Char,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128
-            | Type::USize
-            | Type::SSize
-            | Type::Char,
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..)
+            | Type::USize(..)
+            | Type::SSize(..)
+            | Type::Char(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..)
+            | Type::USize(..)
+            | Type::SSize(..)
+            | Type::Char(..),
         ) => Ok(()),
 
-        (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
+        (
+            Type::F32(..) | Type::F64(..) | Type::F128(..),
+            Type::F32(..) | Type::F64(..) | Type::F128(..),
+        ) => Ok(()),
 
-        (Type::FX8680, Type::FX8680) => Ok(()),
-        (Type::FPPC128, Type::FPPC128) => Ok(()),
+        (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
+        (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
 
         // Pointer to integer casting
         (
-            Type::Ptr(_) | Type::Addr,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128
-            | Type::USize
-            | Type::SSize,
+            Type::Ptr(..) | Type::Addr(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..)
+            | Type::USize(..)
+            | Type::SSize(..),
         ) => Ok(()),
 
-        (Type::Ptr(_) | Type::Addr, Type::Ptr(_) | Type::Addr) => Ok(()),
+        (Type::Ptr(..) | Type::Addr(..), Type::Ptr(..) | Type::Addr(..)) => Ok(()),
 
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128
-            | Type::USize
-            | Type::SSize
-            | Type::Char
-            | Type::F32
-            | Type::F64
-            | Type::F128
-            | Type::FX8680
-            | Type::FPPC128
-            | Type::Bool
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..)
+            | Type::USize(..)
+            | Type::SSize(..)
+            | Type::Char(..)
+            | Type::F32(..)
+            | Type::F64(..)
+            | Type::F128(..)
+            | Type::FX8680(..)
+            | Type::FPPC128(..)
+            | Type::Bool(..)
             | Type::Struct(..)
             | Type::Array(..)
             | Type::FixedArray(..)
             | Type::Fn(..),
-            Type::Ptr(_) | Type::Addr,
+            Type::Ptr(..) | Type::Addr(..),
         ) if is_allocated => Ok(()),
 
         // Const type unwrapping
-        (Type::Const(inner_type), to) => self::check_type_cast(to, inner_type, metadata, span),
+        (Type::Const(inner_type, ..), to) => self::check_type_cast(to, inner_type, metadata, span),
 
         // Pointer to const type
-        (Type::Ptr(_) | Type::Addr, Type::Const(inner_type)) => {
+        (Type::Ptr(..) | Type::Addr(..), Type::Const(inner_type, ..)) => {
             self::check_type_cast(inner_type, from_type, metadata, span)
         }
 

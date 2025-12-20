@@ -37,7 +37,7 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            if let Type::Fn(parameter_types, _, modificator) = function_type {
+            if let Type::Fn(parameter_types, _, modificator, ..) = function_type {
                 expressions::call::validate(
                     typechecker,
                     (parameter_types, modificator.llvm().has_ignore()),

@@ -17,6 +17,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::jit::LLVMJITCompiler;
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizerFlags;
 
+use crate::back_end::llvm_codegen::optimization::LLVMOptimizerPasses;
 use crate::middle_end;
 
 use crate::front_end::preprocessor;
@@ -269,11 +270,13 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         llvm_codegen::optimization::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
-            LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
             &target_machine,
+            LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
+            LLVMOptimizerPasses::new(
+                llvm_backend.get_opt_passes(),
+                llvm_backend.get_modificator_passes(),
+            ),
             thrush_opt,
-            llvm_backend.get_opt_passes(),
-            llvm_backend.get_modificator_passes(),
         )
         .optimize();
 
@@ -513,11 +516,13 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         llvm_codegen::optimization::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
-            LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
             &target_machine,
+            LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
+            LLVMOptimizerPasses::new(
+                llvm_backend.get_opt_passes(),
+                llvm_backend.get_modificator_passes(),
+            ),
             thrush_opt,
-            llvm_backend.get_opt_passes(),
-            llvm_backend.get_modificator_passes(),
         )
         .optimize();
 

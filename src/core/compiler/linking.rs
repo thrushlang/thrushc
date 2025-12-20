@@ -1,12 +1,12 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct LinkingCompilersConfiguration {
     use_clang: bool,
     use_gcc: bool,
     compiler_args: Vec<String>,
-    custom_clang: Option<PathBuf>,
-    custom_gcc: Option<PathBuf>,
+    custom_clang: PathBuf,
+    custom_gcc: PathBuf,
     debug_clang_commands: bool,
     debug_gcc_commands: bool,
 }
@@ -20,8 +20,8 @@ impl LinkingCompilersConfiguration {
 
             compiler_args: Vec::with_capacity(50),
 
-            custom_clang: Some("clang".into()),
-            custom_gcc: None,
+            custom_clang: "clang".into(),
+            custom_gcc: "gcc".into(),
 
             debug_clang_commands: false,
             debug_gcc_commands: false,
@@ -36,8 +36,8 @@ impl LinkingCompilersConfiguration {
     }
 
     #[inline]
-    pub fn get_custom_clang(&self) -> Option<&PathBuf> {
-        self.custom_clang.as_ref()
+    pub fn get_custom_clang(&self) -> &Path {
+        &self.custom_clang
     }
 
     #[inline]
@@ -51,8 +51,8 @@ impl LinkingCompilersConfiguration {
     }
 
     #[inline]
-    pub fn get_custom_gcc(&self) -> Option<&PathBuf> {
-        self.custom_gcc.as_ref()
+    pub fn get_custom_gcc(&self) -> &Path {
+        &self.custom_gcc
     }
 
     #[inline]
@@ -79,12 +79,12 @@ impl LinkingCompilersConfiguration {
 
     #[inline]
     pub fn set_custom_clang(&mut self, value: PathBuf) {
-        self.custom_clang = Some(value);
+        self.custom_clang = value;
     }
 
     #[inline]
     pub fn set_custom_gcc(&mut self, value: PathBuf) {
-        self.custom_gcc = Some(value);
+        self.custom_gcc = value;
     }
 
     #[inline]
@@ -100,7 +100,7 @@ impl LinkingCompilersConfiguration {
 
 impl LinkingCompilersConfiguration {
     #[inline]
-    pub fn add_compiler_arg(&mut self, value: String) {
+    pub fn add_argument(&mut self, value: String) {
         self.compiler_args.push(value);
     }
 }

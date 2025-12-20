@@ -43,27 +43,27 @@ pub fn validate_binary(
 fn validate_band(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
     match (a, b) {
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
         ) => Ok(()),
-        (Type::SSize, Type::SSize) => Ok(()),
-        (Type::USize, Type::USize) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             String::from("Incompatible Operation"),
@@ -78,27 +78,27 @@ fn validate_band(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), C
 fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
     match (a, b) {
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
         ) => Ok(()),
-        (Type::SSize, Type::SSize) => Ok(()),
-        (Type::USize, Type::USize) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             String::from("Incompatible Operation"),
@@ -113,25 +113,25 @@ fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Co
 fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
     match (a, b) {
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64,
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..),
         ) => Ok(()),
-        (Type::SSize, Type::SSize) => Ok(()),
-        (Type::USize, Type::USize) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             String::from("Incompatible Operation"),
@@ -150,7 +150,7 @@ fn validate_binary_gate(
     span: Span,
 ) -> Result<(), CompilationIssue> {
     match (a, b) {
-        (Type::Bool, Type::Bool) => Ok(()),
+        (Type::Bool(..), Type::Bool(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             String::from("Incompatible Operation"),
@@ -170,27 +170,27 @@ fn validate_binary_shift(
 ) -> Result<(), CompilationIssue> {
     match (a, b) {
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
         ) => Ok(()),
-        (Type::SSize, Type::SSize) => Ok(()),
-        (Type::USize, Type::USize) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             String::from("Incompatible Operation"),
@@ -210,30 +210,33 @@ fn validate_binary_comparasion(
 ) -> Result<(), CompilationIssue> {
     match (a, b) {
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
         ) => Ok(()),
-        (Type::SSize, Type::SSize) => Ok(()),
-        (Type::USize, Type::USize) => Ok(()),
-        (Type::FPPC128, Type::FPPC128) => Ok(()),
-        (Type::FX8680, Type::FX8680) => Ok(()),
-        (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
+        (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
+        (
+            Type::F32(..) | Type::F64(..) | Type::F128(..),
+            Type::F32(..) | Type::F64(..) | Type::F128(..),
+        ) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             String::from("Incompatible Operation"),
@@ -253,32 +256,35 @@ fn validate_binary_equality(
 ) -> Result<(), CompilationIssue> {
     match (a, b) {
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64
-            | Type::U128,
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
         ) => Ok(()),
-        (Type::SSize, Type::SSize) => Ok(()),
-        (Type::USize, Type::USize) => Ok(()),
-        (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
-        (Type::Bool, Type::Bool) => Ok(()),
-        (Type::Char, Type::Char) => Ok(()),
-        (Type::FX8680, Type::FX8680) => Ok(()),
-        (Type::FPPC128, Type::FPPC128) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (
+            Type::F32(..) | Type::F64(..) | Type::F128(..),
+            Type::F32(..) | Type::F64(..) | Type::F128(..),
+        ) => Ok(()),
+        (Type::Bool(..), Type::Bool(..)) => Ok(()),
+        (Type::Char(..), Type::Char(..)) => Ok(()),
+        (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
+        (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
 
         _ if a.is_ptr_type() && b.is_ptr_type() => Ok(()),
 
@@ -300,28 +306,31 @@ fn validate_binary_arithmetic(
 ) -> Result<(), CompilationIssue> {
     match (a, b) {
         (
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64,
-            Type::S8
-            | Type::S16
-            | Type::S32
-            | Type::S64
-            | Type::U8
-            | Type::U16
-            | Type::U32
-            | Type::U64,
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..),
         ) => Ok(()),
-        (Type::SSize, Type::SSize) => Ok(()),
-        (Type::USize, Type::USize) => Ok(()),
-        (Type::FPPC128, Type::FPPC128) => Ok(()),
-        (Type::FX8680, Type::FX8680) => Ok(()),
-        (Type::F32 | Type::F64 | Type::F128, Type::F32 | Type::F64 | Type::F128) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
+        (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
+        (
+            Type::F32(..) | Type::F64(..) | Type::F128(..),
+            Type::F32(..) | Type::F64(..) | Type::F128(..),
+        ) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             String::from("Incompatible Operation"),

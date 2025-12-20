@@ -35,7 +35,7 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     let name: &str = function.0;
     let ascii_name: &str = function.1;
 
-    let function_type: &Type = function.2;
+    let return_type: &Type = function.2;
 
     let parameters: &[Ast<'ctx>] = function.3;
     let parameters_types: &[Type] = function.4;
@@ -68,7 +68,7 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     };
 
     let function_type: FunctionType =
-        typegen::generate_fn_type(context, function_type, parameters, ignore_args);
+        typegen::generate_fn_type(context, return_type, parameters, ignore_args);
 
     let llvm_function: FunctionValue =
         llvm_module.add_function(canonical_name, function_type, None);
@@ -84,12 +84,16 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     )
     .add_function_attributes();
 
-    context.set_current_fn(llvm_function);
-
-    context.new_function(
-        name,
-        (llvm_function, parameters_types, call_convention, span),
+    let proto: LLVMFunction = (
+        llvm_function,
+        return_type,
+        parameters_types,
+        call_convention,
+        span,
     );
+
+    context.set_current_llvm_function(proto);
+    context.new_function(name, proto);
 }
 
 pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Function<'ctx>) {
@@ -100,17 +104,17 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
     let function_parameters: &[Ast<'ctx>] = function.3;
     let function_body: Option<&Ast> = function.5;
 
-    let represented_llvm_function: LLVMFunction = codegen
+    let proto: LLVMFunction = codegen
         .get_context()
         .get_table()
         .get_function(function_name);
 
-    let llvm_function: FunctionValue = represented_llvm_function.0;
+    let llvm_function: FunctionValue = proto.0;
     let llvm_function_block: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
     llvm_builder.position_at_end(llvm_function_block);
 
-    codegen.get_mut_context().set_current_fn(llvm_function);
+    codegen.get_mut_context().set_current_llvm_function(proto);
 
     function_parameters.iter().for_each(|parameter| {
         self::compile_parameter(codegen, llvm_function, parameter.as_function_parameter());
@@ -120,11 +124,11 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
         codegen.codegen_block(function_body);
 
         if function_type.is_void_type() && !function_body.has_terminator() {
-            let _ = llvm_builder.build_return(None).is_err();
+            let _ = llvm_builder.build_return(None);
         }
     }
 
-    codegen.get_mut_context().unset_current_function();
+    codegen.get_mut_context().unset_current_llvm_function();
 }
 
 pub fn compile_parameter<'ctx>(

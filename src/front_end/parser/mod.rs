@@ -22,7 +22,6 @@ use crate::front_end::parser::constants::{
     PARSER_MAX_ERRORS, PARSER_MINIMAL_AST_CAPACITY, PARSER_MINIMAL_GLOBAL_CAPACITY,
 };
 use crate::front_end::parser::contexts::controlctx::ParserControlContext;
-use crate::front_end::parser::contexts::typectx::ParserTypeContext;
 use crate::front_end::parser::symbols::SymbolsTable;
 use crate::front_end::preprocessor::module::Module;
 use crate::front_end::types::ast::Ast;
@@ -39,7 +38,6 @@ pub struct ParserContext<'parser> {
     bugs: Vec<CompilationIssue>,
 
     control_ctx: ParserControlContext,
-    type_ctx: ParserTypeContext,
 
     diagnostician: Diagnostician,
     symbols: SymbolsTable<'parser>,
@@ -129,7 +127,6 @@ impl<'parser> ParserContext<'parser> {
             bugs: Vec::with_capacity(100),
 
             control_ctx: ParserControlContext::new(),
-            type_ctx: ParserTypeContext::new(),
 
             diagnostician: Diagnostician::new(file),
             symbols: SymbolsTable::with_functions(functions, asm_functions),
@@ -308,18 +305,8 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn get_control_ctx(&mut self) -> &ParserControlContext {
+    pub fn get_control_ctx(&self) -> &ParserControlContext {
         &self.control_ctx
-    }
-
-    #[inline]
-    pub fn get_type_ctx(&self) -> &ParserTypeContext {
-        &self.type_ctx
-    }
-
-    #[inline]
-    pub fn get_scope(&self) -> usize {
-        self.scope
     }
 
     #[inline]
@@ -332,11 +319,6 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn get_mut_symbols(&mut self) -> &mut SymbolsTable<'parser> {
         &mut self.symbols
-    }
-
-    #[inline]
-    pub fn get_mut_type_ctx(&mut self) -> &mut ParserTypeContext {
-        &mut self.type_ctx
     }
 
     #[inline]

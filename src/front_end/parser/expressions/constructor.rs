@@ -146,7 +146,7 @@ pub fn build_constructor<'parser>(
     Ok(Ast::Constructor {
         name,
         args: args.clone(),
-        kind: args.get_type(name, modificator),
+        kind: args.get_type(name, modificator, span),
         span,
     })
 }

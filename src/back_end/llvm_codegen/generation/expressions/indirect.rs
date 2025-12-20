@@ -26,7 +26,7 @@ pub fn compile<'ctx>(
     let function_ptr: PointerValue<'_> =
         refptr::compile(context, pointer, cast_type).into_pointer_value();
 
-    if let Type::Fn(parameters, kind, modificator) = function_type {
+    if let Type::Fn(parameters, kind, modificator, ..) = function_type {
         let need_ignore: bool = modificator.llvm().has_ignore();
         let function_type: FunctionType<'_> =
             typegen::generate_function_type_from_type(context, kind, parameters, need_ignore);

@@ -143,17 +143,11 @@ pub fn build_function<'parser>(
         return Ok(function);
     }
 
-    ctx.get_mut_control_ctx().set_inside_function(true);
-
-    ctx.get_mut_type_ctx()
-        .set_function_type(return_type.clone());
-
     ctx.get_mut_symbols().declare_parameters(&parameters)?;
 
     let function_body: Ast = block::build_block(ctx)?;
 
     ctx.get_mut_symbols().finish_parameters();
-    ctx.get_mut_control_ctx().set_inside_function(false);
 
     if let Ast::Function { body, .. } = &mut function {
         *body = Some(function_body.into());

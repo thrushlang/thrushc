@@ -28,7 +28,7 @@ pub const SYNC_DECLARATIONS: [TokenType; 6] = [
 
 impl ParserContext<'_> {
     pub fn sync(&mut self) {
-        if let Some(position) = self.control_ctx.get_sync_position() {
+        if let Some(position) = self.get_control_ctx().get_sync_position() {
             match position {
                 ParserSyncPosition::Declaration => self::sync_with_declaration(self),
                 ParserSyncPosition::Statement => self::sync_with_statement(self),
@@ -37,7 +37,7 @@ impl ParserContext<'_> {
                 ParserSyncPosition::NoRelevant => (),
             }
 
-            self.control_ctx.pop_sync_position();
+            self.get_mut_control_ctx().pop_sync_position();
         }
     }
 }
@@ -57,7 +57,6 @@ fn sync_with_declaration(ctx: &mut ParserContext) {
         let _ = ctx.only_advance();
     }
 
-    ctx.get_mut_control_ctx().set_inside_function(false);
     ctx.get_mut_symbols().finish_parameters();
     ctx.get_mut_symbols().finish_scopes();
 
@@ -70,7 +69,10 @@ fn sync_with_statement(ctx: &mut ParserContext) {
             break;
         }
 
-        if ctx.check(TokenType::RBrace) {
+        if ctx.check(TokenType::SemiColon) {
+            let _ = ctx.only_advance();
+            break;
+        } else if ctx.check(TokenType::RBrace) {
             let _ = ctx.only_advance();
 
             ctx.get_mut_symbols().end_scope();
@@ -80,11 +82,6 @@ fn sync_with_statement(ctx: &mut ParserContext) {
                 ctx.get_mut_symbols().finish_parameters();
             }
 
-            break;
-        }
-
-        if ctx.check(TokenType::SemiColon) {
-            let _ = ctx.only_advance();
             break;
         }
 
@@ -104,7 +101,10 @@ fn sync_with_expression(ctx: &mut ParserContext) {
             break;
         }
 
-        if ctx.check(TokenType::RBrace) {
+        if ctx.check(TokenType::SemiColon) {
+            let _ = ctx.only_advance();
+            break;
+        } else if ctx.check(TokenType::RBrace) {
             let _ = ctx.only_advance();
 
             ctx.get_mut_symbols().end_scope();
@@ -114,11 +114,6 @@ fn sync_with_expression(ctx: &mut ParserContext) {
                 ctx.get_mut_symbols().finish_parameters();
             }
 
-            break;
-        }
-
-        if ctx.check(TokenType::SemiColon) {
-            let _ = ctx.only_advance();
             break;
         }
 

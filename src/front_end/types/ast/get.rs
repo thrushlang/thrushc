@@ -70,30 +70,15 @@ impl AstGetType for Ast<'_> {
             Ast::FixedArray { kind, .. } => Ok(kind),
             Ast::Array { kind, .. } => Ok(kind),
             Ast::Struct { kind, .. } => Ok(kind),
-            Ast::Enum { .. } => Ok(&Type::Void),
 
             // Type Conversions
             Ast::As { cast, .. } => Ok(cast),
-
-            // Control Flow
-            Ast::If { .. } => Ok(&Type::Void),
-            Ast::Elif { .. } => Ok(&Type::Void),
-            Ast::Else { .. } => Ok(&Type::Void),
-            Ast::For { .. } => Ok(&Type::Void),
-            Ast::While { .. } => Ok(&Type::Void),
-            Ast::Loop { .. } => Ok(&Type::Void),
-            Ast::Break { .. } => Ok(&Type::Void),
-            Ast::Continue { .. } => Ok(&Type::Void),
-            Ast::Block { .. } => Ok(&Type::Void),
 
             // Constants
             Ast::Const { kind, .. } => Ok(kind),
 
             // Low-Level Instructions
             Ast::LLI { kind, .. } => Ok(kind),
-
-            // Global Assembler
-            Ast::GlobalAssembler { .. } => Ok(&Type::Void),
 
             // Intrinsic
             Ast::Intrinsic { return_type, .. } => Ok(return_type),
@@ -102,16 +87,12 @@ impl AstGetType for Ast<'_> {
             // Indirect Call
             Ast::Indirect { kind, .. } => Ok(kind),
 
-            // Module Import
-            Ast::Import { .. } => Ok(&Type::Void),
-            // C Import
-            Ast::ImportC { .. } => Ok(&Type::Void),
-
-            // Ignored
-            Ast::Pass { .. } => Ok(&Type::Void),
-
-            // Unreachable marker
-            Ast::Unreachable { .. } => Ok(&Type::Void),
+            _ => Err(CompilationIssue::Error(
+                "Syntax error".into(),
+                "Expected a valid value to determinate the type.".into(),
+                None,
+                self.get_span(),
+            )),
         }
     }
 
@@ -164,24 +145,15 @@ impl AstGetType for Ast<'_> {
             // ASM Code Block
             Ast::AsmValue { kind, .. } => Ok(kind),
 
-            // Global Assembler
-            Ast::GlobalAssembler { .. } => Ok(&Type::Void),
-
             // Intrinsic
             Ast::Intrinsic {
                 return_type: kind, ..
             } => Ok(kind),
             Ast::IntrinsicParameter { kind, .. } => Ok(kind),
 
-            // Ignored
-            Ast::Pass { .. } => Ok(&Type::Void),
-
-            // Unreachable marker
-            Ast::Unreachable { .. } => Ok(&Type::Void),
-
             _ => Err(CompilationIssue::Error(
-                String::from("Syntax error"),
-                String::from("Expected a value to get a type."),
+                "Syntax error".into(),
+                "Expected a valid value to determinate the type.".into(),
                 None,
                 self.get_span(),
             )),
@@ -198,7 +170,7 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::Boolean { kind, .. } => kind,
             Ast::Char { kind, .. } => kind,
             Ast::Str { kind, .. } => kind,
-            Ast::NullPtr { .. } => &Type::Ptr(None),
+            Ast::NullPtr { kind, .. } => kind,
 
             // Custom Type
             Ast::CustomType { kind, .. } => kind,
@@ -248,23 +220,11 @@ impl AstLLVMGetType for Ast<'_> {
             // Indirect Call
             Ast::Indirect { kind, .. } => kind,
 
-            // Global Assembler
-            Ast::GlobalAssembler { .. } => &Type::Void,
-
             // Intrinsic
             Ast::Intrinsic {
                 return_type: kind, ..
             } => kind,
             Ast::IntrinsicParameter { kind, .. } => kind,
-
-            // Module Import
-            Ast::Import { .. } => &Type::Void,
-
-            // Ignored
-            Ast::Pass { .. } => &Type::Void,
-
-            // Unreachable marker
-            Ast::Unreachable { .. } => &Type::Void,
 
             any => back_end::llvm_codegen::abort::abort_codegen(
                 context,

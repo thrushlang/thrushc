@@ -16,7 +16,6 @@ use inkwell::types::FloatType;
 use inkwell::values::PointerValue;
 use inkwell::{
     builder::Builder,
-    context::Context,
     values::{BasicValueEnum, FloatValue, IntValue},
 };
 

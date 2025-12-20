@@ -15,8 +15,8 @@ pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), CompilationIssue> 
 
     lexeme
         .parse::<f32>()
-        .map(|f| (Type::F32, f as f64))
-        .or_else(|_| lexeme.parse::<f64>().map(|f| (Type::F64, f)))
+        .map(|f| (Type::F32(span), f as f64))
+        .or_else(|_| lexeme.parse::<f64>().map(|f| (Type::F64(span), f)))
         .map_err(|_| {
             CompilationIssue::Error(
                 "Syntax error".into(),
@@ -41,10 +41,10 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
 
     fn match_signed(number: isize, span: Span) -> Result<(Type, u64), CompilationIssue> {
         match number {
-            n if (I8_MIN..=I8_MAX).contains(&n) => Ok((Type::S8, n as u64)),
-            n if (I16_MIN..=I16_MAX).contains(&n) => Ok((Type::S16, n as u64)),
-            n if (I32_MIN..=I32_MAX).contains(&n) => Ok((Type::S32, n as u64)),
-            n if (isize::MIN..=isize::MAX).contains(&n) => Ok((Type::S64, n as u64)),
+            n if (I8_MIN..=I8_MAX).contains(&n) => Ok((Type::S8(span), n as u64)),
+            n if (I16_MIN..=I16_MAX).contains(&n) => Ok((Type::S16(span), n as u64)),
+            n if (I32_MIN..=I32_MAX).contains(&n) => Ok((Type::S32(span), n as u64)),
+            n if (isize::MIN..=isize::MAX).contains(&n) => Ok((Type::S64(span), n as u64)),
 
             _ => Err(CompilationIssue::Error(
                 "Syntax error".into(),
@@ -57,10 +57,10 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
 
     fn match_unsigned(number: usize, span: Span) -> Result<(Type, u64), CompilationIssue> {
         match number {
-            n if (0..=U8_MAX).contains(&n) => Ok((Type::U8, n as u64)),
-            n if (0..=U16_MAX).contains(&n) => Ok((Type::U16, n as u64)),
-            n if (0..=U32_MAX).contains(&n) => Ok((Type::U32, n as u64)),
-            n if (0..=usize::MAX).contains(&n) => Ok((Type::U64, n as u64)),
+            n if (0..=U8_MAX).contains(&n) => Ok((Type::U8(span), n as u64)),
+            n if (0..=U16_MAX).contains(&n) => Ok((Type::U16(span), n as u64)),
+            n if (0..=U32_MAX).contains(&n) => Ok((Type::U32(span), n as u64)),
+            n if (0..=usize::MAX).contains(&n) => Ok((Type::U64(span), n as u64)),
 
             _ => Err(CompilationIssue::Error(
                 "Syntax error".into(),

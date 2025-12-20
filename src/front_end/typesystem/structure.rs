@@ -1,3 +1,4 @@
+use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::traits::TypeStructExtensions;
 use crate::front_end::typesystem::types::Type;
@@ -8,8 +9,9 @@ impl TypeStructExtensions for Type {
         name: String,
         fields: &[Type],
         modificator: StructureTypeModificator,
+        span: Span,
     ) -> Type {
-        Type::Struct(name, fields.to_vec(), modificator)
+        Type::Struct(name, fields.to_vec(), modificator, span)
     }
 
     #[inline]

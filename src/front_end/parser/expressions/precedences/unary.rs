@@ -13,15 +13,15 @@ pub fn unary_precedence<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     if ctx.match_token(TokenType::Bang)? {
         let operator_tk: &Token = ctx.previous();
-        let operator: TokenType = operator_tk.kind;
-        let span: Span = operator_tk.span;
+        let operator: TokenType = operator_tk.get_type();
+        let span: Span = operator_tk.get_span();
 
         let expression: Ast = lower::lower_precedence(ctx)?;
 
         return Ok(Ast::UnaryOp {
             operator,
             expression: expression.into(),
-            kind: Type::Bool,
+            kind: Type::Bool(span),
             is_pre: false,
             span,
         });
@@ -48,8 +48,8 @@ pub fn unary_precedence<'parser>(
 
     if ctx.match_token(TokenType::Not)? {
         let operator_tk: &Token = ctx.previous();
-        let operator: TokenType = operator_tk.kind;
-        let span: Span = operator_tk.span;
+        let operator: TokenType = operator_tk.get_type();
+        let span: Span = operator_tk.get_span();
 
         let expression: Ast = lower::lower_precedence(ctx)?;
         let expression_type: &Type = expression.get_value_type()?;

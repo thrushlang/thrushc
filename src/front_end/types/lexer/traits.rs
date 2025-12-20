@@ -28,5 +28,5 @@ pub trait TokenTypeExtensions {
 
 pub trait TokenTypeTypeTransform {
     fn as_type(&self, span: Span) -> Result<Type, CompilationIssue>;
-    fn as_type_preprocessor(&self) -> Result<Type, ()>;
+    fn as_type_preprocessor(&self, span: Span) -> Result<Type, ()>;
 }

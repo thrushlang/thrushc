@@ -27,7 +27,7 @@ pub fn build_fixed_array<'parser>(
 
     let span: Span = array_start_tk.get_span();
 
-    let mut array_type: Type = Type::Void;
+    let mut array_type: Type = Type::Void(span);
     let mut items: Vec<Ast> = Vec::with_capacity(100);
 
     loop {
@@ -82,7 +82,7 @@ pub fn build_fixed_array<'parser>(
             )
         })?;
 
-        array_type = Type::FixedArray(item.get_value_type()?.clone().into(), size);
+        array_type = Type::FixedArray(item.get_value_type()?.clone().into(), size, span);
     }
 
     Ok(Ast::FixedArray {

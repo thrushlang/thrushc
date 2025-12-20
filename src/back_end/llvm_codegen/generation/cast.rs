@@ -7,9 +7,6 @@ use crate::back_end::llvm_codegen::typegen;
 
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
-
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
@@ -18,7 +15,6 @@ use crate::front_end::typesystem::traits::LLVMTypeExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::cmp::Ordering;
-use std::fmt::Display;
 use std::path::PathBuf;
 
 use inkwell::builder::Builder;
@@ -347,7 +343,7 @@ pub fn try_cast<'ctx>(
 
 #[inline]
 pub fn try_cast_const<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     from: BasicValueEnum<'ctx>,
     from_type: &Type,
     target_type: &Type,
@@ -373,97 +369,219 @@ pub fn try_cast_const<'ctx>(
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    lhs: &'ctx Ast,
-    rhs: &Type,
+    expr: &'ctx Ast,
+    target_type: &Type,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
+    let from_type: &Type = expr.llvm_get_type(context);
 
-    let lhs_type: &Type = lhs.llvm_get_type(context);
+    match (from_type, target_type) {
+        (from, to) if from.is_ptr_like_type() && to.is_integer_type() => {
+            let val: BasicValueEnum = refptr::compile(context, expr, None);
 
-    let abort_ptrtoint =
-        |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
+            if val.is_pointer_value() {
+                let integer_type: BasicTypeEnum = typegen::generate(context, target_type);
 
-    let abort_ptr = |_| self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs));
+                return llvm_builder
+                    .build_ptr_to_int(val.into_pointer_value(), integer_type.into_int_type(), "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            };
 
-    if lhs_type.is_ptr_like_type() && rhs.is_integer_type() {
-        let val: BasicValueEnum = refptr::compile(context, lhs, None);
-
-        if val.is_pointer_value() {
-            let integer_type: BasicTypeEnum = typegen::generate(context, rhs);
-
-            return llvm_builder
-                .build_ptr_to_int(val.into_pointer_value(), integer_type.into_int_type(), "")
-                .unwrap_or_else(abort_ptrtoint)
-                .into();
-        };
-
-        self::codegen_abort(format!(
-            "Failed to cast pointer '{}' to integer '{}'.",
-            lhs, rhs
-        ));
-    }
-
-    if rhs.is_numeric_type() {
-        let value: BasicValueEnum = codegen::compile(context, lhs, None);
-        let target_type: BasicTypeEnum = typegen::generate(context, rhs);
-
-        if lhs_type.llvm_is_same_bit_size(context, rhs) {
-            return llvm_builder
-                .build_bit_cast(value, target_type, "")
-                .unwrap_or_else(|_| {
-                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs))
-                });
+            abort::abort_codegen(
+                context,
+                &format!(
+                    "Failed to cast '{}' type to '{}' type.",
+                    from_type, target_type
+                ),
+                expr.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            );
         }
 
-        if value.is_int_value() && target_type.is_int_type() {
-            return llvm_builder
-                .build_int_cast(value.into_int_value(), target_type.into_int_type(), "")
-                .unwrap_or_else(|_| {
-                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs))
-                })
-                .into();
+        (_, to) if to.is_numeric_type() => {
+            let value: BasicValueEnum = codegen::compile(context, expr, None);
+            let cast: BasicTypeEnum = typegen::generate(context, target_type);
+
+            if from_type.llvm_is_same_bit_size(context, target_type) {
+                return llvm_builder
+                    .build_bit_cast(value, cast, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    });
+            }
+
+            if value.is_int_value() && cast.is_int_type() {
+                return llvm_builder
+                    .build_int_cast(value.into_int_value(), cast.into_int_type(), "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            }
+
+            if value.is_float_value() && target_type.is_float_type() {
+                return llvm_builder
+                    .build_float_cast(value.into_float_value(), cast.into_float_type(), "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            }
         }
 
-        if value.is_float_value() && target_type.is_float_type() {
-            return llvm_builder
-                .build_float_cast(value.into_float_value(), target_type.into_float_type(), "")
-                .unwrap_or_else(|_| {
-                    self::codegen_abort(format!("Failed to cast '{}' to '{}'.", lhs_type, rhs))
-                })
-                .into();
+        (_, to) if to.is_ptr_type() => {
+            let value: BasicValueEnum = refptr::compile(context, expr, None);
+
+            if value.is_pointer_value() {
+                let cast: PointerType = typegen::generate(context, target_type).into_pointer_type();
+
+                return llvm_builder
+                    .build_pointer_cast(value.into_pointer_value(), cast, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            };
         }
-    }
 
-    if rhs.is_ptr_type() {
-        let value: BasicValueEnum = refptr::compile(context, lhs, None);
+        (_, to) if to.is_const_type() => {
+            let value: BasicValueEnum = refptr::compile(context, expr, None);
 
-        if value.is_pointer_value() {
-            let to: PointerType = typegen::generate(context, rhs).into_pointer_type();
+            if value.is_pointer_value() {
+                let cast: PointerType = typegen::generate(context, from_type).into_pointer_type();
 
-            return llvm_builder
-                .build_pointer_cast(value.into_pointer_value(), to, "")
-                .unwrap_or_else(abort_ptr)
-                .into();
-        };
-    }
+                return llvm_builder
+                    .build_pointer_cast(value.into_pointer_value(), cast, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            };
 
-    if rhs.is_const_type() {
-        let value: BasicValueEnum = refptr::compile(context, lhs, None);
+            let cast: BasicTypeEnum = typegen::generate(context, target_type);
 
-        if value.is_pointer_value() {
-            let to: PointerType = typegen::generate(context, rhs).into_pointer_type();
+            if from_type.llvm_is_same_bit_size(context, target_type) {
+                return llvm_builder
+                    .build_bit_cast(value, cast, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    });
+            }
 
-            return llvm_builder
-                .build_pointer_cast(value.into_pointer_value(), to, "")
-                .unwrap_or_else(abort_ptr)
-                .into();
-        };
+            if value.is_int_value() && cast.is_int_type() {
+                return llvm_builder
+                    .build_int_cast(value.into_int_value(), cast.into_int_type(), "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            }
+
+            if value.is_float_value() && target_type.is_float_type() {
+                return llvm_builder
+                    .build_float_cast(value.into_float_value(), cast.into_float_type(), "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            }
+        }
+
+        _ => {}
     }
 
     abort::abort_codegen(
         context,
-        &format!("Failed to cast '{}' type to '{}' type.", lhs_type, rhs),
-        lhs.get_span(),
+        &format!(
+            "Failed to cast '{}' type to '{}' type.",
+            from_type, target_type
+        ),
+        expr.get_span(),
         PathBuf::from(file!()),
         line!(),
     );
@@ -476,7 +594,7 @@ pub fn compile<'ctx>(
 ########################################################################*/
 
 pub fn const_numeric_cast<'ctx>(
-    context: &LLVMCodeGenContext<'_, 'ctx>,
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
     value: BasicValueEnum<'ctx>,
     target: &Type,
     is_signed: bool,
@@ -514,9 +632,4 @@ pub fn const_numeric_cast<'ctx>(
     }
 
     value
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

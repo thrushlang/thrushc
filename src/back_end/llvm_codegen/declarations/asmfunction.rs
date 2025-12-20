@@ -9,6 +9,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::obfuscation;
 use crate::back_end::llvm_codegen::typegen;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 use crate::back_end::llvm_codegen::types::traits::AssemblerFunctionExtensions;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
 
@@ -167,8 +168,13 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
 
     llvm_builder.position_at_end(last_block);
 
-    context.new_function(
-        name,
-        (asm_function, parameters_types, call_convention, span),
+    let proto: LLVMFunction = (
+        asm_function,
+        return_type,
+        parameters_types,
+        call_convention,
+        span,
     );
+
+    context.new_function(name, proto);
 }

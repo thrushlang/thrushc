@@ -1,5 +1,6 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::obfuscation;
+use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
 
 use inkwell::basic_block::BasicBlock;
 use inkwell::context::Context;
@@ -7,7 +8,7 @@ use inkwell::values::FunctionValue;
 
 #[inline]
 pub fn move_terminator_to_end(context: &LLVMCodeGenContext) {
-    let function: FunctionValue = context.get_current_fn();
+    let function: FunctionValue = context.get_current_llvm_function().get_value();
 
     let last_builder_block: BasicBlock = context.get_last_builder_block();
 

@@ -7,6 +7,7 @@ use crate::front_end::types::ast::traits::AstMemoryExtensions;
 use crate::front_end::types::parser::stmts::traits::{FoundSymbolEither, StructExtensions};
 use crate::front_end::types::parser::stmts::types::{StructField, StructFields};
 use crate::front_end::types::parser::symbols::types::{FoundSymbolId, Struct};
+use crate::front_end::typesystem::traits::TypeCodeLocation;
 use crate::front_end::typesystem::types::Type;
 
 pub fn decompose<'parser>(
@@ -25,7 +26,7 @@ pub fn decompose<'parser>(
     }
 
     let current_type: &Type = match base_type {
-        Type::Ptr(inner_ptr) => {
+        Type::Ptr(inner_ptr, ..) => {
             is_parent_ptr = true;
 
             inner_ptr.as_ref().ok_or_else(|| {
@@ -42,8 +43,8 @@ pub fn decompose<'parser>(
 
     let field_name: &str = property_names[position];
 
-    if let Type::Struct(name, _, _) = current_type {
-        let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
+    if let Type::Struct(name, ..) = current_type {
+        let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(&name, span)?;
         let structure_id: (&str, usize) = object.expected_struct(span)?;
         let id: &str = structure_id.0;
         let scope_idx: usize = structure_id.1;
@@ -59,7 +60,7 @@ pub fn decompose<'parser>(
 
         if let Some((index, (_, field_type, ..))) = field {
             let adjusted_field_type: Type = if is_parent_ptr || source.is_allocated() {
-                Type::Ptr(Some(field_type.clone().into()))
+                Type::Ptr(Some(field_type.clone().into()), field_type.get_span())
             } else {
                 field_type.clone()
             };
@@ -73,7 +74,7 @@ pub fn decompose<'parser>(
 
             nested_indices.iter_mut().for_each(|(ty, ..)| {
                 *ty = if is_parent_ptr || source.is_allocated() {
-                    Type::Ptr(Some(ty.clone().into()))
+                    Type::Ptr(Some(ty.clone().into()), ty.get_span())
                 } else {
                     ty.clone()
                 };
@@ -82,7 +83,10 @@ pub fn decompose<'parser>(
             indices.append(&mut nested_indices);
 
             let adjusted_inner_field_type: Type = if is_parent_ptr || source.is_allocated() {
-                Type::Ptr(Some(field_inner_type.into()))
+                Type::Ptr(
+                    Some(field_inner_type.clone().into()),
+                    field_inner_type.get_span(),
+                )
             } else {
                 field_inner_type
             };

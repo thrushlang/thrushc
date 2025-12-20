@@ -90,7 +90,7 @@ impl<'ctx> SymbolsTable<'ctx> {
 
         if let Some(function) = self.functions.get(name) {
             let llvm_function: FunctionValue = function.0;
-            let span: Span = function.3;
+            let span: Span = function.4;
 
             return SymbolAllocated::new_function(
                 llvm_function.as_global_value().as_pointer_value(),

@@ -27,7 +27,7 @@ pub fn cmp_precedence<'parser>(
             left: expression.into(),
             operator,
             right: right.into(),
-            kind: Type::Bool,
+            kind: Type::Bool(span),
             span,
         };
     }

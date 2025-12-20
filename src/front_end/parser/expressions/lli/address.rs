@@ -14,14 +14,14 @@ pub fn build_address<'parser>(
     let address_span: Span = address_tk.get_span();
 
     let source: Ast = expressions::build_expr(ctx)?;
-    let expr_span: Span = source.get_span();
+    let span: Span = source.get_span();
 
-    let indexes: Vec<Ast> = self::build_address_indexes(ctx, expr_span)?;
+    let indexes: Vec<Ast> = self::build_address_indexes(ctx, span)?;
 
     Ok(Ast::Address {
         source: source.into(),
         indexes,
-        kind: Type::Addr,
+        kind: Type::Addr(span),
         span: address_span,
     })
 }

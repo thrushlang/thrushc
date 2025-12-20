@@ -40,7 +40,7 @@ pub fn validate<'type_checker>(
                 TypeCheckerExprMetadata::new(condition.is_literal_value(), condition.get_span());
 
             checks::check_types(
-                &Type::Bool,
+                &Type::Bool(condition.get_span()),
                 condition.get_value_type()?,
                 Some(condition),
                 None,

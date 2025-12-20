@@ -6,7 +6,7 @@ use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expressions::precedences::mutation;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
-use crate::front_end::typesystem::{traits::CastTypeExtensions, types::Type};
+use crate::front_end::typesystem::types::Type;
 
 pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
     let mut expression: Ast = mutation::equal_precedence(ctx)?;
@@ -19,15 +19,12 @@ pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>,
         let right: Ast = mutation::equal_precedence(ctx)?;
 
         let left_type: &Type = expression.get_value_type()?;
-        let right_type: &Type = right.get_value_type()?;
-
-        let kind: Type = left_type.precompute(right_type);
 
         expression = Ast::BinaryOp {
             left: expression.clone().into(),
             operator,
             right: right.into(),
-            kind,
+            kind: left_type.clone(),
             span,
         };
     }

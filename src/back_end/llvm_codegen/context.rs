@@ -42,6 +42,7 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::targets::TargetData;
 use inkwell::targets::TargetTriple;
+use inkwell::types::BasicTypeEnum;
 use inkwell::values::BasicValueEnum;
 use inkwell::values::FunctionValue;
 use inkwell::values::PointerValue;
@@ -59,7 +60,7 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     loop_ctx: LoopContext<'ctx>,
 
     ptr_anchor: Option<PointerAnchor<'ctx>>,
-    function: Option<FunctionValue<'ctx>>,
+    llvm_function: Option<LLVMFunction<'ctx>>,
 
     diagnostician: Diagnostician,
     options: &'ctx CompilerOptions,
@@ -86,7 +87,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             loop_ctx: LoopContext::new(),
 
             ptr_anchor: None,
-            function: None,
+            llvm_function: None,
 
             diagnostician,
             options,
@@ -111,13 +112,10 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let value: BasicValueEnum =
             generation::cast::try_cast_const(self, compiled_value, expr_type, kind);
 
-        let ptr: PointerValue = alloc::memstatic::local_constant(
-            self,
-            ascii_name,
-            typegen::generate(self, kind),
-            value,
-            metadata,
-        );
+        let llvm_type: inkwell::types::BasicTypeEnum = typegen::generate(self, kind);
+
+        let ptr: PointerValue =
+            alloc::memstatic::local_constant(self, ascii_name, llvm_type, value, metadata);
 
         let constant: SymbolAllocated = SymbolAllocated::new_constant(
             ptr.into(),
@@ -153,10 +151,12 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let value: BasicValueEnum =
             generation::cast::try_cast_const(self, llvm_value, value_type, kind);
 
+        let llvm_type: BasicTypeEnum = typegen::generate(self, kind);
+
         let ptr: PointerValue = alloc::memstatic::global_constant(
             self,
             ascii_name,
-            typegen::generate(self, kind),
+            llvm_type,
             value,
             &attributes,
             metadata,
@@ -190,16 +190,13 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             let value_type: &Type = value.llvm_get_type(self);
             let llvm_value: BasicValueEnum = constgen::compile(self, value, kind);
 
+            let llvm_type: BasicTypeEnum = typegen::generate(self, kind);
+
             let value: BasicValueEnum =
                 generation::cast::try_cast_const(self, llvm_value, value_type, kind);
 
-            let ptr: PointerValue = alloc::memstatic::local_static(
-                self,
-                ascii_name,
-                typegen::generate(self, kind),
-                Some(value),
-                metadata,
-            );
+            let ptr: PointerValue =
+                alloc::memstatic::local_static(self, ascii_name, llvm_type, Some(value), metadata);
 
             let staticvar: SymbolAllocated = SymbolAllocated::new_static(
                 ptr.into(),
@@ -221,31 +218,33 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
                 PathBuf::from(file!()),
                 line!(),
             );
+        } else {
+            let llvm_type: BasicTypeEnum = typegen::generate(self, kind);
+
+            let ptr: PointerValue =
+                alloc::memstatic::local_static(self, ascii_name, llvm_type, None, metadata);
+
+            let staticvar: SymbolAllocated = SymbolAllocated::new_static(
+                ptr.into(),
+                kind,
+                None,
+                metadata.get_llvm_metadata(),
+                span,
+            );
+
+            if let Some(scope) = self.table.get_mut_all_local_statics().last_mut() {
+                scope.insert(name, staticvar);
+                return;
+            }
+
+            abort::abort_codegen(
+                self,
+                "Failed to get the scope!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
         }
-
-        let ptr: PointerValue = alloc::memstatic::local_static(
-            self,
-            ascii_name,
-            typegen::generate(self, kind),
-            None,
-            metadata,
-        );
-
-        let staticvar: SymbolAllocated =
-            SymbolAllocated::new_static(ptr.into(), kind, None, metadata.get_llvm_metadata(), span);
-
-        if let Some(scope) = self.table.get_mut_all_local_statics().last_mut() {
-            scope.insert(name, staticvar);
-            return;
-        }
-
-        abort::abort_codegen(
-            self,
-            "Failed to get the scope!",
-            span,
-            PathBuf::from(file!()),
-            line!(),
-        )
     }
 
     pub fn new_global_static(&mut self, staticvar: GlobalStatic<'ctx>) {
@@ -263,13 +262,15 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             let value_type: &Type = value.llvm_get_type(self);
             let llvm_value: BasicValueEnum = constgen::compile(self, value, kind);
 
+            let llvm_type: inkwell::types::BasicTypeEnum = typegen::generate(self, kind);
+
             let value: BasicValueEnum =
                 generation::cast::try_cast_const(self, llvm_value, value_type, kind);
 
             let ptr: PointerValue = alloc::memstatic::global_static(
                 self,
                 ascii_name,
-                typegen::generate(self, kind),
+                llvm_type,
                 Some(value),
                 &attributes,
                 metadata,
@@ -286,25 +287,30 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             self.table
                 .get_mut_all_global_statics()
                 .insert(name, staticvar);
+        } else {
+            let llvm_type: inkwell::types::BasicTypeEnum = typegen::generate(self, kind);
 
-            return;
+            let ptr: PointerValue = alloc::memstatic::global_static(
+                self,
+                ascii_name,
+                llvm_type,
+                None,
+                &attributes,
+                metadata,
+            );
+
+            let staticvar: SymbolAllocated = SymbolAllocated::new_static(
+                ptr.into(),
+                kind,
+                None,
+                metadata.get_llvm_metadata(),
+                span,
+            );
+
+            self.table
+                .get_mut_all_global_statics()
+                .insert(name, staticvar);
         }
-
-        let ptr: PointerValue = alloc::memstatic::global_static(
-            self,
-            ascii_name,
-            typegen::generate(self, kind),
-            None,
-            &attributes,
-            metadata,
-        );
-
-        let staticvar: SymbolAllocated =
-            SymbolAllocated::new_static(ptr.into(), kind, None, metadata.get_llvm_metadata(), span);
-
-        self.table
-            .get_mut_all_global_statics()
-            .insert(name, staticvar);
     }
 }
 
@@ -404,20 +410,20 @@ impl LLVMCodeGenContext<'_, '_> {
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     #[inline]
-    pub fn set_current_fn(&mut self, new_function: FunctionValue<'ctx>) {
-        self.function = Some(new_function);
+    pub fn set_current_llvm_function(&mut self, new_function: LLVMFunction<'ctx>) {
+        self.llvm_function = Some(new_function);
     }
 
     #[inline]
-    pub fn get_current_fn(&self) -> FunctionValue<'ctx> {
-        self.function.unwrap_or_else(|| {
+    pub fn get_current_llvm_function(&self) -> LLVMFunction<'ctx> {
+        self.llvm_function.unwrap_or_else(|| {
             self::codegen_abort("The function currently being compiled couldn't be obtained.");
         })
     }
 
     #[inline]
-    pub fn unset_current_function(&mut self) {
-        self.function = None;
+    pub fn unset_current_llvm_function(&mut self) {
+        self.llvm_function = None;
     }
 }
 

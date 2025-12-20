@@ -55,6 +55,7 @@ pub fn build_reference<'parser>(
                     LLVMFunctionReferenceTypeModificator::new(has_ignore_attr),
                     GCCFunctionReferenceTypeModificator::new(),
                 ),
+                span,
             ),
             span,
             metadata: ReferenceMetadata::new(true, false, ReferenceType::default()),

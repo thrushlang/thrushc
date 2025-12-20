@@ -678,16 +678,16 @@ impl CommandLine {
                 self.options
                     .get_mut_llvm_backend_options()
                     .get_mut_jit_config()
-                    .add_arg(arg.to_string());
+                    .add_argument(arg.to_string());
+
+                return;
+            } else {
+                self.options
+                    .get_mut_linking_compilers_configuration()
+                    .add_argument(arg.to_string());
 
                 return;
             }
-
-            self.options
-                .get_mut_linking_compilers_configuration()
-                .add_compiler_arg(arg.to_string());
-
-            return;
         }
 
         logging::print_critical_error(

@@ -1,10 +1,11 @@
+use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
 
 pub trait LLVMTypeExtensions {
     fn llvm_is_same_bit_size(
         &self,
-        context: &crate::back_end::llvm_codegen::context::LLVMCodeGenContext<'_, '_>,
+        context: &mut crate::back_end::llvm_codegen::context::LLVMCodeGenContext<'_, '_>,
         other: &Type,
     ) -> bool;
 }
@@ -54,12 +55,16 @@ pub trait TypeStructExtensions {
         name: String,
         fields: &[Type],
         modificator: StructureTypeModificator,
+        span: Span,
     ) -> Type;
 }
 
 pub trait CastTypeExtensions {
     fn narrowing(&self) -> Type;
-    fn precompute(&self, other: &Type) -> Type;
+}
+
+pub trait TypeCodeLocation {
+    fn get_span(&self) -> Span;
 }
 
 pub trait DereferenceExtensions {

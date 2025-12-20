@@ -2,6 +2,7 @@ use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::block;
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 
+use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
 use crate::front_end::types::ast::Ast;
 
 use std::path::PathBuf;
@@ -11,9 +12,12 @@ use inkwell::builder::Builder;
 use inkwell::values::FunctionValue;
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>) {
-    let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
+    let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
 
-    let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
+    let llvm_function: FunctionValue = codegen
+        .get_context()
+        .get_current_llvm_function()
+        .get_value();
 
     if let Ast::Loop { block, span, .. } = node {
         let start: BasicBlock = block::append_block(codegen.get_context(), llvm_function);

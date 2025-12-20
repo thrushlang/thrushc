@@ -44,7 +44,7 @@ fn compile_without_anchor<'ctx>(
     let base_type: &Type = cast_type.unwrap_or(array_type);
     let items_type: &Type = base_type.get_array_base_type();
 
-    let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32);
+    let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32, span);
     let array_ptr: PointerValue =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, &array_type, span);
 
@@ -85,7 +85,7 @@ fn compile_with_anchor<'ctx>(
     let base_type: &Type = cast_type.unwrap_or(array_type);
     let items_type: &Type = base_type.get_array_base_type();
 
-    let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32);
+    let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32, span);
 
     context.set_pointer_anchor(PointerAnchor::new(anchor_ptr, true));
 

@@ -5,7 +5,7 @@ use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expressions::precedences::factor};
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
-use crate::front_end::typesystem::{traits::CastTypeExtensions, types::Type};
+use crate::front_end::typesystem::types::Type;
 
 pub fn term_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -28,15 +28,12 @@ pub fn term_precedence<'parser>(
         let right: Ast = factor::factor(ctx)?;
 
         let left_type: &Type = expression.get_value_type()?;
-        let right_type: &Type = right.get_value_type()?;
-
-        let kind: Type = left_type.precompute(right_type);
 
         expression = Ast::BinaryOp {
             left: expression.clone().into(),
             operator,
             right: right.into(),
-            kind,
+            kind: left_type.clone(),
             span,
         };
     }

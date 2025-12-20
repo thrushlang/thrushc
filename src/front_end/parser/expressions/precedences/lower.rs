@@ -75,17 +75,23 @@ pub fn lower_precedence<'parser>(
 
             Ast::new_str(
                 bytes,
-                Type::Const(Type::Ptr(Some(Type::Array(Type::Char.into()).into())).into()),
+                Type::Const(
+                    Type::Ptr(
+                        Some(Type::Array(Type::Char(span).into(), span).into()),
+                        span,
+                    )
+                    .into(),
+                    span,
+                ),
                 span,
             )
         }
 
         TokenType::Char => {
             let tk: &Token = ctx.advance()?;
-
             let span: Span = tk.get_span();
 
-            Ast::new_char(Type::Char, tk.get_lexeme_first_byte(), span)
+            Ast::new_char(Type::Char(span), tk.get_lexeme_first_byte(), span)
         }
 
         TokenType::NullPtr => Ast::new_nullptr(ctx.advance()?.span),
@@ -148,8 +154,14 @@ pub fn lower_precedence<'parser>(
             }
         }
 
-        TokenType::True => Ast::new_boolean(Type::Bool, 1, ctx.advance()?.get_span()),
-        TokenType::False => Ast::new_boolean(Type::Bool, 0, ctx.advance()?.get_span()),
+        TokenType::True => {
+            let span: Span = ctx.advance()?.get_span();
+            Ast::new_boolean(Type::Bool(span), 1, span)
+        }
+        TokenType::False => {
+            let span: Span = ctx.advance()?.get_span();
+            Ast::new_boolean(Type::Bool(span), 0, span)
+        }
         TokenType::Pass => Ast::Pass {
             span: ctx.advance()?.get_span(),
         },

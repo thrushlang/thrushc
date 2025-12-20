@@ -8,7 +8,11 @@ use inkwell::types::BasicTypeEnum;
 
 impl LLVMTypeExtensions for Type {
     #[inline]
-    fn llvm_is_same_bit_size(&self, context: &LLVMCodeGenContext<'_, '_>, other: &Type) -> bool {
+    fn llvm_is_same_bit_size(
+        &self,
+        context: &mut LLVMCodeGenContext<'_, '_>,
+        other: &Type,
+    ) -> bool {
         let lhs: BasicTypeEnum = crate::back_end::llvm_codegen::typegen::generate(context, self);
         let rhs: BasicTypeEnum = crate::back_end::llvm_codegen::typegen::generate(context, other);
 

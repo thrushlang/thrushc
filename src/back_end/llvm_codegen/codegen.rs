@@ -6,6 +6,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::declarations::{self};
 use crate::back_end::llvm_codegen::generation::{cast, float, integer};
 use crate::back_end::llvm_codegen::statements::lli;
+use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
 use crate::back_end::llvm_codegen::{abort, memory};
 use crate::back_end::llvm_codegen::{binaryop, generation};
 use crate::back_end::llvm_codegen::{builtins, codegen, constgen};
@@ -274,10 +275,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match node {
             Ast::Return {
-                expression,
-                kind,
-                span,
-                ..
+                expression, span, ..
             } => {
                 let llvm_builder: &Builder = self.context.get_llvm_builder();
 
@@ -285,7 +283,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     if llvm_builder.build_return(None).is_err() {
                         abort::abort_codegen(
                             self.context,
-                            "Failed to compile 'return'!",
+                            "Failed to compile a function terminator!",
                             *span,
                             PathBuf::from(file!()),
                             line!(),
@@ -294,13 +292,18 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
 
                 if let Some(expr) = expression {
+                    let cast_type: &Type = self
+                        .get_context()
+                        .get_current_llvm_function()
+                        .get_return_type();
+
                     if llvm_builder
-                        .build_return(Some(&self::compile(self.context, expr, Some(kind))))
+                        .build_return(Some(&self::compile(self.context, expr, Some(cast_type))))
                         .is_err()
                     {
                         abort::abort_codegen(
                             self.context,
-                            "Failed to compile 'return'!",
+                            "Failed to compile a function terminator!",
                             *span,
                             PathBuf::from(file!()),
                             line!(),
@@ -517,7 +520,7 @@ pub fn compile<'ctx>(
             ..
         } => {
             let float: BasicValueEnum =
-                float::generate(context, kind, *value, *signed, *span).into();
+                float::generate_const(context, kind, *value, *signed, *span).into();
 
             cast::try_cast(context, cast_type, kind, float, *span)
         }
@@ -530,7 +533,7 @@ pub fn compile<'ctx>(
             ..
         } => {
             let integer: BasicValueEnum =
-                integer::generate(context, kind, *value, *signed, *span).into();
+                integer::generate_const(context, kind, *value, *signed, *span).into();
 
             cast::try_cast(context, cast_type, kind, integer, *span)
         }

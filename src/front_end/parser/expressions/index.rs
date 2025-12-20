@@ -27,7 +27,10 @@ pub fn build_index<'parser>(
         "Expected ']'.".into(),
     )?;
 
-    let index_type: Type = Type::Ptr(Some(index_type.calculate_index_type(1).clone().into()));
+    let index_type: Type = Type::Ptr(
+        Some(index_type.calculate_index_type(1).clone().into()),
+        span,
+    );
 
     Ok(Ast::Index {
         source: source.into(),

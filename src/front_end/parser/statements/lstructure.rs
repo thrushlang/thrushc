@@ -41,7 +41,7 @@ pub fn build_structure<'parser>(
     let name: &str = name_tk.get_lexeme();
     let span: Span = name_tk.get_span();
 
-    let mut fields_types: StructFields = (name, Vec::with_capacity(10), modificator);
+    let mut fields_types: StructFields = (name, Vec::with_capacity(10), modificator, span);
     let mut field_position: u32 = 0;
 
     loop {
@@ -120,6 +120,7 @@ pub fn build_structure<'parser>(
             fields_types.1.clone(),
             attributes.clone(),
             modificator,
+            span,
         ),
         span,
     )?;

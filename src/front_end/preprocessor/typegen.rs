@@ -1,3 +1,4 @@
+use crate::core::diagnostic::span::Span;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::preprocessor::attributes;
@@ -12,6 +13,7 @@ use crate::front_end::typesystem::modificators::{
     FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
     LLVMFunctionReferenceTypeModificator,
 };
+use crate::front_end::typesystem::traits::TypeCodeLocation;
 use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::ThrushAttributes;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
@@ -19,21 +21,21 @@ use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 pub fn build_type(parser: &mut ModuleParser) -> Result<Type, ()> {
     match parser.peek().kind {
         tk_kind if tk_kind.is_type() => {
-            parser.only_advance()?;
+            let span: Span = parser.advance()?.get_span();
 
             if tk_kind.is_array() {
-                return self::build_array_type(parser);
+                return self::build_array_type(parser, span);
             }
             if tk_kind.is_const() {
-                return self::build_const_type(parser);
+                return self::build_const_type(parser, span);
             }
             if tk_kind.is_fn_ref() {
-                return self::build_fn_ref_type(parser);
+                return self::build_fn_ref_type(parser, span);
             }
 
-            match tk_kind.as_type_preprocessor()? {
+            match tk_kind.as_type_preprocessor(span)? {
                 ty if ty.is_ptr_type() && parser.check(TokenType::LBracket) => {
-                    self::build_recursive_type(parser, Type::Ptr(None))
+                    self::build_recursive_type(parser, Type::Ptr(None, span), span)
                 }
                 ty => Ok(ty),
             }
@@ -69,7 +71,7 @@ pub fn build_type(parser: &mut ModuleParser) -> Result<Type, ()> {
     }
 }
 
-fn build_fn_ref_type(parser: &mut ModuleParser) -> Result<Type, ()> {
+fn build_fn_ref_type(parser: &mut ModuleParser, span: Span) -> Result<Type, ()> {
     parser.consume(TokenType::LBracket)?;
 
     let mut parameter_types: Vec<Type> = Vec::with_capacity(10);
@@ -104,14 +106,15 @@ fn build_fn_ref_type(parser: &mut ModuleParser) -> Result<Type, ()> {
             LLVMFunctionReferenceTypeModificator::new(has_ignore),
             GCCFunctionReferenceTypeModificator::default(),
         ),
+        span,
     ))
 }
 
-fn build_const_type(parser: &mut ModuleParser) -> Result<Type, ()> {
-    Ok(Type::Const(self::build_type(parser)?.into()))
+fn build_const_type(parser: &mut ModuleParser, span: Span) -> Result<Type, ()> {
+    Ok(Type::Const(self::build_type(parser)?.into(), span))
 }
 
-fn build_array_type(parser: &mut ModuleParser) -> Result<Type, ()> {
+fn build_array_type(parser: &mut ModuleParser, span: Span) -> Result<Type, ()> {
     parser.consume(TokenType::LBracket)?;
 
     let array_type: Type = self::build_type(parser)?;
@@ -131,7 +134,7 @@ fn build_array_type(parser: &mut ModuleParser) -> Result<Type, ()> {
         if let Some(array_size) = size {
             parser.consume(TokenType::RBracket)?;
 
-            return Ok(Type::FixedArray(array_type.into(), array_size));
+            return Ok(Type::FixedArray(array_type.into(), array_size, span));
         }
 
         return Err(());
@@ -139,22 +142,26 @@ fn build_array_type(parser: &mut ModuleParser) -> Result<Type, ()> {
 
     parser.consume(TokenType::RBracket)?;
 
-    Ok(Type::Array(array_type.into()))
+    Ok(Type::Array(array_type.into(), span))
 }
 
-fn build_recursive_type(parser: &mut ModuleParser, mut before_type: Type) -> Result<Type, ()> {
+fn build_recursive_type(
+    parser: &mut ModuleParser,
+    mut before_type: Type,
+    span: Span,
+) -> Result<Type, ()> {
     parser.consume(TokenType::LBracket)?;
 
-    if let Type::Ptr(_) = &mut before_type {
+    if let Type::Ptr(..) = &mut before_type {
         let mut inner_type: Type = self::build_type(parser)?;
 
         while parser.check(TokenType::LBracket) {
-            inner_type = self::build_recursive_type(parser, inner_type)?;
+            inner_type = self::build_recursive_type(parser, inner_type, span)?;
         }
 
         parser.consume(TokenType::RBracket)?;
 
-        Ok(Type::Ptr(Some(inner_type.into())))
+        Ok(Type::Ptr(Some(inner_type.into()), span))
     } else {
         Err(())
     }

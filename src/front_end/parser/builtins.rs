@@ -70,7 +70,7 @@ pub fn build_halloc<'parser>(
             of: of.clone(),
             span,
         },
-        kind: Type::Ptr(Some(of.into())),
+        kind: Type::Ptr(Some(of.into()), span),
         span,
     })
 }
@@ -123,7 +123,7 @@ pub fn build_memcpy<'parser>(
             size: size.into(),
             span,
         },
-        kind: Type::Ptr(None),
+        kind: Type::Ptr(None, span),
         span,
     })
 }
@@ -176,7 +176,7 @@ pub fn build_memmove<'parser>(
             size: size.into(),
             span,
         },
-        kind: Type::Ptr(None),
+        kind: Type::Ptr(None, span),
         span,
     })
 }
@@ -229,7 +229,7 @@ pub fn build_memset<'parser>(
             size: size.into(),
             span,
         },
-        kind: Type::Ptr(None),
+        kind: Type::Ptr(None, span),
         span,
     })
 }
@@ -261,7 +261,7 @@ pub fn build_alignof<'parser>(
 
     Ok(Ast::Builtin {
         builtin: ThrushBuiltin::AlignOf { of, span },
-        kind: Type::U32,
+        kind: Type::U32(span),
         span,
     })
 }
@@ -293,7 +293,7 @@ pub fn build_sizeof<'parser>(
 
     Ok(Ast::Builtin {
         builtin: ThrushBuiltin::SizeOf { of, span },
-        kind: Type::USize,
+        kind: Type::USize(span),
         span,
     })
 }
@@ -325,7 +325,7 @@ pub fn build_bit_size_of<'parser>(
 
     Ok(Ast::Builtin {
         builtin: ThrushBuiltin::BitSizeOf { of, span },
-        kind: Type::U64,
+        kind: Type::U64(span),
         span,
     })
 }
@@ -357,7 +357,7 @@ pub fn build_abi_size_of<'parser>(
 
     Ok(Ast::Builtin {
         builtin: ThrushBuiltin::AbiSizeOf { of, span },
-        kind: Type::U64,
+        kind: Type::U64(span),
         span,
     })
 }
@@ -389,7 +389,7 @@ pub fn build_abi_align_of<'parser>(
 
     Ok(Ast::Builtin {
         builtin: ThrushBuiltin::AbiAlignOf { of, span },
-        kind: Type::U32,
+        kind: Type::U32(span),
         span,
     })
 }

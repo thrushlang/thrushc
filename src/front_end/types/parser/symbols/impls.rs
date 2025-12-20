@@ -149,7 +149,7 @@ impl<'parser> StructExtensions<'parser> for Struct<'parser> {
     }
 
     fn get_fields(&self) -> StructFields<'parser> {
-        (self.0, self.1.clone(), self.3)
+        (self.0, self.1.clone(), self.3, self.4)
     }
 }
 

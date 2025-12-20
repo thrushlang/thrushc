@@ -5,6 +5,7 @@ use crate::back_end::llvm_codegen::block;
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 
+use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::typesystem::types::Type;
@@ -17,9 +18,12 @@ use inkwell::values::FunctionValue;
 use inkwell::values::IntValue;
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
-    let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
+    let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
 
-    let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
+    let llvm_function: FunctionValue = codegen
+        .get_context()
+        .get_current_llvm_function()
+        .get_value();
 
     if let Ast::If {
         condition,
@@ -40,9 +44,12 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
             merge
         };
 
-        let cond_value: IntValue =
-            codegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
-                .into_int_value();
+        let cond_value: IntValue = codegen::compile(
+            codegen.get_mut_context(),
+            condition,
+            Some(&Type::Bool(condition.get_span())),
+        )
+        .into_int_value();
 
         llvm_builder
             .build_conditional_branch(cond_value, then, next)
@@ -97,8 +104,11 @@ fn compile_elseif<'ctx>(
     first_block: BasicBlock<'ctx>,
     merge: BasicBlock<'ctx>,
 ) {
-    let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
-    let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
+    let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
+    let llvm_function: FunctionValue = codegen
+        .get_context()
+        .get_current_llvm_function()
+        .get_value();
 
     let mut current: BasicBlock = first_block;
 
@@ -119,9 +129,12 @@ fn compile_elseif<'ctx>(
                 block::append_block(codegen.get_context(), llvm_function)
             };
 
-            let cond_value: IntValue =
-                codegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
-                    .into_int_value();
+            let cond_value: IntValue = codegen::compile(
+                codegen.get_mut_context(),
+                condition,
+                Some(&Type::Bool(condition.get_span())),
+            )
+            .into_int_value();
 
             llvm_builder
                 .build_conditional_branch(cond_value, then, next)

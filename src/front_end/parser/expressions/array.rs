@@ -18,7 +18,7 @@ pub fn build_array<'parser>(
 
     let span: Span = tk.get_span();
 
-    let mut array_type: Type = Type::Void;
+    let mut array_type: Type = Type::Void(span);
     let mut items: Vec<Ast> = Vec::with_capacity(100);
 
     loop {
@@ -62,7 +62,7 @@ pub fn build_array<'parser>(
             }
         })
     })? {
-        array_type = Type::Array(item.get_value_type()?.clone().into());
+        array_type = Type::Array(item.get_value_type()?.clone().into(), span);
     }
 
     Ok(Ast::Array {

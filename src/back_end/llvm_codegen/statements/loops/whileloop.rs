@@ -3,6 +3,7 @@ use crate::back_end::llvm_codegen::block;
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 
+use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::typesystem::types::Type;
@@ -15,9 +16,12 @@ use inkwell::values::FunctionValue;
 use inkwell::values::IntValue;
 
 pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>) {
-    let llvm_builder: &Builder = codegen.get_mut_context().get_llvm_builder();
+    let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
 
-    let llvm_function: FunctionValue = codegen.get_mut_context().get_current_fn();
+    let llvm_function: FunctionValue = codegen
+        .get_context()
+        .get_current_llvm_function()
+        .get_value();
 
     if let Ast::While {
         condition, block, ..
@@ -41,9 +45,12 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
 
         llvm_builder.position_at_end(cond);
 
-        let comparison: IntValue =
-            codegen::compile(codegen.get_mut_context(), condition, Some(&Type::Bool))
-                .into_int_value();
+        let comparison: IntValue = codegen::compile(
+            codegen.get_mut_context(),
+            condition,
+            Some(&Type::Bool(condition.get_span())),
+        )
+        .into_int_value();
 
         llvm_builder
             .build_conditional_branch(comparison, body, exit)

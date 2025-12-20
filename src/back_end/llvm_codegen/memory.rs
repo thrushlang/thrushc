@@ -155,14 +155,14 @@ impl<'ctx> SymbolAllocated<'ctx> {
     pub fn load(&self, context: &mut LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
         let llvm_builder: &Builder = context.get_llvm_builder();
 
-        let target_data: &TargetData = context.get_target_data();
-
         if self.get_type().is_ptr_like_type() {
             return self.get_ptr().into();
         }
 
         let llvm_type: BasicTypeEnum = typegen::generate(context, self.get_type());
-        let alignment: u32 = target_data.get_preferred_alignment(&llvm_type);
+        let alignment: u32 = context
+            .get_target_data()
+            .get_preferred_alignment(&llvm_type);
 
         if let Self::Local { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {

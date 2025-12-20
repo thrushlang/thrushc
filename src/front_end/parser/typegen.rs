@@ -32,10 +32,7 @@ use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::ThrushAttributes;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
-pub fn build_type(
-    ctx: &mut ParserContext<'_>,
-    include_expr: bool,
-) -> Result<Type, CompilationIssue> {
+pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type, CompilationIssue> {
     match ctx.peek().kind {
         tk_kind if tk_kind.is_type() => {
             let tk: &Token = ctx.advance()?;
@@ -43,11 +40,11 @@ pub fn build_type(
 
             match tk_kind {
                 _ if tk_kind.is_array() => self::build_array_type(ctx, span),
-                _ if tk_kind.is_const() => self::build_const_type(ctx),
-                _ if tk_kind.is_fn_ref() => self::build_fn_ref_type(ctx),
+                _ if tk_kind.is_const() => self::build_const_type(ctx, span),
+                _ if tk_kind.is_fn_ref() => self::build_fn_ref_type(ctx, span),
                 _ => match tk_kind.as_type(span)? {
                     ty if ty.is_ptr_type() && ctx.check(TokenType::LBracket) => {
-                        self::build_recursive_type(ctx, Type::Ptr(None))
+                        self::build_recursive_type(ctx, Type::Ptr(None, span), span)
                     }
                     ty => Ok(ty),
                 },
@@ -125,7 +122,7 @@ pub fn build_type(
             }
         }
 
-        _ if include_expr => expressions::build_expr(ctx)?.get_value_type().cloned(),
+        _ if parse_expr => expressions::build_expr(ctx)?.get_value_type().cloned(),
 
         what_heck => Err(CompilationIssue::Error(
             "Syntax error".into(),
@@ -136,7 +133,7 @@ pub fn build_type(
     }
 }
 
-fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue> {
+fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
         "Syntax error".into(),
@@ -187,11 +184,12 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIss
             LLVMFunctionReferenceTypeModificator::new(has_ignore),
             GCCFunctionReferenceTypeModificator::default(),
         ),
+        span,
     ))
 }
 
-fn build_const_type(ctx: &mut ParserContext<'_>) -> Result<Type, CompilationIssue> {
-    Ok(Type::Const(self::build_type(ctx, false)?.into()))
+fn build_const_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
+    Ok(Type::Const(self::build_type(ctx, false)?.into(), span))
 }
 
 fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
@@ -240,7 +238,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
                 "Expected ']'.".into(),
             )?;
 
-            return Ok(Type::FixedArray(array_type.into(), array_size));
+            return Ok(Type::FixedArray(array_type.into(), array_size, span));
         }
 
         return Err(CompilationIssue::Error(
@@ -256,12 +254,14 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         "Syntax error".into(),
         "Expected ']'.".into(),
     )?;
-    Ok(Type::Array(array_type.into()))
+
+    Ok(Type::Array(array_type.into(), span))
 }
 
 fn build_recursive_type(
     ctx: &mut ParserContext<'_>,
     mut before_type: Type,
+    span: Span,
 ) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
@@ -269,11 +269,11 @@ fn build_recursive_type(
         "Expected '['.".into(),
     )?;
 
-    if let Type::Ptr(_) = &mut before_type {
+    if let Type::Ptr(..) = &mut before_type {
         let mut inner_type: Type = self::build_type(ctx, false)?;
 
         while ctx.check(TokenType::LBracket) {
-            inner_type = build_recursive_type(ctx, inner_type)?;
+            inner_type = self::build_recursive_type(ctx, inner_type, span)?;
         }
 
         ctx.consume(
@@ -282,7 +282,7 @@ fn build_recursive_type(
             "Expected ']'.".into(),
         )?;
 
-        Ok(Type::Ptr(Some(inner_type.into())))
+        Ok(Type::Ptr(Some(inner_type.into()), span))
     } else {
         Err(CompilationIssue::Error(
             "Syntax error".into(),

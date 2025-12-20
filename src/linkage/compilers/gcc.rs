@@ -31,10 +31,7 @@ impl<'gcc> GCC<'gcc> {
             return Err(());
         }
 
-        let gcc_path: &PathBuf = match self.config.get_custom_gcc() {
-            Some(p) => p,
-            None => return Err(()),
-        };
+        let gcc_path: &Path = self.config.get_custom_gcc();
 
         let mut cmd: Command = self.build_gcc_command(gcc_path);
 
@@ -70,6 +67,7 @@ impl GCC<'_> {
     pub fn handle_command(&self, command: &mut Command) -> bool {
         match command.output() {
             Ok(output) if output.status.success() => true,
+
             Ok(output) => {
                 if !output.stderr.is_empty() {
                     logging::print_error(

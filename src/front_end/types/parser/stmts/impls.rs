@@ -1,3 +1,4 @@
+use crate::core::diagnostic::span::Span;
 use crate::front_end::types::parser::stmts::traits::ConstructorExtensions;
 use crate::front_end::types::parser::stmts::traits::StructFieldsExtensions;
 use crate::front_end::types::parser::stmts::types::Constructor;
@@ -10,7 +11,11 @@ impl StructFieldsExtensions for StructFields<'_> {
     #[inline]
     fn get_type(&self) -> Type {
         let types: Vec<Type> = self.1.iter().map(|field| field.1.clone()).collect();
-        Type::create_struct_type(self.0.to_string(), types.as_slice(), self.get_modificator())
+
+        let name: String = self.0.to_string();
+        let span: Span = self.3;
+
+        Type::create_struct_type(name, types.as_slice(), self.get_modificator(), span)
     }
 
     #[inline]
@@ -21,8 +26,9 @@ impl StructFieldsExtensions for StructFields<'_> {
 
 impl ConstructorExtensions for Constructor<'_> {
     #[inline]
-    fn get_type(&self, name: &str, modificator: StructureTypeModificator) -> Type {
+    fn get_type(&self, name: &str, modificator: StructureTypeModificator, span: Span) -> Type {
         let types: Vec<Type> = self.iter().map(|field| field.2.clone()).collect();
-        Type::create_struct_type(name.to_string(), types.as_slice(), modificator)
+
+        Type::create_struct_type(name.to_string(), types.as_slice(), modificator, span)
     }
 }

@@ -5,6 +5,7 @@ use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::types::Type;
 
@@ -22,12 +23,13 @@ pub fn build_return<'parser>(
     if ctx.match_token(TokenType::SemiColon)? {
         return Ok(Ast::Return {
             expression: None,
-            kind: Type::Void,
+            kind: Type::Void(span),
             span,
         });
     }
 
     let value: Ast = expressions::build_expr(ctx)?;
+    let kind: &Type = value.get_value_type()?;
 
     ctx.consume(
         TokenType::SemiColon,
@@ -36,8 +38,8 @@ pub fn build_return<'parser>(
     )?;
 
     Ok(Ast::Return {
-        expression: Some(value.into()),
-        kind: ctx.get_type_ctx().get_function_type().clone(),
+        expression: Some(value.clone().into()),
+        kind: kind.clone(),
         span,
     })
 }

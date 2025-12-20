@@ -53,7 +53,7 @@ fn validate_general_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Co
 
 #[inline]
 fn validate_bang_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), CompilationIssue> {
-    if let Type::Bool = a {
+    if let Type::Bool(..) = a {
         return Ok(());
     }
 

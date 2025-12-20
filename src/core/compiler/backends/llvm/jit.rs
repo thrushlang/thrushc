@@ -51,7 +51,7 @@ impl JITConfiguration {
     }
 
     #[inline]
-    pub fn add_arg(&mut self, value: String) {
+    pub fn add_argument(&mut self, value: String) {
         self.args.push(value);
     }
 }

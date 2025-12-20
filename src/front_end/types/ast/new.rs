@@ -43,7 +43,7 @@ impl<'ctx> Ast<'ctx> {
     pub fn new_nullptr(span: Span) -> Ast<'ctx> {
         Ast::NullPtr {
             span,
-            kind: Type::NullPtr,
+            kind: Type::Ptr(None, span),
         }
     }
 }

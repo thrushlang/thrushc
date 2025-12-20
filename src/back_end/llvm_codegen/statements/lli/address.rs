@@ -20,7 +20,9 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let indexes: Vec<IntValue> = indexes
         .iter()
-        .map(|index| codegen::compile(context, index, Some(&Type::U32)).into_int_value())
+        .map(|index| {
+            codegen::compile(context, index, Some(&Type::U32(source.get_span()))).into_int_value()
+        })
         .collect();
 
     let span: Span = source.get_span();

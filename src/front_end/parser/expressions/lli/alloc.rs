@@ -53,7 +53,7 @@ pub fn build_alloc<'parser>(
 
     let mut alloc_type: Type = typegen::build_type(ctx, false)?;
 
-    alloc_type = Type::Ptr(Some(alloc_type.into()));
+    alloc_type = Type::Ptr(Some(alloc_type.into()), span);
 
     let attributes: ThrushAttributes = if !ctx.check(TokenType::RBrace) {
         attributes::build_attributes(ctx, &[TokenType::RBrace, TokenType::SemiColon])?
