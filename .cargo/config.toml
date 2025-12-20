@@ -1,0 +1,2 @@
+[build]
+rustflags = ["-A", "missing_abi", "-A", "elided_named_lifetimes"]

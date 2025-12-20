@@ -13,7 +13,6 @@ use crate::front_end::typesystem::modificators::{
     FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
     LLVMFunctionReferenceTypeModificator,
 };
-use crate::front_end::typesystem::traits::TypeCodeLocation;
 use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::ThrushAttributes;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;

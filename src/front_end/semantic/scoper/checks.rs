@@ -13,6 +13,23 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
         return;
     }
 
+    let unreacheable_positions: Vec<(usize, &Ast)> = nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, stmt)| stmt.is_unreacheable())
+        .collect();
+
+    if unreacheable_positions.len() > 1 {
+        for (_, node) in &unreacheable_positions[1..] {
+            scoper.add_error(CompilationIssue::Error(
+                "Syntax Error".into(),
+                "Only one unreacheable instruction is allowed per block. Additional unreacheable instructions are redundant and disallowed. Remove it.".into(),
+                None,
+                node.get_span(),
+            ));
+        }
+    }
+
     let return_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
@@ -76,11 +93,9 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
         return;
     }
 
-    let Some((terminator_idx, _)) = nodes
-        .iter()
-        .enumerate()
-        .find(|(_, stmt)| stmt.is_terminator() || stmt.is_break() || stmt.is_continue())
-    else {
+    let Some((terminator_idx, _)) = nodes.iter().enumerate().find(|(_, stmt)| {
+        stmt.is_terminator() || stmt.is_unreacheable() || stmt.is_break() || stmt.is_continue()
+    }) else {
         return;
     };
 
@@ -90,7 +105,7 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
         if let Some(unreachable_node) = nodes.get(idx) {
             scoper.add_error(CompilationIssue::Error(
                 "Unreachable code".to_string(),
-                "This instruction will never be executed because of a previous terminator (return/break/continue). Remove it.".to_string(),
+                "This instruction will never be executed because of a previous terminator (return/unreacheable/break/continue). Remove it.".to_string(),
                 None,
                 unreachable_node.get_span(),
             ));

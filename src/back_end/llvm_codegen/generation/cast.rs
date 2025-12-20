@@ -1,5 +1,3 @@
-#![allow(unnecessary_transmutes)]
-
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::refptr;

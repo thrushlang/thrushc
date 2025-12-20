@@ -1,8 +1,4 @@
-use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
-
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::typesystem::types::Type;
 
 use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;

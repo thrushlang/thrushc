@@ -44,7 +44,6 @@ use inkwell::targets::TargetData;
 use inkwell::targets::TargetTriple;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::BasicValueEnum;
-use inkwell::values::FunctionValue;
 use inkwell::values::PointerValue;
 
 #[derive(Debug)]

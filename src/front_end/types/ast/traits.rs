@@ -24,6 +24,7 @@ pub trait AstStatementExtentions {
 pub trait AstStandardExtensions {
     fn is_literal_value(&self) -> bool;
     fn is_reference(&self) -> bool;
+    fn is_unreacheable(&self) -> bool;
     fn is_before_unary(&self) -> bool;
     fn is_import(&self) -> bool;
     fn is_function(&self) -> bool;

@@ -73,6 +73,11 @@ impl AstStandardExtensions for Ast<'_> {
     }
 
     #[inline]
+    fn is_unreacheable(&self) -> bool {
+        matches!(self, Ast::Unreachable { .. })
+    }
+
+    #[inline]
     fn is_break(&self) -> bool {
         matches!(self, Ast::Break { .. })
     }

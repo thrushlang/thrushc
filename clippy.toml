@@ -1,0 +1,5 @@
+avoid-breaking-exported-api = false
+
+unnecessary-transmutes = "allow"
+missing-abi = "allow"
+elided_named_lifetimes = "allow"

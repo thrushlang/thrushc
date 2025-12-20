@@ -190,7 +190,7 @@ https://docs.rs/clang-sys/latest/clang_sys/{0}/index.html
 
 Instructions for installing `libclang` can be found here:
 https://rust-lang.github.io/rust-bindgen/requirements.html
-"#, 
+"#,
                             stringify!($name),
                             library
                                 .version()

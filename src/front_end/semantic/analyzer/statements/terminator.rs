@@ -13,9 +13,7 @@ pub fn validate<'type_checker>(
     node: &'type_checker Ast,
 ) -> Result<(), CompilationIssue> {
     match node {
-        Ast::Return {
-            expression, span, ..
-        } => {
+        Ast::Return { expression, .. } => {
             if let Some(expr) = expression {
                 analyzer.analyze_expr(expr)?;
             }
