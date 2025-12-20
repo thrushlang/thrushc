@@ -398,17 +398,6 @@ pub fn compile<'ctx>(
                     })
                     .into();
             };
-
-            abort::abort_codegen(
-                context,
-                &format!(
-                    "Failed to cast '{}' type to '{}' type.",
-                    from_type, target_type
-                ),
-                expr.get_span(),
-                PathBuf::from(file!()),
-                line!(),
-            );
         }
 
         (_, to) if to.is_numeric_type() => {
@@ -497,7 +486,7 @@ pub fn compile<'ctx>(
             let value: BasicValueEnum = refptr::compile(context, expr, None);
 
             if value.is_pointer_value() {
-                let cast: PointerType = typegen::generate(context, from_type).into_pointer_type();
+                let cast: PointerType = typegen::generate(context, target_type).into_pointer_type();
 
                 return llvm_builder
                     .build_pointer_cast(value.into_pointer_value(), cast, "")
@@ -515,61 +504,6 @@ pub fn compile<'ctx>(
                     })
                     .into();
             };
-
-            let cast: BasicTypeEnum = typegen::generate(context, target_type);
-
-            if from_type.llvm_is_same_bit_size(context, target_type) {
-                return llvm_builder
-                    .build_bit_cast(value, cast, "")
-                    .unwrap_or_else(|_| {
-                        abort::abort_codegen(
-                            context,
-                            &format!(
-                                "Failed to cast '{}' type to '{}' type.",
-                                from_type, target_type
-                            ),
-                            expr.get_span(),
-                            PathBuf::from(file!()),
-                            line!(),
-                        );
-                    });
-            }
-
-            if value.is_int_value() && cast.is_int_type() {
-                return llvm_builder
-                    .build_int_cast(value.into_int_value(), cast.into_int_type(), "")
-                    .unwrap_or_else(|_| {
-                        abort::abort_codegen(
-                            context,
-                            &format!(
-                                "Failed to cast '{}' type to '{}' type.",
-                                from_type, target_type
-                            ),
-                            expr.get_span(),
-                            PathBuf::from(file!()),
-                            line!(),
-                        );
-                    })
-                    .into();
-            }
-
-            if value.is_float_value() && target_type.is_float_type() {
-                return llvm_builder
-                    .build_float_cast(value.into_float_value(), cast.into_float_type(), "")
-                    .unwrap_or_else(|_| {
-                        abort::abort_codegen(
-                            context,
-                            &format!(
-                                "Failed to cast '{}' type to '{}' type.",
-                                from_type, target_type
-                            ),
-                            expr.get_span(),
-                            PathBuf::from(file!()),
-                            line!(),
-                        );
-                    })
-                    .into();
-            }
         }
 
         _ => {}

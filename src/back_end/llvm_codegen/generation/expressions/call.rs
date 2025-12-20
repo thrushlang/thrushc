@@ -25,8 +25,8 @@ pub fn compile<'ctx>(
 
     let function: LLVMFunction = context.get_table().get_function(name);
 
-    let (llvm_function, _, function_arg_types, function_convention, span) =
-        (function.0, function.1, function.2, function.3, function.4);
+    let (llvm_function, function_arg_types, function_convention, span) =
+        (function.0, function.2, function.3, function.4);
 
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()
