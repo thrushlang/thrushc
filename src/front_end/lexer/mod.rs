@@ -54,7 +54,7 @@ impl Lexer {
         let bytes: Vec<u8> = file.get_unit_content().as_bytes().to_vec();
 
         Self {
-            tokens: Vec::with_capacity(MAXIMUM_TOKENS_CAPACITY),
+            tokens: Vec::with_capacity(100_000),
             errors: Vec::with_capacity(100),
             code,
             bytes,
