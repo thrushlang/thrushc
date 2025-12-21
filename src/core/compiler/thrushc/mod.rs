@@ -115,9 +115,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         if linking_compiler_config.get_use_clang() {
             linking::link_with_clang(self);
-        }
-
-        if linking_compiler_config.get_use_gcc() {
+        } else if linking_compiler_config.get_use_gcc() {
             linking::link_with_gcc(self);
         }
 

@@ -1,5 +1,3 @@
-#![allow(non_camel_case_types, clippy::upper_case_acronyms)]
-
 use std::path::Path;
 use std::path::PathBuf;
 

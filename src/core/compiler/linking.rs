@@ -1,4 +1,6 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Stdio;
 
 #[derive(Debug)]
 pub struct LinkingCompilersConfiguration {
@@ -25,6 +27,46 @@ impl LinkingCompilersConfiguration {
 
             debug_clang_commands: false,
             debug_gcc_commands: false,
+        }
+    }
+}
+
+impl LinkingCompilersConfiguration {
+    pub fn comprobate_status(&mut self) {
+        let mut clang_binding: std::process::Command =
+            std::process::Command::new(&self.custom_clang);
+
+        let clang_command: &mut std::process::Command = clang_binding
+            .arg("-v")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .stdin(Stdio::null());
+
+        let mut gcc_binding: std::process::Command = std::process::Command::new(&self.custom_gcc);
+
+        let gcc_command: &mut std::process::Command = gcc_binding
+            .arg("-v")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .stdin(Stdio::null());
+
+        let clang_result: Result<std::process::ExitStatus, std::io::Error> = clang_command.status();
+        let gcc_result: Result<std::process::ExitStatus, std::io::Error> = gcc_command.status();
+
+        if self.use_clang
+            && (clang_result.is_err() || clang_result.is_ok_and(|status| !status.success()))
+            && self.custom_clang.components().count() == 0
+        {
+            self.use_clang = false;
+            self.use_gcc = true;
+        }
+
+        if self.use_gcc
+            && (gcc_result.is_err() || gcc_result.is_ok_and(|status| !status.success()))
+            && self.custom_gcc.components().count() == 0
+        {
+            self.use_gcc = false;
+            self.use_clang = true;
         }
     }
 }

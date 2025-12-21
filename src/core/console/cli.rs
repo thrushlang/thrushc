@@ -114,6 +114,18 @@ impl CommandLine {
             let argument: String = self.args[self.current].clone();
             self.analyze(argument);
         }
+
+        self.validate();
+    }
+}
+
+impl CommandLine {
+    fn validate(&mut self) {
+        if !self.get_options().get_llvm_backend_options().is_jit() {
+            self.get_mut_options()
+                .get_mut_linking_compilers_configuration()
+                .comprobate_status();
+        }
     }
 }
 
@@ -823,7 +835,7 @@ impl CommandLine {
             .get_linking_compilers_configuration()
             .get_use_gcc()
         {
-            self.report_error("Can't use '-clang' flag.");
+            self.report_error("Can't use '-clang-link' flag.");
         }
     }
 
@@ -833,7 +845,7 @@ impl CommandLine {
             .get_linking_compilers_configuration()
             .get_use_clang()
         {
-            self.report_error("Can't use '-gcc' flag.");
+            self.report_error("Can't use '-gcc-link' flag.");
         }
     }
 

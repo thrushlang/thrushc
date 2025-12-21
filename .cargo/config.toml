@@ -1,2 +1,2 @@
 [build]
-rustflags = ["-A", "missing_abi", "-A", "elided_named_lifetimes"]
+rustflags = ["-A", "missing_abi", "-A", "elided_named_lifetimes", "-A", "non_camel_case_types"]
