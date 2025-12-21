@@ -1,5 +1,3 @@
-use std::process;
-
 use colored::Colorize;
 
 use crate::core::console::logging;
@@ -57,7 +55,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-build-dir".custom_color((141, 141, 142)).bold(),
-            "Configure the build directory for the AOT compiler mode.",
+            "Specifies the compiler artifacts directory.",
         ),
     );
 
@@ -110,21 +108,11 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "-llvm-backend".custom_color((141, 141, 142)).bold(),
-            "Enable the usage of the LLVM backend infrastructure.",
-        ),
-    );
-
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
             "{} {} [{}] {}\n",
             "•".bold(),
             "-target".custom_color((141, 141, 142)).bold(),
             "x86_64",
-            "Set the LLVM target arquitecture.",
+            "Set the target arquitecture.",
         ),
     );
 
@@ -135,7 +123,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-target-triple".custom_color((141, 141, 142)).bold(),
             "x86_64-pc-linux-gnu",
-            "Set the LLVM backend target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.",
+            "Set the target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.",
         ),
     );
 
@@ -146,7 +134,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-cpu".custom_color((141, 141, 142)).bold(),
             "haswell",
-            "Specify in LLVM the CPU to optimize.",
+            "Specify the CPU to optimize.",
         ),
     );
 
@@ -157,7 +145,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-cpu-features".custom_color((141, 141, 142)).bold(),
             "+sse2,+cx16,+sahf,-tbm",
-            "Specify in LLVM the new features of the CPU to use.",
+            "Specify the new features of the CPU to use.",
         ),
     );
 
@@ -486,7 +474,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "--print-targets".custom_color((141, 141, 142)).bold(),
-            "Show the current LLVM target supported."
+            "Show the current target supported."
         ),
     );
 
@@ -498,7 +486,7 @@ pub fn show_help() -> ! {
             "--print-supported-cpus"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "Show the current LLVM supported CPUs for the current LLVM target.",
+            "Show the current supported CPUs for the current target.",
         ),
     );
 
@@ -510,7 +498,7 @@ pub fn show_help() -> ! {
             "--print-host-target-triple"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "Show the host LLVM target triple.",
+            "Show the host target triple.",
         ),
     );
 
@@ -524,5 +512,5 @@ pub fn show_help() -> ! {
         ),
     );
 
-    process::exit(1);
+    std::process::exit(1);
 }

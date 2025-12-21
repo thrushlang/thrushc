@@ -114,8 +114,6 @@ impl CommandLine {
             let argument: String = self.args[self.current].clone();
             self.analyze(argument);
         }
-
-        self.check_extra_requirements();
     }
 }
 
@@ -133,11 +131,6 @@ impl CommandLine {
                 self.advance();
                 logging::write(logging::OutputIn::Stdout, COMPILER_VERSION);
                 process::exit(0);
-            }
-
-            "-llvm-backend" => {
-                self.advance();
-                self.get_mut_options().set_use_llvm_backend(true);
             }
 
             "-build-dir" => {
@@ -856,21 +849,6 @@ impl CommandLine {
         self.validation_cache.insert(path_str, exists);
 
         exists
-    }
-}
-
-impl CommandLine {
-    fn check_extra_requirements(&self) {
-        if !self.options.uses_llvm() {
-            self.report_error("Compiler backend is not setted. Try again with '-llvm-backend'.");
-        }
-
-        if !self.options.is_build_dir_setted() && !self.options.get_llvm_backend_options().is_jit()
-        {
-            self.report_error(
-                "AOT compiler build directory is not setted or not exist. Try again with '-build-dir \"PATH\"'.",
-            );
-        }
     }
 }
 

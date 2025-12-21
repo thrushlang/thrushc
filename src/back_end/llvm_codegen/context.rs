@@ -12,6 +12,8 @@ use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 
 use crate::core::compiler::options::CompilerOptions;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
 
@@ -29,9 +31,6 @@ use crate::front_end::types::parser::repr::Local;
 use crate::front_end::types::parser::repr::LocalConstant;
 use crate::front_end::types::parser::repr::LocalStatic;
 use crate::front_end::typesystem::types::Type;
-
-use crate::logging;
-use crate::logging::LoggingType;
 
 use std::fmt::Display;
 use std::path::PathBuf;

@@ -1,18 +1,17 @@
-use std::time::Instant;
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::CompilerOptions;
+use crate::core::compiler::options::Emited;
+use crate::core::compiler::options::PrintableUnit;
+use crate::core::compiler::printers;
+use crate::core::compiler::thrushc::ThrushCompiler;
+use crate::core::compiler::thrushc::interrupt;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 
-use inkwell::{module::Module, targets::TargetMachine};
+use crate::front_end::lexer;
 
-use crate::{
-    core::{
-        compiler::{
-            options::{CompilationUnit, CompilerOptions, Emited, PrintableUnit},
-            printers,
-            thrushc::{ThrushCompiler, interrupt},
-        },
-        console::logging::{self, LoggingType},
-    },
-    front_end::lexer,
-};
+use inkwell::module::Module;
+use inkwell::targets::TargetMachine;
 
 #[inline]
 pub fn llvm_before_optimization(
@@ -20,7 +19,7 @@ pub fn llvm_before_optimization(
     llvm_module: &Module,
     target_machine: &TargetMachine,
     file: &CompilationUnit,
-    file_time: Instant,
+    file_time: std::time::Instant,
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
@@ -53,7 +52,7 @@ pub fn llvm_after_optimization(
     llvm_module: &Module,
     target_machine: &TargetMachine,
     file: &CompilationUnit,
-    file_time: Instant,
+    file_time: std::time::Instant,
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 

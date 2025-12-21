@@ -12,16 +12,13 @@ use crate::front_end::lexer;
 use inkwell::module::Module;
 use inkwell::targets::TargetMachine;
 
-use std::path::Path;
-use std::time::Instant;
-
 pub fn llvm_after_optimization(
     compiler: &mut ThrushCompiler,
     llvm_module: &Module,
     target_machine: &TargetMachine,
-    build_dir: &Path,
+    build_dir: &std::path::Path,
     file: &CompilationUnit,
-    file_time: Instant,
+    file_time: std::time::Instant,
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
@@ -97,9 +94,9 @@ pub fn llvm_before_optimization(
     compiler: &mut ThrushCompiler,
     llvm_module: &Module,
     target_machine: &TargetMachine,
-    build_dir: &Path,
+    build_dir: &std::path::Path,
     file: &CompilationUnit,
-    file_time: Instant,
+    file_time: std::time::Instant,
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
@@ -156,7 +153,7 @@ pub fn llvm_before_optimization(
 
 pub fn after_frontend(
     compiler: &mut ThrushCompiler,
-    build_dir: &Path,
+    build_dir: &std::path::Path,
     file: &CompilationUnit,
     emited: Emited,
 ) -> bool {

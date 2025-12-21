@@ -9,6 +9,7 @@ use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
+
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::lexer::types::Tokens;
 
@@ -123,14 +124,14 @@ impl CompilerOptions {
     #[inline]
     pub fn new() -> Self {
         Self {
-            use_llvm_backend: false,
+            use_llvm_backend: true,
             llvm_backend: LLVMBackend::new(),
             files: Vec::with_capacity(1000),
 
             emit: Vec::with_capacity(10),
             printable: Vec::with_capacity(10),
 
-            build_dir: PathBuf::new(),
+            build_dir: "build".into(),
 
             enable_ansi_colors: false,
             omit_default_optimizations: false,
@@ -263,6 +264,15 @@ impl CompilerOptions {
 
     #[inline]
     pub fn get_build_dir(&self) -> &PathBuf {
+        if !self.build_dir.exists() {
+            std::fs::create_dir_all(&self.build_dir).unwrap_or_else(|_| {
+                logging::print_critical_error(
+                    LoggingType::Panic,
+                    "The AOT compiler directory could not be created automatically.",
+                );
+            });
+        }
+
         &self.build_dir
     }
 
@@ -294,11 +304,6 @@ impl CompilerOptions {
     #[inline]
     pub fn get_clean_build(&self) -> bool {
         self.clean_build
-    }
-
-    #[inline]
-    pub fn is_build_dir_setted(&self) -> bool {
-        self.build_dir.exists()
     }
 
     #[inline]

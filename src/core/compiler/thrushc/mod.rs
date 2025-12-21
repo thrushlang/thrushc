@@ -6,12 +6,6 @@ mod print;
 mod starter;
 mod validate;
 
-use either::Either;
-use std::path::PathBuf;
-use std::process;
-use std::time::Duration;
-use std::time::Instant;
-
 use crate::back_end::llvm_codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::jit::LLVMJITCompiler;
@@ -57,13 +51,13 @@ use inkwell::targets::TargetTriple;
 
 #[derive(Debug)]
 pub struct ThrushCompiler<'thrushc> {
-    compiled: Vec<PathBuf>,
+    compiled: Vec<std::path::PathBuf>,
     uncompiled: &'thrushc [CompilationUnit],
 
     options: &'thrushc CompilerOptions,
 
-    linking_time: Duration,
-    thrushc_time: Duration,
+    linking_time: std::time::Duration,
+    thrushc_time: std::time::Duration,
 }
 
 impl<'thrushc> ThrushCompiler<'thrushc> {
@@ -74,8 +68,8 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
             options,
 
-            linking_time: Duration::default(),
-            thrushc_time: Duration::default(),
+            linking_time: std::time::Duration::default(),
+            thrushc_time: std::time::Duration::default(),
         }
     }
 }
@@ -131,12 +125,12 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
     }
 
     fn compile_file_with_llvm_aot(&mut self, file: &'thrushc CompilationUnit) -> Result<(), ()> {
-        let file_time: Instant = Instant::now();
+        let file_time: std::time::Instant = std::time::Instant::now();
 
         starter::archive_compilation_unit(file);
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
-        let build_dir: &PathBuf = self.options.get_build_dir();
+        let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
         let tokens: Vec<Token> = Lexer::lex(file).unwrap_or_else(|error| {
             logging::print_frontend_panic(LoggingType::FrontEndPanic, &error.display())
@@ -295,14 +289,14 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation(self, file_time, file);
         }
 
-        let compiled_file: PathBuf = finisher::llvm_obj_compilation(
+        let obj_file: std::path::PathBuf = finisher::llvm_obj_compilation(
             &llvm_module,
             &target_machine,
             build_dir,
             file.get_name(),
         );
 
-        self.add_compiled_unit(compiled_file);
+        self.add_compiled_unit(obj_file);
 
         finisher::archive_compilation(self, file_time, file)?;
 
@@ -320,7 +314,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let mut modules: Vec<Module> = Vec::with_capacity(100_000);
 
         self.uncompiled.iter().for_each(|file| {
-            let compiled_file: Result<Either<MemoryBuffer, ()>, ()> =
+            let compiled_file: Result<either::Either<MemoryBuffer, ()>, ()> =
                 self.compile_file_with_llvm_jit(file);
 
             interrumped = compiled_file.is_err();
@@ -354,7 +348,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                 Err(_) => {
                     logging::print_error(
                         LoggingType::LLVMBackend,
-                        "The compiler just in time could not be created correctly.",
+                        "The JIT compiler couldn't be created correctly. Unexpected issue.",
                     );
 
                     return (self.thrushc_time.as_millis(), self.linking_time.as_millis());
@@ -366,7 +360,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
             let llvm_jit_result: i32 = llvm_jit.compile_and_run().unwrap_or(1);
 
-            process::exit(llvm_jit_result)
+            std::process::exit(llvm_jit_result)
         }
 
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
@@ -375,13 +369,13 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
     fn compile_file_with_llvm_jit(
         &mut self,
         file: &'thrushc CompilationUnit,
-    ) -> Result<Either<MemoryBuffer, ()>, ()> {
-        let file_time: Instant = Instant::now();
+    ) -> Result<either::Either<MemoryBuffer, ()>, ()> {
+        let file_time: std::time::Instant = std::time::Instant::now();
 
         starter::archive_compilation_unit(file);
 
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
-        let build_dir: &PathBuf = self.options.get_build_dir();
+        let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
         let tokens: Vec<Token> = Lexer::lex(file).unwrap_or_else(|error| {
             logging::print_frontend_panic(LoggingType::FrontEndPanic, &error.display())
@@ -543,13 +537,13 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         finisher::archive_compilation(self, file_time, file)?;
 
-        Ok(Either::Left(llvm_module.write_bitcode_to_memory()))
+        Ok(either::Either::Left(llvm_module.write_bitcode_to_memory()))
     }
 }
 
 impl ThrushCompiler<'_> {
     #[inline]
-    pub fn get_compiled_files(&self) -> &[PathBuf] {
+    pub fn get_compiled_files(&self) -> &[std::path::PathBuf] {
         &self.compiled
     }
 
@@ -560,7 +554,8 @@ impl ThrushCompiler<'_> {
 }
 
 impl ThrushCompiler<'_> {
-    pub fn add_compiled_unit(&mut self, path: PathBuf) {
+    #[inline]
+    pub fn add_compiled_unit(&mut self, path: std::path::PathBuf) {
         self.compiled.push(path);
     }
 }

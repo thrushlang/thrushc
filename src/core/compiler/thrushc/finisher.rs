@@ -1,28 +1,20 @@
-use std::{
-    path::{Path, PathBuf},
-    time::Instant,
-};
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::thrushc::ThrushCompiler;
+use crate::core::console::logging;
+use crate::core::constants;
+use crate::core::utils::rand;
 
 use colored::Colorize;
 
-use either::Either;
-use inkwell::{
-    memory_buffer::MemoryBuffer,
-    module::Module,
-    targets::{FileType, TargetMachine},
-};
-
-use crate::core::{
-    compiler::{options::CompilationUnit, thrushc::ThrushCompiler},
-    console::logging,
-    constants,
-    utils::rand,
-};
+use inkwell::memory_buffer::MemoryBuffer;
+use inkwell::module::Module;
+use inkwell::targets::FileType;
+use inkwell::targets::TargetMachine;
 
 #[inline]
 pub fn archive_compilation(
     compiler: &mut ThrushCompiler,
-    file_time: Instant,
+    file_time: std::time::Instant,
     file: &CompilationUnit,
 ) -> Result<(), ()> {
     compiler.thrushc_time += file_time.elapsed();
@@ -43,9 +35,9 @@ pub fn archive_compilation(
 #[inline]
 pub fn archive_compilation_module_jit(
     compiler: &mut ThrushCompiler,
-    file_time: Instant,
+    file_time: std::time::Instant,
     file: &CompilationUnit,
-) -> Result<Either<MemoryBuffer, ()>, ()> {
+) -> Result<either::Either<MemoryBuffer, ()>, ()> {
     compiler.thrushc_time += file_time.elapsed();
 
     logging::write(
@@ -58,17 +50,17 @@ pub fn archive_compilation_module_jit(
         ),
     );
 
-    Ok(Either::Right(()))
+    Ok(either::Either::Right(()))
 }
 
 #[inline]
 pub fn llvm_obj_compilation(
     llvm_module: &Module,
     target_machine: &TargetMachine,
-    build_dir: &Path,
+    build_dir: &std::path::Path,
     file_name: &str,
-) -> PathBuf {
-    let obj_file_path: PathBuf = build_dir.join(format!(
+) -> std::path::PathBuf {
+    let obj_file_path: std::path::PathBuf = build_dir.join(format!(
         "{}_{}.o",
         rand::generate_random_string(constants::COMPILER_HARD_OBFUSCATION_LEVEL),
         file_name

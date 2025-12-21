@@ -1,17 +1,15 @@
-use std::time::Instant;
-
 use colored::Colorize;
 
-use crate::core::{
-    compiler::{options::CompilationUnit, thrushc::ThrushCompiler},
-    console::logging::{self, LoggingType},
-};
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::thrushc::ThrushCompiler;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 
 #[inline]
 pub fn archive_compilation_unit(
     compiler: &mut ThrushCompiler,
     file: &CompilationUnit,
-    file_time: Instant,
+    file_time: std::time::Instant,
 ) -> Result<(), ()> {
     compiler.thrushc_time += file_time.elapsed();
 
@@ -34,7 +32,7 @@ pub fn archive_compilation_unit_with_message(
     log_type: LoggingType,
     msg: &str,
     file: &CompilationUnit,
-    file_time: Instant,
+    file_time: std::time::Instant,
 ) -> Result<(), ()> {
     logging::print_error(log_type, msg);
 
