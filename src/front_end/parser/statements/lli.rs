@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -15,13 +16,13 @@ pub fn build_lli<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Instr,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'instr' keyword.".into(),
     )?;
 
     let instr_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected name.".into(),
     )?;
 
@@ -30,19 +31,23 @@ pub fn build_lli<'parser>(
 
     ctx.consume(
         TokenType::Colon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ':'.".into(),
     )?;
 
     let instr_type: Type = typegen::build_type(ctx, false)?;
 
-    ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
+    ctx.consume(
+        TokenType::Eq,
+        CompilationIssueCode::E0001,
+        "Expected '='.".into(),
+    )?;
 
     let expr: Ast = expressions::build_expr(ctx)?;
 
     ctx.consume(
         TokenType::SemiColon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ';'.".into(),
     )?;
 

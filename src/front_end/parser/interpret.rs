@@ -1,12 +1,12 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::typesystem::types::Type;
 
 pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), CompilationIssue> {
     if lexeme.bytes().filter(|&b| b == b'.').count() > 1 {
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Only one decimal marker was expected.".into(),
             None,
             span,
@@ -19,7 +19,7 @@ pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), CompilationIssue> 
         .or_else(|_| lexeme.parse::<f64>().map(|f| (Type::F64(span), f)))
         .map_err(|_| {
             CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Float out of bounds.".into(),
                 None,
                 span,
@@ -47,7 +47,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
             n if (isize::MIN..=isize::MAX).contains(&n) => Ok((Type::S64(span), n as u64)),
 
             _ => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
@@ -63,7 +63,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
             n if (0..=usize::MAX).contains(&n) => Ok((Type::U64(span), n as u64)),
 
             _ => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
@@ -92,7 +92,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
                     .map(|n| match_unsigned(n, span))
                     .unwrap_or_else(|_| {
                         Err(CompilationIssue::Error(
-                            "Syntax error".into(),
+                            CompilationIssueCode::E0001,
                             format!("Integer invalid numeric '{}' format.", base),
                             None,
                             span,
@@ -107,7 +107,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
         .or_else(|_| lexeme.parse::<isize>().map(|n| match_signed(n, span)))
         .unwrap_or_else(|_| {
             Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,

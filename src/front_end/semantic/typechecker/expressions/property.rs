@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use crate::core::diagnostic::span::Span;
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::core::errors::{position::CompilationPosition, standard::CompilationIssue};
 
 use crate::front_end::semantic::typechecker::TypeChecker;
@@ -19,7 +20,7 @@ pub fn validate<'type_checker>(
 
             if !source_type.is_struct_type() && !source_type.is_ptr_struct_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     format!("A structure type was expected within a structure 'struct T' type, or raw typed pointer structure pointer 'ptr[struct T]', got '{}'.", source_type),
                     None,
                     source_span,

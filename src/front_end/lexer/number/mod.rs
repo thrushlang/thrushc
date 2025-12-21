@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::token::Token;
@@ -17,8 +17,8 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             lexer.end_span();
 
             return Err(CompilationIssue::Error(
-                String::from("Syntax error"),
-                String::from("Hexadecimal identifier '0x' cannot be repeated."),
+                CompilationIssueCode::E0001,
+                "Hexadecimal identifier '0x' cannot be repeated.".into(),
                 None,
                 Span::new(lexer.line, lexer.span),
             ));
@@ -28,8 +28,8 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             lexer.end_span();
 
             return Err(CompilationIssue::Error(
-                String::from("Syntax error"),
-                String::from("Binary identifier '0b' cannot be repeated."),
+                CompilationIssueCode::E0001,
+                "Binary identifier '0b' cannot be repeated.".into(),
                 None,
                 Span::new(lexer.line, lexer.span),
             ));

@@ -14,7 +14,7 @@ pub mod typegen;
 use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -225,7 +225,7 @@ impl<'parser> ParserContext<'parser> {
     pub fn consume(
         &mut self,
         kind: TokenType,
-        title: String,
+        code: CompilationIssueCode,
         help: String,
     ) -> Result<&'parser Token, CompilationIssue> {
         if self.peek().kind == kind {
@@ -233,7 +233,7 @@ impl<'parser> ParserContext<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            title,
+            code,
             help,
             None,
             self.previous().span,
@@ -258,7 +258,7 @@ impl<'parser> ParserContext<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            String::from("Syntax error"),
+            CompilationIssueCode::E0002,
             String::from("EOF has been reached."),
             None,
             self.peek().span,
@@ -273,7 +273,7 @@ impl<'parser> ParserContext<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            String::from("Syntax error"),
+            CompilationIssueCode::E0002,
             String::from("EOF has been reached."),
             None,
             self.peek().span,

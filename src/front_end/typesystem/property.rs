@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::parser::ParserContext;
 use crate::front_end::types::ast::Ast;
@@ -25,18 +25,12 @@ pub fn decompose<'parser>(
         return Ok((base_type.clone(), indices));
     }
 
+    let default_ptr_type: &Type = &Type::Ptr(None, base_type.get_span());
+
     let current_type: &Type = match base_type {
         Type::Ptr(inner_ptr, ..) => {
             is_parent_ptr = true;
-
-            inner_ptr.as_ref().ok_or_else(|| {
-                CompilationIssue::Error(
-                    "Type error".into(),
-                    "Properties of an non-typed pointer 'ptr' cannot be accessed.".into(),
-                    None,
-                    span,
-                )
-            })?
+            inner_ptr.as_ref().map_or(default_ptr_type, |v| v)
         }
         _ => base_type,
     };
@@ -95,8 +89,8 @@ pub fn decompose<'parser>(
         }
 
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
-            format!("Expected property, not '{}'.", field_name),
+            CompilationIssueCode::E0001,
+            format!("Expected a property, got '{}'.", field_name),
             None,
             span,
         ));
@@ -104,8 +98,8 @@ pub fn decompose<'parser>(
 
     if position < property_names.len() {
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
-            format!("Property source of '{}' isn't a structure.", field_name),
+            CompilationIssueCode::E0001,
+            format!("Property reference of '{}' isn't a structure.", field_name),
             None,
             span,
         ));

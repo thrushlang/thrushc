@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -31,7 +32,7 @@ pub fn build_enum_value<'parser>(
 
     let field_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected enum name.".into(),
     )?;
 
@@ -39,7 +40,7 @@ pub fn build_enum_value<'parser>(
 
     if !union.contain_field(field_name) {
         return Err(CompilationIssue::Error(
-            String::from("Syntax error"),
+            CompilationIssueCode::E0001,
             format!("Not found '{}' field in '{}' enum.", name, field_name),
             None,
             span,

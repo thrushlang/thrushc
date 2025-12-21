@@ -3,6 +3,7 @@ use inkwell::AtomicOrdering;
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -21,7 +22,7 @@ pub fn build_const<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Const,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'const' keyword.".into(),
     )?;
 
@@ -32,7 +33,7 @@ pub fn build_const<'parser>(
 
     let const_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected name.".into(),
     )?;
 
@@ -43,7 +44,7 @@ pub fn build_const<'parser>(
 
     ctx.consume(
         TokenType::Colon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ':'.".into(),
     )?;
 
@@ -51,7 +52,11 @@ pub fn build_const<'parser>(
 
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Eq])?;
 
-    ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
+    ctx.consume(
+        TokenType::Eq,
+        CompilationIssueCode::E0001,
+        "Expected '='.".into(),
+    )?;
 
     let value: Ast = expressions::build_expression(ctx)?;
 

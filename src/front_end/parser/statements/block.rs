@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -12,7 +12,7 @@ pub fn build_block<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let block_tk: &Token = ctx.consume(
         TokenType::LBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '{'.".into(),
     )?;
 

@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -14,7 +14,7 @@ pub fn build_conditional<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let if_tk: &Token = ctx.consume(
         TokenType::If,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'if' keyword.".into(),
     )?;
 

@@ -4,6 +4,7 @@ use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::semantic::scoper::context::ScoperContext;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
@@ -66,7 +67,7 @@ impl<'scoper> Scoper<'scoper> {
     fn analyze_global_node(&mut self, node: &Ast) {
         if !node.is_compatible_with_main_scope() {
             self.add_error(CompilationIssue::Error(
-                "Invalid Scope Position".into(),
+                CompilationIssueCode::E0016,
                 "This expression, statement, or declaration should not be in the main scope. It should be in a local scope. Reposition it.".into(),
                 None,
                 node.get_span(),
@@ -87,7 +88,7 @@ impl<'scoper> Scoper<'scoper> {
     fn analyze_local_node(&mut self, node: &Ast) {
         if node.is_function() {
             self.add_error(CompilationIssue::Error(
-                "Invalid Scope Position".into(),
+                CompilationIssueCode::E0016,
                 "This function should not be in a local scope. It should be in the main scope. Reposition it.".into(),
                 None,
                 node.get_span(),
@@ -96,7 +97,7 @@ impl<'scoper> Scoper<'scoper> {
 
         if node.is_asm_function() {
             self.add_error(CompilationIssue::Error(
-                "Invalid Scope Position".into(),
+                CompilationIssueCode::E0016,
                 "This assembler function should not be in a local scope. It should be in the main scope. Reposition it.".into(),
                 None,
                 node.get_span(),
@@ -105,7 +106,7 @@ impl<'scoper> Scoper<'scoper> {
 
         if node.is_custom_type() {
             self.add_error(CompilationIssue::Error(
-                "Invalid Scope Position".into(),
+                CompilationIssueCode::E0016,
                 "This type should not be in a local scope. It should be in the main scope. Reposition it.".into(),
                 None,
                 node.get_span(),
@@ -114,7 +115,7 @@ impl<'scoper> Scoper<'scoper> {
 
         if node.is_global_asm() {
             self.add_error(CompilationIssue::Error(
-                "Invalid Scope Position".into(),
+                CompilationIssueCode::E0016,
                 "This global module assembler should not be in a local scope. It should be in the main scope. Reposition it.".into(),
                 None,
                 node.get_span(),
@@ -123,7 +124,7 @@ impl<'scoper> Scoper<'scoper> {
 
         if node.is_enum() {
             self.add_error(CompilationIssue::Error(
-                "Invalid Scope Position".into(),
+                CompilationIssueCode::E0016,
                 "This enumeration should not be in a local scope. It should be in the main scope. Reposition it.".into(),
                 None,
                 node.get_span(),
@@ -132,7 +133,7 @@ impl<'scoper> Scoper<'scoper> {
 
         if node.is_import() {
             self.add_error(CompilationIssue::Error(
-                "Invalid Scope Position".into(),
+                CompilationIssueCode::E0016,
                 "This module import should not be in a local scope. It should be in the main scope. Reposition it.".into(),
                 None,
                 node.get_span(),
@@ -141,7 +142,7 @@ impl<'scoper> Scoper<'scoper> {
 
         if node.is_intrinsic() {
             self.add_error(CompilationIssue::Error(
-                "Invalid Scope Position".into(),
+                CompilationIssueCode::E0016,
                 "This compiler intrinsic should not be in a local scope. It should be in the main scope. Reposition it.".into(),
                 None,
                 node.get_span(),
@@ -201,7 +202,7 @@ impl<'scoper> Scoper<'scoper> {
                 if !self.get_context().is_inside_loop() {
                     self.add_error(
                         CompilationIssue::Error(
-                            "Syntax Error".into(),
+                            CompilationIssueCode::E0017,
                             "Only loop control flow terminators can be inside a loop. The instruction inside a loop was expected. Reposition it inside a loop.".into(),
                             None,
                             node.get_span(),
@@ -212,7 +213,7 @@ impl<'scoper> Scoper<'scoper> {
             Ast::Return { span, .. } => {
                 if !self.get_context().is_inside_function() {
                     self.add_error(CompilationIssue::Error(
-                        "Syntax error".into(),
+                        CompilationIssueCode::E0018,
                         "Expected function terminator inside of a function. Reposition it.".into(),
                         None,
                         *span,

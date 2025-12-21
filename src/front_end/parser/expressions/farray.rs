@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -15,13 +15,13 @@ pub fn build_fixed_array<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Fixed,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'fixed' keyword.".into(),
     )?;
 
     let array_start_tk: &Token = ctx.consume(
         TokenType::LBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '['.".into(),
     )?;
 
@@ -44,7 +44,7 @@ pub fn build_fixed_array<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ','.".into(),
             )?;
         }
@@ -52,7 +52,7 @@ pub fn build_fixed_array<'parser>(
 
     ctx.consume(
         TokenType::RBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ']'.".into(),
     )?;
 
@@ -75,7 +75,7 @@ pub fn build_fixed_array<'parser>(
     })? {
         let size: u32 = u32::try_from(items.len()).map_err(|_| {
             CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "The size limit of an array was exceeded.".into(),
                 None,
                 span,

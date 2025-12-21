@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -21,13 +22,13 @@ pub fn build_function<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Fn,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'fn' keyword.".into(),
     )?;
 
     let function_name_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected identifier.".into(),
     )?;
 
@@ -39,7 +40,7 @@ pub fn build_function<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -57,7 +58,7 @@ pub fn build_function<'parser>(
 
         let parameter_name_tk: &Token = ctx.consume(
             TokenType::Identifier,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected 'identifier'.".into(),
         )?;
 
@@ -67,7 +68,7 @@ pub fn build_function<'parser>(
 
         ctx.consume(
             TokenType::Colon,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected ':'.".into(),
         )?;
 
@@ -91,7 +92,7 @@ pub fn build_function<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ','.".into(),
             )?;
         }
@@ -99,7 +100,7 @@ pub fn build_function<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 

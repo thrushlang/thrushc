@@ -3,6 +3,7 @@ use inkwell::AtomicOrdering;
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -21,7 +22,7 @@ pub fn build_local<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Local,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'local' keyword.".into(),
     )?;
 
@@ -32,7 +33,7 @@ pub fn build_local<'parser>(
 
     let local_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected identifier.".into(),
     )?;
 
@@ -42,7 +43,7 @@ pub fn build_local<'parser>(
 
     ctx.consume(
         TokenType::Colon,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected ':'."),
     )?;
 
@@ -75,7 +76,7 @@ pub fn build_local<'parser>(
 
     ctx.consume(
         TokenType::Eq,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected '='."),
     )?;
 

@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::token::Token;
@@ -25,7 +25,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
     if lexer.previous() != '\'' {
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Unclosed char. Did you forget to close the char with a '\''?.".into(),
             None,
             span,
@@ -54,7 +54,7 @@ fn handle_char_scape_sequence(lexer: &mut Lexer, span: Span) -> Result<char, Com
         '"' => Ok('"'),
 
         _ => Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Invalid escape sequence. Valid escapes are '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
             None,
             span,

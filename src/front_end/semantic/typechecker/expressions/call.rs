@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::semantic::typechecker::{
     TypeChecker, checks, metadata::TypeCheckerExprMetadata,
@@ -21,7 +21,7 @@ pub fn validate<'type_checker>(
 
     if required_count != provided_count && !ignore_more_arguments {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0022,
             format!(
                 "Expected arguments total '{}', not '{}'. You should try to fill it in.",
                 required_count, provided_count
@@ -37,7 +37,7 @@ pub fn validate<'type_checker>(
             .join(", ");
 
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0023,
             format!(
                 "Arguments were expected in the order '{}'. You must reorder it.",
                 expected_types

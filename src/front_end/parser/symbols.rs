@@ -2,6 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::parser::constants::PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY;
 use crate::front_end::parser::constants::PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY;
 use crate::front_end::types::ast::Ast;
@@ -163,7 +164,7 @@ impl<'parser> SymbolsTable<'parser> {
             {
                 if self.parameters.contains_key(id) {
                     return Err(CompilationIssue::Error(
-                        "Parameter already declared".into(),
+                        CompilationIssueCode::E0004,
                         format!("'{}' parameter already declared before.", id),
                         None,
                         *span,
@@ -190,7 +191,7 @@ impl<'parser> SymbolsTable<'parser> {
         if let Some(last_scope) = self.llis.last_mut() {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
-                    "Low level instruction already declared".into(),
+                    CompilationIssueCode::E0004,
                     format!("Low level instruction '{}' already declared before.", id),
                     None,
                     span,
@@ -214,7 +215,7 @@ impl<'parser> SymbolsTable<'parser> {
         if let Some(last_scope) = self.locals.last_mut() {
             if last_scope.contains_key(id) || self.parameters.contains_key(id) {
                 return Err(CompilationIssue::Error(
-                    "Local variable already declared".into(),
+                    CompilationIssueCode::E0004,
                     format!("'{}' local variable already declared before.", id),
                     None,
                     span,
@@ -237,7 +238,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), CompilationIssue> {
         if self.global_statics.contains_key(id) {
             return Err(CompilationIssue::Error(
-                "Static already declared".into(),
+                CompilationIssueCode::E0004,
                 format!("'{}' static already declared before.", id),
                 None,
                 span,
@@ -258,7 +259,7 @@ impl<'parser> SymbolsTable<'parser> {
         if let Some(last_scope) = self.local_statics.last_mut() {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
-                    "Static already declared".into(),
+                    CompilationIssueCode::E0004,
                     format!("'{}' static already declared before.", id),
                     None,
                     span,
@@ -281,7 +282,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), CompilationIssue> {
         if self.global_constants.contains_key(id) {
             return Err(CompilationIssue::Error(
-                "Constant already declared".into(),
+                CompilationIssueCode::E0004,
                 format!("'{}' constant already declared before.", id),
                 None,
                 span,
@@ -302,7 +303,7 @@ impl<'parser> SymbolsTable<'parser> {
         if let Some(last_scope) = self.local_constants.last_mut() {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
-                    "Constant already declared".into(),
+                    CompilationIssueCode::E0004,
                     format!("'{}' constant already declared before.", id),
                     None,
                     span,
@@ -325,7 +326,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), CompilationIssue> {
         if self.global_custom_types.contains_key(id) {
             return Err(CompilationIssue::Error(
-                "Custom type already declared".into(),
+                CompilationIssueCode::E0004,
                 format!("'{}' custom type already declared before.", id),
                 None,
                 span,
@@ -346,7 +347,7 @@ impl<'parser> SymbolsTable<'parser> {
         if let Some(last_scope) = self.local_custom_types.last_mut() {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
-                    "Custom already declared".into(),
+                    CompilationIssueCode::E0004,
                     format!("'{}' Custom already declared before.", id),
                     None,
                     span,
@@ -369,7 +370,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), CompilationIssue> {
         if self.global_structs.contains_key(id) {
             return Err(CompilationIssue::Error(
-                "Structure already declared".into(),
+                CompilationIssueCode::E0004,
                 format!("'{}' structure already declared before.", id),
                 None,
                 span,
@@ -390,7 +391,7 @@ impl<'parser> SymbolsTable<'parser> {
         if let Some(last_scope) = self.local_structs.last_mut() {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
-                    "Structure already declared".into(),
+                    CompilationIssueCode::E0004,
                     format!("'{}' structure already declared before.", id),
                     None,
                     span,
@@ -413,7 +414,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), CompilationIssue> {
         if self.global_enums.contains_key(id) {
             return Err(CompilationIssue::Error(
-                String::from("Enum already declared"),
+                CompilationIssueCode::E0004,
                 format!("'{}' enum already declared before.", id),
                 None,
                 span,
@@ -434,7 +435,7 @@ impl<'parser> SymbolsTable<'parser> {
         if let Some(last_scope) = self.local_enums.last_mut() {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
-                    "Enum already declared".into(),
+                    CompilationIssueCode::E0004,
                     format!("'{}' enum already declared before.", id),
                     None,
                     span,
@@ -457,7 +458,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), CompilationIssue> {
         if self.asm_functions.contains_key(id) {
             return Err(CompilationIssue::Error(
-                "Assembly function already declared".into(),
+                CompilationIssueCode::E0004,
                 format!("'{}' assembler function already declared before.", id),
                 None,
                 span,
@@ -477,7 +478,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), CompilationIssue> {
         if self.functions.contains_key(id) {
             return Err(CompilationIssue::Error(
-                "Function already declared".into(),
+                CompilationIssueCode::E0004,
                 format!("'{}' function already declared before.", id),
                 None,
                 span,
@@ -497,7 +498,7 @@ impl<'parser> SymbolsTable<'parser> {
     ) -> Result<(), CompilationIssue> {
         if self.intrinsics.contains_key(id) {
             return Err(CompilationIssue::Error(
-                "Intrinsic already declared".into(),
+                CompilationIssueCode::E0004,
                 format!("'{}' intrinsic already declared before.", id),
                 None,
                 span,
@@ -783,7 +784,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            String::from("Not found"),
+            CompilationIssueCode::E0028,
             format!("'{}' isn't declared or defined.", id),
             None,
             span,
@@ -815,7 +816,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            String::from("Not found"),
+            CompilationIssueCode::E0028,
             String::from("LLI not found."),
             None,
             span,
@@ -833,7 +834,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            String::from("Not found"),
+            CompilationIssueCode::E0028,
             String::from("Assembler function not found."),
             None,
             span,
@@ -851,7 +852,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            "Not found".into(),
+            CompilationIssueCode::E0028,
             "Function not found.".into(),
             None,
             span,
@@ -869,7 +870,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            "Not found".into(),
+            CompilationIssueCode::E0028,
             "Intrinsic not found.".into(),
             None,
             span,
@@ -905,7 +906,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            "Not found".into(),
+            CompilationIssueCode::E0028,
             "Enum reference not found.".into(),
             None,
             span,
@@ -941,7 +942,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            "Not found".into(),
+            CompilationIssueCode::E0028,
             "Custom type reference not found.".into(),
             None,
             span,
@@ -971,7 +972,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            "Not found".into(),
+            CompilationIssueCode::E0028,
             "Local not found.".into(),
             None,
             span,
@@ -1007,7 +1008,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            "Not found".into(),
+            CompilationIssueCode::E0028,
             "Static reference not found.".into(),
             None,
             span,
@@ -1043,7 +1044,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            "Not found".into(),
+            CompilationIssueCode::E0028,
             "Constant reference not found.".into(),
             None,
             span,
@@ -1061,7 +1062,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            String::from("Not found"),
+            CompilationIssueCode::E0028,
             String::from("Parameter not found in this scope."),
             None,
             span,
@@ -1097,7 +1098,7 @@ impl<'parser> SymbolsTable<'parser> {
         }
 
         Err(CompilationIssue::Error(
-            String::from("Structure not found"),
+            CompilationIssueCode::E0028,
             format!("'{}' structure not defined.", id),
             None,
             span,

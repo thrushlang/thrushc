@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::token::Token;
@@ -43,7 +43,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
         let span: Span = Span::new(lexer.line, lexer.span);
 
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Unexpected EOF after escape character.".into(),
             None,
             span,
@@ -67,7 +67,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
             let span: Span = Span::new(lexer.line, lexer.span);
 
             Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Invalid escape sequence. Valid escapes are '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
                 None,
                 span,
@@ -96,7 +96,7 @@ fn validate_and_finalize_string(
 ) -> Result<(), CompilationIssue> {
     if !found_end_quote {
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Unclosed literal string. Did you forget to close it with a '\"'?".into(),
             None,
             span,

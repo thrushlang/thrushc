@@ -1,6 +1,6 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
@@ -18,7 +18,7 @@ pub fn validate<'analyzer>(
 
             if !value.is_constant_value() {
                 analyzer.add_error(CompilationIssue::Error(
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0006,
                     "Expected constant value or reference constant value. Verify that it is an SSA value.".into(),
                     None,
                     span,

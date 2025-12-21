@@ -1,7 +1,7 @@
 use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::types::ast::Ast;
 
@@ -45,11 +45,11 @@ impl<'llvm> IntrinsicChecker<'llvm> {
                         && external_name.split(".").count() <= 2)
                 {
                     self.add_error(CompilationIssue::Error(
-                    "Intrinsic not found".into(),
-                    "This intrinsic is not recognized by the compiler as existing. Try another.".into(),
-                    None,
-                    *span,
-                ));
+                        CompilationIssueCode::E0025,
+                        "This intrinsic is not recognized by the compiler as existing. Try another name.".into(),
+                        None,
+                        *span,
+                    ));
                 }
             }
         }

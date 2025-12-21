@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -13,7 +13,7 @@ pub fn build_global_assembler<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let tk: &Token = ctx.consume(
         TokenType::GlobalAsm,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'global_asm' keyword.".into(),
     )?;
 
@@ -21,7 +21,7 @@ pub fn build_global_assembler<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -30,13 +30,13 @@ pub fn build_global_assembler<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
     ctx.consume(
         TokenType::SemiColon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ';'.".into(),
     )?;
 

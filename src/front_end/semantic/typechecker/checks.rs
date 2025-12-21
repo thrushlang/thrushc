@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;
@@ -17,7 +17,7 @@ pub fn check_types(
     let span: Span = metadata.get_span();
 
     let error: CompilationIssue = CompilationIssue::Error(
-        "Mismatched types".into(),
+        CompilationIssueCode::E0020,
         format!("Expected '{}' type, got '{}' type.", lhs, rhs),
         None,
         span,
@@ -60,7 +60,7 @@ pub fn check_types(
 
             if mod1 != mod2 {
                 return Err(CompilationIssue::Error(
-                    "Mismatched structure type modificator".into(),
+                    CompilationIssueCode::E0021,
                     format!(
                         "Expected structure type with '{}' attributes but found '{}'.",
                         mod1, mod2
@@ -90,7 +90,7 @@ pub fn check_types(
 
             if mod1 != mod2 {
                 return Err(CompilationIssue::Error(
-                    "Function Ref Attributes Mismatch".into(),
+                    CompilationIssueCode::E0021,
                     format!(
                         "Expected function reference type with '{}' attributes but found '{}'.",
                         mod1, mod2
@@ -659,7 +659,7 @@ pub fn check_type_cast(
         }
 
         _ => Err(CompilationIssue::Error(
-            "Cast Error".into(),
+            CompilationIssueCode::E0032,
             format!(
                 "Cannot cast type '{}' to '{}'. Types are incompatible.",
                 from_type, cast_type

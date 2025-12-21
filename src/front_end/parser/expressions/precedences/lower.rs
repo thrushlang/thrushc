@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -54,7 +55,7 @@ pub fn lower_precedence<'parser>(
 
             ctx.consume(
                 TokenType::RParen,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ')'.".into(),
             )?;
 
@@ -175,7 +176,7 @@ pub fn lower_precedence<'parser>(
             let previous: &Token = ctx.advance()?;
 
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 format!("Expression '{}' don't allowed.", previous.lexeme),
                 None,
                 previous.span,

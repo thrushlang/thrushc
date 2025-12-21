@@ -1,19 +1,18 @@
-use std::path::PathBuf;
-
-pub enum ThrushLexerPanic {
-    TooBigFile(PathBuf),
+#[derive(Debug)]
+pub enum LexerPanic {
+    TooBigFile(std::path::PathBuf),
     TooMuchTokens,
 }
 
-impl ThrushLexerPanic {
+impl LexerPanic {
+    #[inline]
     pub fn display(&self) -> String {
         match self {
-            ThrushLexerPanic::TooBigFile(file_path) => {
+            LexerPanic::TooBigFile(file_path) => {
                 format!("\"{}\" is too big file.", file_path.display())
             }
-
-            ThrushLexerPanic::TooMuchTokens => {
-                String::from("The limit of 1 000 000 tokens has been exceeded.")
+            LexerPanic::TooMuchTokens => {
+                String::from("The limit of 1_000_000_000 tokens has been exceeded.")
             }
         }
     }

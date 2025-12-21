@@ -2,6 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::checks;
 use crate::front_end::semantic::typechecker::metadata::TypeCheckerExprMetadata;
@@ -31,7 +32,7 @@ pub fn validate<'type_checker>(
 
             if local_type.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     "The void type isn't a value.".into(),
                     None,
                     *span,
@@ -46,7 +47,7 @@ pub fn validate<'type_checker>(
 
                 if local_type.is_void_type() {
                     typechecker.add_error(CompilationIssue::Error(
-                        "Type error".into(),
+                        CompilationIssueCode::E0019,
                         "The void type isn't a value.".into(),
                         None,
                         *span,

@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -12,7 +12,7 @@ pub fn build_continue<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let continue_tk: &Token = ctx.consume(
         TokenType::Continue,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'continue' keyword.".into(),
     )?;
 
@@ -20,7 +20,7 @@ pub fn build_continue<'parser>(
 
     ctx.consume(
         TokenType::SemiColon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ';'.".into(),
     )?;
 
@@ -32,7 +32,7 @@ pub fn build_break<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let break_tk: &Token = ctx.consume(
         TokenType::Break,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'break' keyword.".into(),
     )?;
 
@@ -40,7 +40,7 @@ pub fn build_break<'parser>(
 
     ctx.consume(
         TokenType::SemiColon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ';'.".into(),
     )?;
 

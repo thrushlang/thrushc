@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::{ParserContext, expressions};
@@ -14,7 +14,7 @@ pub fn build_indirect<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Indirect,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'indirect' keyword.".into(),
     )?;
 
@@ -27,7 +27,7 @@ pub fn build_indirect<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -45,7 +45,7 @@ pub fn build_indirect<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ','.".into(),
             )?;
         }
@@ -53,7 +53,7 @@ pub fn build_indirect<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 

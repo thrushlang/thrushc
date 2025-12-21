@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -106,7 +107,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                         Ok(constant.0)
                     }
                     _ => Err(CompilationIssue::Error(
-                        "Syntax error".into(),
+                        CompilationIssueCode::E0001,
                         format!("Not found type '{}'.", name),
                         None,
                         span,
@@ -114,7 +115,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                 }
             } else {
                 Err(CompilationIssue::Error(
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0001,
                     format!("Expected type, not '{}'", name),
                     None,
                     ctx.previous().span,
@@ -125,7 +126,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
         _ if parse_expr => expressions::build_expr(ctx)?.get_value_type().cloned(),
 
         what_heck => Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             format!("Expected type, not '{}'", what_heck),
             None,
             ctx.previous().span,
@@ -136,7 +137,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
 fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '['.".into(),
     )?;
 
@@ -155,14 +156,14 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Co
 
         ctx.consume(
             TokenType::Comma,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected ','.".into(),
         )?;
     }
 
     ctx.consume(
         TokenType::RBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ']'.".into(),
     )?;
 
@@ -171,7 +172,7 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Co
 
     ctx.consume(
         TokenType::Arrow,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '->'.".into(),
     )?;
 
@@ -195,7 +196,7 @@ fn build_const_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
 fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '['.".into(),
     )?;
 
@@ -204,7 +205,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
     if ctx.check(TokenType::SemiColon) {
         ctx.consume(
             TokenType::SemiColon,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected ';'.".into(),
         )?;
 
@@ -213,7 +214,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
 
         if !size.is_integer() {
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected literal integer value.".into(),
                 None,
                 span,
@@ -222,7 +223,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
 
         if !size_type.is_unsigned_integer_type() || !size_type.is_lesseq_unsigned32bit_integer() {
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected unsigned integer value less than or equal to 32 bits.".into(),
                 None,
                 span,
@@ -234,7 +235,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         if let Ok(array_size) = u32::try_from(raw_array_size) {
             ctx.consume(
                 TokenType::RBracket,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ']'.".into(),
             )?;
 
@@ -242,7 +243,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         }
 
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected any unsigned 32 bits integer value.".into(),
             None,
             span,
@@ -251,7 +252,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
 
     ctx.consume(
         TokenType::RBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ']'.".into(),
     )?;
 
@@ -265,7 +266,7 @@ fn build_recursive_type(
 ) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '['.".into(),
     )?;
 
@@ -278,14 +279,14 @@ fn build_recursive_type(
 
         ctx.consume(
             TokenType::RBracket,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected ']'.".into(),
         )?;
 
         Ok(Type::Ptr(Some(inner_type.into()), span))
     } else {
         Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             format!("Expected pointer type, not '{}'", before_type),
             None,
             ctx.previous().span,

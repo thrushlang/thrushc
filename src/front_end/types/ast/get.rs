@@ -3,7 +3,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstGetType, AstLLVMGetType};
@@ -88,7 +88,7 @@ impl AstGetType for Ast<'_> {
             Ast::Indirect { kind, .. } => Ok(kind),
 
             _ => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected a valid value to determinate the type.".into(),
                 None,
                 self.get_span(),
@@ -152,7 +152,7 @@ impl AstGetType for Ast<'_> {
             Ast::IntrinsicParameter { kind, .. } => Ok(kind),
 
             _ => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected a valid value to determinate the type.".into(),
                 None,
                 self.get_span(),
@@ -246,7 +246,7 @@ impl Ast<'_> {
             }
 
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected string literal.".into(),
                 None,
                 span,
@@ -254,7 +254,7 @@ impl Ast<'_> {
         }
 
         Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected string literal.".into(),
             None,
             span,

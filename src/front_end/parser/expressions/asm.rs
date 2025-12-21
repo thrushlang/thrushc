@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, attributes, expressions, typegen};
@@ -14,7 +14,7 @@ pub fn build_asm_code_block<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let asm_tk: &Token = ctx.consume(
         TokenType::Asm,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'asm' keyword.".into(),
     )?;
 
@@ -42,7 +42,7 @@ pub fn build_asm_code_block<'parser>(
             } else {
                 ctx.consume(
                     TokenType::Colon,
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0001,
                     "Expected ','.".into(),
                 )?;
             }
@@ -50,14 +50,14 @@ pub fn build_asm_code_block<'parser>(
 
         ctx.consume(
             TokenType::RParen,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected ')'.".into(),
         )?;
     }
 
     ctx.consume(
         TokenType::LBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '{'.".into(),
     )?;
 
@@ -74,7 +74,7 @@ pub fn build_asm_code_block<'parser>(
 
         if !raw_str.is_str() {
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected string literal value.".into(),
                 None,
                 raw_str_span,
@@ -94,7 +94,7 @@ pub fn build_asm_code_block<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ','.".into(),
             )?;
         }
@@ -104,13 +104,13 @@ pub fn build_asm_code_block<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '}'.".into(),
     )?;
 
     ctx.consume(
         TokenType::LBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '{'.".into(),
     )?;
 
@@ -138,7 +138,7 @@ pub fn build_asm_code_block<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ','.".into(),
             )?;
         }
@@ -148,7 +148,7 @@ pub fn build_asm_code_block<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '}'.".into(),
     )?;
 

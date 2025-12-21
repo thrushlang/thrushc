@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::Lexer;
 
@@ -31,7 +31,7 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilati
     match cleaned.parse::<usize>() {
         Ok(num) if num <= U8_MAX || num <= U16_MAX || num <= U32_MAX || num < usize::MAX => Ok(()),
         Ok(_) => Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Integer literal is too large to be represented in a integer type.".into(),
             None,
             span,
@@ -46,13 +46,13 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilati
                 Ok(())
             }
             Ok(_) => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
             )),
             Err(_) => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Integer literal is too large to be represented in a integer type.".into(),
                 None,
                 span,
@@ -78,7 +78,7 @@ fn check_integer_radix_format(
             Ok(())
         }
         Ok(_) => Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             format!(
                 "Integer out of bounds signed {} format.",
                 if radix == 16 { "hexadecimal" } else { "binary" }
@@ -91,7 +91,7 @@ fn check_integer_radix_format(
                 Ok(())
             }
             Ok(_) => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 format!(
                     "Integer out of bounds unsigned {} format.",
                     if radix == 16 { "hexadecimal" } else { "binary" }
@@ -100,7 +100,7 @@ fn check_integer_radix_format(
                 span,
             )),
             Err(_) => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 format!(
                     "Integer invalid numeric {} format.",
                     if radix == 16 { "hexadecimal" } else { "binary" }

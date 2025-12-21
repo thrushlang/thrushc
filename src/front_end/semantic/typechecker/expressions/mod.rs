@@ -10,6 +10,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::builtins;
 use crate::front_end::semantic::typechecker::checks;
@@ -73,8 +74,8 @@ pub fn validate<'type_checker>(
         Ast::FixedArray { items, kind, span } => {
             if kind.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
-                    "An element is expected for inference.".into(),
+                    CompilationIssueCode::E0019,
+                    "An element is expected for type inference.".into(),
                     None,
                     *span,
                 ));
@@ -107,8 +108,8 @@ pub fn validate<'type_checker>(
         } => {
             if kind.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
-                    "An element is expected for inference.".into(),
+                    CompilationIssueCode::E0019,
+                    "An element is expected for type inference.".into(),
                     None,
                     *span,
                 ));

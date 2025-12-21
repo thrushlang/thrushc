@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -18,13 +19,13 @@ pub fn build_enum<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Enum,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'enum'.".into(),
     )?;
 
     let name: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected enum name.".into(),
     )?;
 
@@ -36,7 +37,7 @@ pub fn build_enum<'parser>(
 
     ctx.consume(
         TokenType::LBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '{'.".into(),
     )?;
 
@@ -53,19 +54,23 @@ pub fn build_enum<'parser>(
             let name: &str = field_tk.get_lexeme();
             ctx.consume(
                 TokenType::Colon,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ':'.".into(),
             )?;
 
             let field_type: Type = typegen::build_type(ctx, false)?;
 
-            ctx.consume(TokenType::Eq, "Syntax error".into(), "Expected '='.".into())?;
+            ctx.consume(
+                TokenType::Eq,
+                CompilationIssueCode::E0001,
+                "Expected '='.".into(),
+            )?;
 
             let expr: Ast = expressions::build_expr(ctx)?;
 
             ctx.consume(
                 TokenType::SemiColon,
-                String::from("Syntax error"),
+                CompilationIssueCode::E0001,
                 String::from("Expected ';'."),
             )?;
 
@@ -75,7 +80,7 @@ pub fn build_enum<'parser>(
         }
 
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected identifier in enum field.".into(),
             None,
             ctx.advance()?.get_span(),
@@ -84,7 +89,7 @@ pub fn build_enum<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '}'.".into(),
     )?;
 

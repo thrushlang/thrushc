@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -94,13 +94,13 @@ fn build_linkage_attribute<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
     let linkage_tk: &Token = ctx.consume(
         TokenType::Str,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected a string literal.".into(),
     )?;
 
@@ -110,7 +110,7 @@ fn build_linkage_attribute<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -124,13 +124,13 @@ fn build_external_attribute<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
     let name: &Token = ctx.consume(
         TokenType::Str,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected a string literal.".into(),
     )?;
 
@@ -138,7 +138,7 @@ fn build_external_attribute<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -152,13 +152,13 @@ fn build_assembler_syntax_attribute<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
     let syntax_tk: &Token = ctx.consume(
         TokenType::Str,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected a string literal.".into(),
     )?;
 
@@ -166,7 +166,7 @@ fn build_assembler_syntax_attribute<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -178,13 +178,13 @@ fn build_call_convention_attribute(ctx: &mut ParserContext) -> Result<String, Co
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
     let convention_tk: &Token = ctx.consume(
         TokenType::Str,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected a string literal.".into(),
     )?;
 
@@ -192,7 +192,7 @@ fn build_call_convention_attribute(ctx: &mut ParserContext) -> Result<String, Co
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 

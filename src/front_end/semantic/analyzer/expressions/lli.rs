@@ -1,6 +1,6 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
@@ -40,7 +40,7 @@ pub fn validate<'analyzer>(
 
             if source_type.is_address_type() {
                 analyzer.add_warning(CompilationIssue::Warning(
-                    "Undefined behavior".into(), 
+                    CompilationIssueCode::E0010, 
                     "*Maybe* this value at runtime causes undefined behavior because it is anything at runtime, and memory calculation needs valid pointers or deep types.".into(), 
                      source.get_span()
                 ));

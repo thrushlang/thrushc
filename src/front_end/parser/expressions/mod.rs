@@ -12,7 +12,7 @@ pub mod precedences;
 pub mod property;
 pub mod reference;
 
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -30,7 +30,7 @@ pub fn build_expression<'parser>(
 
     ctx.consume(
         TokenType::SemiColon,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected ';'."),
     )?;
 

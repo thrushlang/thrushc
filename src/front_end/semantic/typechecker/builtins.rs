@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::types::ast::Ast;
@@ -53,7 +53,7 @@ pub fn validate_memmove<'type_checker>(
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}' type.", source_type),
             None,
             source_span,
@@ -62,7 +62,7 @@ pub fn validate_memmove<'type_checker>(
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}' type.", destination_type)
                 ,
             None,
@@ -72,7 +72,7 @@ pub fn validate_memmove<'type_checker>(
 
     if !size_type.is_unsigned_integer_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
             size_span,
@@ -104,7 +104,7 @@ pub fn validate_memcpy<'type_checker>(
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr'  type, got '{}' type.", source_type),
             None,
             source_span,
@@ -113,7 +113,7 @@ pub fn validate_memcpy<'type_checker>(
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type."
                 .into(),
             None,
@@ -123,7 +123,7 @@ pub fn validate_memcpy<'type_checker>(
 
     if size_type.is_unsigned_integer_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
             size_span,
@@ -155,7 +155,7 @@ pub fn validate_memset<'type_checker>(
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             format!("Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', memory address 'addr' type, got '{}' type.", size_type),
             None,
             destination_span,
@@ -164,7 +164,7 @@ pub fn validate_memset<'type_checker>(
 
     if !new_size_type.is_unsigned_integer_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             format!(
                 "Expected unsigned integer type, got '{}' type.",
                 new_size_type
@@ -176,7 +176,7 @@ pub fn validate_memset<'type_checker>(
 
     if !size_type.is_unsigned_integer_type() {
         typechecker.add_error(CompilationIssue::Error(
-            "Type error".into(),
+            CompilationIssueCode::E0019,
             format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
             size_span,

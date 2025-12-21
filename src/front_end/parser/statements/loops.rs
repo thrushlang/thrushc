@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -15,7 +16,7 @@ pub fn build_for_loop<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let for_tk: &Token = ctx.consume(
         TokenType::For,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'for' keyword.".into(),
     )?;
 
@@ -42,7 +43,7 @@ pub fn build_loop<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let loop_tk: &Token = ctx.consume(
         TokenType::Loop,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'loop' keyword.".into(),
     )?;
 
@@ -61,7 +62,7 @@ pub fn build_while_loop<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let while_tk: &Token = ctx.consume(
         TokenType::While,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'while' keyword.".into(),
     )?;
 

@@ -17,7 +17,7 @@ use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::lexer::ThrushLexerPanic;
+use crate::core::errors::lexer::LexerPanic;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::token::Token;
@@ -29,7 +29,7 @@ use std::{mem, process};
 
 use unicode_categories::UnicodeCategories;
 
-const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000;
+const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000_000;
 const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;
 const MAX_ERRORS: usize = 50;
 
@@ -49,10 +49,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn lex(
-        file: &CompilationUnit,
-        options: &CompilerOptions,
-    ) -> Result<Tokens, ThrushLexerPanic> {
+    pub fn lex(file: &CompilationUnit, options: &CompilerOptions) -> Result<Tokens, LexerPanic> {
         let code: Vec<char> = file.get_unit_content().chars().collect();
         let bytes: Vec<u8> = file.get_unit_content().as_bytes().to_vec();
 
@@ -72,16 +69,14 @@ impl Lexer {
 }
 
 impl Lexer {
-    fn start(&mut self) -> Result<Tokens, ThrushLexerPanic> {
+    fn start(&mut self) -> Result<Tokens, LexerPanic> {
         if self.code.len() > MAXIMUM_BYTES_TO_LEX {
-            return Err(ThrushLexerPanic::TooBigFile(
-                self.diagnostician.get_file_path(),
-            ));
+            return Err(LexerPanic::TooBigFile(self.diagnostician.get_file_path()));
         }
 
         while !self.is_eof() {
             if self.tokens.len() >= MAXIMUM_TOKENS_CAPACITY {
-                return Err(ThrushLexerPanic::TooMuchTokens);
+                return Err(LexerPanic::TooMuchTokens);
             }
 
             self.start = self.current;

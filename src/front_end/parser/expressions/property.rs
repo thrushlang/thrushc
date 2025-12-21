@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -21,7 +21,7 @@ pub fn build_property<'parser>(
 
     let first_property: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected property name.".into(),
     )?;
 
@@ -32,7 +32,7 @@ pub fn build_property<'parser>(
     while ctx.match_token(TokenType::Dot)? {
         let property: &Token = ctx.consume(
             TokenType::Identifier,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected property name.".into(),
         )?;
 

@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -12,7 +12,7 @@ pub fn build_import<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let import_tk: &Token = ctx.consume(
         TokenType::Import,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'import' keyword.".into(),
     )?;
 
@@ -20,13 +20,13 @@ pub fn build_import<'parser>(
 
     ctx.consume(
         TokenType::Str,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected string literal.".into(),
     )?;
 
     ctx.consume(
         TokenType::SemiColon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ';'.".into(),
     )?;
 

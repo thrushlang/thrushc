@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expressions};
@@ -12,7 +12,7 @@ pub fn build_array<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let tk: &Token = ctx.consume(
         TokenType::LBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '['.".into(),
     )?;
 
@@ -35,7 +35,7 @@ pub fn build_array<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ','.".into(),
             )?;
         }
@@ -43,7 +43,7 @@ pub fn build_array<'parser>(
 
     ctx.consume(
         TokenType::RBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ']'.".into(),
     )?;
 

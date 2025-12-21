@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::typesystem::types::Type;
@@ -15,7 +15,7 @@ pub fn validate_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Compil
         TokenType::Bang => self::validate_bang_unary(op, a, span),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Unknown Type Operation"),
+            CompilationIssueCode::E0031,
             format!("'{}{}' isn't valid operation.", op, a),
             None,
             span,
@@ -30,7 +30,7 @@ fn validate_not_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Compil
     }
 
     Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
+        CompilationIssueCode::E0030,
         format!("'{}{}' isn't valid operation.", op, a),
         None,
         span,
@@ -44,7 +44,7 @@ fn validate_general_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Co
     }
 
     Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
+        CompilationIssueCode::E0030,
         format!("'{}{}' isn't valid operation.", op, a),
         None,
         span,
@@ -58,7 +58,7 @@ fn validate_bang_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Compi
     }
 
     Err(CompilationIssue::Error(
-        String::from("Incompatible Type Operation"),
+        CompilationIssueCode::E0030,
         format!("'{}{}' isn't valid operation.", op, a),
         None,
         span,

@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::character;
 use crate::front_end::lexer::identifier;
@@ -40,7 +41,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
                 let span: Span = Span::new(lexer.line, lexer.span);
 
                 return Err(CompilationIssue::Error(
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0001,
                     "Expected '*/'.".into(),
                     None,
                     span,
@@ -98,7 +99,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             let span: Span = Span::new(lexer.line, lexer.span);
 
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "This character isn't recognized.".into(),
                 None,
                 span,

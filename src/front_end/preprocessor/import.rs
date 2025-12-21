@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::core::compiler;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::Lexer;
 use crate::front_end::lexer::token::Token;
@@ -29,7 +29,7 @@ pub fn build_import<'preprocessor>(
 
     if !path.exists() {
         ctx.add_error(CompilationIssue::Error(
-            "Import error".into(),
+            CompilationIssueCode::E0029,
             "Cannot resolve module, specified path does not exist in filesystem.".into(),
             None,
             span,
@@ -40,7 +40,7 @@ pub fn build_import<'preprocessor>(
 
     if !path.is_file() {
         ctx.add_error(CompilationIssue::Error(
-            "Import error".into(),
+            CompilationIssueCode::E0029,
             "Invalid module target, path resolves to directory, expected file.".into(),
             None,
             span,
@@ -53,7 +53,7 @@ pub fn build_import<'preprocessor>(
         && path.extension().unwrap_or_default() != "🐦"
     {
         ctx.add_error(CompilationIssue::Error(
-            "Import error".into(),
+            CompilationIssueCode::E0029,
             "Expected '.thrush' or '.🐦' module.".into(),
             None,
             span,
@@ -68,7 +68,7 @@ pub fn build_import<'preprocessor>(
         Some(name) => name.to_string_lossy().to_string(),
         None => {
             ctx.add_error(CompilationIssue::Error(
-                "Import error".into(),
+                CompilationIssueCode::E0029,
                 "Unable to extract filename component.".into(),
                 None,
                 span,
@@ -82,7 +82,7 @@ pub fn build_import<'preprocessor>(
         Some(name) => name.to_string_lossy().to_string(),
         None => {
             ctx.add_error(CompilationIssue::Error(
-                "Import error".into(),
+                CompilationIssueCode::E0029,
                 "Unable to extract filename.".into(),
                 None,
                 span,
@@ -98,7 +98,7 @@ pub fn build_import<'preprocessor>(
         Ok(tokens) => tokens,
         Err(_) => {
             ctx.add_error(CompilationIssue::Error(
-                "Import error".into(),
+                CompilationIssueCode::E0029,
                 "Imported module contains invalid syntax.".into(),
                 None,
                 span,

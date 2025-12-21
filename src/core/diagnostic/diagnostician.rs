@@ -58,7 +58,7 @@ impl Diagnostician {
                 let generated: String = printers::print_to_string(
                     &diagnostic,
                     (
-                        title,
+                        &title.to_title(),
                         &self.path,
                         note.as_ref().map(|x| x.as_str()),
                         logging_type,
@@ -96,8 +96,10 @@ impl Diagnostician {
                     logging_type,
                 );
 
-                let generated: String =
-                    printers::print_to_string(&diagnostic, (title, &self.path, None, logging_type));
+                let generated: String = printers::print_to_string(
+                    &diagnostic,
+                    (&title.to_title(), &self.path, None, logging_type),
+                );
 
                 if self.get_config().export_warnings() {
                     let path: PathBuf = self.get_config().export_path().join("warnings");

@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -20,13 +21,13 @@ pub fn build_structure<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Struct,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'struct' keyword.".into(),
     )?;
 
     let name_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected identifier.".into(),
     )?;
 
@@ -35,7 +36,7 @@ pub fn build_structure<'parser>(
 
     ctx.consume(
         TokenType::LBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '{'.".into(),
     )?;
 
@@ -53,7 +54,7 @@ pub fn build_structure<'parser>(
         if ctx.check(TokenType::Identifier) {
             let field_tk: &Token = ctx.consume(
                 TokenType::Identifier,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected identifier.".into(),
             )?;
 
@@ -62,7 +63,7 @@ pub fn build_structure<'parser>(
 
             ctx.consume(
                 TokenType::Colon,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ':'.".into(),
             )?;
 
@@ -83,12 +84,12 @@ pub fn build_structure<'parser>(
             } else if ctx.check_to(TokenType::Identifier, 0) {
                 ctx.consume(
                     TokenType::Comma,
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0001,
                     "Expected ','.".into(),
                 )?;
             } else {
                 return Err(CompilationIssue::Error(
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0001,
                     "Expected identifier.".into(),
                     None,
                     ctx.previous().get_span(),
@@ -98,7 +99,7 @@ pub fn build_structure<'parser>(
             ctx.only_advance()?;
 
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected structure fields identifiers.".into(),
                 None,
                 ctx.previous().get_span(),
@@ -108,7 +109,7 @@ pub fn build_structure<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '}'.".into(),
     )?;
 

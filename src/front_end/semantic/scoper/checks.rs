@@ -1,4 +1,4 @@
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::semantic::scoper::Scoper;
 use crate::front_end::types::ast::Ast;
@@ -22,7 +22,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     if unreacheable_positions.len() > 1 {
         for (_, node) in &unreacheable_positions[1..] {
             scoper.add_error(CompilationIssue::Error(
-                "Syntax Error".into(),
+                CompilationIssueCode::E0015,
                 "Only one unreacheable instruction is allowed per block. Additional unreacheable instructions are redundant and disallowed. Remove it.".into(),
                 None,
                 node.get_span(),
@@ -39,7 +39,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     if return_positions.len() > 1 {
         for (_, node) in &return_positions[1..] {
             scoper.add_error(CompilationIssue::Error(
-                "Syntax Error".into(),
+                CompilationIssueCode::E0015,
                 "Only one function terminator is allowed per block. The previous function terminator at an earlier position makes this block unreachable and invalid. Remove it.".into(),
                 None,
                 node.get_span(),
@@ -56,7 +56,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     if break_positions.len() > 1 {
         for (_, node) in &break_positions[1..] {
             scoper.add_error(CompilationIssue::Error(
-                "Syntax Error".into(),
+                CompilationIssueCode::E0015,
                 "Only one break loop control terminator is allowed per loop block. Additional break loop control terminators are redundant and disallowed. Remove it.".into(),
                 None,
                 node.get_span(),
@@ -73,7 +73,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     if continue_positions.len() > 1 {
         for (_, node) in &continue_positions[1..] {
             scoper.add_error(CompilationIssue::Error(
-                "Syntax Error".into(),
+                CompilationIssueCode::E0015,
                 "Only one continue loop control terminator is allowed per loop block. Additional continue loop control terminators are redundant and disallowed. Remove it.".into(),
                 None,
                 node.get_span()
@@ -104,7 +104,7 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
     for idx in unreachable_range {
         if let Some(unreachable_node) = nodes.get(idx) {
             scoper.add_error(CompilationIssue::Error(
-                "Unreachable code".to_string(),
+                CompilationIssueCode::E0014,
                 "This instruction will never be executed because of a previous terminator (return/unreacheable/break/continue). Remove it.".to_string(),
                 None,
                 unreachable_node.get_span(),

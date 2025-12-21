@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use crate::core::diagnostic::span::Span;
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::core::errors::{position::CompilationPosition, standard::CompilationIssue};
 
 use crate::front_end::semantic::typechecker::{
@@ -33,7 +34,7 @@ pub fn validate<'type_checker>(
 
             if lli_type.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     "The void type isn't a value.".into(),
                     None,
                     *span,
@@ -53,7 +54,7 @@ pub fn validate<'type_checker>(
 
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     format!(
                         "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
                         source_type
@@ -76,7 +77,7 @@ pub fn validate<'type_checker>(
 
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     format!(
                         "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
                         source_type
@@ -88,7 +89,7 @@ pub fn validate<'type_checker>(
 
             if source_type.is_ptr_type() && !source_type.is_typed_ptr_type() && indexes.len() > 1 {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     format!(
                         "Expected raw typed pointer ptr[T] instead, got '{}'.",
                         source_type
@@ -101,7 +102,7 @@ pub fn validate<'type_checker>(
                 && !source_type.is_ptr_indexable_like_type()
             {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     format!("Expected raw typed pointer type with indexable type 'struct T', or 'array[T; N]', got '{}'.", source_type),
                     None,
                     span,
@@ -114,7 +115,7 @@ pub fn validate<'type_checker>(
 
                 if !indexe_type.is_unsigned_integer_type() {
                     typechecker.add_error(CompilationIssue::Error(
-                        "Type error".into(),
+                        CompilationIssueCode::E0019,
                         format!("Expected unsigned integer type, got '{}'.", indexe_type),
                         None,
                         span,
@@ -140,7 +141,7 @@ pub fn validate<'type_checker>(
 
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                      format!(
                         "Expected raw typed pointer 'ptr[T]', pointer 'ptr' or memory address 'addr' type, got '{}'.",
                         source_type

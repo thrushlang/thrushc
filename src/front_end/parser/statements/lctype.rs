@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -16,13 +17,13 @@ pub fn build_custom_type<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Type,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'type' keyword.".into(),
     )?;
 
     let name_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected type name.".into(),
     )?;
 
@@ -31,7 +32,7 @@ pub fn build_custom_type<'parser>(
 
     ctx.consume(
         TokenType::Eq,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected '='."),
     )?;
 
@@ -41,7 +42,7 @@ pub fn build_custom_type<'parser>(
 
     ctx.consume(
         TokenType::SemiColon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ';'.".into(),
     )?;
 

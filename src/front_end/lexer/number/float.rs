@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::Lexer;
 
@@ -10,7 +10,7 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilation
 
     if dot_count > 1 {
         return Err(CompilationIssue::Error(
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Only one decimal marker was expected.".into(),
             None,
             span,
@@ -22,8 +22,8 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilation
     }
 
     Err(CompilationIssue::Error(
-        "Syntax error".into(),
-        "Float out of bounds.".into(),
+        CompilationIssueCode::E0001,
+        "Float literal is too large to be represented in a standard float type.".into(),
         None,
         span,
     ))

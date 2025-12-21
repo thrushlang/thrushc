@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expressions, typegen};
@@ -12,7 +12,7 @@ pub fn build_write<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let write_tk: &Token = ctx.consume(
         TokenType::Write,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'write' keyword.".into(),
     )?;
 
@@ -22,7 +22,7 @@ pub fn build_write<'parser>(
 
     ctx.consume(
         TokenType::Comma,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ','.".into(),
     )?;
 

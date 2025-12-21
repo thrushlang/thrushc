@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -19,7 +19,7 @@ pub fn build_intrinsic<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let intrinsic_tk: &Token = ctx.consume(
         TokenType::Intrinsic,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'intrinsic' keyword.".into(),
     )?;
 
@@ -27,13 +27,13 @@ pub fn build_intrinsic<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
     let external_name_tk: &Token = ctx.consume(
         TokenType::Str,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected string literal.".into(),
     )?;
 
@@ -41,13 +41,13 @@ pub fn build_intrinsic<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
     let name_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'identifier'.".into(),
     )?;
 
@@ -55,7 +55,7 @@ pub fn build_intrinsic<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -69,7 +69,7 @@ pub fn build_intrinsic<'parser>(
 
         let parameter_name_tk: &Token = ctx.consume(
             TokenType::Identifier,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected 'identifier'.".into(),
         )?;
 
@@ -77,7 +77,7 @@ pub fn build_intrinsic<'parser>(
 
         ctx.consume(
             TokenType::Colon,
-            "Syntax error".into(),
+            CompilationIssueCode::E0001,
             "Expected ':'.".into(),
         )?;
 
@@ -92,7 +92,7 @@ pub fn build_intrinsic<'parser>(
         } else {
             ctx.consume(
                 TokenType::Comma,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ','.".into(),
             )?;
         }
@@ -100,7 +100,7 @@ pub fn build_intrinsic<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -110,7 +110,7 @@ pub fn build_intrinsic<'parser>(
 
     ctx.consume(
         TokenType::SemiColon,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ';'.".into(),
     )?;
 

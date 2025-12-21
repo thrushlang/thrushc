@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expressions};
@@ -17,19 +17,19 @@ pub fn build_constructor<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::New,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'new' keyword.".into(),
     )?;
 
     let identifier_tk: &Token = ctx.consume(
         TokenType::Identifier,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'identifier' keyword.".into(),
     )?;
 
     ctx.consume(
         TokenType::LBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '{'.".into(),
     )?;
 
@@ -61,13 +61,13 @@ pub fn build_constructor<'parser>(
 
             ctx.consume(
                 TokenType::Colon,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected ':'.".into(),
             )?;
 
             if !structure.contains_field(field_name) {
                 return Err(CompilationIssue::Error(
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0001,
                     "Expected existing field name.".into(),
                     None,
                     field_span,
@@ -76,7 +76,7 @@ pub fn build_constructor<'parser>(
 
             if amount >= required {
                 return Err(CompilationIssue::Error(
-                    "Too many fields in structure".into(),
+                    CompilationIssueCode::E0026,
                     format!("Expected '{}' fields, not '{}' fields.", required, amount),
                     None,
                     span,
@@ -102,12 +102,12 @@ pub fn build_constructor<'parser>(
             } else if ctx.check_to(TokenType::Identifier, 0) {
                 ctx.consume(
                     TokenType::Comma,
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0001,
                     "Expected ','.".into(),
                 )?;
             } else {
                 return Err(CompilationIssue::Error(
-                    "Syntax error".into(),
+                    CompilationIssueCode::E0001,
                     "Expected identifier.".into(),
                     None,
                     ctx.previous().get_span(),
@@ -115,7 +115,7 @@ pub fn build_constructor<'parser>(
             }
         } else {
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected field name.".into(),
                 None,
                 span,
@@ -127,7 +127,7 @@ pub fn build_constructor<'parser>(
 
     if provided != required {
         return Err(CompilationIssue::Error(
-            "Missing fields in structure".into(),
+            CompilationIssueCode::E0027,
             format!(
                 "Expected '{}' arguments, but '{}' was gived.",
                 required, provided
@@ -139,7 +139,7 @@ pub fn build_constructor<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '}'.".into(),
     )?;
 

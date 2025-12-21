@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -188,7 +189,7 @@ pub fn build_reference<'parser>(
     }
 
     Err(CompilationIssue::Error(
-        "Unknown reference".into(),
+        CompilationIssueCode::E0028,
         "It is not a valid reference.".into(),
         None,
         span,

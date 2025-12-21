@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, attributes, typegen};
@@ -13,7 +13,7 @@ pub fn build_alloc<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let alloc_tk: &Token = ctx.consume(
         TokenType::Alloc,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'alloc' keyword.".into(),
     )?;
 
@@ -37,7 +37,7 @@ pub fn build_alloc<'parser>(
 
         _ => {
             return Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected site allocation attribute.".into(),
                 None,
                 span,
@@ -47,7 +47,7 @@ pub fn build_alloc<'parser>(
 
     ctx.consume(
         TokenType::LBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '{'.".into(),
     )?;
 
@@ -63,7 +63,7 @@ pub fn build_alloc<'parser>(
 
     ctx.consume(
         TokenType::RBrace,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '}'.".into(),
     )?;
 

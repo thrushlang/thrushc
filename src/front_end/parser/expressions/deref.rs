@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
@@ -29,7 +30,7 @@ pub fn build_dereference<'parser>(
         while ctx.check(TokenType::Deref) {
             ctx.consume(
                 TokenType::Deref,
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 "Expected 'deref' keyword.".into(),
             )?;
 

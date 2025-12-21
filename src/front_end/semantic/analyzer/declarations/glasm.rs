@@ -1,6 +1,6 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
@@ -15,7 +15,7 @@ pub fn validate<'analyzer>(
         Ast::GlobalAssembler { span, .. } => {
             if analyzer.get_context().has_global_assembler() {
                 analyzer.add_error(CompilationIssue::Error(
-                    "Syntax Error".into(),
+                    CompilationIssueCode::E0005,
                     "Global assembler is already defined before. One per file is expected. Remove one.".into(),
                     None,
                     *span,

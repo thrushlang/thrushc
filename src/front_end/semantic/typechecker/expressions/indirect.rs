@@ -2,6 +2,7 @@ use crate::core::diagnostic::span::Span;
 use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::semantic::typechecker::TypeChecker;
 use crate::front_end::semantic::typechecker::expressions;
 use crate::front_end::types::ast::Ast;
@@ -27,7 +28,7 @@ pub fn validate<'type_checker>(
 
             if !function_ref.is_fnref_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     format!(
                         "Expected function reference 'Fn[..] -> T' type, got '{}'.",
                         function_ref
@@ -46,7 +47,7 @@ pub fn validate<'type_checker>(
                 )?;
             } else {
                 typechecker.add_error(CompilationIssue::Error(
-                    "Type error".into(),
+                    CompilationIssueCode::E0019,
                     format!(
                         "Expected function reference 'Fn[..] -> T' type, got '{}'.",
                         function_type

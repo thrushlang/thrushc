@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use crate::core::diagnostic::span::Span;
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::core::errors::{position::CompilationPosition, standard::CompilationIssue};
 
 use crate::front_end::semantic::analyzer::Analyzer;
@@ -18,7 +19,7 @@ pub fn validate<'analyzer>(
 
                 if !value.is_constant_value() {
                     analyzer.add_error(CompilationIssue::Error(
-                        "Syntax error".into(),
+                        CompilationIssueCode::E0006,
                         "Expected constant value or reference constant value. Verify that it is an SSA value.".into(),
                         None,
                         span,

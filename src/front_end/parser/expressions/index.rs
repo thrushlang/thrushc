@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::expressions;
@@ -23,7 +24,7 @@ pub fn build_index<'parser>(
 
     ctx.consume(
         TokenType::RBracket,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ']'.".into(),
     )?;
 

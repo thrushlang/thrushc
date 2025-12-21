@@ -2,7 +2,7 @@ use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::semantic::linter::symbols::LinterSymbolsTable;
 use crate::front_end::types::ast::Ast;
@@ -231,19 +231,10 @@ impl Linter<'_> {
             for (name, info) in last_scope.iter() {
                 let span: Span = info.0;
                 let used: bool = info.1;
-                let is_mutable_used: bool = info.2;
 
                 if !used {
                     warnings.push(CompilationIssue::Warning(
-                        String::from("Local not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-
-                if !is_mutable_used {
-                    warnings.push(CompilationIssue::Warning(
-                        String::from("Mutable local not used"),
+                        CompilationIssueCode::W0005,
                         format!("'{}' not used.", name),
                         span,
                     ));
@@ -258,7 +249,7 @@ impl Linter<'_> {
 
                 if !used {
                     warnings.push(CompilationIssue::Warning(
-                        String::from("Local constant not used"),
+                        CompilationIssueCode::W0010,
                         format!("'{}' not used.", name),
                         span,
                     ));
@@ -270,19 +261,10 @@ impl Linter<'_> {
             for (name, info) in last_scope.iter() {
                 let span: Span = info.0;
                 let used: bool = info.1;
-                let is_mutable_used: bool = info.2;
 
                 if !used {
                     warnings.push(CompilationIssue::Warning(
-                        String::from("Local Static not used"),
-                        format!("'{}' not used.", name),
-                        span,
-                    ));
-                }
-
-                if !is_mutable_used {
-                    warnings.push(CompilationIssue::Warning(
-                        String::from("Local mutable static not used"),
+                        CompilationIssueCode::W0009,
                         format!("'{}' not used.", name),
                         span,
                     ));
@@ -297,7 +279,7 @@ impl Linter<'_> {
 
                 if !used {
                     warnings.push(CompilationIssue::Warning(
-                        String::from("LLI not used"),
+                        CompilationIssueCode::W0007,
                         format!("'{}' not used.", name),
                         span,
                     ));
@@ -314,19 +296,10 @@ impl Linter<'_> {
         for (name, info) in self.symbols.get_all_function_parameters().iter() {
             let span: Span = info.0;
             let used: bool = info.1;
-            let is_mutable_used: bool = info.2;
 
             if !used {
                 warnings.push(CompilationIssue::Warning(
-                    String::from("Parameter not used"),
-                    format!("'{}' not used.", name),
-                    span,
-                ));
-            }
-
-            if !is_mutable_used {
-                warnings.push(CompilationIssue::Warning(
-                    String::from("Mutable parameter not used"),
+                    CompilationIssueCode::W0008,
                     format!("'{}' not used.", name),
                     span,
                 ));
@@ -345,7 +318,7 @@ impl Linter<'_> {
 
             if !used {
                 warnings.push(CompilationIssue::Warning(
-                    "Static not used".into(),
+                    CompilationIssueCode::W0009,
                     format!("'{}' not used.", name),
                     span,
                 ));
@@ -358,7 +331,7 @@ impl Linter<'_> {
 
             if !used {
                 warnings.push(CompilationIssue::Warning(
-                    String::from("Constant not used"),
+                    CompilationIssueCode::W0010,
                     format!("'{}' not used.", name),
                     span,
                 ));
@@ -371,7 +344,7 @@ impl Linter<'_> {
 
             if !used {
                 warnings.push(CompilationIssue::Warning(
-                    String::from("Function not used"),
+                    CompilationIssueCode::W0017,
                     format!("'{}' not used.", name),
                     span,
                 ));
@@ -384,7 +357,7 @@ impl Linter<'_> {
 
             if !used {
                 warnings.push(CompilationIssue::Warning(
-                    String::from("Assembler function not used"),
+                    CompilationIssueCode::W0011,
                     format!("'{}' not used.", name),
                     span,
                 ));
@@ -397,7 +370,7 @@ impl Linter<'_> {
 
             if !used {
                 warnings.push(CompilationIssue::Warning(
-                    String::from("Enum not used"),
+                    CompilationIssueCode::W0012,
                     format!("'{}' not used.", name),
                     span,
                 ));
@@ -411,7 +384,7 @@ impl Linter<'_> {
 
                 if !used {
                     warnings.push(CompilationIssue::Warning(
-                        String::from("Enum field not used"),
+                        CompilationIssueCode::W0013,
                         format!("'{}' not used.", field_name),
                         span,
                     ));
@@ -425,7 +398,7 @@ impl Linter<'_> {
 
             if !used {
                 warnings.push(CompilationIssue::Warning(
-                    String::from("Intrinsic not used"),
+                    CompilationIssueCode::W0014,
                     format!("'{}' not used.", name),
                     span,
                 ));
@@ -438,7 +411,7 @@ impl Linter<'_> {
 
             if !used {
                 warnings.push(CompilationIssue::Warning(
-                    String::from("Structure not used"),
+                    CompilationIssueCode::W0015,
                     format!("'{}' not used.", name),
                     span,
                 ));
@@ -452,7 +425,7 @@ impl Linter<'_> {
 
                 if !used {
                     warnings.push(CompilationIssue::Warning(
-                        String::from("Structure field not used"),
+                        CompilationIssueCode::W0016,
                         format!("'{}' not used.", field_name),
                         span,
                     ));

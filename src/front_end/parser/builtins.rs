@@ -1,6 +1,7 @@
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::parser::expressions;
 use crate::middle_end::mir::builtins::ThrushBuiltin;
 
@@ -31,7 +32,7 @@ pub fn build_builtin<'parser>(
             let span: Span = ctx.peek().get_span();
 
             Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0003,
                 format!("Unknown '{}' compiler builtin.", span),
                 None,
                 span,
@@ -45,7 +46,7 @@ pub fn build_halloc<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let halloc_tk: &Token = ctx.consume(
         TokenType::Halloc,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'halloc' keyword.".into(),
     )?;
 
@@ -53,7 +54,7 @@ pub fn build_halloc<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -61,7 +62,7 @@ pub fn build_halloc<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -80,13 +81,13 @@ pub fn build_memcpy<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let memcpy_tk: &Token = ctx.consume(
         TokenType::MemCpy,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected 'memcpy' keyword."),
     )?;
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -96,7 +97,7 @@ pub fn build_memcpy<'parser>(
 
     ctx.consume(
         TokenType::Comma,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ','.".into(),
     )?;
 
@@ -104,7 +105,7 @@ pub fn build_memcpy<'parser>(
 
     ctx.consume(
         TokenType::Comma,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ','.".into(),
     )?;
 
@@ -112,7 +113,7 @@ pub fn build_memcpy<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -133,13 +134,13 @@ pub fn build_memmove<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let memcpy_tk: &Token = ctx.consume(
         TokenType::MemMove,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected 'memmove' keyword."),
     )?;
 
     ctx.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected '('."),
     )?;
 
@@ -149,7 +150,7 @@ pub fn build_memmove<'parser>(
 
     ctx.consume(
         TokenType::Comma,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected ','."),
     )?;
 
@@ -157,7 +158,7 @@ pub fn build_memmove<'parser>(
 
     ctx.consume(
         TokenType::Comma,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected ','."),
     )?;
 
@@ -165,7 +166,7 @@ pub fn build_memmove<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected ')'."),
     )?;
 
@@ -186,13 +187,13 @@ pub fn build_memset<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let memcpy_tk: &Token = ctx.consume(
         TokenType::MemSet,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected 'memset' keyword."),
     )?;
 
     ctx.consume(
         TokenType::LParen,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected '('."),
     )?;
 
@@ -202,7 +203,7 @@ pub fn build_memset<'parser>(
 
     ctx.consume(
         TokenType::Comma,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected ','."),
     )?;
 
@@ -210,7 +211,7 @@ pub fn build_memset<'parser>(
 
     ctx.consume(
         TokenType::Comma,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected ','."),
     )?;
 
@@ -218,7 +219,7 @@ pub fn build_memset<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected ')'."),
     )?;
 
@@ -239,7 +240,7 @@ pub fn build_alignof<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::AlignOf,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'alignof' keyword.".into(),
     )?;
 
@@ -247,7 +248,7 @@ pub fn build_alignof<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -255,7 +256,7 @@ pub fn build_alignof<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -271,7 +272,7 @@ pub fn build_sizeof<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::SizeOf,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected 'sizeof' keyword."),
     )?;
 
@@ -279,7 +280,7 @@ pub fn build_sizeof<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -287,7 +288,7 @@ pub fn build_sizeof<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -303,7 +304,7 @@ pub fn build_bit_size_of<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::BitSizeOf,
-        String::from("Syntax error"),
+        CompilationIssueCode::E0001,
         String::from("Expected 'bit_size_of' keyword."),
     )?;
 
@@ -311,7 +312,7 @@ pub fn build_bit_size_of<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -319,7 +320,7 @@ pub fn build_bit_size_of<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -335,7 +336,7 @@ pub fn build_abi_size_of<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::AbiSizeOf,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'abi_size_of' keyword.".into(),
     )?;
 
@@ -343,7 +344,7 @@ pub fn build_abi_size_of<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -351,7 +352,7 @@ pub fn build_abi_size_of<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 
@@ -367,7 +368,7 @@ pub fn build_abi_align_of<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let sizeof_tk: &Token = ctx.consume(
         TokenType::AbiAlignOf,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected 'abi_align_of' keyword.".into(),
     )?;
 
@@ -375,7 +376,7 @@ pub fn build_abi_align_of<'parser>(
 
     ctx.consume(
         TokenType::LParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected '('.".into(),
     )?;
 
@@ -383,7 +384,7 @@ pub fn build_abi_align_of<'parser>(
 
     ctx.consume(
         TokenType::RParen,
-        "Syntax error".into(),
+        CompilationIssueCode::E0001,
         "Expected ')'.".into(),
     )?;
 

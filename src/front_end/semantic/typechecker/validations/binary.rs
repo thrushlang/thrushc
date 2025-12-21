@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::typesystem::types::Type;
@@ -28,7 +28,7 @@ pub fn validate_binary(
         TokenType::And | TokenType::Or => self::validate_binary_gate(op, a, b, span),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Unknown Type Operation"),
+            CompilationIssueCode::E0031,
             format!(
                 "'{}{}' isn't a valid arithmetic or logical operation.",
                 op, a
@@ -66,7 +66,7 @@ fn validate_band(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), C
         (Type::USize(..), Type::USize(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Operation"),
+            CompilationIssueCode::E0030,
             format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
             None,
             span,
@@ -101,7 +101,7 @@ fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Co
         (Type::USize(..), Type::USize(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Operation"),
+            CompilationIssueCode::E0030,
             format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
             None,
             span,
@@ -134,7 +134,7 @@ fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), Co
         (Type::USize(..), Type::USize(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Operation"),
+            CompilationIssueCode::E0030,
             format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
             None,
             span,
@@ -153,7 +153,7 @@ fn validate_binary_gate(
         (Type::Bool(..), Type::Bool(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Operation"),
+            CompilationIssueCode::E0030,
             format!("'{} {} {}' isn't a valid logical operation.", a, op, b),
             None,
             span,
@@ -193,7 +193,7 @@ fn validate_binary_shift(
         (Type::USize(..), Type::USize(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Operation"),
+            CompilationIssueCode::E0030,
             format!("'{} {} {}' isn't a valid arithmetic operation.", a, op, b),
             None,
             span,
@@ -239,7 +239,7 @@ fn validate_binary_comparasion(
         ) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Operation"),
+            CompilationIssueCode::E0030,
             format!("'{} {} {}' isn't a valid relational operation.", a, op, b),
             None,
             span,
@@ -289,7 +289,7 @@ fn validate_binary_equality(
         _ if a.is_ptr_type() && b.is_ptr_type() => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Operation"),
+            CompilationIssueCode::E0030,
             format!("'{} {} {}' isn't a valid relational operation.", a, op, b),
             None,
             span,
@@ -333,7 +333,7 @@ fn validate_binary_arithmetic(
         ) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
-            String::from("Incompatible Operation"),
+            CompilationIssueCode::E0030,
             format!("'{} {} {}' isn't a valid arithmetic operation.", a, op, b),
             None,
             span,

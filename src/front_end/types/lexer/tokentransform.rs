@@ -1,5 +1,5 @@
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::lexer::traits::TokenTypeTypeTransform;
@@ -37,7 +37,7 @@ impl TokenTypeTypeTransform for TokenType {
             TokenType::Void => Ok(Type::Void(span)),
 
             any => Err(CompilationIssue::Error(
-                "Syntax error".into(),
+                CompilationIssueCode::E0001,
                 format!("{} isn't a valid type.", any),
                 None,
                 span,

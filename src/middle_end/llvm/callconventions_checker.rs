@@ -5,7 +5,7 @@ use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::standard::CompilationIssue;
+use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 use crate::middle_end::mir::attributes::{
@@ -201,7 +201,7 @@ impl CallConventionsChecker<'_> {
                     arch if arch.contains("x86") => {
                         if !X86_64_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                                "Unsupported Call Convention".into(),
+                                CompilationIssueCode::E0024,
                                 format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
                                 None,
                                 span,
@@ -211,7 +211,7 @@ impl CallConventionsChecker<'_> {
                     arch if arch.contains("arm") => {
                         if !ARM_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                                "Unsupported Call Convention".into(),
+                                CompilationIssueCode::E0024,
                                 format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
                                 None,
                                 span,
@@ -221,7 +221,7 @@ impl CallConventionsChecker<'_> {
                     arch if arch.contains("riscv") => {
                         if !RISCV_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                                "Unsupported Call Convention".into(),
+                                CompilationIssueCode::E0024,
                                 format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
                                 None,
                                 span,
@@ -231,7 +231,7 @@ impl CallConventionsChecker<'_> {
                     arch if arch.contains("aarch64") => {
                         if !AARCH64_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                            "Unsupported Call Convention".into(),
+                                CompilationIssueCode::E0024,
                                 format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
                                 None,
                                 span,
@@ -241,7 +241,7 @@ impl CallConventionsChecker<'_> {
                     arch if arch.starts_with("amd") => {
                         if !AMDGPU_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                                "Unsupported Call Convention".into(),
+                                CompilationIssueCode::E0024,
                                 format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
                                 None,
                                 span,
@@ -252,7 +252,7 @@ impl CallConventionsChecker<'_> {
                     arch if arch.contains("wasm") => {
                         if !WASM_CALL_CONVENTIONS.contains(&call_conv) {
                             self.add_error(CompilationIssue::Error(
-                                "Unsupported Call Convention".into(),
+                                CompilationIssueCode::E0024,
                                 format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
                                 None,
                                 span,
