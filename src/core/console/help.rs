@@ -223,7 +223,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "--opt-passes".custom_color((141, 141, 142)).bold(),
             "[-p{passname,passname}]",
-            "Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.",
+            "Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.",
         ),
     );
 
@@ -234,7 +234,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "--modificator-passes".custom_color((141, 141, 142)).bold(),
             "[loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;]",
-            "Pass a list of custom modificator optimization passes to the LLVM backend.",
+            "Pass a list of custom modificator optimization passes.",
         ),
     );
 
@@ -338,7 +338,7 @@ pub fn show_help() -> ! {
             "--omit-direct-access-external-data"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT)",
+            "It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT).",
         ),
     );
 
@@ -508,7 +508,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "--print-opt-passes".custom_color((141, 141, 142)).bold(),
-            "Show all available optimization passes through '--opt-passes=p{passname, passname}' in the compiler for the LLVM backend.",
+            "Show all available optimization passes through '--opt-passes=p{passname, passname}'.",
         ),
     );
 

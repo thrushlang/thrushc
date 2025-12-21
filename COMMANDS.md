@@ -19,7 +19,7 @@ General Commands:
 
 General flags:
 
-• -build-dir Configure the build directory for the AOT compiler mode.
+• -build-dir Specifies the compiler artifacts directory.
 
 Linkage flags:
 
@@ -30,11 +30,10 @@ Linkage flags:
 
 Compiler flags:
 
-• -llvm-backend Enable the usage of the LLVM backend infrastructure.
-• -target [x86_64] Set the LLVM target arquitecture.
-• -target-triple [x86_64-pc-linux-gnu] Set the LLVM backend target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.
-• -cpu [haswell] Specify in LLVM the CPU to optimize.
-• -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify in LLVM the new features of the CPU to use.
+• -target [x86_64] Set the target arquitecture.
+• -target-triple [x86_64-pc-linux-gnu] Set the target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.
+• -cpu [haswell] Specify the CPU to optimize.
+• -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify the new features of the CPU to use.
 • -emit [llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens] Compile the code into specified representation.
 • -print [llvm-ir|raw-llvm-ir|tokens] Displays the final compilation on standard output.
 • -opt [O0|O1|O2|O3|Oz] Optimization level.
@@ -47,8 +46,8 @@ JIT Compiler flags:
 
 Extra compiler flags:
 
-• --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes to the LLVM backend. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
-• --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes to the LLVM backend.
+• --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
+• --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes.
 • --reloc-mode [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
 • --code-model [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
 • --target-triple-darwin-variant [arm64-apple-ios15.0-macabi] Specify the darwin target variant triple.
@@ -60,7 +59,7 @@ Omission compiler flags:
 
 • --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
 • --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
-• --omit-direct-access-external-data It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT)
+• --omit-direct-access-external-data It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT).
 • --omit-rtlib-got It omits the runtime library dependency on the Global Offset Table (GOT), essential when generating non-Position Independent Code (PIC) with ARM.
 • --omit-default-opt It omits default optimization that occurs even without specified optimization.
 
@@ -81,8 +80,8 @@ Useful flags:
 • --no-obfuscate-archive-names Stop generating name obfuscation for each file; this does not apply to the final build.
 • --no-obfuscate-ir Stop generating name obfuscation in the emitted IR code.
 
-• --print-targets Show the current LLVM target supported.
-• --print-supported-cpus Show the current LLVM supported CPUs for the current LLVM target.
-• --print-host-target-triple Show the host LLVM target triple.
-• --print-opt-passes Show all available optimization passes through '--opt-passes=p{passname, passname}' in the compiler for the LLVM backend.
+• --print-targets Show the current target supported.
+• --print-supported-cpus Show the current supported CPUs for the current target.
+• --print-host-target-triple Show the host target triple.
+• --print-opt-passes Show all available optimization passes through '--opt-passes=p{passname, passname}'.
 ```
