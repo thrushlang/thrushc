@@ -11,7 +11,7 @@ pub mod symbols;
 pub mod sync;
 pub mod typegen;
 
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::CompilationIssue;
@@ -61,19 +61,20 @@ impl<'parser> Parser<'parser> {
         tokens: &'parser [Token],
         file: &'parser CompilationUnit,
         modules: Vec<Module>,
+        options: &CompilerOptions,
     ) -> (ParserContext<'parser>, bool) {
         Self {
             tokens,
             file,
             modules,
         }
-        .start()
+        .start(options)
     }
 }
 
 impl<'parser> Parser<'parser> {
-    fn start(&mut self) -> (ParserContext<'parser>, bool) {
-        let mut ctx: ParserContext = ParserContext::new(self.tokens, self.file);
+    fn start(&mut self, options: &CompilerOptions) -> (ParserContext<'parser>, bool) {
+        let mut ctx: ParserContext = ParserContext::new(self.tokens, self.file, options);
 
         declarations::parse_forward(&mut ctx);
 
@@ -114,7 +115,11 @@ impl<'parser> Parser<'parser> {
 }
 
 impl<'parser> ParserContext<'parser> {
-    pub fn new(tokens: &'parser [Token], file: &'parser CompilationUnit) -> Self {
+    pub fn new(
+        tokens: &'parser [Token],
+        file: &'parser CompilationUnit,
+        options: &CompilerOptions,
+    ) -> Self {
         let functions: Functions = HashMap::with_capacity(PARSER_MINIMAL_GLOBAL_CAPACITY);
         let asm_functions: AssemblerFunctions =
             HashMap::with_capacity(PARSER_MINIMAL_GLOBAL_CAPACITY);
@@ -128,7 +133,7 @@ impl<'parser> ParserContext<'parser> {
 
             control_ctx: ParserControlContext::new(),
 
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
             symbols: SymbolsTable::with_functions(functions, asm_functions),
 
             current: 0,

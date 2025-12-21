@@ -130,7 +130,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = Lexer::lex(file).unwrap_or_else(|error| {
+        let tokens: Vec<Token> = Lexer::lex(file, &self.options).unwrap_or_else(|error| {
             logging::print_frontend_panic(LoggingType::FrontEndPanic, &error.display())
         });
 
@@ -143,9 +143,10 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         }
 
         let mut preprocessor: Preprocessor = Preprocessor::new(&tokens, file);
-        let modules: Vec<preprocessor::module::Module> = preprocessor.generate_modules()?;
+        let modules: Vec<preprocessor::module::Module> =
+            preprocessor.generate_modules(&self.options)?;
 
-        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules);
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules, &self.options);
 
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;
@@ -155,14 +156,14 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let ast: &[Ast] = parser_context.get_ast();
 
         let semantic_analysis_throwed_errors: bool =
-            SemanticAnalyzer::new(ast, file).check(parser_throwed_errors);
+            SemanticAnalyzer::new(ast, file, self.options).check(parser_throwed_errors);
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return finisher::archive_compilation(self, file_time, file);
         }
 
         let mut intrinsic_checker: middle_end::llvm::intrinsic_checker::IntrinsicChecker =
-            middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file);
+            middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file, &self.options);
 
         let mut call_conv_checker: middle_end::llvm::callconventions_checker::CallConventionsChecker =
             middle_end::llvm::callconventions_checker::CallConventionsChecker::new(
@@ -236,7 +237,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_builder,
             target_machine.get_target_data(),
             target_machine.get_triple(),
-            Diagnostician::new(file),
+            Diagnostician::new(file, &self.options),
             self.options,
         );
 
@@ -375,7 +376,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = Lexer::lex(file).unwrap_or_else(|error| {
+        let tokens: Vec<Token> = Lexer::lex(file, &self.options).unwrap_or_else(|error| {
             logging::print_frontend_panic(LoggingType::FrontEndPanic, &error.display())
         });
 
@@ -388,9 +389,10 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         }
 
         let mut preprocessor: Preprocessor = Preprocessor::new(&tokens, file);
-        let modules: Vec<preprocessor::module::Module> = preprocessor.generate_modules()?;
+        let modules: Vec<preprocessor::module::Module> =
+            preprocessor.generate_modules(&self.options)?;
 
-        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules);
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules, &self.options);
 
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;
@@ -400,14 +402,14 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let ast: &[Ast] = parser_context.get_ast();
 
         let semantic_analysis_throwed_errors: bool =
-            SemanticAnalyzer::new(ast, file).check(parser_throwed_errors);
+            SemanticAnalyzer::new(ast, file, self.options).check(parser_throwed_errors);
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
 
         let mut intrinsic_checker: middle_end::llvm::intrinsic_checker::IntrinsicChecker =
-            middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file);
+            middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file, self.options);
 
         let mut call_conv_checker: middle_end::llvm::callconventions_checker::CallConventionsChecker =
             middle_end::llvm::callconventions_checker::CallConventionsChecker::new(
@@ -482,7 +484,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_builder,
             target_machine.get_target_data(),
             target_machine.get_triple(),
-            Diagnostician::new(file),
+            Diagnostician::new(file, &self.options),
             self.options,
         );
 

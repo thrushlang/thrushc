@@ -39,7 +39,7 @@ impl<'call_conv_checker> CallConventionsChecker<'call_conv_checker> {
             ast,
             options,
             errors: Vec::with_capacity(100),
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
         }
     }
 }

@@ -1,2 +1,2 @@
 [build]
-rustflags = ["-A", "missing_abi", "-A", "elided_named_lifetimes", "-A", "non_camel_case_types"]
+rustflags = ["-A", "missing_abi", "-A", "elided_named_lifetimes", "-A", "non_camel_case_types", "-A", "clippy::upper_case_acronyms"]

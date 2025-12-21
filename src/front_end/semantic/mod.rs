@@ -2,7 +2,7 @@ use attrchecker::AttributeChecker;
 use linter::Linter;
 use typechecker::TypeChecker;
 
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::semantic::scoper::Scoper;
 use crate::front_end::types::ast::Ast;
@@ -28,12 +28,13 @@ impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
     pub fn new(
         ast: &'semantic_analyzer [Ast<'semantic_analyzer>],
         file: &'semantic_analyzer CompilationUnit,
+        options: &CompilerOptions,
     ) -> Self {
-        let type_checker: TypeChecker = TypeChecker::new(ast, file);
-        let analyzer: Analyzer = Analyzer::new(ast, file);
-        let attr_checker: AttributeChecker = AttributeChecker::new(ast, file);
-        let scoper: Scoper = Scoper::new(ast, file);
-        let linter: Linter = Linter::new(ast, file);
+        let type_checker: TypeChecker = TypeChecker::new(ast, file, options);
+        let analyzer: Analyzer = Analyzer::new(ast, file, options);
+        let attr_checker: AttributeChecker = AttributeChecker::new(ast, file, options);
+        let scoper: Scoper = Scoper::new(ast, file, options);
+        let linter: Linter = Linter::new(ast, file, options);
 
         Self {
             type_checker,

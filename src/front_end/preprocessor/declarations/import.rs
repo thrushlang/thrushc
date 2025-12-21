@@ -1,16 +1,16 @@
 use std::path::PathBuf;
 
-use crate::{
-    core::{
-        compiler::{self, options::CompilationUnit},
-        diagnostic::span::Span,
-    },
-    front_end::{
-        lexer::{Lexer, token::Token, tokentype::TokenType},
-        preprocessor::{errors::PreprocessorIssue, module::Module, parser::ModuleParser},
-        types::parser::stmts::traits::TokenExtensions,
-    },
-};
+use crate::core::compiler;
+use crate::core::compiler::options::CompilationUnit;
+use crate::core::diagnostic::span::Span;
+
+use crate::front_end::lexer::Lexer;
+use crate::front_end::lexer::token::Token;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::preprocessor::errors::PreprocessorIssue;
+use crate::front_end::preprocessor::module::Module;
+use crate::front_end::preprocessor::parser::ModuleParser;
+use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_import(ctx: &mut ModuleParser, module: &mut Module) -> Result<(), ()> {
     let unit: &CompilationUnit = module.get_unit();
@@ -93,7 +93,7 @@ pub fn build_import(ctx: &mut ModuleParser, module: &mut Module) -> Result<(), (
 
     let file: CompilationUnit = CompilationUnit::new(name, path, content, base_name);
 
-    let tokens: Vec<Token> = match Lexer::lex(&file) {
+    let tokens: Vec<Token> = match Lexer::lex(&file, ctx.get_options()) {
         Ok(tokens) => tokens,
         Err(_) => {
             ctx.add_error(PreprocessorIssue::new(
@@ -107,7 +107,7 @@ pub fn build_import(ctx: &mut ModuleParser, module: &mut Module) -> Result<(), (
         }
     };
 
-    let mut parser: ModuleParser = ModuleParser::new(tokens);
+    let mut parser: ModuleParser = ModuleParser::new(tokens, ctx.get_options());
 
     let other_module: Module = match parser.parse(file) {
         Ok(module) => module,

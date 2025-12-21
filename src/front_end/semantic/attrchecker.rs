@@ -1,4 +1,4 @@
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
@@ -30,13 +30,14 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     pub fn new(
         ast: &'attr_checker [Ast<'attr_checker>],
         file: &'attr_checker CompilationUnit,
+        options: &CompilerOptions,
     ) -> Self {
         Self {
             ast,
             errors: Vec::with_capacity(100),
             warnings: Vec::with_capacity(100),
 
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
         }
     }
 }

@@ -60,7 +60,21 @@ pub fn llvm_obj_compilation(
     build_dir: &std::path::Path,
     file_name: &str,
 ) -> std::path::PathBuf {
-    let obj_file_path: std::path::PathBuf = build_dir.join(format!(
+    let path: std::path::PathBuf = build_dir.join("obj");
+
+    if !path.exists() {
+        std::fs::create_dir_all(&path).unwrap_or_else(|_| {
+            logging::print_any_panic(
+                logging::LoggingType::Panic,
+                &format!(
+                    "Cannot create directory '{}' for object files compilation.",
+                    path.display()
+                ),
+            )
+        });
+    }
+
+    let obj_file_path: std::path::PathBuf = path.join(format!(
         "{}_{}.o",
         rand::generate_random_string(constants::COMPILER_HARD_OBFUSCATION_LEVEL),
         file_name

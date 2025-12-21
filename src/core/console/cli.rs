@@ -525,6 +525,37 @@ impl CommandLine {
                     .set_debug_gcc_commands(true);
             }
 
+            "--export-compiler-errors" => {
+                self.advance();
+
+                self.get_mut_options()
+                    .set_export_compiler_error_diagnostics();
+            }
+
+            "--export-compiler-warnings" => {
+                self.advance();
+
+                self.get_mut_options()
+                    .set_export_compiler_warning_diagnostics();
+            }
+
+            "--export-diagnostics-path" => {
+                self.advance();
+
+                let path: PathBuf = PathBuf::from(self.peek());
+
+                self.get_mut_options().set_export_diagnostic_path(path);
+
+                self.advance();
+            }
+
+            "--clean-exported-diagnostics" => {
+                self.advance();
+
+                self.get_mut_options()
+                    .set_compiler_exported_diagnostics_clean();
+            }
+
             "--clean-build" => {
                 self.advance();
                 self.get_mut_options().set_clean_build();

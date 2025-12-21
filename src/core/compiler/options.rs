@@ -24,6 +24,11 @@ pub struct CompilerOptions {
     enable_ansi_colors: bool,
     omit_default_optimizations: bool,
 
+    export_diagnostics_path: PathBuf,
+    export_compiler_error_diagnostics: bool,
+    export_compiler_warning_diagnostics: bool,
+    compiler_export_diagnostics_clean: bool,
+
     clean_tokens: bool,
     clean_assembler: bool,
     clean_object: bool,
@@ -134,6 +139,11 @@ impl CompilerOptions {
             enable_ansi_colors: false,
             omit_default_optimizations: false,
 
+            export_diagnostics_path: "diagnostics".into(),
+            export_compiler_error_diagnostics: false,
+            export_compiler_warning_diagnostics: false,
+            compiler_export_diagnostics_clean: false,
+
             clean_tokens: false,
             clean_assembler: false,
             clean_object: false,
@@ -234,6 +244,26 @@ impl CompilerOptions {
     }
 
     #[inline]
+    pub fn set_export_diagnostic_path(&mut self, export_diagnostics_path: PathBuf) {
+        self.export_diagnostics_path = export_diagnostics_path;
+    }
+
+    #[inline]
+    pub fn set_export_compiler_error_diagnostics(&mut self) {
+        self.export_compiler_error_diagnostics = true;
+    }
+
+    #[inline]
+    pub fn set_export_compiler_warning_diagnostics(&mut self) {
+        self.export_compiler_warning_diagnostics = true;
+    }
+
+    #[inline]
+    pub fn set_compiler_exported_diagnostics_clean(&mut self) {
+        self.compiler_export_diagnostics_clean = true;
+    }
+
+    #[inline]
     pub fn add_emit_option(&mut self, emit: EmitableUnit) {
         self.emit.push(emit);
     }
@@ -317,6 +347,25 @@ impl CompilerOptions {
     #[inline]
     pub fn need_ansi_colors(&self) -> bool {
         self.enable_ansi_colors
+    }
+
+    #[inline]
+    pub fn get_export_diagnostics_path(&self) -> &Path {
+        &self.export_diagnostics_path
+    }
+
+    #[inline]
+    pub fn get_export_compiler_error_diagnostics(&self) -> bool {
+        self.export_compiler_error_diagnostics
+    }
+
+    #[inline]
+    pub fn get_export_compiler_warning_diagnostics(&self) -> bool {
+        self.export_compiler_warning_diagnostics
+    }
+
+    pub fn get_compiler_exported_diagnostics_clean(&self) -> bool {
+        self.compiler_export_diagnostics_clean
     }
 
     #[inline]

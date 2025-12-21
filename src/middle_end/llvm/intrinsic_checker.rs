@@ -1,4 +1,4 @@
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::CompilationIssue;
@@ -16,11 +16,15 @@ pub struct IntrinsicChecker<'llvm> {
 
 impl<'llvm> IntrinsicChecker<'llvm> {
     #[inline]
-    pub fn new(ast: &'llvm [Ast<'llvm>], file: &'llvm CompilationUnit) -> Self {
+    pub fn new(
+        ast: &'llvm [Ast<'llvm>],
+        file: &'llvm CompilationUnit,
+        options: &CompilerOptions,
+    ) -> Self {
         Self {
             ast,
             errors: Vec::with_capacity(100),
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
         }
     }
 }

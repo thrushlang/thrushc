@@ -13,7 +13,7 @@ pub mod token;
 pub mod tokentype;
 pub mod types;
 
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
@@ -49,7 +49,10 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn lex(file: &CompilationUnit) -> Result<Tokens, ThrushLexerPanic> {
+    pub fn lex(
+        file: &CompilationUnit,
+        options: &CompilerOptions,
+    ) -> Result<Tokens, ThrushLexerPanic> {
         let code: Vec<char> = file.get_unit_content().chars().collect();
         let bytes: Vec<u8> = file.get_unit_content().as_bytes().to_vec();
 
@@ -62,7 +65,7 @@ impl Lexer {
             current: 0,
             line: 1,
             span: (0, 0),
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
         }
         .start()
     }

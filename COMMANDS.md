@@ -70,6 +70,10 @@ Debug compiler flags:
 
 Useful flags:
 
+• --export-compiler-errors Export compiler error diagnostics to files.
+• --export-compiler-warnings Export compiler warning diagnostics to files.
+• --export-diagnostics-path [diagnostics/] Specify the path where diagnostic files will be exported.
+• --clean-exported-diagnostics Clean the exported diagnostics directory.
 • --clean-build Clean the compiler build folder that holds everything.
 • --clean-tokens Clean the compiler folder that holds the lexical analysis tokens.
 • --clean-assembler Clean the compiler folder containing emitted assembler.

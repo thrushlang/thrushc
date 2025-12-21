@@ -1,16 +1,18 @@
-use std::{
-    fmt::{self, Display, Write as WriteIO},
-    fs::File,
-    io::{self, Write},
-    path::{Path, PathBuf},
-};
+use std::fmt;
+use std::fmt::Display;
+use std::fmt::Write as WriteIO;
+use std::fs::File;
+use std::io;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
 use colored::Colorize;
 
-use crate::{
-    core::console::logging,
-    front_end::{lexer::token::Token, types::lexer::types::Tokens, utils::rand},
-};
+use crate::core::console::logging;
+use crate::front_end::lexer::token::Token;
+use crate::front_end::types::lexer::types::Tokens;
+use crate::front_end::utils::rand;
 
 pub fn print_to_file(tokens: &Tokens, build_path: &Path, file_name: &str) -> Result<(), io::Error> {
     let base_tokens_path: PathBuf = build_path.join("emit").join("tokens");

@@ -1,15 +1,16 @@
-use std::fmt::Display;
-use std::path::Path;
-
 use crate::core::compiler;
-use crate::core::compiler::options::CompilationUnit;
-use crate::core::console::logging::LoggingType;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
+use crate::core::console::logging::{self, LoggingType};
+use crate::core::diagnostic::config::DiagnosticianConfig;
 use crate::core::diagnostic::span::Span;
 use crate::core::diagnostic::{self, Diagnostic, printers};
 use crate::core::errors::standard::CompilationIssue;
 use crate::front_end::preprocessor::errors::PreprocessorIssue;
 
-use {colored::Colorize, std::path::PathBuf};
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::Path;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Notificator {
@@ -21,15 +22,23 @@ pub enum Notificator {
 #[derive(Debug, Clone)]
 pub struct Diagnostician {
     path: PathBuf,
+    base_name: String,
     code: String,
+    config: DiagnosticianConfig,
 }
 
 impl Diagnostician {
     #[inline]
-    pub fn new(file: &CompilationUnit) -> Self {
+    pub fn new(file: &CompilationUnit, options: &CompilerOptions) -> Self {
         Self {
             path: file.get_path().to_path_buf(),
+            base_name: file.get_base_name(),
             code: file.get_unit_clone(),
+            config: DiagnosticianConfig::new(
+                options.get_export_diagnostics_path().to_path_buf(),
+                options.get_export_compiler_error_diagnostics(),
+                options.get_export_compiler_warning_diagnostics(),
+            ),
         }
     }
 }
@@ -46,10 +55,36 @@ impl Diagnostician {
                     logging_type,
                 );
 
-                printers::print(
+                let generated: String = printers::print_to_string(
                     &diagnostic,
-                    (title, &self.path, note.as_deref(), logging_type),
+                    (
+                        title,
+                        &self.path,
+                        note.as_ref().map(|x| x.as_str()),
+                        logging_type,
+                    ),
                 );
+
+                if self.get_config().export_errors() {
+                    let path: PathBuf = self.get_config().export_path().join("errors");
+
+                    std::fs::create_dir_all(&path).unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "Unable to create errors diagnostics path for export purposes!",
+                        );
+                    });
+
+                    let full_path: PathBuf = path.join(format!("{}.txt", self.get_base_name()));
+
+                    if let Ok(mut file_diag) =
+                        OpenOptions::new().create(true).append(true).open(full_path)
+                    {
+                        let _ = file_diag.write(generated.as_bytes());
+                    }
+                }
+
+                logging::write(logging::OutputIn::Stderr, &generated);
             }
 
             CompilationIssue::Warning(title, help, span) => {
@@ -61,7 +96,29 @@ impl Diagnostician {
                     logging_type,
                 );
 
-                printers::print(&diagnostic, (title, &self.path, None, logging_type));
+                let generated: String =
+                    printers::print_to_string(&diagnostic, (title, &self.path, None, logging_type));
+
+                if self.get_config().export_warnings() {
+                    let path: PathBuf = self.get_config().export_path().join("warnings");
+
+                    std::fs::create_dir_all(&path).unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "Unable to create warnings diagnostics path for export purposes!",
+                        );
+                    });
+
+                    let full_path: PathBuf = path.join(format!("{}.txt", self.get_base_name()));
+
+                    if let Ok(mut file_diag) =
+                        OpenOptions::new().create(true).append(true).open(full_path)
+                    {
+                        let _ = file_diag.write(generated.as_bytes());
+                    }
+                }
+
+                logging::write(logging::OutputIn::Stderr, &generated);
             }
 
             CompilationIssue::FrontEndBug(title, info, span, position, path, line) => {
@@ -95,9 +152,7 @@ impl Diagnostician {
             }
         };
     }
-}
 
-impl Diagnostician {
     pub fn dispatch_preprocessor_diagnostic(
         &mut self,
         error: &PreprocessorIssue,
@@ -118,7 +173,10 @@ impl Diagnostician {
             logging_type,
         );
 
-        printers::print(&diagnostic, (title, path, None, logging_type));
+        let diag: String =
+            printers::print_to_string(&diagnostic, (title, &self.path, None, logging_type));
+
+        logging::write(logging::OutputIn::Stderr, &diag);
     }
 }
 
@@ -127,15 +185,14 @@ impl Diagnostician {
     pub fn get_file_path(&self) -> PathBuf {
         self.path.clone()
     }
-}
 
-impl Display for Notificator {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::CommonHelp => write!(f, "{}", " HELP: ".bright_green().bold()),
-            Self::CompilerFrontendBug | Self::CompilerBackendBug => {
-                write!(f, "{}", " INFO: ".bright_red().bold())
-            }
-        }
+    #[inline]
+    pub fn get_config(&self) -> &DiagnosticianConfig {
+        &self.config
+    }
+
+    #[inline]
+    pub fn get_base_name(&self) -> &str {
+        &self.base_name
     }
 }

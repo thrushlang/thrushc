@@ -1,4 +1,5 @@
 use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::CompilerOptions;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::CompilationIssue;
@@ -22,12 +23,16 @@ pub struct Scoper<'scoper> {
 
 impl<'scoper> Scoper<'scoper> {
     #[inline]
-    pub fn new(ast: &'scoper [Ast<'scoper>], file: &CompilationUnit) -> Self {
+    pub fn new(
+        ast: &'scoper [Ast<'scoper>],
+        file: &CompilationUnit,
+        options: &CompilerOptions,
+    ) -> Self {
         Self {
             ast,
             context: ScoperContext::new(),
             errors: Vec::with_capacity(100),
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
         }
     }
 }

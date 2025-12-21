@@ -1,37 +1,39 @@
 use std::mem;
 
-use crate::{
-    core::{
-        compiler::options::CompilationUnit,
-        console::logging::{self, LoggingType},
-    },
-    front_end::{
-        lexer::{token::Token, tokentype::TokenType},
-        preprocessor::{
-            declarations, errors::PreprocessorIssue, module::Module, signatures::ExternalSymbol,
-            table::ModuleSymbolTable,
-        },
-        types::parser::stmts::traits::TokenExtensions,
-    },
-};
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+
+use crate::front_end::lexer::token::Token;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::preprocessor::declarations;
+use crate::front_end::preprocessor::errors::PreprocessorIssue;
+use crate::front_end::preprocessor::module::Module;
+use crate::front_end::preprocessor::signatures::ExternalSymbol;
+use crate::front_end::preprocessor::table::ModuleSymbolTable;
+use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 #[derive(Debug)]
-pub struct ModuleParser {
+pub struct ModuleParser<'module_parser> {
     symbols: Vec<ExternalSymbol>,
     tokens: Vec<Token>,
-    errors: Vec<PreprocessorIssue>,
     table: ModuleSymbolTable,
+    options: &'module_parser CompilerOptions,
+
+    errors: Vec<PreprocessorIssue>,
 
     current: usize,
 }
 
-impl ModuleParser {
+impl<'module_parser> ModuleParser<'module_parser> {
     #[inline]
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(tokens: Vec<Token>, options: &'module_parser CompilerOptions) -> Self {
         Self {
             symbols: Vec::with_capacity(100_000),
+            options,
             table: ModuleSymbolTable::new(),
             tokens,
+
             errors: Vec::with_capacity(100),
 
             current: 0,
@@ -39,7 +41,7 @@ impl ModuleParser {
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     pub fn parse(&mut self, file: CompilationUnit) -> Result<Module, Vec<PreprocessorIssue>> {
         let mut module: Module = Module::new(file);
 
@@ -71,14 +73,14 @@ impl ModuleParser {
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[inline]
     pub fn get_table(&self) -> &ModuleSymbolTable {
         &self.table
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[inline]
     pub fn add_symbol(&mut self, symbol: ExternalSymbol) {
         self.symbols.push(symbol);
@@ -90,14 +92,14 @@ impl ModuleParser {
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[inline]
     pub fn merge_errors(&mut self, errors: Vec<PreprocessorIssue>) {
         self.errors.extend(errors);
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[inline]
     pub fn consume(&mut self, kind: TokenType) -> Result<&Token, ()> {
         if self.peek().kind == kind {
@@ -107,7 +109,7 @@ impl ModuleParser {
         Err(())
     }
 }
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[must_use]
     pub fn peek(&self) -> &Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
@@ -132,7 +134,7 @@ impl ModuleParser {
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[must_use]
     pub fn check(&self, kind: TokenType) -> bool {
         if self.is_eof() {
@@ -156,7 +158,7 @@ impl ModuleParser {
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[inline]
     pub fn match_token(&mut self, kind: TokenType) -> Result<bool, ()> {
         if self.peek().kind == kind {
@@ -168,7 +170,7 @@ impl ModuleParser {
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[inline]
     pub fn advance_until(&mut self, kind: TokenType) -> Result<(), ()> {
         while !self.match_token(kind)? {
@@ -208,7 +210,7 @@ impl ModuleParser {
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[inline]
     pub fn only_advance(&mut self) -> Result<(), ()> {
         if !self.is_eof() {
@@ -230,9 +232,16 @@ impl ModuleParser {
     }
 }
 
-impl ModuleParser {
+impl ModuleParser<'_> {
     #[must_use]
     pub fn is_eof(&self) -> bool {
         self.peek().kind == TokenType::Eof
+    }
+}
+
+impl ModuleParser<'_> {
+    #[inline]
+    pub fn get_options(&self) -> &CompilerOptions {
+        self.options
     }
 }

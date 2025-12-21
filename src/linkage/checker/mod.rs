@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use crate::{
     core::{
-        compiler::{linking::LinkingCompilersConfiguration, options::CompilationUnit},
+        compiler::{
+            linking::LinkingCompilersConfiguration,
+            options::{CompilationUnit, CompilerOptions},
+        },
         console::logging::LoggingType,
         diagnostic::diagnostician::Diagnostician,
         errors::standard::CompilationIssue,
@@ -37,13 +40,14 @@ impl<'linkage_checker> LinkageChecker<'linkage_checker> {
         files: Vec<LinkageCheckerFile<'linkage_checker>>,
         config: &'linkage_checker LinkingCompilersConfiguration,
         file: &'linkage_checker CompilationUnit,
+        options: &CompilerOptions,
     ) -> Self {
         Self {
             files,
             resolver: LibraryResolver::new(),
             parser: CompilerLinkerParser::new(config),
 
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
             errors: Vec::with_capacity(100),
 
             current: 0,

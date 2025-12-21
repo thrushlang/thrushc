@@ -10,7 +10,7 @@ pub mod table;
 pub mod typegen;
 pub mod types;
 
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 
 use crate::core::diagnostic::diagnostician::Diagnostician;
 
@@ -33,11 +33,14 @@ impl<'preprocessor> Preprocessor<'preprocessor> {
 }
 
 impl<'preprocessor> Preprocessor<'preprocessor> {
-    pub fn generate_modules(&mut self) -> Result<Vec<Module>, ()> {
+    pub fn generate_modules(
+        &mut self,
+        options: &'preprocessor CompilerOptions,
+    ) -> Result<Vec<Module>, ()> {
         let mut ctx: PreprocessorContext =
-            PreprocessorContext::new(self.tokens, Diagnostician::new(self.file));
+            PreprocessorContext::new(self.tokens, Diagnostician::new(self.file, options), options);
 
-        let mut modules: Vec<Module> = Vec::with_capacity(100);
+        let mut modules: Vec<Module> = Vec::with_capacity(100_000);
 
         while !ctx.is_eof() {
             if ctx.check(TokenType::Import) {

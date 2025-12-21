@@ -1,4 +1,4 @@
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
@@ -32,12 +32,16 @@ pub struct Linter<'linter> {
 }
 
 impl<'linter> Linter<'linter> {
-    pub fn new(ast: &'linter [Ast], file: &'linter CompilationUnit) -> Self {
+    pub fn new(
+        ast: &'linter [Ast],
+        file: &'linter CompilationUnit,
+        options: &CompilerOptions,
+    ) -> Self {
         Self {
             ast,
             warnings: Vec::with_capacity(100),
             bugs: Vec::with_capacity(100),
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
             symbols: LinterSymbolsTable::new(),
         }
     }

@@ -7,6 +7,10 @@ pub fn auto_clean(options: &CompilerOptions) {
         self::clean_build(options);
     }
 
+    if options.get_compiler_exported_diagnostics_clean() {
+        self::clean_exported_diagnostics(options)
+    }
+
     if options.get_clean_assembler() {
         self::clean_assembler(options);
     }
@@ -26,6 +30,12 @@ pub fn auto_clean(options: &CompilerOptions) {
     if options.get_clean_tokens() {
         self::clean_tokens(options);
     }
+}
+
+#[inline]
+fn clean_exported_diagnostics(options: &CompilerOptions) {
+    let _ = std::fs::remove_dir_all(options.get_export_diagnostics_path());
+    let _ = std::fs::create_dir_all(options.get_export_diagnostics_path());
 }
 
 #[inline]

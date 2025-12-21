@@ -391,6 +391,55 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
+            "--export-compiler-errors"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Export compiler error diagnostics to files."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--export-compiler-warnings"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Export compiler warning diagnostics to files."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
+            "--export-diagnostics-path"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "diagnostics/",
+            "Specify the path where diagnostic files will be exported."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--clean-exported-diagnostics"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Clean the exported diagnostics directory."
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
             "--clean-build".custom_color((141, 141, 142)).bold(),
             "Clean the compiler build folder that holds everything."
         ),

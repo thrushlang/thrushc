@@ -1,14 +1,12 @@
-use crate::{
-    core::{
-        console::logging::{self, LoggingType},
-        diagnostic::diagnostician::Diagnostician,
-        errors::standard::CompilationIssue,
-    },
-    front_end::{
-        lexer::{token::Token, tokentype::TokenType},
-        preprocessor::errors::PreprocessorIssue,
-    },
-};
+use crate::core::compiler::options::CompilerOptions;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::errors::standard::CompilationIssue;
+
+use crate::front_end::lexer::token::Token;
+use crate::front_end::lexer::tokentype::TokenType;
+use crate::front_end::preprocessor::errors::PreprocessorIssue;
 
 #[derive(Debug)]
 pub struct PreprocessorContext<'preprocessor> {
@@ -16,18 +14,24 @@ pub struct PreprocessorContext<'preprocessor> {
     errors: Vec<CompilationIssue>,
     module_errors: Vec<PreprocessorIssue>,
     diagnostician: Diagnostician,
+    options: &'preprocessor CompilerOptions,
 
     current: usize,
 }
 
 impl<'preprocessor> PreprocessorContext<'preprocessor> {
     #[inline]
-    pub fn new(tokens: &'preprocessor [Token], diagnostician: Diagnostician) -> Self {
+    pub fn new(
+        tokens: &'preprocessor [Token],
+        diagnostician: Diagnostician,
+        options: &'preprocessor CompilerOptions,
+    ) -> Self {
         Self {
             tokens,
             errors: Vec::with_capacity(100),
             module_errors: Vec::with_capacity(100),
             diagnostician,
+            options,
             current: 0,
         }
     }
@@ -164,5 +168,12 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
     #[must_use]
     pub fn is_eof(&self) -> bool {
         self.peek().kind == TokenType::Eof
+    }
+}
+
+impl<'preprocessor> PreprocessorContext<'preprocessor> {
+    #[inline]
+    pub fn get_options(&self) -> &CompilerOptions {
+        self.options
     }
 }

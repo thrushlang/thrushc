@@ -1,4 +1,4 @@
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::CompilationIssue;
@@ -32,7 +32,11 @@ pub struct Analyzer<'analyzer> {
 
 impl<'analyzer> Analyzer<'analyzer> {
     #[inline]
-    pub fn new(ast: &'analyzer [Ast<'analyzer>], file: &'analyzer CompilationUnit) -> Self {
+    pub fn new(
+        ast: &'analyzer [Ast<'analyzer>],
+        file: &'analyzer CompilationUnit,
+        options: &CompilerOptions,
+    ) -> Self {
         Self {
             ast,
 
@@ -41,7 +45,7 @@ impl<'analyzer> Analyzer<'analyzer> {
             warnings: Vec::with_capacity(100),
 
             symbols: AnalyzerSymbolsTable::new(),
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
 
             context: AnalyzerContext::new(),
         }

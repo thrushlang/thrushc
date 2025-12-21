@@ -1,4 +1,4 @@
-use crate::core::compiler::options::CompilationUnit;
+use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::errors::standard::CompilationIssue;
@@ -34,6 +34,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
     pub fn new(
         ast: &'type_checker [Ast<'type_checker>],
         file: &'type_checker CompilationUnit,
+        options: &CompilerOptions,
     ) -> Self {
         Self {
             ast,
@@ -44,7 +45,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             warnings: Vec::with_capacity(100),
 
             symbols: TypeCheckerSymbolsTable::new(),
-            diagnostician: Diagnostician::new(file),
+            diagnostician: Diagnostician::new(file, options),
         }
     }
 }

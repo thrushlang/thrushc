@@ -1,5 +1,7 @@
+pub mod config;
 pub mod diagnostician;
 pub mod errors;
+pub mod impls;
 pub mod position;
 pub mod printers;
 pub mod span;
@@ -7,10 +9,10 @@ pub mod traits;
 
 use colored::Colorize;
 
-use crate::core::{
-    console::logging::LoggingType,
-    diagnostic::{diagnostician::Notificator, position::CodePosition, span::Span},
-};
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::diagnostician::Notificator;
+use crate::core::diagnostic::position::CodePosition;
+use crate::core::diagnostic::span::Span;
 
 #[derive(Debug)]
 pub struct Diagnostic<'a> {

@@ -12,7 +12,7 @@ use crate::core::diagnostic::traits::ErrorDisassembler;
 use crate::core::diagnostic::traits::IssueDisassembler;
 use crate::core::errors::position::CompilationPosition;
 
-pub fn print(diagnostic: &Diagnostic, error: Error<'_>) {
+pub fn print_to_string(diagnostic: &Diagnostic, error: Error<'_>) -> String {
     let title: &str = error.get_title();
     let path: &Path = error.get_path();
     let note: Option<&str> = error.get_note();
@@ -24,37 +24,33 @@ pub fn print(diagnostic: &Diagnostic, error: Error<'_>) {
     let line: usize = diagnostic.get_span().get_line();
     let end: usize = diagnostic.get_span().get_span_end();
 
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!(
-            "{} {}:{}\n",
-            format_args!(
-                "{}",
-                logging_type
-                    .text_with_color(path.to_string_lossy().as_ref())
-                    .underline()
-            ),
-            logging_type.text_with_color(&line.to_string()),
-            logging_type.text_with_color(&end.to_string()),
+    let mut buffer = String::new();
+
+    buffer.push_str(&format!(
+        "{} {}:{}\n",
+        format_args!(
+            "{}",
+            logging_type
+                .text_with_color(path.to_string_lossy().as_ref())
+                .underline()
         ),
-    );
+        logging_type.text_with_color(&line.to_string()),
+        logging_type.text_with_color(&end.to_string()),
+    ));
 
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!("\n{} {}\n", logging_type.as_styled(), title.to_uppercase()),
-    );
+    buffer.push_str(&format!(
+        "\n{} {}\n",
+        logging_type.as_styled(),
+        title.to_uppercase()
+    ));
 
-    logging::write(
-        logging::OutputIn::Stderr,
-        &format!("\n{}\n{}", code, signaler),
-    );
+    buffer.push_str(&format!("\n{}\n{}", code, signaler));
 
     if let Some(note) = note {
-        logging::write(
-            logging::OutputIn::Stderr,
-            &format!("{} {}\n", "NOTE:".bright_blue().bold(), note),
-        );
+        buffer.push_str(&format!("{} {}\n", "NOTE:".bright_blue().bold(), note));
     }
+
+    buffer
 }
 
 pub fn print_compiler_frontend_bug(diagnostic: &Diagnostic, error: FrontendError<'_>) {
