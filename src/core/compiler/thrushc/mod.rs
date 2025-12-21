@@ -12,6 +12,7 @@ use crate::back_end::llvm_codegen::jit::LLVMJITCompiler;
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizerFlags;
 
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizerPasses;
+use crate::front_end::types::lexer::types::Tokens;
 use crate::middle_end;
 
 use crate::front_end::preprocessor;
@@ -32,7 +33,6 @@ use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 
 use crate::front_end::lexer::Lexer;
-use crate::front_end::lexer::token::Token;
 use crate::front_end::parser::Parser;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::semantic::SemanticAnalyzer;
@@ -130,9 +130,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = Lexer::lex(file, &self.options).unwrap_or_else(|error| {
-            logging::print_frontend_panic(LoggingType::FrontEndPanic, &error.display())
-        });
+        let tokens: Tokens = Lexer::lex(file, self.options);
 
         if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation(self, file_time, file);
@@ -144,9 +142,9 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         let mut preprocessor: Preprocessor = Preprocessor::new(&tokens, file);
         let modules: Vec<preprocessor::module::Module> =
-            preprocessor.generate_modules(&self.options)?;
+            preprocessor.generate_modules(self.options)?;
 
-        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules, &self.options);
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules, self.options);
 
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;
@@ -163,7 +161,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         }
 
         let mut intrinsic_checker: middle_end::llvm::intrinsic_checker::IntrinsicChecker =
-            middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file, &self.options);
+            middle_end::llvm::intrinsic_checker::IntrinsicChecker::new(ast, file, self.options);
 
         let mut call_conv_checker: middle_end::llvm::callconventions_checker::CallConventionsChecker =
             middle_end::llvm::callconventions_checker::CallConventionsChecker::new(
@@ -237,7 +235,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_builder,
             target_machine.get_target_data(),
             target_machine.get_triple(),
-            Diagnostician::new(file, &self.options),
+            Diagnostician::new(file, self.options),
             self.options,
         );
 
@@ -376,9 +374,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = Lexer::lex(file, &self.options).unwrap_or_else(|error| {
-            logging::print_frontend_panic(LoggingType::FrontEndPanic, &error.display())
-        });
+        let tokens: Tokens = Lexer::lex(file, self.options);
 
         if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);
@@ -390,9 +386,9 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
         let mut preprocessor: Preprocessor = Preprocessor::new(&tokens, file);
         let modules: Vec<preprocessor::module::Module> =
-            preprocessor.generate_modules(&self.options)?;
+            preprocessor.generate_modules(self.options)?;
 
-        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules, &self.options);
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, modules, self.options);
 
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;
@@ -484,7 +480,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_builder,
             target_machine.get_target_data(),
             target_machine.get_triple(),
-            Diagnostician::new(file, &self.options),
+            Diagnostician::new(file, self.options),
             self.options,
         );
 

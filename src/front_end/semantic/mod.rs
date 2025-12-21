@@ -48,14 +48,15 @@ impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
 
 impl<'semantic_analyzer> SemanticAnalyzer<'semantic_analyzer> {
     pub fn check(&mut self, parser_throwed_errors: bool) -> bool {
-        if parser_throwed_errors {
+        let scoper_errors: bool = self.scoper.start();
+
+        if parser_throwed_errors || scoper_errors {
             return true;
         }
 
         let type_checker_errors: bool = self.type_checker.start();
         let analyzer_errors: bool = self.analyzer.start();
         let attr_checker_errors: bool = self.attr_checker.start();
-        let scoper_errors: bool = self.scoper.start();
 
         if !type_checker_errors && !analyzer_errors && !attr_checker_errors && !scoper_errors {
             self.linter.check();

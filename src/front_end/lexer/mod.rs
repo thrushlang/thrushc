@@ -17,7 +17,6 @@ use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging::{self, LoggingType};
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::lexer::LexerPanic;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::front_end::lexer::token::Token;
@@ -25,13 +24,9 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::lexer::types::Tokens;
 
-use std::{mem, process};
-
 use unicode_categories::UnicodeCategories;
 
-const MAXIMUM_TOKENS_CAPACITY: usize = 1_000_000_000;
-const MAXIMUM_BYTES_TO_LEX: usize = 1_000_000;
-const MAX_ERRORS: usize = 50;
+const PREALLOCATED_TOKENS_CAPACITY: usize = 10_000;
 
 #[derive(Debug)]
 pub struct Lexer {
@@ -49,12 +44,12 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn lex(file: &CompilationUnit, options: &CompilerOptions) -> Result<Tokens, LexerPanic> {
+    pub fn lex(file: &CompilationUnit, options: &CompilerOptions) -> Tokens {
         let code: Vec<char> = file.get_unit_content().chars().collect();
         let bytes: Vec<u8> = file.get_unit_content().as_bytes().to_vec();
 
         Self {
-            tokens: Vec::with_capacity(100_000),
+            tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
             errors: Vec::with_capacity(100),
             code,
             bytes,
@@ -69,29 +64,10 @@ impl Lexer {
 }
 
 impl Lexer {
-    fn start(&mut self) -> Result<Tokens, LexerPanic> {
-        if self.code.len() > MAXIMUM_BYTES_TO_LEX {
-            return Err(LexerPanic::TooBigFile(self.diagnostician.get_file_path()));
-        }
-
+    fn start(&mut self) -> Tokens {
         while !self.is_eof() {
-            if self.tokens.len() >= MAXIMUM_TOKENS_CAPACITY {
-                return Err(LexerPanic::TooMuchTokens);
-            }
-
             self.start = self.current;
             self.start_span();
-
-            let total_issues: usize = self.errors.len();
-
-            if total_issues >= MAX_ERRORS {
-                logging::print_warn(
-                    LoggingType::Warning,
-                    "Too many issues. Stopping compilation.",
-                );
-
-                break;
-            }
 
             if let Err(error) = lex::analyze(self) {
                 self.add_error(error);
@@ -104,7 +80,7 @@ impl Lexer {
                     .dispatch_diagnostic(error, LoggingType::Error);
             });
 
-            process::exit(1);
+            std::process::exit(1);
         };
 
         self.tokens.push(Token {
@@ -115,7 +91,7 @@ impl Lexer {
             span: Span::new(self.line, self.span),
         });
 
-        Ok(mem::take(&mut self.tokens))
+        std::mem::take(&mut self.tokens)
     }
 }
 

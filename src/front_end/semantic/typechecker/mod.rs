@@ -7,15 +7,14 @@ use crate::front_end::semantic::typechecker::symbols::TypeCheckerSymbolsTable;
 use crate::front_end::types::ast::Ast;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
-pub mod builtins;
-pub mod checks;
-pub mod constants;
-pub mod declarations;
-pub mod expressions;
-pub mod metadata;
-pub mod statements;
-pub mod symbols;
-pub mod validations;
+mod builtins;
+mod checks;
+mod declarations;
+mod expressions;
+mod metadata;
+mod statements;
+mod symbols;
+mod validations;
 
 #[derive(Debug)]
 pub struct TypeChecker<'type_checker> {

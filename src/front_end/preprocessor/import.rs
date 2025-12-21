@@ -11,6 +11,7 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::preprocessor::context::PreprocessorContext;
 use crate::front_end::preprocessor::module::Module;
 use crate::front_end::preprocessor::parser::ModuleParser;
+use crate::front_end::types::lexer::types::Tokens;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_import<'preprocessor>(
@@ -94,19 +95,7 @@ pub fn build_import<'preprocessor>(
 
     let file: CompilationUnit = CompilationUnit::new(name, path, content, base_name);
 
-    let tokens: Vec<Token> = match Lexer::lex(&file, ctx.get_options()) {
-        Ok(tokens) => tokens,
-        Err(_) => {
-            ctx.add_error(CompilationIssue::Error(
-                CompilationIssueCode::E0029,
-                "Imported module contains invalid syntax.".into(),
-                None,
-                span,
-            ));
-
-            return Err(());
-        }
-    };
+    let tokens: Tokens = Lexer::lex(&file, ctx.get_options());
 
     let mut parser: ModuleParser = ModuleParser::new(tokens, ctx.get_options());
 

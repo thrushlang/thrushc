@@ -12,7 +12,6 @@ use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 use ahash::AHashMap as HashMap;
 
 mod builtins;
-mod constants;
 mod declarations;
 mod expressions;
 mod marks;

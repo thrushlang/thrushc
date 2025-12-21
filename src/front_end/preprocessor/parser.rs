@@ -1,5 +1,3 @@
-use std::mem;
-
 use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -66,7 +64,7 @@ impl ModuleParser<'_> {
         module.append_symbols(&mut self.symbols);
 
         if !self.errors.is_empty() {
-            return Err(mem::take(&mut self.errors));
+            return Err(std::mem::take(&mut self.errors));
         }
 
         Ok(module)

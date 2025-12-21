@@ -18,9 +18,6 @@ use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
-use crate::front_end::parser::constants::{
-    PARSER_MAX_ERRORS, PARSER_MINIMAL_AST_CAPACITY, PARSER_MINIMAL_GLOBAL_CAPACITY,
-};
 use crate::front_end::parser::contexts::controlctx::ParserControlContext;
 use crate::front_end::parser::symbols::SymbolsTable;
 use crate::front_end::preprocessor::module::Module;
@@ -28,6 +25,9 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
 use ahash::AHashMap as HashMap;
+
+pub const PARSER_MINIMAL_AST_CAPACITY: usize = 10_000;
+pub const PARSER_MINIMAL_GLOBAL_CAPACITY: usize = 10_000;
 
 #[derive(Debug)]
 pub struct ParserContext<'parser> {
@@ -82,16 +82,6 @@ impl<'parser> Parser<'parser> {
             match declarations::parse(&mut ctx) {
                 Ok(ast) => ctx.add_ast(ast),
                 Err(error) => {
-                    let total_issues: usize = ctx.errors.len() + ctx.bugs.len();
-
-                    if total_issues >= PARSER_MAX_ERRORS {
-                        logging::print_warn(
-                            LoggingType::Warning,
-                            "Too many issues. Stopping compilation.",
-                        );
-                        break;
-                    }
-
                     if error.is_bug() {
                         ctx.add_bug(error);
                     } else {

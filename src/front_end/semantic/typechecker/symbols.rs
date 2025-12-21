@@ -1,6 +1,3 @@
-use crate::front_end::semantic::typechecker::constants::TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY;
-use crate::front_end::semantic::typechecker::constants::TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY;
-
 use crate::front_end::types::semantic::typechecker::types::TypeCheckerAssemblerFunction;
 use crate::front_end::types::semantic::typechecker::types::TypeCheckerAssemblerFunctions;
 use crate::front_end::types::semantic::typechecker::types::TypeCheckerFunction;
@@ -13,6 +10,10 @@ use crate::front_end::types::semantic::typechecker::types::TypeCheckerLocal;
 use crate::front_end::types::semantic::typechecker::types::TypeCheckerLocals;
 
 use ahash::AHashMap as HashMap;
+
+pub const PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY: usize = 100_000;
+pub const PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY: usize = 255;
+
 #[derive(Debug)]
 pub struct TypeCheckerSymbolsTable<'symbol> {
     functions: TypeCheckerFunctions<'symbol>,
@@ -29,12 +30,12 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     #[inline]
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),
-            asm_functions: HashMap::with_capacity(TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),
-            intrinsics: HashMap::with_capacity(TYPECHECKER_SYMBOLS_GLOBAL_MINIMAL_CAPACITY),
+            functions: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
+            asm_functions: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
+            intrinsics: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
 
-            locals: Vec::with_capacity(TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY),
-            llis: Vec::with_capacity(TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY),
+            locals: Vec::with_capacity(PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY),
+            llis: Vec::with_capacity(PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY),
 
             scope: 0,
         }
@@ -100,11 +101,11 @@ impl TypeCheckerSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
         self.llis.push(HashMap::with_capacity(
-            TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
+            PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY,
         ));
 
         self.locals.push(HashMap::with_capacity(
-            TYPECHECKER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,
+            PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY,
         ));
 
         self.scope += 1;

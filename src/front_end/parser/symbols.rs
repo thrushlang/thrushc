@@ -3,8 +3,6 @@ use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
 use crate::core::errors::standard::CompilationIssueCode;
-use crate::front_end::parser::constants::PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY;
-use crate::front_end::parser::constants::PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::symbols::types::AssemblerFunction;
 use crate::front_end::types::parser::symbols::types::AssemblerFunctions;
@@ -35,8 +33,8 @@ use crate::front_end::types::parser::symbols::types::Parameters;
 use crate::front_end::types::parser::symbols::types::StaticSymbol;
 use crate::front_end::types::parser::symbols::types::Struct;
 
-use ahash::AHashMap as HashMap;
-use std::path::PathBuf;
+pub const PREALLOCATED_GLOBAL_TABLE_CAPACITY: usize = 1000;
+pub const PREALLOCATED_LOCAL_TABLE_CAPACITY: usize = 255;
 
 #[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'parser> {
@@ -70,23 +68,23 @@ impl<'parser> SymbolsTable<'parser> {
             functions,
             asm_functions,
 
-            intrinsics: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            intrinsics: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
 
-            global_structs: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            global_statics: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            global_constants: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            global_custom_types: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            global_enums: HashMap::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            global_structs: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
+            global_statics: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
+            global_constants: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
+            global_custom_types: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
+            global_enums: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
 
-            local_structs: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
-            local_statics: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
-            local_constants: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
-            local_custom_types: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            local_enums: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            locals: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
-            llis: Vec::with_capacity(PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            local_structs: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
+            local_statics: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
+            local_constants: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
+            local_custom_types: Vec::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
+            local_enums: Vec::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
+            locals: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
+            llis: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
 
-            parameters: HashMap::with_capacity(10),
+            parameters: ahash::AHashMap::with_capacity(10),
         }
     }
 }
@@ -94,27 +92,27 @@ impl<'parser> SymbolsTable<'parser> {
 impl SymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.local_structs.push(HashMap::with_capacity(
-            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        self.local_structs.push(ahash::AHashMap::with_capacity(
+            PREALLOCATED_LOCAL_TABLE_CAPACITY,
         ));
-        self.local_custom_types.push(HashMap::with_capacity(
-            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        self.local_custom_types.push(ahash::AHashMap::with_capacity(
+            PREALLOCATED_LOCAL_TABLE_CAPACITY,
         ));
-        self.local_statics.push(HashMap::with_capacity(
-            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        self.local_statics.push(ahash::AHashMap::with_capacity(
+            PREALLOCATED_LOCAL_TABLE_CAPACITY,
         ));
-        self.local_constants.push(HashMap::with_capacity(
-            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        self.local_constants.push(ahash::AHashMap::with_capacity(
+            PREALLOCATED_LOCAL_TABLE_CAPACITY,
         ));
-        self.local_enums.push(HashMap::with_capacity(
-            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        self.local_enums.push(ahash::AHashMap::with_capacity(
+            PREALLOCATED_LOCAL_TABLE_CAPACITY,
         ));
 
-        self.locals.push(HashMap::with_capacity(
-            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        self.locals.push(ahash::AHashMap::with_capacity(
+            PREALLOCATED_LOCAL_TABLE_CAPACITY,
         ));
-        self.llis.push(HashMap::with_capacity(
-            PARSER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
+        self.llis.push(ahash::AHashMap::with_capacity(
+            PREALLOCATED_LOCAL_TABLE_CAPACITY,
         ));
     }
 
@@ -810,7 +808,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
-                PathBuf::from(file!()),
+                std::path::PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -900,7 +898,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The last scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
-                PathBuf::from(file!()),
+                std::path::PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -936,7 +934,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The last scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
-                PathBuf::from(file!()),
+                std::path::PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -966,7 +964,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
-                PathBuf::from(file!()),
+                std::path::PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -1002,7 +1000,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The last scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
-                PathBuf::from(file!()),
+                std::path::PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -1038,7 +1036,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The last scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
-                PathBuf::from(file!()),
+                std::path::PathBuf::from(file!()),
                 line!(),
             ));
         }
@@ -1092,7 +1090,7 @@ impl<'parser> SymbolsTable<'parser> {
                 String::from("The last scope could not be obtained."),
                 span,
                 CompilationPosition::Parser,
-                PathBuf::from(file!()),
+                std::path::PathBuf::from(file!()),
                 line!(),
             ));
         }

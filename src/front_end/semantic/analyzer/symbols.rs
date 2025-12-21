@@ -1,6 +1,3 @@
-use crate::front_end::semantic::analyzer::constants::ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY;
-use crate::front_end::semantic::analyzer::constants::ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY;
-
 use crate::front_end::types::semantic::analyzer::types::AnalyzerAssemblerFunction;
 use crate::front_end::types::semantic::analyzer::types::AnalyzerAssemblerFunctions;
 use crate::front_end::types::semantic::analyzer::types::AnalyzerFunction;
@@ -11,6 +8,9 @@ use crate::front_end::types::semantic::analyzer::types::AnalyzerLocal;
 use crate::front_end::types::semantic::analyzer::types::AnalyzerLocals;
 
 use ahash::AHashMap as HashMap;
+
+pub const PREALLOCATE_SYMBOLS_GLOBAL_TABLE: usize = 1000;
+pub const PREALLOCATE_SYMBOLS_LOCAL_TABLE: usize = 255;
 
 #[derive(Debug)]
 pub struct AnalyzerSymbolsTable<'symbol> {
@@ -27,11 +27,11 @@ impl<'symbol> AnalyzerSymbolsTable<'symbol> {
     #[inline]
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
-            asm_functions: HashMap::with_capacity(ANALYZER_SYMBOLS_MINIMAL_GLOBAL_CAPACITY),
+            functions: HashMap::with_capacity(PREALLOCATE_SYMBOLS_GLOBAL_TABLE),
+            asm_functions: HashMap::with_capacity(PREALLOCATE_SYMBOLS_GLOBAL_TABLE),
 
-            locals: Vec::with_capacity(ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
-            llis: Vec::with_capacity(ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY),
+            locals: Vec::with_capacity(PREALLOCATE_SYMBOLS_LOCAL_TABLE),
+            llis: Vec::with_capacity(PREALLOCATE_SYMBOLS_LOCAL_TABLE),
 
             scope: 0,
         }
@@ -71,12 +71,10 @@ impl<'symbol> AnalyzerSymbolsTable<'symbol> {
 impl AnalyzerSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.llis.push(HashMap::with_capacity(
-            ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
-        ));
-        self.locals.push(HashMap::with_capacity(
-            ANALYZER_SYMBOLS_MINIMAL_LOCAL_CAPACITY,
-        ));
+        self.llis
+            .push(HashMap::with_capacity(PREALLOCATE_SYMBOLS_LOCAL_TABLE));
+        self.locals
+            .push(HashMap::with_capacity(PREALLOCATE_SYMBOLS_LOCAL_TABLE));
 
         self.scope += 1;
     }

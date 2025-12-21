@@ -9,7 +9,6 @@ use crate::front_end::types::ast::Ast;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 mod builtins;
-mod constants;
 mod context;
 mod declarations;
 mod expressions;

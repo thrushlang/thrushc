@@ -1,8 +1,6 @@
 use ahash::AHashMap as HashMap;
 
 use crate::core::diagnostic::span::Span;
-use crate::front_end::semantic::linter::constants::LINTER_MINIMAL_GLOBAL_CAPACITY;
-use crate::front_end::semantic::linter::constants::LINTER_MINIMAL_LOCAL_CAPACITY;
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::fnparam::FunctionParameterMetadata;
@@ -32,6 +30,9 @@ use crate::front_end::types::semantic::linter::types::LinterStaticInfo;
 use crate::front_end::types::semantic::linter::types::LinterStructFieldsInfo;
 use crate::front_end::types::semantic::linter::types::LinterStructs;
 
+pub const PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY: usize = 1000;
+pub const PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY: usize = 255;
+
 #[derive(Debug)]
 pub struct LinterSymbolsTable<'linter> {
     functions: LinterFunctions<'linter>,
@@ -57,20 +58,20 @@ impl LinterSymbolsTable<'_> {
     #[inline]
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(LINTER_MINIMAL_GLOBAL_CAPACITY),
-            asm_functions: HashMap::with_capacity(LINTER_MINIMAL_GLOBAL_CAPACITY),
-            intrinsics: HashMap::with_capacity(LINTER_MINIMAL_GLOBAL_CAPACITY),
+            functions: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
+            asm_functions: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
+            intrinsics: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
 
-            global_statics: HashMap::with_capacity(LINTER_MINIMAL_GLOBAL_CAPACITY),
-            global_constants: HashMap::with_capacity(LINTER_MINIMAL_GLOBAL_CAPACITY),
+            global_statics: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
+            global_constants: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
 
-            local_statics: Vec::with_capacity(LINTER_MINIMAL_LOCAL_CAPACITY),
-            local_constants: Vec::with_capacity(LINTER_MINIMAL_LOCAL_CAPACITY),
+            local_statics: Vec::with_capacity(PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY),
+            local_constants: Vec::with_capacity(PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY),
 
-            enums: HashMap::with_capacity(LINTER_MINIMAL_GLOBAL_CAPACITY),
-            structs: HashMap::with_capacity(LINTER_MINIMAL_GLOBAL_CAPACITY),
-            locals: Vec::with_capacity(LINTER_MINIMAL_LOCAL_CAPACITY),
-            llis: Vec::with_capacity(LINTER_MINIMAL_LOCAL_CAPACITY),
+            enums: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
+            structs: HashMap::with_capacity(PREALLOCATED_GLOBAL_SYMBOLS_TABLE_CAPACITY),
+            locals: Vec::with_capacity(PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY),
+            llis: Vec::with_capacity(PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY),
             parameters: HashMap::with_capacity(15),
 
             scope: 0,
@@ -336,12 +337,15 @@ impl<'linter> LinterSymbolsTable<'linter> {
 impl LinterSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.local_constants
-            .push(HashMap::with_capacity(LINTER_MINIMAL_LOCAL_CAPACITY));
-        self.locals
-            .push(HashMap::with_capacity(LINTER_MINIMAL_LOCAL_CAPACITY));
-        self.llis
-            .push(HashMap::with_capacity(LINTER_MINIMAL_LOCAL_CAPACITY));
+        self.local_constants.push(HashMap::with_capacity(
+            PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY,
+        ));
+        self.locals.push(HashMap::with_capacity(
+            PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY,
+        ));
+        self.llis.push(HashMap::with_capacity(
+            PREALLOCATED_LOCAL_SYMBOLS_TABLE_CAPACITY,
+        ));
 
         self.scope += 1;
     }
