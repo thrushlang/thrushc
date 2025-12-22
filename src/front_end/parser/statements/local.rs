@@ -80,7 +80,11 @@ pub fn build_local<'parser>(
         String::from("Expected '='."),
     )?;
 
+    ctx.get_mut_type_ctx().add_infered_type(local_type.clone());
+
     let value: Ast = expressions::build_expression(ctx)?;
+
+    ctx.get_mut_type_ctx().pop_infered_type();
 
     let local: Ast = Ast::Local {
         name,

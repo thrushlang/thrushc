@@ -50,10 +50,18 @@ pub fn validate<'type_checker>(
     }
 
     for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
-        let from_type = expr.get_value_type()?;
-        let expr_metadata = TypeCheckerExprMetadata::new(expr.is_literal_value(), expr.get_span());
+        let from_type: &Type = expr.get_value_type()?;
+        let expr_metadata: TypeCheckerExprMetadata =
+            TypeCheckerExprMetadata::new(expr.is_literal_value());
 
-        checks::check_types(target_type, from_type, Some(expr), None, expr_metadata)?;
+        checks::check_types(
+            target_type,
+            from_type,
+            Some(expr),
+            None,
+            expr_metadata,
+            expr.get_span(),
+        )?;
     }
 
     for arg in args.iter() {

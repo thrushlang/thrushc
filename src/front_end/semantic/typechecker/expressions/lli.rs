@@ -25,10 +25,8 @@ pub fn validate<'type_checker>(
         } => {
             typechecker.symbols.new_lli(name, (lli_type, *span));
 
-            let expr_span: Span = expr.get_span();
-
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(expr.is_literal_value(), expr_span);
+                TypeCheckerExprMetadata::new(expr.is_literal_value());
 
             let value_type: &Type = expr.get_value_type()?;
 
@@ -41,7 +39,14 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            checks::check_types(lli_type, value_type, Some(expr), None, metadata)?;
+            checks::check_types(
+                lli_type,
+                value_type,
+                Some(expr),
+                None,
+                metadata,
+                node.get_span(),
+            )?;
 
             typechecker.analyze_expr(expr)?;
 
@@ -137,7 +142,6 @@ pub fn validate<'type_checker>(
             ..
         } => {
             let source_type: &Type = source.get_value_type()?;
-            let span: Span = source.get_span();
 
             if !source_type.is_ptr_type() && !source_type.is_address_type() {
                 typechecker.add_error(CompilationIssue::Error(
@@ -147,19 +151,25 @@ pub fn validate<'type_checker>(
                         source_type
                     ),
                     None,
-                    span,
+                    source.get_span(),
                 ));
             }
 
             typechecker.analyze_expr(source)?;
 
             let value_type: &Type = write_value.get_value_type()?;
-            let span: Span = write_value.get_span();
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(write_value.is_literal_value(), span);
+                TypeCheckerExprMetadata::new(write_value.is_literal_value());
 
-            checks::check_types(write_type, value_type, Some(write_value), None, metadata)?;
+            checks::check_types(
+                write_type,
+                value_type,
+                Some(write_value),
+                None,
+                metadata,
+                write_value.get_span(),
+            )?;
 
             Ok(())
         }

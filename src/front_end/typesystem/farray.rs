@@ -2,9 +2,9 @@ use crate::front_end::typesystem::{traits::TypeFixedArrayEntensions, types::Type
 
 impl TypeFixedArrayEntensions for Type {
     #[inline]
-    fn get_fixed_array_base_type(&self) -> &Type {
+    fn get_fixed_array_base_type(&self) -> Type {
         if let Type::FixedArray(inner, ..) = self {
-            return inner;
+            return *(*inner).clone();
         }
 
         if let Type::Ptr(Some(inner), ..) = self {
@@ -15,7 +15,7 @@ impl TypeFixedArrayEntensions for Type {
             return inner.get_fixed_array_base_type();
         }
 
-        self
+        self.clone()
     }
 
     #[inline]
@@ -26,18 +26,18 @@ impl TypeFixedArrayEntensions for Type {
             Type::Bool(..) => 1,
             Type::Char(..) => 2,
 
-            Type::S8(..) => 4,
-            Type::S16(..) => 5,
-            Type::S32(..) => 6,
-            Type::S64(..) => 7,
-            Type::SSize(..) => 8,
+            Type::U8(..) => 3,
+            Type::U16(..) => 4,
+            Type::U32(..) => 5,
+            Type::U64(..) => 6,
+            Type::U128(..) => 7,
+            Type::USize(..) => 8,
 
-            Type::U8(..) => 9,
-            Type::U16(..) => 10,
-            Type::U32(..) => 11,
-            Type::U64(..) => 12,
-            Type::U128(..) => 13,
-            Type::USize(..) => 14,
+            Type::S8(..) => 9,
+            Type::S16(..) => 10,
+            Type::S32(..) => 11,
+            Type::S64(..) => 12,
+            Type::SSize(..) => 13,
 
             Type::F32(..) => 15,
             Type::F64(..) => 16,

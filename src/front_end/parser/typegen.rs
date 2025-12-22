@@ -21,6 +21,7 @@ use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::stmts::types::StructFields;
 use crate::front_end::types::parser::symbols::types::ConstantSymbol;
 use crate::front_end::types::parser::symbols::types::CustomTypeSymbol;
+use crate::front_end::types::parser::symbols::types::FoundSymbolId;
 use crate::front_end::types::parser::symbols::types::LocalSymbol;
 use crate::front_end::types::parser::symbols::types::ParameterSymbol;
 use crate::front_end::types::parser::symbols::types::StaticSymbol;
@@ -58,68 +59,69 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
             let name: &str = identifier_tk.get_lexeme();
             let span: Span = identifier_tk.get_span();
 
-            if let Ok(object) = ctx.get_symbols().get_symbols_id(name, span) {
-                match object {
-                    _ if object.is_structure() => {
-                        let (id, scope_idx) = object.expected_struct(span)?;
-                        let structure: Struct =
-                            ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
-                        let fields: StructFields = structure.get_fields();
+            let object_result: Result<FoundSymbolId, CompilationIssue> =
+                ctx.get_symbols().get_symbols_id(name, span);
 
-                        Ok(fields.get_type())
-                    }
-                    _ if object.is_custom_type() => {
-                        let (id, scope_idx) = object.expected_custom_type(span)?;
-                        let custom: CustomTypeSymbol = ctx
-                            .get_symbols()
-                            .get_custom_type_by_id(id, scope_idx, span)?;
+            if let Err(issue) = object_result {
+                ctx.add_error(issue);
+                return Ok(Type::Void(span));
+            }
 
-                        Ok(custom.0)
-                    }
-                    _ if object.is_parameter() => {
-                        let parameter_id: &str = object.expected_parameter(span)?;
-                        let parameter: ParameterSymbol =
-                            ctx.get_symbols().get_parameter_by_id(parameter_id, span)?;
+            let object: FoundSymbolId = object_result?;
 
-                        Ok(parameter.0)
-                    }
-                    _ if object.is_local() => {
-                        let (id, scope_idx) = object.expected_local(span)?;
-                        let local: LocalSymbol = ctx
-                            .get_symbols()
-                            .get_local_by_id(id, scope_idx, span)?
-                            .clone();
+            match object {
+                _ if object.is_structure() => {
+                    let (id, scope_idx) = object.expected_struct(span)?;
+                    let structure: Struct =
+                        ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
+                    let fields: StructFields = structure.get_fields();
 
-                        Ok(local.0)
-                    }
-                    _ if object.is_static() => {
-                        let (id, scope_idx) = object.expected_static(span)?;
-                        let staticvar: StaticSymbol =
-                            ctx.get_symbols().get_static_by_id(id, scope_idx, span)?;
-
-                        Ok(staticvar.0)
-                    }
-                    _ if object.is_constant() => {
-                        let (id, scope_idx) = object.expected_constant(span)?;
-                        let constant: ConstantSymbol =
-                            ctx.get_symbols().get_const_by_id(id, scope_idx, span)?;
-
-                        Ok(constant.0)
-                    }
-                    _ => Err(CompilationIssue::Error(
-                        CompilationIssueCode::E0001,
-                        format!("Not found type '{}'.", name),
-                        None,
-                        span,
-                    )),
+                    Ok(fields.get_type())
                 }
-            } else {
-                Err(CompilationIssue::Error(
+                _ if object.is_custom_type() => {
+                    let (id, scope_idx) = object.expected_custom_type(span)?;
+                    let custom: CustomTypeSymbol = ctx
+                        .get_symbols()
+                        .get_custom_type_by_id(id, scope_idx, span)?;
+
+                    Ok(custom.0)
+                }
+                _ if object.is_parameter() => {
+                    let parameter_id: &str = object.expected_parameter(span)?;
+                    let parameter: ParameterSymbol =
+                        ctx.get_symbols().get_parameter_by_id(parameter_id, span)?;
+
+                    Ok(parameter.0)
+                }
+                _ if object.is_local() => {
+                    let (id, scope_idx) = object.expected_local(span)?;
+                    let local: LocalSymbol = ctx
+                        .get_symbols()
+                        .get_local_by_id(id, scope_idx, span)?
+                        .clone();
+
+                    Ok(local.0)
+                }
+                _ if object.is_static() => {
+                    let (id, scope_idx) = object.expected_static(span)?;
+                    let staticvar: StaticSymbol =
+                        ctx.get_symbols().get_static_by_id(id, scope_idx, span)?;
+
+                    Ok(staticvar.0)
+                }
+                _ if object.is_constant() => {
+                    let (id, scope_idx) = object.expected_constant(span)?;
+                    let constant: ConstantSymbol =
+                        ctx.get_symbols().get_const_by_id(id, scope_idx, span)?;
+
+                    Ok(constant.0)
+                }
+                _ => Err(CompilationIssue::Error(
                     CompilationIssueCode::E0001,
-                    format!("Expected type, not '{}'", name),
+                    format!("Not found type '{}'.", name),
                     None,
-                    ctx.previous().span,
-                ))
+                    span,
+                )),
             }
         }
 

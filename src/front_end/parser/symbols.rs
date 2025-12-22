@@ -783,7 +783,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("'{}' isn't declared or defined.", id),
+            format!("'{}' reference isn't declared or defined.", id),
             None,
             span,
         ))

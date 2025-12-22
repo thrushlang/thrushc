@@ -11,11 +11,10 @@ pub fn check_types(
     lhs: &Type,
     rhs: &Type,
     expr: Option<&Ast>,
-    op: Option<&TokenType>,
+    operator: Option<&TokenType>,
     metadata: TypeCheckerExprMetadata,
+    span: Span,
 ) -> Result<(), CompilationIssue> {
-    let span: Span = metadata.get_span();
-
     let error: CompilationIssue = CompilationIssue::Error(
         CompilationIssueCode::E0020,
         format!("Expected '{}' type, got '{}' type.", lhs, rhs),
@@ -29,7 +28,7 @@ pub fn check_types(
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, None, Some(op), metadata);
+        return self::check_types(lhs, expression_type, None, Some(op), metadata, span);
     }
 
     if let Some(Ast::UnaryOp {
@@ -38,7 +37,7 @@ pub fn check_types(
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, None, Some(op), metadata);
+        return self::check_types(lhs, expression_type, None, Some(op), metadata, span);
     }
 
     if let Some(Ast::Group {
@@ -47,10 +46,10 @@ pub fn check_types(
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, Some(expression), None, metadata);
+        return self::check_types(lhs, expression_type, Some(expression), None, metadata, span);
     }
 
-    match (lhs, rhs, op) {
+    match (lhs, rhs, operator) {
         (Type::Char(..), Type::Char(..), None) => Ok(()),
 
         (Type::Struct(_, lhs, mod1, ..), Type::Struct(_, rhs, mod2, ..), None) => {
@@ -70,9 +69,9 @@ pub fn check_types(
                 ));
             }
 
-            lhs.iter()
-                .zip(rhs.iter())
-                .try_for_each(|(lhs, rhs)| self::check_types(lhs, rhs, None, None, metadata))?;
+            lhs.iter().zip(rhs.iter()).try_for_each(|(lhs, rhs)| {
+                self::check_types(lhs, rhs, None, None, metadata, span)
+            })?;
 
             Ok(())
         }
@@ -100,22 +99,24 @@ pub fn check_types(
                 ));
             }
 
-            lhs.iter()
-                .zip(rhs.iter())
-                .try_for_each(|(lhs, rhs)| self::check_types(lhs, rhs, None, None, metadata))?;
+            lhs.iter().zip(rhs.iter()).try_for_each(|(lhs, rhs)| {
+                self::check_types(lhs, rhs, None, None, metadata, span)
+            })?;
 
             Ok(())
         }
 
         (Type::Const(lhs, ..), Type::Const(rhs, ..), None) => {
-            self::check_types(lhs, rhs, None, None, metadata)
+            self::check_types(lhs, rhs, None, None, metadata, span)
         }
 
-        (Type::Const(lhs, ..), rhs, None) => self::check_types(lhs, rhs, None, None, metadata),
+        (Type::Const(lhs, ..), rhs, None) => {
+            self::check_types(lhs, rhs, None, None, metadata, span)
+        }
 
         (Type::FixedArray(lhs, lhs_size, ..), Type::FixedArray(rhs, rhs_size, ..), None) => {
             if lhs_size == rhs_size {
-                self::check_types(lhs, rhs, None, None, metadata)?;
+                self::check_types(lhs, rhs, None, None, metadata, span)?;
                 return Ok(());
             }
 
@@ -123,7 +124,7 @@ pub fn check_types(
         }
 
         (Type::Array(lhs, ..), Type::Array(rhs, ..), None) => {
-            self::check_types(lhs, rhs, None, None, metadata)?;
+            self::check_types(lhs, rhs, None, None, metadata, span)?;
             Ok(())
         }
 
@@ -138,7 +139,7 @@ pub fn check_types(
             Type::Ptr(Some(rhs), ..),
             Some(TokenType::EqEq | TokenType::BangEq) | None,
         ) => {
-            self::check_types(lhs, rhs, expr, op, metadata)?;
+            self::check_types(lhs, rhs, expr, operator, metadata, span)?;
             Ok(())
         }
 

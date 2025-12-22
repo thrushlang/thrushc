@@ -24,6 +24,11 @@ impl ParserControlContext {
     pub fn pop_sync_position(&mut self) {
         self.sync_position.pop();
     }
+
+    #[inline]
+    pub fn reset_sync_position(&mut self) {
+        self.sync_position.clear();
+    }
 }
 
 impl ParserControlContext {

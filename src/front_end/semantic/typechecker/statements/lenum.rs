@@ -26,9 +26,16 @@ pub fn validate<'type_checker>(
                 let value: &Ast = &field.2;
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());
+                    TypeCheckerExprMetadata::new(value.is_literal_value());
 
-                checks::check_types(&target_type, from_type, Some(value), None, metadata)?;
+                checks::check_types(
+                    &target_type,
+                    from_type,
+                    Some(value),
+                    None,
+                    metadata,
+                    value.get_span(),
+                )?;
 
                 typechecker.analyze_expr(value)?;
 

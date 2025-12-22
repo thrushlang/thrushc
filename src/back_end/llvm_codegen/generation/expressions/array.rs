@@ -1,8 +1,10 @@
+use std::path::PathBuf;
+
 use crate::back_end::llvm_codegen::anchors::PointerAnchor;
-use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::memory;
 use crate::back_end::llvm_codegen::memory::LLVMAllocationSite;
+use crate::back_end::llvm_codegen::{abort, memory};
+use crate::back_end::llvm_codegen::{codegen, typegen};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -11,6 +13,7 @@ use crate::front_end::typesystem::types::Type;
 
 use inkwell::AddressSpace;
 use inkwell::context::Context;
+use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 
 #[inline]
@@ -42,19 +45,47 @@ fn compile_without_anchor<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     let base_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: &Type = base_type.get_array_base_type();
+    let items_type: Type = base_type.get_array_base_type();
 
-    let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32, span);
+    let array_size: u32 = u32::try_from(items.len()).unwrap_or_else(|_| {
+        abort::abort_codegen(
+            context,
+            "Failed to parse the size!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        )
+    });
+
+    let array_type: Type = Type::FixedArray(items_type.clone().into(), array_size, span);
+
+    let llvm_type: BasicTypeEnum = typegen::generate(context, &array_type);
+
     let array_ptr: PointerValue =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, &array_type, span);
 
+    if items.is_empty() {
+        memory::store_anon(context, array_ptr, llvm_type.const_zero(), span);
+        return array_ptr.into();
+    }
+
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile(context, item, Some(items_type)))
+        .map(|item| codegen::compile(context, item, Some(&items_type)))
         .collect();
 
-    for (idx, value) in items.iter().enumerate() {
-        let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+    for (n, value) in items.iter().enumerate() {
+        let idx: u64 = u64::try_from(n).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to parse the build index!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let index: IntValue = llvm_context.i32_type().const_int(idx, false);
 
         let ptr: PointerValue = memory::gep_anon(
             context,
@@ -80,29 +111,55 @@ fn compile_with_anchor<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let anchor_ptr: PointerValue = anchor.get_pointer();
+    let anchor: PointerValue = anchor.get_pointer();
+
+    let array_size: u32 = u32::try_from(items.len()).unwrap_or_else(|_| {
+        abort::abort_codegen(
+            context,
+            "Failed to parse the size!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        )
+    });
 
     let base_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: &Type = base_type.get_array_base_type();
+    let items_type: Type = base_type.get_array_base_type();
 
-    let array_type: Type = Type::FixedArray(items_type.clone().into(), items.len() as u32, span);
+    let array_type: Type = Type::FixedArray(items_type.clone().into(), array_size, span);
+    let llvm_type: BasicTypeEnum = typegen::generate(context, &array_type);
 
-    context.set_pointer_anchor(PointerAnchor::new(anchor_ptr, true));
+    context.set_pointer_anchor(PointerAnchor::new(anchor, true));
+
+    if items.is_empty() {
+        memory::store_anon(context, anchor, llvm_type.const_zero(), span);
+        return anchor.into();
+    }
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile(context, item, Some(items_type)))
+        .map(|item| codegen::compile(context, item, Some(&items_type)))
         .collect();
 
     let ptr: Option<PointerValue> = items
         .iter()
         .enumerate()
-        .map(|(idx, value)| {
-            let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+        .map(|(n, value)| {
+            let idx: u64 = u64::try_from(n).unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to parse the build index!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
+
+            let index: IntValue = llvm_context.i32_type().const_int(idx, false);
 
             let ptr: PointerValue = memory::gep_anon(
                 context,
-                anchor_ptr,
+                anchor,
                 &array_type,
                 &[llvm_context.i32_type().const_zero(), index],
                 span,
@@ -114,14 +171,11 @@ fn compile_with_anchor<'ctx>(
         })
         .last();
 
-    ptr.unwrap_or(self::compile_null_ptr(context).into_pointer_value())
-        .into()
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+    ptr.unwrap_or(
+        context
+            .get_llvm_context()
+            .ptr_type(AddressSpace::default())
+            .const_null(),
+    )
+    .into()
 }

@@ -18,7 +18,16 @@ pub fn build_array<'parser>(
 
     let span: Span = tk.get_span();
 
-    let mut array_type: Type = Type::Void(span);
+    let mut array_type: Type = ctx
+        .get_type_ctx()
+        .get_infered_type()
+        .unwrap_or(Type::Void(span))
+        .get_array_base_type();
+
+    if !array_type.is_array_type() {
+        array_type = Type::Array(array_type.into(), span);
+    }
+
     let mut items: Vec<Ast> = Vec::with_capacity(100);
 
     loop {

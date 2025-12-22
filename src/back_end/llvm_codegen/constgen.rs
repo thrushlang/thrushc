@@ -73,13 +73,13 @@ pub fn compile<'ctx>(
             .into(),
 
         // Fixed-size array
-        Ast::FixedArray { items, .. } => {
-            generation::expressions::farray::compile_const(context, items, cast_type)
+        Ast::FixedArray { items, span, .. } => {
+            generation::expressions::farray::compile_const(context, items, cast_type, *span)
         }
 
         // String literal compilation
-        Ast::Str { bytes, .. } => {
-            generation::expressions::string::compile_str_constant(context, bytes).into()
+        Ast::Str { bytes, span, .. } => {
+            generation::expressions::string::compile_str_constant(context, bytes, *span).into()
         }
 
         // Struct constructor handling
@@ -148,7 +148,7 @@ pub fn compile<'ctx>(
 
             abort::abort_codegen(
                 context,
-                "Can't be compiled!.",
+                "Failed to compile the binary operation!",
                 *span,
                 PathBuf::from(file!()),
                 line!(),

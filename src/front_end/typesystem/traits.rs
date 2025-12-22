@@ -26,12 +26,12 @@ pub trait TypeExtensions {
 }
 
 pub trait TypeFixedArrayEntensions {
-    fn get_fixed_array_base_type(&self) -> &Type;
+    fn get_fixed_array_base_type(&self) -> Type;
     fn get_fixed_array_type_herarchy(&self) -> u8;
 }
 
 pub trait TypeArrayEntensions {
-    fn get_array_base_type(&self) -> &Type;
+    fn get_array_base_type(&self) -> Type;
     fn get_array_type_herarchy(&self) -> u8;
 }
 

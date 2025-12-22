@@ -1,13 +1,11 @@
-use std::fmt::Display;
+use std::path::PathBuf;
 
 use crate::back_end::llvm_codegen::anchors::PointerAnchor;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::cast;
 use crate::back_end::llvm_codegen::memory::LLVMAllocationSite;
-use crate::back_end::llvm_codegen::typegen;
+use crate::back_end::llvm_codegen::{abort, typegen};
 use crate::back_end::llvm_codegen::{codegen, constgen, memory};
-
-use crate::core::console::logging::{self, LoggingType};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -24,17 +22,18 @@ pub fn compile_const<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
     array_type: &Type,
+    span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let base_type: &Type = array_type.get_fixed_array_base_type();
-    let array_type: BasicTypeEnum = typegen::generate(context, base_type);
+    let base_type: Type = array_type.get_fixed_array_base_type();
+    let array_type: BasicTypeEnum = typegen::generate(context, &base_type);
 
     let values: Vec<BasicValueEnum> = items
         .iter()
         .map(|item| {
             let value_type: &Type = item.llvm_get_type(context);
-            let value: BasicValueEnum = constgen::compile(context, item, base_type);
+            let value: BasicValueEnum = constgen::compile(context, item, &base_type);
 
-            cast::try_cast_const(context, value, value_type, base_type)
+            cast::try_cast_const(context, value, value_type, &base_type)
         })
         .collect();
 
@@ -85,10 +84,13 @@ pub fn compile_const<'ctx>(
             )
             .into(),
         _ => {
-            self::codegen_abort(format!(
-                "Incompatible type '{}' for the construction of constant fixed array.",
-                base_type
-            ));
+            abort::abort_codegen(
+                context,
+                "Failed to compile the constant array!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            );
         }
     }
 }
@@ -123,24 +125,46 @@ fn compile_fixed_array_with_anchor<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let anchor_ptr: PointerValue = anchor.get_pointer();
+    let anchor: PointerValue = anchor.get_pointer();
 
     let array_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: &Type = array_type.get_fixed_array_base_type();
+    let items_type: Type = array_type.get_fixed_array_base_type();
 
-    context.set_pointer_anchor(PointerAnchor::new(anchor_ptr, true));
+    let llvm_type: BasicTypeEnum = typegen::generate(context, array_type);
+
+    context.set_pointer_anchor(PointerAnchor::new(anchor, true));
+
+    if items.is_empty() {
+        memory::store_anon(context, anchor, llvm_type.const_zero(), span);
+
+        return context
+            .get_llvm_context()
+            .ptr_type(AddressSpace::default())
+            .const_null()
+            .into();
+    }
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile(context, item, Some(items_type)))
+        .map(|item| codegen::compile(context, item, Some(&items_type)))
         .collect();
 
-    for (idx, value) in items.iter().enumerate() {
-        let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+    for (n, value) in items.iter().enumerate() {
+        let idx: u64 = u64::try_from(n).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to parse the build index!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let index: IntValue = llvm_context.i32_type().const_int(idx, false);
 
         let ptr: PointerValue = memory::gep_anon(
             context,
-            anchor_ptr,
+            anchor,
             array_type,
             &[llvm_context.i32_type().const_zero(), index],
             span,
@@ -149,7 +173,11 @@ fn compile_fixed_array_with_anchor<'ctx>(
         memory::store_anon(context, ptr, *value, span);
     }
 
-    self::compile_null_ptr(context)
+    context
+        .get_llvm_context()
+        .ptr_type(AddressSpace::default())
+        .const_null()
+        .into()
 }
 
 fn compile_fixed_array_without_anchor<'ctx>(
@@ -162,18 +190,34 @@ fn compile_fixed_array_without_anchor<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     let array_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: &Type = array_type.get_fixed_array_base_type();
+    let items_type: Type = array_type.get_fixed_array_base_type();
+
+    let llvm_type: BasicTypeEnum = typegen::generate(context, array_type);
+
+    if items.is_empty() {
+        return llvm_type.const_zero();
+    }
 
     let array_ptr: PointerValue =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, array_type, span);
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile(context, item, Some(items_type)))
+        .map(|item| codegen::compile(context, item, Some(&items_type)))
         .collect();
 
-    for (idx, value) in items.iter().enumerate() {
-        let index: IntValue = llvm_context.i32_type().const_int(idx as u64, false);
+    for (n, value) in items.iter().enumerate() {
+        let idx: u64 = u64::try_from(n).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to parse the build index!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let index: IntValue = llvm_context.i32_type().const_int(idx, false);
 
         let ptr: PointerValue = memory::gep_anon(
             context,
@@ -187,16 +231,4 @@ fn compile_fixed_array_without_anchor<'ctx>(
     }
 
     memory::load_anon(context, array_ptr, array_type, span)
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
-}
-
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

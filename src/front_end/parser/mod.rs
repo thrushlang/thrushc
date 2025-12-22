@@ -19,6 +19,7 @@ use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::contexts::controlctx::ParserControlContext;
+use crate::front_end::parser::contexts::typectx::ParserTypeContext;
 use crate::front_end::parser::symbols::SymbolsTable;
 use crate::front_end::preprocessor::module::Module;
 use crate::front_end::types::ast::Ast;
@@ -38,6 +39,7 @@ pub struct ParserContext<'parser> {
     bugs: Vec<CompilationIssue>,
 
     control_ctx: ParserControlContext,
+    type_ctx: ParserTypeContext,
 
     diagnostician: Diagnostician,
     symbols: SymbolsTable<'parser>,
@@ -122,6 +124,7 @@ impl<'parser> ParserContext<'parser> {
             bugs: Vec::with_capacity(100),
 
             control_ctx: ParserControlContext::new(),
+            type_ctx: ParserTypeContext::new(),
 
             diagnostician: Diagnostician::new(file, options),
             symbols: SymbolsTable::with_functions(functions, asm_functions),
@@ -305,6 +308,11 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
+    pub fn get_type_ctx(&self) -> &ParserTypeContext {
+        &self.type_ctx
+    }
+
+    #[inline]
     pub fn get_ast(&self) -> &[Ast<'parser>] {
         &self.ast
     }
@@ -319,6 +327,11 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn get_mut_control_ctx(&mut self) -> &mut ParserControlContext {
         &mut self.control_ctx
+    }
+
+    #[inline]
+    pub fn get_mut_type_ctx(&mut self) -> &mut ParserTypeContext {
+        &mut self.type_ctx
     }
 }
 

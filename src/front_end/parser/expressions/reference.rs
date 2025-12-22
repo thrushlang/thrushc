@@ -36,10 +36,18 @@ pub fn build_reference<'parser>(
     name: &'parser str,
     span: Span,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let symbol: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
+    let object_result: Result<FoundSymbolId, CompilationIssue> =
+        ctx.get_symbols().get_symbols_id(name, span);
 
-    if symbol.is_function() {
-        let id: &str = symbol.expected_function(span)?;
+    if let Err(issue) = object_result {
+        ctx.add_error(issue);
+        return Ok(Ast::new_nullptr(span));
+    }
+
+    let object: FoundSymbolId = object_result?;
+
+    if object.is_function() {
+        let id: &str = object.expected_function(span)?;
 
         let function: Function = ctx.get_symbols().get_function_by_id(span, id)?;
 
@@ -63,8 +71,8 @@ pub fn build_reference<'parser>(
         });
     }
 
-    if symbol.is_static() {
-        let static_var: (&str, usize) = symbol.expected_static(span)?;
+    if object.is_static() {
+        let static_var: (&str, usize) = object.expected_static(span)?;
 
         let static_id: &str = static_var.0;
         let scope_idx: usize = static_var.1;
@@ -87,8 +95,8 @@ pub fn build_reference<'parser>(
         });
     }
 
-    if symbol.is_constant() {
-        let constant: (&str, usize) = symbol.expected_constant(span)?;
+    if object.is_constant() {
+        let constant: (&str, usize) = object.expected_constant(span)?;
 
         let const_id: &str = constant.0;
         let scope_idx: usize = constant.1;
@@ -107,8 +115,8 @@ pub fn build_reference<'parser>(
         });
     }
 
-    if symbol.is_parameter() {
-        let parameter_id: &str = symbol.expected_parameter(span)?;
+    if object.is_parameter() {
+        let parameter_id: &str = object.expected_parameter(span)?;
 
         let parameter: ParameterSymbol =
             ctx.get_symbols().get_parameter_by_id(parameter_id, span)?;
@@ -128,8 +136,8 @@ pub fn build_reference<'parser>(
         });
     }
 
-    if symbol.is_lli() {
-        let lli: (&str, usize) = symbol.expected_lli(span)?;
+    if object.is_lli() {
+        let lli: (&str, usize) = object.expected_lli(span)?;
 
         let lli_id: &str = lli.0;
         let scope_idx: usize = lli.1;
@@ -148,8 +156,8 @@ pub fn build_reference<'parser>(
         });
     }
 
-    if symbol.is_local() {
-        let local_position: (&str, usize) = symbol.expected_local(span)?;
+    if object.is_local() {
+        let local_position: (&str, usize) = object.expected_local(span)?;
         let local_id: &str = local_position.0;
         let scope_idx: usize = local_position.1;
 

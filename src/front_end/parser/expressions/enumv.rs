@@ -20,7 +20,16 @@ pub fn build_enum_value<'parser>(
     name: &'parser str,
     span: Span,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
+    let object_result: Result<FoundSymbolId, CompilationIssue> =
+        ctx.get_symbols().get_symbols_id(name, span);
+
+    if let Err(issue) = object_result {
+        ctx.add_error(issue);
+        return Ok(Ast::new_nullptr(span));
+    }
+
+    let object: FoundSymbolId = object_result?;
+
     let enum_id: (&str, usize) = object.expected_enum(span)?;
     let id: &str = enum_id.0;
     let scope_idx: usize = enum_id.1;

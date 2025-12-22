@@ -3,7 +3,6 @@ use crate::back_end::llvm_codegen::indexes;
 use crate::back_end::llvm_codegen::memory;
 use crate::back_end::llvm_codegen::refptr;
 
-use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
@@ -21,7 +20,5 @@ pub fn compile<'ctx>(
 
     let ordered_indexes: Vec<IntValue> = indexes::compile(context, index, ptr_type);
 
-    let span: Span = source.get_span();
-
-    memory::gep_anon(context, ptr, ptr_type, &ordered_indexes, span).into()
+    memory::gep_anon(context, ptr, ptr_type, &ordered_indexes, source.get_span()).into()
 }

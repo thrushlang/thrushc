@@ -28,14 +28,17 @@ pub fn validate<'type_checker>(
             typechecker.analyze_expr(condition)?;
 
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(condition.is_literal_value(), condition.get_span());
+                TypeCheckerExprMetadata::new(condition.is_literal_value());
+
+            let span: Span = condition.get_span();
 
             checks::check_types(
-                &Type::Bool(condition.get_span()),
+                &Type::Bool(span),
                 condition.get_value_type()?,
                 Some(condition),
                 None,
                 metadata,
+                span,
             )?;
 
             elseif
@@ -56,10 +59,10 @@ pub fn validate<'type_checker>(
         } => {
             typechecker.analyze_expr(condition)?;
 
-            let condition_span: Span = condition.get_span();
-
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(condition.is_literal_value(), condition_span);
+                TypeCheckerExprMetadata::new(condition.is_literal_value());
+
+            let span: Span = condition.get_span();
 
             checks::check_types(
                 &Type::Bool(condition.get_span()),
@@ -67,6 +70,7 @@ pub fn validate<'type_checker>(
                 Some(condition),
                 None,
                 metadata,
+                span,
             )?;
 
             typechecker.analyze_stmt(block)?;

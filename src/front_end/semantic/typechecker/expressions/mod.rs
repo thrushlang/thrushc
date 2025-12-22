@@ -22,8 +22,6 @@ use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::parser::stmts::types::Constructor;
-use crate::front_end::typesystem::traits::TypeArrayEntensions;
-use crate::front_end::typesystem::traits::TypeFixedArrayEntensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
@@ -81,24 +79,9 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            let array_type: &Type = kind.get_fixed_array_base_type();
-
-            items.iter().try_for_each(|item| {
-                let span: Span = item.get_span();
-
-                let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(item.is_literal_value(), span);
-
-                checks::check_types(
-                    array_type,
-                    item.get_value_type()?,
-                    Some(item),
-                    None,
-                    metadata,
-                )?;
-
-                typechecker.analyze_expr(item)
-            })?;
+            items
+                .iter()
+                .try_for_each(|item| typechecker.analyze_expr(item))?;
 
             Ok(())
         }
@@ -115,24 +98,9 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            let array_type: &Type = kind.get_array_base_type();
-
-            items.iter().try_for_each(|item| {
-                let span: Span = item.get_span();
-
-                let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(item.is_literal_value(), span);
-
-                checks::check_types(
-                    array_type,
-                    item.get_value_type()?,
-                    Some(item),
-                    None,
-                    metadata,
-                )?;
-
-                typechecker.analyze_expr(item)
-            })?;
+            items
+                .iter()
+                .try_for_each(|item| typechecker.analyze_expr(item))?;
 
             Ok(())
         }
@@ -151,9 +119,9 @@ pub fn validate<'type_checker>(
                 let from_type: &Type = expr.get_value_type()?;
 
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(expr.is_literal_value(), span);
+                    TypeCheckerExprMetadata::new(expr.is_literal_value());
 
-                checks::check_types(target_type, from_type, Some(expr), None, metadata)?;
+                checks::check_types(target_type, from_type, Some(expr), None, metadata, span)?;
 
                 typechecker.analyze_expr(expr)?;
 

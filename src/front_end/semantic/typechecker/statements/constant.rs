@@ -25,7 +25,7 @@ pub fn validate<'type_checker>(
             ..
         } => {
             let metadata: TypeCheckerExprMetadata =
-                TypeCheckerExprMetadata::new(value.is_literal_value(), value.get_span());
+                TypeCheckerExprMetadata::new(value.is_literal_value());
 
             let from_type: &Type = value.get_value_type()?;
 
@@ -35,6 +35,7 @@ pub fn validate<'type_checker>(
                 Some(value),
                 None,
                 metadata,
+                node.get_span(),
             )?;
 
             typechecker.analyze_expr(value)?;

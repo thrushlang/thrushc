@@ -9,7 +9,27 @@ use crate::front_end::types::ast::traits::{
 impl AstStandardExtensions for Ast<'_> {
     #[inline]
     fn is_literal_value(&self) -> bool {
-        matches!(self, Ast::Integer { .. } | Ast::Float { .. })
+        match self {
+            Ast::Integer { .. }
+            | Ast::Float { .. }
+            | Ast::Boolean { .. }
+            | Ast::Char { .. }
+            | Ast::Str { .. }
+            | Ast::NullPtr { .. } => true,
+
+            Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_literal_value()),
+            Ast::Array { items, .. } => items.iter().all(|item| item.is_literal_value()),
+
+            Ast::EnumValue { value, .. } => value.is_literal_value(),
+
+            Ast::Group { expression, .. } => expression.is_literal_value(),
+            Ast::BinaryOp { left, right, .. } => {
+                left.is_literal_value() && right.is_literal_value()
+            }
+            Ast::UnaryOp { expression, .. } => expression.is_literal_value(),
+
+            _ => false,
+        }
     }
 
     #[inline]

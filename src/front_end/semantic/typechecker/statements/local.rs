@@ -43,7 +43,7 @@ pub fn validate<'type_checker>(
                 let metadata: &LocalMetadata = metadata;
 
                 let type_metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(local_value.is_literal_value(), *span);
+                    TypeCheckerExprMetadata::new(local_value.is_literal_value());
 
                 if local_type.is_void_type() {
                     typechecker.add_error(CompilationIssue::Error(
@@ -63,6 +63,7 @@ pub fn validate<'type_checker>(
                         Some(local_value),
                         None,
                         type_metadata,
+                        node.get_span(),
                     )?;
 
                     typechecker.analyze_expr(local_value)?;

@@ -11,7 +11,7 @@ use crate::front_end::typesystem::traits::TypeCodeLocation;
 use crate::front_end::typesystem::types::Type;
 
 pub fn decompose<'parser>(
-    ctx: &ParserContext<'parser>,
+    ctx: &mut ParserContext<'parser>,
     mut position: usize,
     source: &Ast,
     property_names: Vec<&str>,
@@ -38,7 +38,15 @@ pub fn decompose<'parser>(
     let field_name: &str = property_names[position];
 
     if let Type::Struct(name, ..) = current_type {
-        let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(&name, span)?;
+        let object_result: Result<FoundSymbolId, CompilationIssue> =
+            ctx.get_symbols().get_symbols_id(name, span);
+
+        if let Err(issue) = object_result {
+            ctx.add_error(issue);
+            return Ok((base_type.clone(), indices));
+        }
+
+        let object: FoundSymbolId = object_result?;
         let structure_id: (&str, usize) = object.expected_struct(span)?;
         let id: &str = structure_id.0;
         let scope_idx: usize = structure_id.1;

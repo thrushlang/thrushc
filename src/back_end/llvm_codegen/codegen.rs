@@ -544,8 +544,8 @@ pub fn compile<'ctx>(
             .const_null()
             .into(),
 
-        Ast::Str { bytes, .. } => {
-            generation::expressions::string::compile_str(context, bytes).into()
+        Ast::Str { bytes, span, .. } => {
+            generation::expressions::string::compile_str(context, bytes, *span).into()
         }
 
         Ast::Char { byte, .. } => context

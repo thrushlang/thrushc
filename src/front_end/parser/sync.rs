@@ -38,6 +38,7 @@ impl ParserContext<'_> {
             }
 
             self.get_mut_control_ctx().pop_sync_position();
+            self.get_mut_type_ctx().reset_infered_types();
         }
     }
 }

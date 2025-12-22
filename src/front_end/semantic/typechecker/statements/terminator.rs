@@ -22,9 +22,16 @@ pub fn validate<'type_checker>(
         } => {
             if let Some(expr) = expression {
                 let metadata: TypeCheckerExprMetadata =
-                    TypeCheckerExprMetadata::new(expr.is_literal_value(), expr.get_span());
+                    TypeCheckerExprMetadata::new(expr.is_literal_value());
 
-                checks::check_types(kind, expr.get_value_type()?, Some(expr), None, metadata)?;
+                checks::check_types(
+                    kind,
+                    expr.get_value_type()?,
+                    Some(expr),
+                    None,
+                    metadata,
+                    node.get_span(),
+                )?;
 
                 typechecker.analyze_expr(expr)?;
             }

@@ -16,7 +16,15 @@ pub fn build_call<'parser>(
     name: &'parser str,
     span: Span,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
+    let object_result: Result<FoundSymbolId, CompilationIssue> =
+        ctx.get_symbols().get_symbols_id(name, span);
+
+    if let Err(issue) = object_result {
+        ctx.add_error(issue);
+        return Ok(Ast::new_nullptr(span));
+    }
+
+    let object: FoundSymbolId = object_result?;
 
     let function_type: Type = if object.is_intrinsic() {
         let id: &str = object.expected_intrinsic(span)?;
