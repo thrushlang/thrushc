@@ -413,13 +413,14 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
-    // Extra
-    Pass {
+    // Unreachable
+    Unreachable {
         span: Span,
     },
 
-    // Unreachable
-    Unreachable {
+    // Invalid
+    Invalid {
+        kind: Type,
         span: Span,
     },
 }

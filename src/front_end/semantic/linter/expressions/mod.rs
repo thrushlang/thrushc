@@ -199,8 +199,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         | Ast::Str { .. }
         | Ast::Float { .. }
         | Ast::NullPtr { .. }
-        | Ast::Char { .. }
-        | Ast::Pass { .. } => (),
+        | Ast::Char { .. } => (),
 
         _ => {
             let span: Span = expr.get_span();

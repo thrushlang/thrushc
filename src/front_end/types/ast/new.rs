@@ -46,4 +46,12 @@ impl<'ctx> Ast<'ctx> {
             kind: Type::Ptr(None, span),
         }
     }
+
+    #[inline]
+    pub fn invalid_ast(span: Span) -> Ast<'ctx> {
+        Ast::Invalid {
+            kind: Type::Void(span),
+            span,
+        }
+    }
 }

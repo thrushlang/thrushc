@@ -127,8 +127,7 @@ pub fn validate<'analyzer>(
         | Ast::Str { .. }
         | Ast::Float { .. }
         | Ast::NullPtr { .. }
-        | Ast::Char { .. }
-        | Ast::Pass { .. } => Ok(()),
+        | Ast::Char { .. } => Ok(()),
 
         _ => {
             let span: Span = node.get_span();

@@ -1,15 +1,18 @@
-use crate::core::console::logging::{self, LoggingType};
+use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::diagnostic::span::Span;
+use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::front_end::abort;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::preprocessor::errors::PreprocessorIssue;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 #[derive(Debug)]
-pub struct CBindgenContext<'preprocessor> {
-    tokens: &'preprocessor [Token],
+pub struct CBindgenContext<'cbindgen> {
+    tokens: &'cbindgen [Token],
     errors: Vec<CompilationIssue>,
     module_errors: Vec<PreprocessorIssue>,
     diagnostician: Diagnostician,
@@ -17,9 +20,9 @@ pub struct CBindgenContext<'preprocessor> {
     current: usize,
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[inline]
-    pub fn new(tokens: &'preprocessor [Token], diagnostician: Diagnostician) -> Self {
+    pub fn new(tokens: &'cbindgen [Token], diagnostician: Diagnostician) -> Self {
         Self {
             tokens,
             errors: Vec::with_capacity(100),
@@ -30,7 +33,7 @@ impl<'preprocessor> CBindgenContext<'preprocessor> {
     }
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     pub fn verify(&mut self) -> Result<(), ()> {
         if !self.errors.is_empty() || !self.module_errors.is_empty() {
             self.errors.iter().for_each(|error: &CompilationIssue| {
@@ -50,23 +53,23 @@ impl<'preprocessor> CBindgenContext<'preprocessor> {
     }
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[inline]
     pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[inline]
     pub fn merge_module_errors(&mut self, other: Vec<PreprocessorIssue>) {
         self.module_errors.extend(other);
     }
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[inline]
-    pub fn consume(&mut self, kind: TokenType) -> Result<&'preprocessor Token, ()> {
+    pub fn consume(&mut self, kind: TokenType) -> Result<&'cbindgen Token, ()> {
         if self.peek().kind == kind {
             return self.advance();
         }
@@ -74,34 +77,43 @@ impl<'preprocessor> CBindgenContext<'preprocessor> {
         Err(())
     }
 }
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[must_use]
-    pub fn peek(&self) -> &'preprocessor Token {
+    pub fn peek(&mut self) -> &'cbindgen Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
-            logging::print_frontend_panic(
-                LoggingType::FrontEndPanic,
-                "Attempting to get token in invalid current position.",
-            );
+            let span: Span = self.previous().get_span();
+
+            abort::abort_front_end(
+                self.get_mut_diagnostician(),
+                CompilationPosition::Parser,
+                "Unable to get a lexical token!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         })
     }
 
     #[must_use]
-    pub fn previous(&self) -> &'preprocessor Token {
+    pub fn previous(&mut self) -> &'cbindgen Token {
         self.tokens.get(self.current - 1).unwrap_or_else(|| {
-            logging::print_frontend_panic(
-                LoggingType::FrontEndPanic,
-                &format!(
-                    "Attempting to get token in invalid previous position in line '{}'.",
-                    self.peek().get_span().get_line()
-                ),
-            );
+            let span: Span = self.previous().get_span();
+
+            abort::abort_front_end(
+                self.get_mut_diagnostician(),
+                CompilationPosition::Parser,
+                "Unable to get a lexical token!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         })
     }
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[must_use]
-    pub fn check(&self, kind: TokenType) -> bool {
+    pub fn check(&mut self, kind: TokenType) -> bool {
         if self.is_eof() {
             return false;
         }
@@ -110,7 +122,7 @@ impl<'preprocessor> CBindgenContext<'preprocessor> {
     }
 
     #[must_use]
-    pub fn check_to(&self, kind: TokenType, modifier: usize) -> bool {
+    pub fn check_to(&mut self, kind: TokenType, modifier: usize) -> bool {
         if self.is_eof() {
             return false;
         }
@@ -123,7 +135,7 @@ impl<'preprocessor> CBindgenContext<'preprocessor> {
     }
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[inline]
     pub fn match_token(&mut self, kind: TokenType) -> Result<bool, ()> {
         if self.peek().kind == kind {
@@ -135,7 +147,7 @@ impl<'preprocessor> CBindgenContext<'preprocessor> {
     }
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[inline]
     pub fn only_advance(&mut self) -> Result<(), ()> {
         if !self.is_eof() {
@@ -147,7 +159,7 @@ impl<'preprocessor> CBindgenContext<'preprocessor> {
     }
 
     #[inline]
-    pub fn advance(&mut self) -> Result<&'preprocessor Token, ()> {
+    pub fn advance(&mut self) -> Result<&'cbindgen Token, ()> {
         if !self.is_eof() {
             self.current += 1;
             return Ok(self.previous());
@@ -157,9 +169,16 @@ impl<'preprocessor> CBindgenContext<'preprocessor> {
     }
 }
 
-impl<'preprocessor> CBindgenContext<'preprocessor> {
+impl<'cbindgen> CBindgenContext<'cbindgen> {
     #[must_use]
-    pub fn is_eof(&self) -> bool {
+    pub fn is_eof(&mut self) -> bool {
         self.peek().kind == TokenType::Eof
+    }
+}
+
+impl CBindgenContext<'_> {
+    #[inline]
+    pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
+        &mut self.diagnostician
     }
 }

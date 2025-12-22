@@ -87,22 +87,18 @@ pub fn build_structure<'parser>(
                     "Expected ','.".into(),
                 )?;
             } else {
-                return Err(CompilationIssue::Error(
+                ctx.consume(
+                    TokenType::Identifier,
                     CompilationIssueCode::E0001,
                     "Expected identifier.".into(),
-                    None,
-                    ctx.previous().get_span(),
-                ));
+                )?;
             }
         } else {
-            ctx.only_advance()?;
-
-            return Err(CompilationIssue::Error(
+            ctx.consume(
+                TokenType::Identifier,
                 CompilationIssueCode::E0001,
-                "Expected structure fields identifiers.".into(),
-                None,
-                ctx.previous().get_span(),
-            ));
+                "Expected identifier.".into(),
+            )?;
         }
     }
 

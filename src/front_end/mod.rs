@@ -1,3 +1,4 @@
+pub mod abort;
 pub mod lexer;
 pub mod parser;
 pub mod preprocessor;

@@ -172,7 +172,6 @@ pub fn validate<'type_checker>(
         | Ast::Float { .. }
         | Ast::NullPtr { .. }
         | Ast::Char { .. }
-        | Ast::Pass { .. }
         | Ast::DirectRef { .. } => Ok(()),
 
         _ => {

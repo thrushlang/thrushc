@@ -1,12 +1,15 @@
 use crate::core::compiler::options::CompilerOptions;
-use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::diagnostic::span::Span;
+use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
+use crate::front_end::abort;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::preprocessor::errors::PreprocessorIssue;
+use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 #[derive(Debug)]
 pub struct PreprocessorContext<'preprocessor> {
@@ -83,32 +86,41 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
 }
 impl<'preprocessor> PreprocessorContext<'preprocessor> {
     #[must_use]
-    pub fn peek(&self) -> &'preprocessor Token {
+    pub fn peek(&mut self) -> &'preprocessor Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
-            logging::print_frontend_panic(
-                LoggingType::FrontEndPanic,
-                "Attempting to get token in invalid current position.",
-            );
+            let span: Span = self.previous().get_span();
+
+            abort::abort_front_end(
+                self.get_mut_diagnostician(),
+                CompilationPosition::Parser,
+                "Unable to get a lexical token!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         })
     }
 
     #[must_use]
-    pub fn previous(&self) -> &'preprocessor Token {
+    pub fn previous(&mut self) -> &'preprocessor Token {
         self.tokens.get(self.current - 1).unwrap_or_else(|| {
-            logging::print_frontend_panic(
-                LoggingType::FrontEndPanic,
-                &format!(
-                    "Attempting to get token in invalid previous position in line '{}'.",
-                    self.peek().span.get_line()
-                ),
-            );
+            let span: Span = self.previous().get_span();
+
+            abort::abort_front_end(
+                self.get_mut_diagnostician(),
+                CompilationPosition::Parser,
+                "Unable to get a lexical token!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         })
     }
 }
 
 impl<'preprocessor> PreprocessorContext<'preprocessor> {
     #[must_use]
-    pub fn check(&self, kind: TokenType) -> bool {
+    pub fn check(&mut self, kind: TokenType) -> bool {
         if self.is_eof() {
             return false;
         }
@@ -117,7 +129,7 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
     }
 
     #[must_use]
-    pub fn check_to(&self, kind: TokenType, modifier: usize) -> bool {
+    pub fn check_to(&mut self, kind: TokenType, modifier: usize) -> bool {
         if self.is_eof() {
             return false;
         }
@@ -166,7 +178,7 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
 
 impl<'preprocessor> PreprocessorContext<'preprocessor> {
     #[must_use]
-    pub fn is_eof(&self) -> bool {
+    pub fn is_eof(&mut self) -> bool {
         self.peek().kind == TokenType::Eof
     }
 }
@@ -175,5 +187,12 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
     #[inline]
     pub fn get_options(&self) -> &CompilerOptions {
         self.options
+    }
+}
+
+impl PreprocessorContext<'_> {
+    #[inline]
+    pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
+        &mut self.diagnostician
     }
 }

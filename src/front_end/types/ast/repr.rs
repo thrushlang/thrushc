@@ -41,8 +41,8 @@ impl Ast<'_> {
             );
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected assembler function for transformation to AssemblerFunction.",
         );
     }
@@ -71,8 +71,8 @@ impl Ast<'_> {
             );
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected static for transformation to GlobalStatic.",
         );
     }
@@ -95,8 +95,8 @@ impl Ast<'_> {
             );
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected constant for transformation to GlobalConstant.",
         );
     }
@@ -127,8 +127,8 @@ impl Ast<'_> {
             );
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected function for transformation to Function.",
         );
     }
@@ -157,8 +157,8 @@ impl Ast<'_> {
             );
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected intrinsic for transformation to Intrinsic.",
         );
     }
@@ -188,8 +188,8 @@ impl Ast<'_> {
             );
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected local for transformation to Local.",
         );
     }
@@ -209,8 +209,8 @@ impl Ast<'_> {
             return (name, ascii_name, kind, &**value, *metadata, *span);
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected constant for transformation to LocalConstant.",
         );
     }
@@ -229,8 +229,8 @@ impl Ast<'_> {
             return (name, ascii_name, kind, *position, *span, *metadata);
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected function parameter for transformation to FunctionParameter.",
         );
     }
@@ -250,8 +250,8 @@ impl Ast<'_> {
             return (name, ascii_name, kind, value.as_deref(), *metadata, *span);
         }
 
-        logging::print_bug(
-            logging::LoggingType::Bug,
+        logging::print_frontend_panic(
+            logging::LoggingType::FrontEndPanic,
             "Expected static for transformation to LocalStatic.",
         );
     }

@@ -64,8 +64,8 @@ pub fn llvm_obj_compilation(
 
     if !path.exists() {
         std::fs::create_dir_all(&path).unwrap_or_else(|_| {
-            logging::print_any_panic(
-                logging::LoggingType::Panic,
+            logging::print_critical_error(
+                logging::LoggingType::Error,
                 &format!(
                     "Cannot create directory '{}' for object files compilation.",
                     path.display()

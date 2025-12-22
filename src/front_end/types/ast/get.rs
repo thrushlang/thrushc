@@ -87,6 +87,9 @@ impl AstGetType for Ast<'_> {
             // Indirect Call
             Ast::Indirect { kind, .. } => Ok(kind),
 
+            // Invalid
+            Ast::Invalid { kind, .. } => Ok(kind),
+
             _ => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected a valid value to determinate the type.".into(),
@@ -150,6 +153,9 @@ impl AstGetType for Ast<'_> {
                 return_type: kind, ..
             } => Ok(kind),
             Ast::IntrinsicParameter { kind, .. } => Ok(kind),
+
+            // Invalid
+            Ast::Invalid { kind, .. } => Ok(kind),
 
             _ => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
@@ -225,6 +231,9 @@ impl AstLLVMGetType for Ast<'_> {
                 return_type: kind, ..
             } => kind,
             Ast::IntrinsicParameter { kind, .. } => kind,
+
+            // Invalid
+            Ast::Invalid { kind, .. } => kind,
 
             any => back_end::llvm_codegen::abort::abort_codegen(
                 context,
@@ -375,11 +384,11 @@ impl AstCodeLocation for Ast<'_> {
             // Indirect Call
             Ast::Indirect { span, .. } => *span,
 
-            // Ignored
-            Ast::Pass { span, .. } => *span,
-
             // Unreachable marker
             Ast::Unreachable { span } => *span,
+
+            // Invalid
+            Ast::Invalid { span, .. } => *span,
         }
     }
 }

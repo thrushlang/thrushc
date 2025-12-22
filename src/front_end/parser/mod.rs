@@ -1,7 +1,6 @@
 pub mod attributes;
 pub mod builder;
 pub mod builtins;
-pub mod constants;
 pub mod contexts;
 pub mod declarations;
 pub mod expressions;
@@ -12,10 +11,13 @@ pub mod sync;
 pub mod typegen;
 
 use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
-use crate::core::console::logging::{self, LoggingType};
+use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::diagnostic::span::Span;
+use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
+use crate::front_end::abort;
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::contexts::controlctx::ParserControlContext;
@@ -23,6 +25,7 @@ use crate::front_end::parser::contexts::typectx::ParserTypeContext;
 use crate::front_end::parser::symbols::SymbolsTable;
 use crate::front_end::preprocessor::module::Module;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
 use ahash::AHashMap as HashMap;
@@ -159,25 +162,34 @@ impl<'parser> ParserContext<'parser> {
 
 impl<'parser> ParserContext<'parser> {
     #[must_use]
-    pub fn peek(&self) -> &'parser Token {
+    pub fn peek(&mut self) -> &'parser Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
-            logging::print_frontend_panic(
-                LoggingType::FrontEndPanic,
-                "Attempting to get token in invalid current position.",
-            );
+            let span: Span = self.previous().get_span();
+
+            abort::abort_front_end(
+                self.get_mut_diagnostician(),
+                CompilationPosition::Parser,
+                "Unable to get a lexical token!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         })
     }
 
     #[must_use]
-    pub fn previous(&self) -> &'parser Token {
+    pub fn previous(&mut self) -> &'parser Token {
         self.tokens.get(self.current - 1).unwrap_or_else(|| {
-            logging::print_frontend_panic(
-                LoggingType::FrontEndPanic,
-                &format!(
-                    "Attempting to get token in invalid previous position in line '{}'.",
-                    self.peek().span.get_line()
-                ),
-            );
+            let span: Span = self.previous().get_span();
+
+            abort::abort_front_end(
+                self.get_mut_diagnostician(),
+                CompilationPosition::Parser,
+                "Unable to get a lexical token!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         })
     }
 }
@@ -191,7 +203,7 @@ impl<'parser> ParserContext<'parser> {
 
 impl<'parser> ParserContext<'parser> {
     #[must_use]
-    pub fn check(&self, kind: TokenType) -> bool {
+    pub fn check(&mut self, kind: TokenType) -> bool {
         if self.is_eof() {
             return false;
         }
@@ -200,7 +212,7 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[must_use]
-    pub fn check_to(&self, kind: TokenType, modifier: usize) -> bool {
+    pub fn check_to(&mut self, kind: TokenType, modifier: usize) -> bool {
         if self.is_eof() {
             return false;
         }
@@ -229,7 +241,7 @@ impl<'parser> ParserContext<'parser> {
             code,
             help,
             None,
-            self.previous().span,
+            self.previous().get_span(),
         ))
     }
 
@@ -252,9 +264,9 @@ impl<'parser> ParserContext<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0002,
-            String::from("EOF has been reached."),
+            "EOF has been reached.".into(),
             None,
-            self.peek().span,
+            self.peek().get_span(),
         ))
     }
 
@@ -267,9 +279,9 @@ impl<'parser> ParserContext<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0002,
-            String::from("EOF has been reached."),
+            "EOF has been reached.".into(),
             None,
-            self.peek().span,
+            self.peek().get_span(),
         ))
     }
 
@@ -333,6 +345,11 @@ impl<'parser> ParserContext<'parser> {
     pub fn get_mut_type_ctx(&mut self) -> &mut ParserTypeContext {
         &mut self.type_ctx
     }
+
+    #[inline]
+    pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
+        &mut self.diagnostician
+    }
 }
 
 impl<'parser> ParserContext<'parser> {
@@ -359,7 +376,7 @@ impl ParserContext<'_> {
     }
 
     #[must_use]
-    pub fn is_eof(&self) -> bool {
+    pub fn is_eof(&mut self) -> bool {
         self.peek().kind == TokenType::Eof
     }
 }

@@ -41,7 +41,7 @@ pub fn build_constructor<'parser>(
 
     if let Err(issue) = object_result {
         ctx.add_error(issue);
-        return Ok(Ast::new_nullptr(span));
+        return Ok(Ast::invalid_ast(span));
     }
 
     let object: FoundSymbolId = object_result?;
@@ -75,21 +75,25 @@ pub fn build_constructor<'parser>(
             )?;
 
             if !structure.contains_field(field_name) {
-                return Err(CompilationIssue::Error(
+                ctx.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0001,
                     "Expected existing field name.".into(),
                     None,
                     field_span,
                 ));
+
+                continue;
             }
 
             if amount >= required {
-                return Err(CompilationIssue::Error(
+                ctx.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0026,
                     format!("Expected '{}' fields, not '{}' fields.", required, amount),
                     None,
                     span,
                 ));
+
+                continue;
             }
 
             let expression: Ast = expressions::build_expr(ctx)?;
@@ -115,20 +119,23 @@ pub fn build_constructor<'parser>(
                     "Expected ','.".into(),
                 )?;
             } else {
-                return Err(CompilationIssue::Error(
+                ctx.consume(
+                    TokenType::Identifier,
                     CompilationIssueCode::E0001,
                     "Expected identifier.".into(),
-                    None,
-                    ctx.previous().get_span(),
-                ));
+                )?;
             }
         } else {
-            return Err(CompilationIssue::Error(
+            let span: Span = ctx.advance()?.get_span();
+
+            ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected field name.".into(),
                 None,
                 span,
             ));
+
+            continue;
         }
     }
 

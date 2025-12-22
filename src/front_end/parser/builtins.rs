@@ -29,14 +29,16 @@ pub fn build_builtin<'parser>(
         TokenType::AbiAlignOf => self::build_abi_align_of(ctx),
 
         _ => {
-            let span: Span = ctx.peek().get_span();
+            let span: Span = ctx.advance()?.get_span();
 
-            Err(CompilationIssue::Error(
+            ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0003,
                 format!("Unknown '{}' compiler builtin.", span),
                 None,
                 span,
-            ))
+            ));
+
+            Ok(Ast::invalid_ast(span))
         }
     }
 }

@@ -7,7 +7,6 @@ use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::CompilationIssue;
 
 use std::path::PathBuf;
-use std::process;
 
 pub fn abort_codegen<'ctx>(
     context: &mut LLVMCodeGenContext<'ctx, '_>,
@@ -30,5 +29,5 @@ pub fn abort_codegen<'ctx>(
         LoggingType::BackendBug,
     );
 
-    process::exit(1);
+    std::process::exit(1);
 }

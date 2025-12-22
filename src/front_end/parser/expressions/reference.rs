@@ -41,7 +41,7 @@ pub fn build_reference<'parser>(
 
     if let Err(issue) = object_result {
         ctx.add_error(issue);
-        return Ok(Ast::new_nullptr(span));
+        return Ok(Ast::invalid_ast(span));
     }
 
     let object: FoundSymbolId = object_result?;
@@ -196,10 +196,12 @@ pub fn build_reference<'parser>(
         return Ok(reference);
     }
 
-    Err(CompilationIssue::Error(
+    ctx.add_error(CompilationIssue::Error(
         CompilationIssueCode::E0028,
         "It is not a valid reference.".into(),
         None,
         span,
-    ))
+    ));
+
+    Ok(Ast::invalid_ast(span))
 }

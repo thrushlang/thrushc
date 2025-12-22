@@ -1,11 +1,7 @@
 use colored::{ColoredString, Colorize};
+use std::io::{self, Write};
 
-use std::{
-    io::{self, Write},
-    process,
-};
-
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum OutputIn {
     Stdout,
     Stderr,
@@ -19,6 +15,7 @@ pub enum LoggingType {
     BackendPanic,
     BackendBug,
     FrontEndPanic,
+    FronteEndBug,
     Error,
     Warning,
     Panic,
@@ -44,37 +41,13 @@ pub fn print_error(ltype: LoggingType, msg: &str) {
 #[inline]
 pub fn print_frontend_panic(ltype: LoggingType, msg: &str) -> ! {
     let _ = io::stderr().write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes());
-    process::exit(1);
+    std::process::exit(1);
 }
 
 #[inline]
 pub fn print_critical_error(ltype: LoggingType, msg: &str) -> ! {
     let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
-    process::exit(1);
-}
-
-#[inline]
-pub fn print_any_panic(ltype: LoggingType, msg: &str) -> ! {
-    let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
-    process::exit(1);
-}
-
-#[inline]
-pub fn print_bug(ltype: LoggingType, msg: &str) -> ! {
-    let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
-
-    let _ = io::stderr().write_all(
-        format!(
-            "\n\nMaybe this is a issue... Report it in: '{}'.\n",
-            "https://github.com/thrushlang/thrushc/issues/"
-                .bold()
-                .bright_red()
-                .underline()
-        )
-        .as_bytes(),
-    );
-
-    process::exit(1);
+    std::process::exit(1);
 }
 
 #[inline]
@@ -124,7 +97,7 @@ pub fn print_backend_panic(ltype: LoggingType, msg: &str) -> ! {
         .as_bytes(),
     );
 
-    process::exit(1);
+    std::process::exit(1);
 }
 
 #[inline]
@@ -143,7 +116,7 @@ pub fn print_backend_bug(ltype: LoggingType, msg: &str) -> ! {
         .as_bytes(),
     );
 
-    process::exit(1);
+    std::process::exit(1);
 }
 
 #[inline]
@@ -165,10 +138,10 @@ impl LoggingType {
         match self {
             LoggingType::LLVMBackend => "LLVM Backend".bright_red().bold().underline(),
             LoggingType::JITCompiler => "JIT Compiler".bright_red().bold().underline(),
-
             LoggingType::BackendPanic => "BACKEND PANIC".bright_red().bold(),
             LoggingType::BackendBug => "BACKEND BUG".bold().bright_red().underline(),
             LoggingType::FrontEndPanic => "FRONTEND PANIC".bright_red().bold(),
+            LoggingType::FronteEndBug => "FRONTEND BUG".bright_red().bold(),
             LoggingType::Error => "ERROR".bright_red().bold(),
             LoggingType::Warning => "WARN".yellow().bold(),
             LoggingType::Panic => "PANIC".bold().bright_red().underline(),
@@ -182,9 +155,9 @@ impl LoggingType {
         match self {
             LoggingType::LLVMBackend => msg.bright_red().bold(),
             LoggingType::JITCompiler => msg.bright_red().bold(),
-
             LoggingType::BackendPanic => msg.bright_red().bold(),
             LoggingType::BackendBug => msg.bold().bright_red().underline(),
+            LoggingType::FronteEndBug => msg.bright_red().bold(),
             LoggingType::FrontEndPanic => msg.bright_red().bold(),
             LoggingType::Error => msg.bright_red().bold(),
             LoggingType::Warning => msg.yellow().bold(),

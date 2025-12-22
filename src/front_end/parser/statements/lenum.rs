@@ -77,14 +77,13 @@ pub fn build_enum<'parser>(
             enum_fields.push((name, field_type, expr));
 
             continue;
+        } else {
+            ctx.consume(
+                TokenType::Identifier,
+                CompilationIssueCode::E0001,
+                "Expected identifier.".into(),
+            )?;
         }
-
-        return Err(CompilationIssue::Error(
-            CompilationIssueCode::E0001,
-            "Expected identifier in enum field.".into(),
-            None,
-            ctx.advance()?.get_span(),
-        ));
     }
 
     ctx.consume(

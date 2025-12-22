@@ -21,7 +21,7 @@ pub fn build_call<'parser>(
 
     if let Err(issue) = object_result {
         ctx.add_error(issue);
-        return Ok(Ast::new_nullptr(span));
+        return Ok(Ast::invalid_ast(span));
     }
 
     let object: FoundSymbolId = object_result?;
