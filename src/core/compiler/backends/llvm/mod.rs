@@ -4,7 +4,6 @@ pub mod jit;
 pub mod passes;
 pub mod target;
 pub mod targets;
-pub mod utils;
 
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
 

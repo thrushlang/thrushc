@@ -1,8 +1,8 @@
-use crate::core::{
-    console::logging::LoggingType,
-    diagnostic::{diagnostician::Diagnostician, span::Span},
-    errors::{position::CompilationPosition, standard::CompilationIssue},
-};
+use crate::core::console::logging::LoggingType;
+use crate::core::diagnostic::diagnostician::Diagnostician;
+use crate::core::diagnostic::span::Span;
+use crate::core::errors::position::CompilationPosition;
+use crate::core::errors::standard::CompilationIssue;
 
 pub fn abort_front_end(
     diagnostician: &mut Diagnostician,

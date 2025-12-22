@@ -1,7 +1,7 @@
 use colored::Colorize;
 
 use super::position::CompilationPosition;
-use crate::core::diagnostic::span::Span;
+use crate::core::{console::logging, diagnostic::span::Span};
 
 #[derive(Debug, Clone)]
 pub enum CompilationIssue {
@@ -36,7 +36,65 @@ impl CompilationIssue {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+lazy_static::lazy_static! {
+    pub static ref COMPILATION_ISSUE_CODE_EXPLANATIONS: ahash::AHashMap<CompilationIssueCode, &'static str> = {
+        let mut explanations: ahash::AHashMap<CompilationIssueCode, &'static str> = ahash::AHashMap::with_capacity(100);
+
+        explanations.insert(CompilationIssueCode::E0001, r#""#);
+        explanations.insert(CompilationIssueCode::E0002, r#""#);
+        explanations.insert(CompilationIssueCode::E0003, r#""#);
+        explanations.insert(CompilationIssueCode::E0004, r#""#);
+        explanations.insert(CompilationIssueCode::E0005, r#""#);
+        explanations.insert(CompilationIssueCode::E0006, r#""#);
+        explanations.insert(CompilationIssueCode::E0007, r#""#);
+        explanations.insert(CompilationIssueCode::E0008, r#""#);
+        explanations.insert(CompilationIssueCode::E0010, r#""#);
+        explanations.insert(CompilationIssueCode::E0011, r#""#);
+        explanations.insert(CompilationIssueCode::E0012, r#""#);
+        explanations.insert(CompilationIssueCode::E0013, r#""#);
+        explanations.insert(CompilationIssueCode::E0014, r#""#);
+        explanations.insert(CompilationIssueCode::E0015, r#""#);
+        explanations.insert(CompilationIssueCode::E0016, r#""#);
+        explanations.insert(CompilationIssueCode::E0017, r#""#);
+        explanations.insert(CompilationIssueCode::E0018, r#""#);
+        explanations.insert(CompilationIssueCode::E0019, r#""#);
+        explanations.insert(CompilationIssueCode::E0020, r#""#);
+        explanations.insert(CompilationIssueCode::E0021, r#""#);
+        explanations.insert(CompilationIssueCode::E0022, r#""#);
+        explanations.insert(CompilationIssueCode::E0023, r#""#);
+        explanations.insert(CompilationIssueCode::E0024, r#""#);
+        explanations.insert(CompilationIssueCode::E0025, r#""#);
+        explanations.insert(CompilationIssueCode::E0026, r#""#);
+        explanations.insert(CompilationIssueCode::E0027, r#""#);
+        explanations.insert(CompilationIssueCode::E0028, r#""#);
+        explanations.insert(CompilationIssueCode::E0029, r#""#);
+        explanations.insert(CompilationIssueCode::E0030, r#""#);
+        explanations.insert(CompilationIssueCode::E0031, r#""#);
+        explanations.insert(CompilationIssueCode::E0032, r#""#);
+        explanations.insert(CompilationIssueCode::E0033, r#""#);
+
+        explanations.insert(CompilationIssueCode::W0001, r#""#);
+        explanations.insert(CompilationIssueCode::W0002, r#""#);
+        explanations.insert(CompilationIssueCode::W0003, r#""#);
+        explanations.insert(CompilationIssueCode::W0004, r#""#);
+        explanations.insert(CompilationIssueCode::W0005, r#""#);
+        explanations.insert(CompilationIssueCode::W0007, r#""#);
+        explanations.insert(CompilationIssueCode::W0008, r#""#);
+        explanations.insert(CompilationIssueCode::W0009, r#""#);
+        explanations.insert(CompilationIssueCode::W0010, r#""#);
+        explanations.insert(CompilationIssueCode::W0011, r#""#);
+        explanations.insert(CompilationIssueCode::W0012, r#""#);
+        explanations.insert(CompilationIssueCode::W0013, r#""#);
+        explanations.insert(CompilationIssueCode::W0014, r#""#);
+        explanations.insert(CompilationIssueCode::W0015, r#""#);
+        explanations.insert(CompilationIssueCode::W0016, r#""#);
+        explanations.insert(CompilationIssueCode::W0017, r#""#);
+
+        explanations
+    };
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CompilationIssueCode {
     E0001, // Syntax Error.
     E0002, // EOF.
@@ -215,6 +273,83 @@ impl CompilationIssueCode {
             CompilationIssueCode::W0017 => {
                 format!("UNUSED FUNCTION - {}", "W0017".bright_yellow())
             }
+        }
+    }
+
+    pub fn get_explanation(&self) -> &str {
+        COMPILATION_ISSUE_CODE_EXPLANATIONS
+            .get(self)
+            .unwrap_or_else(|| {
+                logging::print_warn(
+                    logging::LoggingType::Warning,
+                    "Unable to get the properly issue explanation.",
+                );
+
+                &""
+            })
+    }
+}
+
+impl From<&str> for CompilationIssueCode {
+    fn from(n: &str) -> Self {
+        match n {
+            "E0001" => CompilationIssueCode::E0001,
+            "E0002" => CompilationIssueCode::E0002,
+            "E0003" => CompilationIssueCode::E0003,
+            "E0004" => CompilationIssueCode::E0004,
+            "E0005" => CompilationIssueCode::E0005,
+            "E0006" => CompilationIssueCode::E0006,
+            "E0007" => CompilationIssueCode::E0007,
+            "E0008" => CompilationIssueCode::E0008,
+            "E0010" => CompilationIssueCode::E0010,
+            "E0011" => CompilationIssueCode::E0011,
+            "E0012" => CompilationIssueCode::E0012,
+            "E0013" => CompilationIssueCode::E0013,
+            "E0014" => CompilationIssueCode::E0014,
+            "E0015" => CompilationIssueCode::E0015,
+            "E0016" => CompilationIssueCode::E0016,
+            "E0017" => CompilationIssueCode::E0017,
+            "E0018" => CompilationIssueCode::E0018,
+            "E0019" => CompilationIssueCode::E0019,
+            "E0020" => CompilationIssueCode::E0020,
+            "E0021" => CompilationIssueCode::E0021,
+            "E0022" => CompilationIssueCode::E0022,
+            "E0023" => CompilationIssueCode::E0023,
+            "E0024" => CompilationIssueCode::E0024,
+            "E0025" => CompilationIssueCode::E0025,
+            "E0026" => CompilationIssueCode::E0026,
+            "E0027" => CompilationIssueCode::E0027,
+            "E0028" => CompilationIssueCode::E0028,
+            "E0029" => CompilationIssueCode::E0029,
+            "E0030" => CompilationIssueCode::E0030,
+            "E0031" => CompilationIssueCode::E0031,
+            "E0032" => CompilationIssueCode::E0032,
+            "E0033" => CompilationIssueCode::E0033,
+
+            "W0001" => CompilationIssueCode::W0001,
+            "W0002" => CompilationIssueCode::W0002,
+            "W0003" => CompilationIssueCode::W0003,
+            "W0004" => CompilationIssueCode::W0004,
+            "W0005" => CompilationIssueCode::W0005,
+            "W0007" => CompilationIssueCode::W0007,
+            "W0008" => CompilationIssueCode::W0008,
+            "W0009" => CompilationIssueCode::W0009,
+            "W0010" => CompilationIssueCode::W0010,
+            "W0011" => CompilationIssueCode::W0011,
+            "W0012" => CompilationIssueCode::W0012,
+            "W0013" => CompilationIssueCode::W0013,
+            "W0014" => CompilationIssueCode::W0014,
+            "W0015" => CompilationIssueCode::W0015,
+            "W0016" => CompilationIssueCode::W0016,
+            "W0017" => CompilationIssueCode::W0017,
+
+            unknown => logging::print_critical_error(
+                logging::LoggingType::Error,
+                &format!(
+                    "Unknown '{}' as valid issue code. Try again with another.",
+                    unknown
+                ),
+            ),
         }
     }
 }

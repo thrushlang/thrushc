@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use inkwell::targets::Target;
 
-use crate::core::{compiler::backends::llvm::utils, console::logging};
+use crate::core::console::logging;
 
 #[derive(Debug)]
 pub struct JITConfiguration {
@@ -15,7 +15,7 @@ impl JITConfiguration {
     #[inline]
     pub fn new() -> Self {
         Self {
-            libc_path: PathBuf::from(utils::get_default_dynamic_c_runtime()),
+            libc_path: PathBuf::from(self::get_common_c_runtime_path()),
             libraries: Vec::with_capacity(100),
             args: Vec::with_capacity(100),
         }
@@ -62,7 +62,7 @@ pub fn has_jit_available(target: &Target) -> Result<(), ()> {
         logging::print_error(
             logging::LoggingType::JITCompiler,
             &format!(
-                "The Just-In-Time Compiler is not available for the target: '{}'.",
+                "The JIT compiler isn't properly available for the target '{}'.",
                 target.get_name().to_string_lossy()
             ),
         );
@@ -71,4 +71,48 @@ pub fn has_jit_available(target: &Target) -> Result<(), ()> {
     }
 
     Ok(())
+}
+
+fn get_common_c_runtime_path() -> &'static str {
+    match std::env::consts::FAMILY {
+        "unix" => {
+            let candidates: [&str; 5] = [
+                "libc.so",
+                "libc.so.6",
+                "libc.so.1",
+                "libc.so.4",
+                "libc.so.5",
+            ];
+
+            for name in candidates.iter() {
+                if unsafe { libloading::Library::new(name) }.is_ok() {
+                    return name;
+                }
+            }
+
+            "libc.so.6"
+        }
+
+        "windows" => {
+            let candidates: [&str; 7] = [
+                "msvcrt.dll",
+                "ucrtbase.dll",
+                "msvcr120.dll",
+                "msvcr110.dll",
+                "msvcr100.dll",
+                "msvcr90.dll",
+                "msvcr80.dll",
+            ];
+
+            for name in candidates.iter() {
+                if unsafe { libloading::Library::new(name) }.is_ok() {
+                    return name;
+                }
+            }
+
+            "ucrtbase.dll"
+        }
+
+        _ => "libc.6.so",
+    }
 }
