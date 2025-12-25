@@ -54,7 +54,7 @@ impl LLVMBackend {
             },
             target_cpu: LLVMTargetCPU {
                 target_cpu: TargetMachine::get_host_cpu_name().to_string(),
-                target_cpu_feautures: TargetMachine::get_host_cpu_features().to_string(),
+                target_cpu_features: TargetMachine::get_host_cpu_features().to_string(),
             },
             optimization: ThrushOptimization::None,
             reloc_mode: RelocMode::Default,

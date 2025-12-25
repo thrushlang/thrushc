@@ -23,12 +23,12 @@ pub fn llvm_before_optimization(
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
-    if compiler_options.contains_printable(PrintableUnit::RawLLVMIR) {
+    if compiler_options.contains_printable(PrintableUnit::UnOptLLVMIR) {
         printers::llvmir::print_llvm_ir(compiler, llvm_module, file.get_name(), true);
         return Ok(true);
     }
 
-    if compiler_options.contains_printable(PrintableUnit::RawAssembly) {
+    if compiler_options.contains_printable(PrintableUnit::UnOptAssembly) {
         if let Err(error) = printers::assembler::print_llvm_assembler(
             compiler,
             target_machine,

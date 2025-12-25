@@ -52,12 +52,12 @@ pub struct CompilationUnit {
 
 #[derive(Debug, PartialEq)]
 pub enum EmitableUnit {
-    RawLLVMIR,
-    RawLLVMBitcode,
+    UnOptLLVMIR,
+    UnOptLLVMBitcode,
     LLVMBitcode,
     LLVMIR,
     Object,
-    RawAssembly,
+    UnOptAssembly,
     Assembly,
     AST,
     Tokens,
@@ -65,9 +65,9 @@ pub enum EmitableUnit {
 
 #[derive(Debug, PartialEq)]
 pub enum PrintableUnit {
-    RawLLVMIR,
+    UnOptLLVMIR,
     LLVMIR,
-    RawAssembly,
+    UnOptAssembly,
     Assembly,
     Tokens,
 }
@@ -82,10 +82,11 @@ pub enum Emited<'emited> {
 pub enum ThrushOptimization {
     #[default]
     None,
-    Size,
     Low,
     Mid,
     High,
+    Size,
+    Zize,
 }
 
 impl ThrushOptimization {
@@ -94,7 +95,9 @@ impl ThrushOptimization {
         match self {
             ThrushOptimization::None => OptimizationLevel::None,
             ThrushOptimization::Low => OptimizationLevel::Default,
-            ThrushOptimization::Mid | ThrushOptimization::Size => OptimizationLevel::Less,
+            ThrushOptimization::Mid | ThrushOptimization::Size | ThrushOptimization::Zize => {
+                OptimizationLevel::Less
+            }
             ThrushOptimization::High => OptimizationLevel::Aggressive,
         }
     }
@@ -173,12 +176,10 @@ impl CompilerOptions {
                 LoggingType::Warning,
                 &format!("File skipped due to repetition '{}'.", path.display()),
             );
-
-            return;
+        } else {
+            self.files
+                .push(CompilationUnit::new(name, path, content, base_name));
         }
-
-        self.files
-            .push(CompilationUnit::new(name, path, content, base_name));
     }
 }
 

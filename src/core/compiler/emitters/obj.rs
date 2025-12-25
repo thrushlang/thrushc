@@ -20,7 +20,7 @@ pub fn emit_llvm_object(
     unoptimized: bool,
 ) -> Result<(), LLVMString> {
     let compiler_options: &CompilerOptions = compiler.get_options();
-    let obfuscate: bool = compiler_options.need_obfuscate_archive_names();
+    let need_obfuscation: bool = compiler_options.need_obfuscate_archive_names();
 
     let objects_base_path: PathBuf = build_dir.join("emit").join("obj");
 
@@ -30,7 +30,7 @@ pub fn emit_llvm_object(
 
     let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
 
-    let object_file_name: String = if obfuscate {
+    let object_file_name: String = if need_obfuscation {
         format!(
             "{}{}_{}.o",
             optimization_name_modifier,

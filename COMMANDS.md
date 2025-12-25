@@ -14,7 +14,7 @@ Usage: thrushc [-flags|--flags] [files..]
 
 General Commands:
 
-• -h, --help, help Show help message.
+• -h, --help optional[opt|emit|print|code-model|reloc-model] Show help message.
 • -v, --version, version Show the version.
 
 General flags:
@@ -31,12 +31,12 @@ Linkage flags:
 Compiler flags:
 
 • -target [x86_64] Set the target arquitecture.
-• -target-triple [x86_64-pc-linux-gnu] Set the target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.
-• -cpu [haswell] Specify the CPU to optimize.
+• -target-triple [x86_64-pc-linux-gnu|x86_64-pc-windows-msvc] Set the target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.
+• -cpu [haswell|alderlake|ivybridge|pentium|pantherlake] Specify the CPU to optimize.
 • -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify the new features of the CPU to use.
-• -emit [llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens] Compile the code into specified representation.
-• -print [llvm-ir|raw-llvm-ir|tokens] Displays the final compilation on standard output.
-• -opt [O0|O1|O2|O3|Oz] Optimization level.
+• -emit [llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|ast|tokens] Compile the code into specified representation.
+• -print [llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens] Displays the final compilation on standard output.
+• -opt [O0|O1|O2|O3|Os|Oz] Optimization level.
 
 JIT Compiler flags:
 
@@ -48,7 +48,7 @@ Extra compiler flags:
 
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
 • --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes.
-• --reloc-mode [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
+• --reloc-model [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
 • --code-model [small|medium|large|kernel] Define how code is organized and accessed at machine code level.
 • --target-triple-darwin-variant [arm64-apple-ios15.0-macabi] Specify the darwin target variant triple.
 • --macos-version [15.0.0] Specify the MacOS SDK version.

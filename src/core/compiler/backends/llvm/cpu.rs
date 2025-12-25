@@ -1,7 +1,7 @@
 #[derive(Debug)]
 pub struct LLVMTargetCPU {
     pub target_cpu: String,
-    pub target_cpu_feautures: String,
+    pub target_cpu_features: String,
 }
 
 impl LLVMTargetCPU {
@@ -12,7 +12,7 @@ impl LLVMTargetCPU {
 
     #[inline]
     pub fn get_cpu_features(&self) -> &str {
-        &self.target_cpu_feautures
+        &self.target_cpu_features
     }
 }
 
@@ -24,6 +24,6 @@ impl LLVMTargetCPU {
 
     #[inline]
     pub fn set_processador_features(&mut self, features: String) {
-        self.target_cpu_feautures = features;
+        self.target_cpu_features = features;
     }
 }

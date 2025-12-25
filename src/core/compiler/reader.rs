@@ -8,29 +8,32 @@ use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 
 pub fn get_file_source_code(file_path: &std::path::Path) -> String {
-    match self::read_file_to_string_buffered(file_path) {
-        Ok(code) => code,
-        _ => {
-            logging::print_critical_error(
-                LoggingType::Error,
-                &format!("File '{}' can't be read correctly.", file_path.display()),
-            );
-        }
-    }
+    self::read_file_to_string_buffered(file_path).unwrap_or_else(|error| {
+        logging::print_critical_error(
+            LoggingType::Error,
+            &format!(
+                "File '{}' can't be read correctly. Since: '{}'.",
+                file_path.display(),
+                error
+            ),
+        )
+    })
 }
 
-fn read_file_to_string_buffered(path: &std::path::Path) -> Result<String, ()> {
-    let file: std::fs::File = std::fs::File::open(path).map_err(|_| ())?;
+fn read_file_to_string_buffered(path: &std::path::Path) -> Result<String, &str> {
+    let file: std::fs::File = std::fs::File::open(path).map_err(|_| "unable to open the file")?;
 
     let mut reader: BufReader<std::fs::File> = BufReader::new(file);
     let mut buffer: Vec<u8> = Vec::with_capacity(1_000_000_000);
 
-    reader.read_to_end(&mut buffer).map_err(|_| ())?;
+    reader
+        .read_to_end(&mut buffer)
+        .map_err(|_| "unable to fill the buffer")?;
 
     let (encoding, offset) = Encoding::for_bom(&buffer).unwrap_or((encoding_rs::UTF_8, 0));
 
     if encoding == encoding_rs::UTF_8 {
-        String::from_utf8(buffer).map_err(|_| ())
+        String::from_utf8(buffer).map_err(|_| "invalid utf-8 content")
     } else {
         let bytes: &[u8] = &buffer[offset..];
         let mut decoder: encoding_rs::Decoder = encoding.new_decoder();
@@ -41,7 +44,7 @@ fn read_file_to_string_buffered(path: &std::path::Path) -> Result<String, ()> {
         if let CoderResult::InputEmpty = result {
             Ok(string)
         } else {
-            Err(())
+            Err("Unable to decode correctly to utf-8")
         }
     }
 }

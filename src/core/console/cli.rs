@@ -134,9 +134,33 @@ impl CommandLine {
         let arg: &str = argument.as_str();
 
         match arg {
-            "-h" | "--help" | "help" => {
+            "-h" | "--help" => {
                 self.advance();
-                console::help::show_help();
+
+                match self.peek_optional() {
+                    Some("opt") => {
+                        self.advance();
+                        console::help::show_optimization_help();
+                    }
+                    Some("emit") => {
+                        self.advance();
+                        console::help::show_emission_help();
+                    }
+                    Some("print") => {
+                        self.advance();
+                        console::help::show_printing_help();
+                    }
+                    Some("code-model") => {
+                        self.advance();
+                        console::help::show_code_model_help();
+                    }
+                    Some("reloc-model") => {
+                        self.advance();
+                        console::help::show_reloc_model();
+                    }
+
+                    _ => console::help::show_help(),
+                }
             }
 
             "-v" | "--version" | "version" => {
@@ -454,7 +478,7 @@ impl CommandLine {
                 self.get_mut_options().set_omit_default_optimizations();
             }
 
-            "--reloc-mode" => {
+            "--reloc-model" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
@@ -651,6 +675,15 @@ impl CommandLine {
 
 impl CommandLine {
     #[inline]
+    fn peek_optional(&self) -> Option<&str> {
+        if self.is_eof() {
+            return None;
+        }
+
+        Some(&self.args[self.current])
+    }
+
+    #[inline]
     fn peek(&self) -> &str {
         if self.is_eof() {
             self.report_error("Expected value after flag or command.");
@@ -741,7 +774,8 @@ impl CommandLine {
             "O1" => ThrushOptimization::Low,
             "O2" => ThrushOptimization::Mid,
             "O3" => ThrushOptimization::High,
-            "Oz" => ThrushOptimization::Size,
+            "Os" => ThrushOptimization::Size,
+            "Oz" => ThrushOptimization::Zize,
 
             any => {
                 self.report_error(&format!("Unknown optimization level: '{}'.", any));
@@ -753,9 +787,9 @@ impl CommandLine {
     fn parse_print_option(&self, emit: &str) -> PrintableUnit {
         match emit {
             "llvm-ir" => PrintableUnit::LLVMIR,
-            "raw-llvm-ir" => PrintableUnit::RawLLVMIR,
+            "unopt-llvm-ir" => PrintableUnit::UnOptLLVMIR,
             "asm" => PrintableUnit::Assembly,
-            "raw-asm" => PrintableUnit::RawAssembly,
+            "unopt-asm" => PrintableUnit::UnOptAssembly,
             "tokens" => PrintableUnit::Tokens,
 
             any => {
@@ -770,9 +804,9 @@ impl CommandLine {
             "llvm-bc" => EmitableUnit::LLVMBitcode,
             "llvm-ir" => EmitableUnit::LLVMIR,
             "asm" => EmitableUnit::Assembly,
-            "raw-llvm-bc" => EmitableUnit::RawLLVMBitcode,
-            "raw-llvm-ir" => EmitableUnit::RawLLVMIR,
-            "raw-asm" => EmitableUnit::RawAssembly,
+            "unopt-llvm-bc" => EmitableUnit::UnOptLLVMBitcode,
+            "unopt-llvm-ir" => EmitableUnit::UnOptLLVMIR,
+            "unopt-asm" => EmitableUnit::UnOptAssembly,
             "obj" => EmitableUnit::Object,
             "ast" => EmitableUnit::AST,
             "tokens" => EmitableUnit::Tokens,

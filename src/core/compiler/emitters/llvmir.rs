@@ -17,7 +17,7 @@ pub fn emit_llvm_ir(
     unoptimized: bool,
 ) -> Result<(), LLVMString> {
     let compiler_options: &CompilerOptions = compiler.get_options();
-    let obfuscate: bool = compiler_options.need_obfuscate_archive_names();
+    let need_obfuscation: bool = compiler_options.need_obfuscate_archive_names();
 
     let llvmir_base_path: PathBuf = build_dir.join("emit").join("llvm-ir");
 
@@ -27,7 +27,7 @@ pub fn emit_llvm_ir(
 
     let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
 
-    let llvmir_file_name: String = if obfuscate {
+    let llvmir_file_name: String = if need_obfuscation {
         format!(
             "{}{}_{}.ll",
             optimization_name_modifier,

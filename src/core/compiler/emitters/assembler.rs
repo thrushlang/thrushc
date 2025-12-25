@@ -2,7 +2,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use inkwell::module::Module;
-use inkwell::support::LLVMString;
 use inkwell::targets::FileType;
 use inkwell::targets::TargetMachine;
 
@@ -18,9 +17,15 @@ pub fn emit_llvm_assembler(
     build_dir: &Path,
     file_name: &str,
     unoptimized: bool,
-) -> Result<(), LLVMString> {
+) -> Result<(), &'static str> {
+    if !target_machine.get_target().has_asm_backend() {
+        return Err(
+            "The object doesn't support emitting readable assembly; aborting assembly emission.",
+        );
+    }
+
     let compiler_options: &CompilerOptions = compiler.get_options();
-    let obfuscate: bool = compiler_options.need_obfuscate_archive_names();
+    let need_obfuscation: bool = compiler_options.need_obfuscate_archive_names();
 
     let assembler_base_path: PathBuf = build_dir.join("emit").join("assembler");
 
@@ -30,7 +35,7 @@ pub fn emit_llvm_assembler(
 
     let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
 
-    let assembler_file_name: String = if obfuscate {
+    let assembler_file_name: String = if need_obfuscation {
         format!(
             "{}{}_{}.s",
             optimization_name_modifier,
@@ -43,7 +48,9 @@ pub fn emit_llvm_assembler(
 
     let assembler_file_path: PathBuf = assembler_base_path.join(assembler_file_name);
 
-    target_machine.write_to_file(llvm_module, FileType::Assembly, &assembler_file_path)?;
+    target_machine
+        .write_to_file(llvm_module, FileType::Assembly, &assembler_file_path)
+        .map_err(|_| "Failed to compile to readable assembler!")?;
 
     Ok(())
 }

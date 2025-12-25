@@ -201,12 +201,22 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let target: Target = Target::from_triple(llvm_triple).map_err(|_| {
             let _ = interrupt::archive_compilation_unit_with_message(
                 self,
-                LoggingType::LLVMBackend,
-                "Target-triple could not be built correctly. Maybe this target triple is invalid. Try another.",
+                LoggingType::Error,
+                "The compiler couldn't be configured correctly. The target is possibly unrecognizable. Try again another target or try to fix it.",
                 file,
                 file_time,
             );
         })?;
+
+        if !target.has_target_machine() {
+            interrupt::archive_compilation_unit_with_message(
+                self,
+                LoggingType::Error,
+                "The compiler couldn't be configured correctly. The specified target cannot be used for code generation. Try with another target.",
+                file,
+                file_time,
+            )?;
+        }
 
         let target_machine: TargetMachine = target
             .create_target_machine(
@@ -221,7 +231,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                 let _ = interrupt::archive_compilation_unit_with_message(
                     self,
                     LoggingType::LLVMBackend,
-                    "Target machine could not be built correctly.",
+                    "The compiler couldn't be configured correctly. Possibly the target is not supported for code generation.",
                     file,
                     file_time,
                 );

@@ -62,8 +62,8 @@ pub fn has_jit_available(target: &Target) -> Result<(), ()> {
         logging::print_error(
             logging::LoggingType::JITCompiler,
             &format!(
-                "The JIT compiler isn't properly available for the target '{}'.",
-                target.get_name().to_string_lossy()
+                "The JIT compiler isn't properly available for the target '{}'. Aborting compilation.",
+                target.get_description().to_string_lossy()
             ),
         );
 

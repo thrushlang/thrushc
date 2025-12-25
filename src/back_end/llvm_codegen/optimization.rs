@@ -125,6 +125,21 @@ impl LLVMOptimizer<'_, '_> {
                 ThrushOptimization::Size => {
                     if let Err(error) =
                         self.get_module()
+                            .run_passes("default<Os>", machine, options)
+                    {
+                        logging::print_warn(
+                            logging::LoggingType::Warning,
+                            &format!(
+                                "Some optimizations passes couldn't be performed because: '{:?}'.",
+                                error
+                            ),
+                        );
+                    }
+                }
+
+                ThrushOptimization::Zize => {
+                    if let Err(error) =
+                        self.get_module()
                             .run_passes("default<Oz>", machine, options)
                     {
                         logging::print_warn(

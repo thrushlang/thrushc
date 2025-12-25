@@ -26,11 +26,13 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {}, {}, {} {}\n",
+            "{} {}, {} {} {}\n",
             "•".bold(),
             "-h".custom_color((141, 141, 142)).bold(),
             "--help".custom_color((141, 141, 142)).bold(),
-            "help".custom_color((141, 141, 142)).bold(),
+            "optional[opt|emit|print|code-model|reloc-model]"
+                .custom_color((141, 141, 142))
+                .bold(),
             "Show help message.",
         ),
     );
@@ -122,7 +124,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-target-triple".custom_color((141, 141, 142)).bold(),
-            "x86_64-pc-linux-gnu",
+            "x86_64-pc-linux-gnu|x86_64-pc-windows-msvc",
             "Set the target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.",
         ),
     );
@@ -133,7 +135,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-cpu".custom_color((141, 141, 142)).bold(),
-            "haswell",
+            "haswell|alderlake|ivybridge|pentium|pantherlake",
             "Specify the CPU to optimize.",
         ),
     );
@@ -155,7 +157,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-emit".custom_color((141, 141, 142)).bold(),
-            "llvm-bc|llvm-ir|asm|raw-llvm-ir|raw-llvm-bc|raw-asm|obj|ast|tokens",
+            "llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|ast|tokens",
             "Compile the code into specified representation.",
         ),
     );
@@ -166,7 +168,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-print".custom_color((141, 141, 142)).bold(),
-            "llvm-ir|raw-llvm-ir|tokens",
+            "llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens",
             "Displays the final compilation on standard output.",
         ),
     );
@@ -177,7 +179,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-opt".custom_color((141, 141, 142)).bold(),
-            "O0|O1|O2|O3|Oz",
+            "O0|O1|O2|O3|Os|Oz",
             "Optimization level.",
         ),
     );
@@ -241,10 +243,10 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {} {} {}\n",
+            "{} {} [{}] {}\n",
             "•".bold(),
-            "--reloc-mode".custom_color((141, 141, 142)).bold(),
-            "[static|pic|dynamic]",
+            "--reloc-model".custom_color((141, 141, 142)).bold(),
+            "static|pic|dynamic",
             "Indicate how references to memory addresses and linkage symbols are handled."
         ),
     );
@@ -562,4 +564,359 @@ pub fn show_help() -> ! {
     );
 
     std::process::exit(1);
+}
+
+pub fn show_optimization_help() -> ! {
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "-opt value; -opt=value; -opt:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "O0|O1|O2|O3|Os|Oz",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "O0".custom_color((141, 141, 142)).bold(),
+            "No optimization. Minimal compile time; produces the most predictable code for debugging.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "O1".custom_color((141, 141, 142)).bold(),
+            "Basic optimization. Reduces code size and execution time without significantly increasing compile time.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "O2".custom_color((141, 141, 142)).bold(),
+            "Standard optimization. Enables most stable optimizations.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "O3".custom_color((141, 141, 142)).bold(),
+            "Enables SIMD vectorization and heavy inlining to maximize execution speed.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "Os".custom_color((141, 141, 142)).bold(),
+            "Optimize for size. Enables all 'O2' optimizations that do not increase the size of the generated binary.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "Oz".custom_color((141, 141, 142)).bold(),
+            "Aggressive size optimization. Further reduces binary size by disabling certain 'O2' optimization passes.",
+        ),
+    );
+
+    std::process::exit(1);
+}
+
+pub fn show_emission_help() -> ! {
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "-emit value; -emit=value; -emit:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|ast|tokens",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "llvm-bc".custom_color((141, 141, 142)).bold(),
+            "Emit optimized LLVM bitcode.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "llvm-ir".custom_color((141, 141, 142)).bold(),
+            "Emit optimized LLVM Intermediate Representation.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "asm".custom_color((141, 141, 142)).bold(),
+            "Emit target-specific optimized assembly code.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "unopt-llvm-ir".custom_color((141, 141, 142)).bold(),
+            "Emit unoptimized LLVM IR before any optimization passes.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "unopt-llvm-bc".custom_color((141, 141, 142)).bold(),
+            "Emit unoptimized LLVM bitcode before any optimization passes.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "unopt-asm".custom_color((141, 141, 142)).bold(),
+            "Emit unoptimized target-specific assembly before any optimizations passes.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "obj".custom_color((141, 141, 142)).bold(),
+            "Emit machine-specific object file.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "ast".custom_color((141, 141, 142)).bold(),
+            "Emit the compiler abstract syntax tree.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "tokens".custom_color((141, 141, 142)).bold(),
+            "Emit the compiler lexical tokens.",
+        ),
+    );
+
+    std::process::exit(1)
+}
+
+pub fn show_printing_help() -> ! {
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "-print value; -print=value; -print:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "llvm-ir".custom_color((141, 141, 142)).bold(),
+            "Print optimized LLVM Intermediate Representation.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "unopt-llvm-ir".custom_color((141, 141, 142)).bold(),
+            "Print unoptimized LLVM IR before any optimization passes.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "asm".custom_color((141, 141, 142)).bold(),
+            "Print optimized target-specific assembly code.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "unopt-asm".custom_color((141, 141, 142)).bold(),
+            "Print unoptimized assembly code before any optimizations.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "tokens".custom_color((141, 141, 142)).bold(),
+            "Print the compiler lexical tokens.",
+        ),
+    );
+
+    std::process::exit(1)
+}
+
+pub fn show_code_model_help() -> ! {
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "--code-model value; --code-model=value; --code-model:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "small|medium|large|kernel",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "small".custom_color((141, 141, 142)).bold(),
+            "Default model. Assumes the code and data fit within a 2GB address space.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "medium".custom_color((141, 141, 142)).bold(),
+            "Allows code to be in the 2GB range, but data sections can be larger or located further away.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "large".custom_color((141, 141, 142)).bold(),
+            "No assumptions about addresses. Code and data can be anywhere in the 64-bit address space.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "kernel".custom_color((141, 141, 142)).bold(),
+            "Maps code to the high end of the address spaces.",
+        ),
+    );
+
+    std::process::exit(1)
+}
+
+pub fn show_reloc_model() -> ! {
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "--reloc-model value; --reloc-model=value; --reloc-model:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "static|pic|dynamic",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "static".custom_color((141, 141, 142)).bold(),
+            "Non-relocatable code. Addresses are fixed at link time. Fastest, but not suitable for shared libraries.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "pic".custom_color((141, 141, 142)).bold(),
+            "Position Independent Code. Required for shared libraries.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "dynamic".custom_color((141, 141, 142)).bold(),
+            "Generates code that relies on a dynamic linker to resolve addresses at runtime.",
+        ),
+    );
+
+    std::process::exit(1)
 }

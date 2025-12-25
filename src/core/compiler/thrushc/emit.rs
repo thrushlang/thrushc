@@ -64,7 +64,7 @@ pub fn llvm_after_optimization(
             file.get_name(),
             false,
         ) {
-            logging::print_error(LoggingType::Error, &error.to_string());
+            logging::print_error(LoggingType::Error, error);
             interrupt::archive_compilation_unit(compiler, file, file_time)?;
         };
 
@@ -100,7 +100,7 @@ pub fn llvm_before_optimization(
 ) -> Result<bool, ()> {
     let compiler_options: &CompilerOptions = compiler.get_options();
 
-    if compiler_options.contains_emitable(EmitableUnit::RawLLVMIR) {
+    if compiler_options.contains_emitable(EmitableUnit::UnOptLLVMIR) {
         if let Err(error) =
             emitters::llvmir::emit_llvm_ir(compiler, llvm_module, build_dir, file.get_name(), true)
         {
@@ -111,7 +111,7 @@ pub fn llvm_before_optimization(
         return Ok(true);
     }
 
-    if compiler_options.contains_emitable(EmitableUnit::RawLLVMBitcode) {
+    if compiler_options.contains_emitable(EmitableUnit::UnOptLLVMBitcode) {
         if !emitters::llvmbitcode::emit_llvm_bitcode(
             compiler,
             llvm_module,
@@ -132,7 +132,7 @@ pub fn llvm_before_optimization(
         return Ok(true);
     }
 
-    if compiler_options.contains_emitable(EmitableUnit::RawAssembly) {
+    if compiler_options.contains_emitable(EmitableUnit::UnOptAssembly) {
         if let Err(error) = emitters::assembler::emit_llvm_assembler(
             compiler,
             llvm_module,
@@ -141,7 +141,7 @@ pub fn llvm_before_optimization(
             file.get_name(),
             true,
         ) {
-            logging::print_error(LoggingType::Error, &error.to_string());
+            logging::print_error(LoggingType::Error, error);
             interrupt::archive_compilation_unit(compiler, file, file_time)?;
         }
 
