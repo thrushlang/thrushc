@@ -21,7 +21,7 @@ use ahash::AHashMap as HashMap;
 use inkwell::values::FunctionValue;
 
 #[derive(Debug)]
-pub struct SymbolsTable<'ctx> {
+pub struct LLVMSymbolsTable<'ctx> {
     functions: LLVMFunctions<'ctx>,
     global_statics: LLVMGlobalStatics<'ctx>,
     local_statics: LLVMLocalStatics<'ctx>,
@@ -33,7 +33,7 @@ pub struct SymbolsTable<'ctx> {
     scope: usize,
 }
 
-impl SymbolsTable<'_> {
+impl LLVMSymbolsTable<'_> {
     #[inline]
     pub fn new() -> Self {
         Self {
@@ -51,7 +51,7 @@ impl SymbolsTable<'_> {
     }
 }
 
-impl<'ctx> SymbolsTable<'ctx> {
+impl<'ctx> LLVMSymbolsTable<'ctx> {
     #[must_use]
     pub fn get_symbol(&self, name: &str) -> SymbolAllocated<'ctx> {
         if let Some(parameter) = self.parameters.get(name) {
@@ -117,7 +117,7 @@ impl<'ctx> SymbolsTable<'ctx> {
     }
 }
 
-impl<'ctx> SymbolsTable<'ctx> {
+impl<'ctx> LLVMSymbolsTable<'ctx> {
     #[inline]
     pub fn get_mut_all_functions(&mut self) -> &mut LLVMFunctions<'ctx> {
         &mut self.functions
@@ -154,7 +154,7 @@ impl<'ctx> SymbolsTable<'ctx> {
     }
 }
 
-impl SymbolsTable<'_> {
+impl LLVMSymbolsTable<'_> {
     pub fn begin_scope(&mut self) {
         self.local_statics.push(HashMap::with_capacity(
             LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY,

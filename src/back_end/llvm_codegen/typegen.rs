@@ -40,12 +40,12 @@ pub fn generate_fn_type<'ctx>(
     }
 
     if kind.is_void_type() {
-        return llvm_context
+        llvm_context
             .void_type()
-            .fn_type(&parameters_types, is_var_args);
+            .fn_type(&parameters_types, is_var_args)
+    } else {
+        self::generate(context, kind).fn_type(&parameters_types, is_var_args)
     }
-
-    self::generate(context, kind).fn_type(&parameters_types, is_var_args)
 }
 
 #[inline]
@@ -64,12 +64,12 @@ pub fn generate_function_type_from_type<'ctx>(
     });
 
     if kind.is_void_type() {
-        return llvm_context
+        llvm_context
             .void_type()
-            .fn_type(&parameters_types, is_var_args);
+            .fn_type(&parameters_types, is_var_args)
+    } else {
+        self::generate(context, kind).fn_type(&parameters_types, is_var_args)
     }
-
-    self::generate(context, kind).fn_type(&parameters_types, is_var_args)
 }
 
 #[inline]

@@ -21,59 +21,61 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
         .get_current_llvm_function(node.get_span())
         .get_value();
 
-    if let Ast::Loop { block, span, .. } = node {
-        let block_span: Span = block.get_span();
+    let Ast::Loop { block, span, .. } = node else {
+        return;
+    };
 
-        let start: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
-        let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+    let block_span: Span = block.get_span();
 
+    let start: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+    let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+
+    llvm_builder
+        .build_unconditional_branch(start)
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                codegen.get_mut_context(),
+                "Failed to compile loop terminator to start!",
+                *span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+    llvm_builder.position_at_end(start);
+
+    codegen
+        .get_mut_context()
+        .get_mut_loop_ctx()
+        .add_continue_branch(start);
+
+    codegen
+        .get_mut_context()
+        .get_mut_loop_ctx()
+        .add_break_branch(exit);
+
+    codegen.codegen_block(block);
+
+    if codegen
+        .get_mut_context()
+        .get_last_builder_block(block_span)
+        .get_terminator()
+        .is_none()
+    {
         llvm_builder
             .build_unconditional_branch(start)
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     codegen.get_mut_context(),
-                    "Failed to compile loop terminator to start!",
+                    "Failed to compile loop body terminator to start!",
                     *span,
                     PathBuf::from(file!()),
                     line!(),
                 )
             });
-
-        llvm_builder.position_at_end(start);
-
-        codegen
-            .get_mut_context()
-            .get_mut_loop_ctx()
-            .add_continue_branch(start);
-
-        codegen
-            .get_mut_context()
-            .get_mut_loop_ctx()
-            .add_break_branch(exit);
-
-        codegen.codegen_block(block);
-
-        if codegen
-            .get_mut_context()
-            .get_last_builder_block(block_span)
-            .get_terminator()
-            .is_none()
-        {
-            llvm_builder
-                .build_unconditional_branch(start)
-                .unwrap_or_else(|_| {
-                    abort::abort_codegen(
-                        codegen.get_mut_context(),
-                        "Failed to compile loop body terminator to start!",
-                        *span,
-                        PathBuf::from(file!()),
-                        line!(),
-                    )
-                });
-        }
-
-        codegen.get_mut_context().get_mut_loop_ctx().pop();
-
-        llvm_builder.position_at_end(exit);
     }
+
+    codegen.get_mut_context().get_mut_loop_ctx().pop();
+
+    llvm_builder.position_at_end(exit);
 }

@@ -230,20 +230,19 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 let metadata: &LocalMetadata = metadata;
 
                 if metadata.is_undefined() {
-                    self.context.new_local(node.as_local());
-
-                    return;
+                    self.context.allocate_local(node.as_local());
+                } else {
+                    statements::local::compile(self.context, node.as_local());
                 }
-
-                statements::local::compile(self.context, node.as_local());
             }
 
             Ast::Const { .. } => {
-                self.context.new_local_constant(node.as_local_constant());
+                self.context
+                    .allocate_local_constant(node.as_local_constant());
             }
 
             Ast::Static { .. } => {
-                self.context.new_local_static(node.as_local_static());
+                self.context.allocate_local_static(node.as_local_static());
             }
 
             Ast::LLI {
@@ -469,11 +468,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             }
 
             Ast::Const { .. } => {
-                self.context.new_global_constant(ast.as_global_constant());
+                self.context
+                    .allocate_global_constant(ast.as_global_constant());
             }
 
             Ast::Static { .. } => {
-                self.context.new_global_static(ast.as_global_static());
+                self.context.allocate_global_static(ast.as_global_static());
             }
 
             _ => (),

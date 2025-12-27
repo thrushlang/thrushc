@@ -3,10 +3,10 @@ use crate::back_end::llvm_codegen::alloc;
 use crate::back_end::llvm_codegen::constgen;
 use crate::back_end::llvm_codegen::generation;
 use crate::back_end::llvm_codegen::localanchor::PointerAnchor;
-use crate::back_end::llvm_codegen::loopcontrol::LoopContext;
+use crate::back_end::llvm_codegen::loopcontrol::LLVMLoopContext;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
 use crate::back_end::llvm_codegen::memory::SymbolToAllocate;
-use crate::back_end::llvm_codegen::symbols::SymbolsTable;
+use crate::back_end::llvm_codegen::symbols::LLVMSymbolsTable;
 use crate::back_end::llvm_codegen::typegen;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::repr::LLVMCtors;
@@ -60,8 +60,8 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     target_data: TargetData,
     target_triple: TargetTriple,
 
-    table: SymbolsTable<'ctx>,
-    loop_ctx: LoopContext<'ctx>,
+    table: LLVMSymbolsTable<'ctx>,
+    loop_ctx: LLVMLoopContext<'ctx>,
     ctors: LLVMCtors<'ctx>,
     dtors: LLVMDtors<'ctx>,
 
@@ -89,8 +89,8 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             target_data,
             target_triple,
 
-            table: SymbolsTable::new(),
-            loop_ctx: LoopContext::new(),
+            table: LLVMSymbolsTable::new(),
+            loop_ctx: LLVMLoopContext::new(),
 
             ctors: LLVMCtors::new(),
             dtors: LLVMDtors::new(),
@@ -105,7 +105,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    pub fn new_local_constant(&mut self, constant: LocalConstant<'ctx>) {
+    pub fn allocate_local_constant(&mut self, constant: LocalConstant<'ctx>) {
         let name: &str = constant.0;
         let ascii_name: &str = constant.1;
 
@@ -144,7 +144,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    pub fn new_global_constant(&mut self, constant: GlobalConstant<'ctx>) {
+    pub fn allocate_global_constant(&mut self, constant: GlobalConstant<'ctx>) {
         let name: &str = constant.0;
         let ascii_name: &str = constant.1;
 
@@ -181,7 +181,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    pub fn new_local_static(&mut self, staticvar: LocalStatic<'ctx>) {
+    pub fn allocate_local_static(&mut self, staticvar: LocalStatic<'ctx>) {
         let name: &str = staticvar.0;
         let ascii_name: &str = staticvar.1;
 
@@ -251,7 +251,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
     }
 
-    pub fn new_global_static(&mut self, staticvar: GlobalStatic<'ctx>) {
+    pub fn allocate_global_static(&mut self, staticvar: GlobalStatic<'ctx>) {
         let name: &str = staticvar.0;
         let ascii_name: &str = staticvar.1;
 
@@ -315,7 +315,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     #[inline]
-    pub fn new_local(&mut self, local: Local<'ctx>) {
+    pub fn allocate_local(&mut self, local: Local<'ctx>) {
         let name: &str = local.0;
         let ascii_name: &str = local.1;
 
@@ -345,7 +345,9 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             )
         }
     }
+}
 
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     #[inline]
     pub fn new_lli(
         &mut self,
@@ -487,7 +489,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
-    pub fn get_loop_ctx(&self) -> &LoopContext<'ctx> {
+    pub fn get_loop_ctx(&self) -> &LLVMLoopContext<'ctx> {
         &self.loop_ctx
     }
 
@@ -507,7 +509,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
-    pub fn get_table(&self) -> &SymbolsTable<'ctx> {
+    pub fn get_table(&self) -> &LLVMSymbolsTable<'ctx> {
         &self.table
     }
 
@@ -545,7 +547,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
-    pub fn get_mut_loop_ctx(&mut self) -> &mut LoopContext<'ctx> {
+    pub fn get_mut_loop_ctx(&mut self) -> &mut LLVMLoopContext<'ctx> {
         &mut self.loop_ctx
     }
 }

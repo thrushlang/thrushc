@@ -15,23 +15,24 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, local: Local<'c
     let kind: &Type = local.2;
     let expr: Option<&Ast> = local.3;
 
-    context.new_local(local);
+    context.allocate_local(local);
 
-    if let Some(expr) = expr {
-        let symbol: SymbolAllocated = context.get_table().get_symbol(name);
+    let Some(expr) = expr else {
+        return;
+    };
 
-        context.set_pointer_anchor(PointerAnchor::new(symbol.get_ptr(), false));
+    let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
-        let value: BasicValueEnum = codegen::compile(context, expr, Some(kind));
+    context.set_pointer_anchor(PointerAnchor::new(symbol.get_ptr(), false));
 
-        if let Some(anchor) = context.get_pointer_anchor() {
-            if !anchor.is_triggered() {
-                symbol.store(context, value);
-            }
-        } else {
+    let value: BasicValueEnum = codegen::compile(context, expr, Some(kind));
+
+    match context.get_pointer_anchor() {
+        Some(anchor) if !anchor.is_triggered() => {
             symbol.store(context, value);
         }
-
-        context.clear_pointer_anchor();
+        _ => symbol.store(context, value),
     }
+
+    context.clear_pointer_anchor();
 }

@@ -7,22 +7,22 @@ use inkwell::basic_block::BasicBlock;
 use std::fmt::Display;
 
 #[derive(Debug)]
-pub struct LoopContext<'ctx> {
+pub struct LLVMLoopContext<'ctx> {
     break_branches: Vec<BasicBlock<'ctx>>,
     continue_branches: Vec<BasicBlock<'ctx>>,
 }
 
-impl<'ctx> LoopContext<'ctx> {
+impl<'ctx> LLVMLoopContext<'ctx> {
     #[inline]
-    pub fn new() -> LoopContext<'ctx> {
-        LoopContext {
+    pub fn new() -> LLVMLoopContext<'ctx> {
+        LLVMLoopContext {
             break_branches: Vec::with_capacity(LLVM_COMPILER_BRANCHERS_CAPACITY),
             continue_branches: Vec::with_capacity(LLVM_COMPILER_BRANCHERS_CAPACITY),
         }
     }
 }
 
-impl<'ctx> LoopContext<'ctx> {
+impl<'ctx> LLVMLoopContext<'ctx> {
     #[inline]
     pub fn add_break_branch(&mut self, branch: BasicBlock<'ctx>) {
         self.break_branches.push(branch);
@@ -34,7 +34,7 @@ impl<'ctx> LoopContext<'ctx> {
     }
 }
 
-impl<'ctx> LoopContext<'ctx> {
+impl<'ctx> LLVMLoopContext<'ctx> {
     #[inline]
     pub fn get_last_break_branch(&self) -> BasicBlock<'ctx> {
         *self.break_branches.last().unwrap_or_else(|| {
@@ -50,7 +50,7 @@ impl<'ctx> LoopContext<'ctx> {
     }
 }
 
-impl LoopContext<'_> {
+impl LLVMLoopContext<'_> {
     #[inline]
     pub fn pop(&mut self) {
         self.break_branches.pop();

@@ -1,3 +1,5 @@
+#![allow(unnecessary_transmutes)]
+
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::refptr;
@@ -48,11 +50,20 @@ pub fn const_integer_together<'ctx>(
                         unsafe { std::mem::transmute::<i64, u64>(lhs_number) };
 
                     return (rhs.get_type().const_int(lhs_number_transmuted, true), rhs);
+                } else if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                    let rhs_number_transmuted: u64 =
+                        unsafe { std::mem::transmute::<i64, u64>(rhs_number) };
+
+                    return (lhs, lhs.get_type().const_int(rhs_number_transmuted, true));
                 }
             }
 
             if let Some(lhs_number) = lhs.get_zero_extended_constant() {
                 return (rhs.get_type().const_int(lhs_number, true), rhs);
+            }
+
+            if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                return (lhs, lhs.get_type().const_int(rhs_number, true));
             }
 
             (rhs.get_type().const_zero(), rhs.get_type().const_zero())
@@ -64,11 +75,20 @@ pub fn const_integer_together<'ctx>(
                         unsafe { std::mem::transmute::<i64, u64>(rhs_number) };
 
                     return (lhs, lhs.get_type().const_int(rhs_number_transmuted, true));
+                } else if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                    let lhs_number_transmuted: u64 =
+                        unsafe { std::mem::transmute::<i64, u64>(lhs_number) };
+
+                    return (rhs.get_type().const_int(lhs_number_transmuted, true), rhs);
                 }
             }
 
             if let Some(rhs_number) = rhs.get_zero_extended_constant() {
-                return (lhs, lhs.get_type().const_int(rhs_number, true));
+                return (lhs, lhs.get_type().const_int(rhs_number, false));
+            }
+
+            if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                return (rhs.get_type().const_int(lhs_number, false), rhs);
             }
 
             (rhs.get_type().const_zero(), rhs.get_type().const_zero())
@@ -324,16 +344,16 @@ pub fn try_cast<'ctx>(
     from: BasicValueEnum<'ctx>,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    if from.is_float_value() && target_type.is_some() {
-        if let Some(target_type) = target_type {
-            return self::float(context, target_type, from_type, from, span).unwrap_or(from);
-        }
+    if from.is_float_value()
+        && let Some(target_type) = target_type
+    {
+        return self::float(context, target_type, from_type, from, span).unwrap_or(from);
     }
 
-    if from.is_int_value() && target_type.is_some() {
-        if let Some(target_type) = target_type {
-            return self::integer(context, target_type, from_type, from, span).unwrap_or(from);
-        }
+    if from.is_int_value()
+        && let Some(target_type) = target_type
+    {
+        return self::integer(context, target_type, from_type, from, span).unwrap_or(from);
     }
 
     from
