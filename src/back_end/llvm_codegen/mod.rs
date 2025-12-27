@@ -11,6 +11,7 @@ pub mod codemodel;
 pub mod constants;
 pub mod constgen;
 pub mod context;
+pub mod debug;
 pub mod declarations;
 pub mod generation;
 pub mod indexes;

@@ -7,3 +7,4 @@ compiler-builder/target
 dist
 embedded
 Cargo.lock
+versions

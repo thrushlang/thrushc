@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process;
 
 use crate::core::compiler;
 use crate::core::compiler::backends::llvm;
@@ -166,7 +165,7 @@ impl CommandLine {
             "-v" | "--version" | "version" => {
                 self.advance();
                 logging::write(logging::OutputIn::Stdout, COMPILER_VERSION);
-                process::exit(0);
+                std::process::exit(0);
             }
 
             "-build-dir" => {
@@ -357,7 +356,7 @@ impl CommandLine {
 
             "-emit" => {
                 self.advance();
-                self.validate_emit_llvm_required(arg);
+                self.validate_llvm_required(arg);
 
                 let emitable: EmitableUnit = self.parse_emit_option(self.peek());
 
@@ -368,13 +367,43 @@ impl CommandLine {
 
             "-print" => {
                 self.advance();
-                self.validate_emit_llvm_required(arg);
+                self.validate_llvm_required(arg);
 
                 let pritable_unit: PrintableUnit = self.parse_print_option(self.peek());
 
                 self.get_mut_options().add_print_option(pritable_unit);
 
                 self.advance();
+            }
+
+            "-dbg" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_debug_config()
+                    .set_debug_mode();
+            }
+
+            "-dbg-for-inlining" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_debug_config()
+                    .set_split_debug_inlining();
+            }
+
+            "-dbg-for-profiling" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_debug_config()
+                    .set_debug_for_profiling();
             }
 
             "--link-check" => {
@@ -385,6 +414,7 @@ impl CommandLine {
 
             "--macos-version" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
                 let version: String = self.peek().to_string();
 
@@ -402,6 +432,7 @@ impl CommandLine {
 
             "--ios-version" => {
                 self.advance();
+                self.validate_llvm_required(arg);
 
                 let version: String = self.peek().to_string();
 
@@ -641,7 +672,7 @@ impl CommandLine {
                         .trim(),
                 );
 
-                process::exit(0);
+                std::process::exit(0);
             }
 
             "--print-supported-cpus" => {
@@ -870,27 +901,6 @@ impl CommandLine {
                 "Can't use '{}' if the '-jit' flag was enabled previously.",
                 arg
             ));
-        }
-    }
-
-    fn validate_emit_llvm_required(&self, arg: &str) {
-        if !self.options.uses_llvm() {
-            let llvm_emit_options: [&'static str; 7] = [
-                "raw-llvm-ir",
-                "raw-llvm-bc",
-                "raw-asm",
-                "obj",
-                "llvm-bc",
-                "llvm-ir",
-                "asm",
-            ];
-
-            if llvm_emit_options.contains(&self.peek()) {
-                self.report_error(&format!(
-                    "Can't use '{}' without '-llvm-backend' flag previously.",
-                    arg
-                ));
-            }
         }
     }
 

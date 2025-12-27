@@ -5,7 +5,7 @@ use crate::back_end::llvm_codegen::targettriple::LLVMTargetTriple;
 
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::options::CompilerOptions;
-use crate::core::constants::COMPILER_VERSION;
+use crate::core::constants::COMPILER_ID;
 
 use inkwell::values::BasicMetadataValueEnum;
 use inkwell::values::MetadataValue;
@@ -364,7 +364,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         let version: MetadataValue = self
             .get_context()
             .get_llvm_context()
-            .metadata_string(&format!("thrushc version {}", COMPILER_VERSION));
+            .metadata_string(COMPILER_ID);
 
         let node: MetadataValue = self
             .get_context()

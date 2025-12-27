@@ -247,6 +247,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             target_machine.get_triple(),
             Diagnostician::new(file, self.options),
             self.options,
+            file,
         );
 
         llvm_codegen::LLVMCompiler::compile(&mut llvm_codegen_context, ast);
@@ -492,6 +493,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             target_machine.get_triple(),
             Diagnostician::new(file, self.options),
             self.options,
+            file,
         );
 
         llvm_codegen::LLVMCompiler::compile(&mut llvm_codegen_context, ast);

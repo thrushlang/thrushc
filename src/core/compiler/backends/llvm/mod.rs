@@ -1,4 +1,5 @@
 pub mod cpu;
+pub mod debug;
 pub mod info;
 pub mod jit;
 pub mod passes;
@@ -8,6 +9,7 @@ pub mod targets;
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
 
 use crate::core::compiler::backends::llvm::cpu::LLVMTargetCPU;
+use crate::core::compiler::backends::llvm::debug::DebugConfiguration;
 use crate::core::compiler::backends::llvm::jit::JITConfiguration;
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
 use crate::core::compiler::backends::llvm::target::LLVMTarget;
@@ -22,6 +24,8 @@ pub struct LLVMBackend {
     optimization: ThrushOptimization,
     reloc_mode: RelocMode,
     code_model: CodeModel,
+    dbg_config: DebugConfiguration,
+
     modificator_passes: Vec<LLVMModificatorPasses>,
     opt_passes: String,
     omit_frame_pointer: bool,
@@ -59,12 +63,15 @@ impl LLVMBackend {
             optimization: ThrushOptimization::None,
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
+            dbg_config: DebugConfiguration::new(),
+
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),
             omit_frame_pointer: false,
             omit_uwtable: false,
             omit_direct_access_external_data: false,
             omit_rtlibusegot: false,
+
             use_jit: false,
             jit_config: JITConfiguration::new(),
         }
@@ -113,6 +120,11 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn get_debug_config(&self) -> &DebugConfiguration {
+        &self.dbg_config
+    }
+
+    #[inline]
     pub fn omit_frame_pointer(&self) -> bool {
         self.omit_frame_pointer
     }
@@ -152,6 +164,11 @@ impl LLVMBackend {
     #[inline]
     pub fn get_mut_jit_config(&mut self) -> &mut JITConfiguration {
         &mut self.jit_config
+    }
+
+    #[inline]
+    pub fn get_mut_debug_config(&mut self) -> &mut DebugConfiguration {
+        &mut self.dbg_config
     }
 }
 

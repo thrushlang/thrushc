@@ -1,6 +1,9 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::alloc;
 use crate::back_end::llvm_codegen::constgen;
+use crate::back_end::llvm_codegen::debug::LLVMDebugContext;
 use crate::back_end::llvm_codegen::generation;
 use crate::back_end::llvm_codegen::localanchor::PointerAnchor;
 use crate::back_end::llvm_codegen::loopcontrol::LLVMLoopContext;
@@ -13,6 +16,7 @@ use crate::back_end::llvm_codegen::types::repr::LLVMCtors;
 use crate::back_end::llvm_codegen::types::repr::LLVMDtors;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 
+use crate::core::compiler::options::CompilationUnit;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
@@ -59,6 +63,7 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     builder: &'ctx Builder<'ctx>,
     target_data: TargetData,
     target_triple: TargetTriple,
+    dbg_context: Option<LLVMDebugContext<'ctx>>,
 
     table: LLVMSymbolsTable<'ctx>,
     loop_ctx: LLVMLoopContext<'ctx>,
@@ -81,13 +86,25 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         target_triple: TargetTriple,
         diagnostician: Diagnostician,
         options: &'ctx CompilerOptions,
+        file: &CompilationUnit,
     ) -> Self {
+        let dbg_context: Option<LLVMDebugContext> = if options
+            .get_llvm_backend_options()
+            .get_debug_config()
+            .is_debug_mode()
+        {
+            Some(LLVMDebugContext::new(module, options, file))
+        } else {
+            None
+        };
+
         Self {
             module,
             context,
             builder,
             target_data,
             target_triple,
+            dbg_context,
 
             table: LLVMSymbolsTable::new(),
             loop_ctx: LLVMLoopContext::new(),

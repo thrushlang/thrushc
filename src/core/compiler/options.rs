@@ -112,6 +112,11 @@ impl ThrushOptimization {
                 | ThrushOptimization::Size
         )
     }
+
+    #[inline]
+    pub fn is_none_opt(&self) -> bool {
+        matches!(self, ThrushOptimization::None)
+    }
 }
 
 impl CompilationUnit {
@@ -365,6 +370,7 @@ impl CompilerOptions {
         self.export_compiler_warning_diagnostics
     }
 
+    #[inline]
     pub fn get_compiler_exported_diagnostics_clean(&self) -> bool {
         self.compiler_export_diagnostics_clean
     }

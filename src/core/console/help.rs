@@ -184,6 +184,36 @@ pub fn show_help() -> ! {
         ),
     );
 
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-dbg".custom_color((141, 141, 142)).bold(),
+            "Enable generation of debug information (DWARF).",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-dbg-for-inlining".custom_color((141, 141, 142)).bold(),
+            "Enable debug information specifically optimized for inlined functions.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-dbg-for-profiling".custom_color((141, 141, 142)).bold(),
+            "Emit extra debug info to support source-level profiling tools.",
+        ),
+    );
+
     logging::write(logging::OutputIn::Stderr, "\nJIT Compiler flags:\n\n");
 
     logging::write(
