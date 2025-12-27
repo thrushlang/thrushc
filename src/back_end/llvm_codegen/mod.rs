@@ -1,6 +1,5 @@
 pub mod abort;
 pub mod alloc;
-pub mod anchors;
 pub mod attrbuilder;
 pub mod attributes;
 pub mod binaryop;
@@ -16,6 +15,7 @@ pub mod declarations;
 pub mod generation;
 pub mod indexes;
 pub mod jit;
+pub mod localanchor;
 pub mod loopcontrol;
 pub mod memory;
 pub mod metadata;

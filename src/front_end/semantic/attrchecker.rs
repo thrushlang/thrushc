@@ -80,6 +80,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             Ast::Function {
                 attributes,
                 body,
+                return_type,
                 span,
                 ..
             } => {
@@ -109,7 +110,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
                 self.analyze_attrs(
                     attributes,
-                    AttributeCheckerAttributeApplicant::Function,
+                    AttributeCheckerAttributeApplicant::Function { return_type },
                     *span,
                 );
             }
@@ -211,14 +212,92 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         span: Span,
     ) {
         match applicant {
-            AttributeCheckerAttributeApplicant::Function => {
+            AttributeCheckerAttributeApplicant::Function { return_type, .. } => {
                 self.check_irrelevant_attributes(attributes, applicant);
                 self.check_illogical_attributes(attributes);
+
+                if let Some(attr) = attributes.get_attr(ThrushAttributeComparator::Constructor) {
+                    if !return_type.is_void_type() {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0013,
+                            "Functions that execute before the entry point should not return anything. Rewrite it to a void type.".into(),
+                            None,
+                            attr.get_span(),
+                        ));
+                    }
+
+                    if !attributes.has_public_attribute() {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0013,
+                            "Functions that run before the entry point must be public. Add '@public' attribute."
+                                .into(),
+                            None,
+                            attr.get_span(),
+                        ));
+                    }
+
+                    if let Some(attr) = attributes.get_attr(ThrushAttributeComparator::Extern) {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0013,
+                            "Functions that run before the entry point cannot be external. Remove the attribute.".into(),
+                            None,
+                            attr.get_span(),
+                        ));
+                    }
+
+                    if let Some(attr) = attributes.get_attr(ThrushAttributeComparator::Linkage) {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0013,
+                            "Functions that run before the entrypoint cannot have custom linkage. Remove it.".into(),
+                            None,
+                            attr.get_span(),
+                        ));
+                    }
+                }
+
+                if let Some(attr) = attributes.get_attr(ThrushAttributeComparator::Destructor) {
+                    if !return_type.is_void_type() {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0013,
+                            "Functions that execute after the entry point should not return anything. Rewrite them to a void type.".into(),
+                            None,
+                            attr.get_span(),
+                        ));
+                    }
+
+                    if !attributes.has_public_attribute() {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0013,
+                            "Functions that run after the entry point must be public. Add '@public' attribute."
+                                .into(),
+                            None,
+                            attr.get_span(),
+                        ));
+                    }
+
+                    if let Some(attr) = attributes.get_attr(ThrushAttributeComparator::Extern) {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0013,
+                            "Functions that run after the entry point cannot be external. Remove it.".into(),
+                            None,
+                            attr.get_span(),
+                        ));
+                    }
+
+                    if let Some(attr) = attributes.get_attr(ThrushAttributeComparator::Linkage) {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0013,
+                            "Functions that run after the entrypoint cannot have custom linkage. Remove it.".into(),
+                            None,
+                            attr.get_span(),
+                        ));
+                    }
+                }
 
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
-                        "Repetitive attributes are disallowed.".into(),
+                        "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
                     ));
@@ -241,7 +320,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
-                        "Repetitive attributes are disallowed.".into(),
+                        "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
                     ));
@@ -255,7 +334,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
-                        "Repetitive attributes are disallowed.".into(),
+                        "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
                     ));
@@ -309,7 +388,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
-                        "Repetitive attributes are disallowed.".into(),
+                        "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
                     ));
@@ -326,7 +405,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
-                        "Repetitive attributes are disallowed.".into(),
+                        "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
                     ));
@@ -358,6 +437,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ThrushAttributeComparator::StrongStack,
             ThrushAttributeComparator::PreciseFloats,
             ThrushAttributeComparator::Linkage,
+            ThrushAttributeComparator::Constructor,
+            ThrushAttributeComparator::Destructor,
         ];
 
         const VALID_INTRINSIC_ATTRIBUTES: &[ThrushAttributeComparator] = &[
@@ -423,7 +504,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             &[ThrushAttributeComparator::Heap];
 
         match applicant {
-            AttributeCheckerAttributeApplicant::Function => {
+            AttributeCheckerAttributeApplicant::Function { .. } => {
                 attributes.iter().for_each(|attr| {
                     if !VALID_FUNCTION_ATTRIBUTES.contains(&attr.as_attr_cmp()) {
                         self.add_warning(CompilationIssue::Warning(
@@ -623,6 +704,17 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                         span,
                     ));
                 }
+            }
+        }
+
+        if attributes.has_constructor_attribute() && attributes.has_destructor_attribute() {
+            if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Destructor) {
+                self.add_error(CompilationIssue::Error(
+                    CompilationIssueCode::E0012,
+                    "A symbol cannot be both a constructor and a destructor at the same time. Remove an attribute.".into(),
+                    None,
+                    span,
+                ));
             }
         }
 

@@ -10,11 +10,10 @@ use std::path::PathBuf;
 
 pub fn analyze<'linter>(linter: &mut Linter<'linter>, node: &'linter Ast) {
     match node {
-        Ast::Return {
-            expression: Some(expr),
-            ..
-        } => {
-            linter.analyze_expr(expr);
+        Ast::Return { expression, .. } => {
+            if let Some(expr) = expression {
+                linter.analyze_expr(expr);
+            }
         }
 
         _ => {

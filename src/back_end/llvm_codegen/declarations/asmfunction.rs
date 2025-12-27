@@ -82,11 +82,11 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
         )
     };
 
-    let asm_function_type: FunctionType =
+    let function_type: FunctionType =
         typegen::generate_fn_type(context, return_type, parameters, false);
 
-    let asm_function_ptr: PointerValue = llvm_context.create_inline_asm(
-        asm_function_type,
+    let function_ptr: PointerValue = llvm_context.create_inline_asm(
+        function_type,
         assembler,
         constraints,
         sideeffects,
@@ -96,24 +96,19 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
     );
 
     let asm_function: FunctionValue =
-        llvm_module.add_function(&llvm_function_name, asm_function_type, None);
+        llvm_module.add_function(&llvm_function_name, function_type, None);
 
     if !is_public {
         asm_function.set_linkage(Linkage::LinkerPrivate);
     }
 
-    AttributeBuilder::new(
-        llvm_context,
-        &attributes,
-        LLVMAttributeApplicant::Function(asm_function),
-    )
-    .add_function_attributes();
+    AttributeBuilder::new(attributes, LLVMAttributeApplicant::Function(asm_function))
+        .add_function_attributes(context);
 
-    let last_block: BasicBlock = context.get_last_builder_block();
+    let last_block: BasicBlock = context.get_last_builder_block(span);
+    let function_block: BasicBlock = block::append_block(context, asm_function);
 
-    let asm_function_block: BasicBlock = block::append_block(context, asm_function);
-
-    llvm_builder.position_at_end(asm_function_block);
+    llvm_builder.position_at_end(function_block);
 
     let args: Vec<BasicMetadataValueEnum> = asm_function
         .get_param_iter()
@@ -121,7 +116,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
         .collect();
 
     if let Ok(asm_fn_call) =
-        llvm_builder.build_indirect_call(asm_function_type, asm_function_ptr, &args, "")
+        llvm_builder.build_indirect_call(function_type, function_ptr, &args, "")
     {
         match (
             return_type.is_void_type(),

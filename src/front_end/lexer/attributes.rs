@@ -31,6 +31,8 @@ lazy_static! {
         attributes.insert(b"@strongstack", TokenType::StrongStack);
         attributes.insert(b"@precisefp", TokenType::PreciseFloats);
         attributes.insert(b"@convention", TokenType::Convention);
+        attributes.insert(b"@preentrypoint", TokenType::Constructor);
+        attributes.insert(b"@postentrypoint", TokenType::Destructor);
 
         attributes
     };

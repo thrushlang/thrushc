@@ -4,8 +4,8 @@ use crate::back_end::llvm_codegen::memory::SymbolAllocated;
 use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::types::Type;
 
-use ahash::AHashMap as HashMap;
-use inkwell::values::FunctionValue;
+use ahash::{AHashMap as HashMap, AHashSet as HashSet};
+use inkwell::values::{FunctionValue, PointerValue};
 
 pub type LLVMGlobalConstants<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;
 pub type LLVMLocalConstants<'ctx> = Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>;
@@ -20,3 +20,6 @@ pub type LLVMInstructions<'ctx> = Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>
 pub type LLVMFunctionsParameters<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;
 
 pub type LLVMAttributes<'ctx> = Vec<LLVMAttribute<'ctx>>;
+
+pub type LLVMCtors<'ctx> = HashSet<(PointerValue<'ctx>, u32)>;
+pub type LLVMDtors<'ctx> = HashSet<(PointerValue<'ctx>, u32)>;

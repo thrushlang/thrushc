@@ -11,7 +11,6 @@ use crate::front_end::types::ast::metadata::constant::{ConstantMetadata, LLVMCon
 use crate::front_end::types::ast::metadata::staticvar::{LLVMStaticMetadata, StaticMetadata};
 
 use inkwell::ThreadLocalMode;
-use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::{
     AddressSpace,
@@ -114,26 +113,28 @@ pub fn global_constant<'ctx>(
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     value: BasicValueEnum<'ctx>,
-    attributes: &LLVMAttributes<'ctx>,
+    attributes: LLVMAttributes<'ctx>,
     metadata: ConstantMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
-    let llvm_context: &Context = context.get_llvm_context();
 
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMConstantMetadata = metadata.get_llvm_metadata();
 
-    let name: String = self::generate_name(context, name, "global.constant", Some(attributes));
+    let name: String = self::generate_name(context, name, "global.constant", Some(&attributes));
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
-    AttributeBuilder::new(
-        llvm_context,
-        attributes,
-        LLVMAttributeApplicant::Global(global),
-    )
-    .add_global_attributes();
+    let linkage: Option<Linkage> =
+        if !attributes.has_public_attribute() && !attributes.has_linkage_attribute() {
+            Some(Linkage::LinkerPrivate)
+        } else {
+            None
+        };
+
+    AttributeBuilder::new(attributes, LLVMAttributeApplicant::Global(global))
+        .add_global_attributes();
 
     self::set_global_common(
         &global,
@@ -143,11 +144,7 @@ pub fn global_constant<'ctx>(
         None,
         Some(&value),
         Some(target_data.get_preferred_alignment_of_global(&global)),
-        if !attributes.has_public_attribute() && !attributes.has_linkage_attribute() {
-            Some(Linkage::LinkerPrivate)
-        } else {
-            None
-        },
+        linkage,
     );
 
     global.as_pointer_value()
@@ -193,30 +190,34 @@ pub fn global_static<'ctx>(
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     value: Option<BasicValueEnum<'ctx>>,
-    attributes: &LLVMAttributes<'ctx>,
+    attributes: LLVMAttributes<'ctx>,
     metadata: StaticMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
-    let llvm_context: &Context = context.get_llvm_context();
 
     let target_data: &TargetData = context.get_target_data();
     let llvm_metadata: LLVMStaticMetadata = metadata.get_llvm_metadata();
 
-    let name: String = self::generate_name(context, name, "global.static", Some(attributes));
+    let name: String = self::generate_name(context, name, "global.static", Some(&attributes));
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
 
-    AttributeBuilder::new(
-        llvm_context,
-        attributes,
-        LLVMAttributeApplicant::Global(global),
-    )
-    .add_global_attributes();
+    let linkage: Option<Linkage> = if !attributes.has_public_attribute()
+        && !attributes.has_extern_attribute()
+        && !attributes.has_linkage_attribute()
+    {
+        Some(Linkage::LinkerPrivate)
+    } else {
+        None
+    };
 
     if !attributes.has_extern_attribute() && value.is_none() {
         global.set_initializer(&llvm_type.const_zero());
     }
+
+    AttributeBuilder::new(attributes, LLVMAttributeApplicant::Global(global))
+        .add_global_attributes();
 
     self::set_global_common(
         &global,
@@ -226,14 +227,7 @@ pub fn global_static<'ctx>(
         llvm_metadata.thread_mode,
         value.as_ref(),
         Some(target_data.get_preferred_alignment_of_global(&global)),
-        if !attributes.has_public_attribute()
-            && !attributes.has_extern_attribute()
-            && !attributes.has_linkage_attribute()
-        {
-            Some(Linkage::LinkerPrivate)
-        } else {
-            None
-        },
+        linkage,
     );
 
     global.as_pointer_value()

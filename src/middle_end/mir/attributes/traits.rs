@@ -19,6 +19,8 @@ pub trait ThrushAttributesExtensions {
     fn has_asmalignstack_attribute(&self) -> bool;
     fn has_asmthrow_attribute(&self) -> bool;
     fn has_asmsideffects_attribute(&self) -> bool;
+    fn has_constructor_attribute(&self) -> bool;
+    fn has_destructor_attribute(&self) -> bool;
     fn has_asmsyntax_attribute(&self) -> bool;
     fn has_convention_attribute(&self) -> bool;
 

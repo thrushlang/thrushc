@@ -78,8 +78,19 @@ impl ThrushAttributesExtensions for ThrushAttributes {
         self.iter().any(|attr| attr.is_asmsyntax_attribute())
     }
 
+    #[inline]
     fn has_convention_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_conv_attribute())
+    }
+
+    #[inline]
+    fn has_constructor_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_constructor_attribute())
+    }
+
+    #[inline]
+    fn has_destructor_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_destructor_attribute())
     }
 
     #[inline]
@@ -142,6 +153,8 @@ impl ThrushAttributeComparatorExtensions for ThrushAttribute {
             ThrushAttribute::Packed(..) => ThrushAttributeComparator::Packed,
             ThrushAttribute::NoUnwind(..) => ThrushAttributeComparator::NoUnwind,
             ThrushAttribute::OptFuzzing(..) => ThrushAttributeComparator::OptFuzzing,
+            ThrushAttribute::Constructor(..) => ThrushAttributeComparator::Constructor,
+            ThrushAttribute::Destructor(..) => ThrushAttributeComparator::Destructor,
         }
     }
 }

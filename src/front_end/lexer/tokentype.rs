@@ -68,6 +68,8 @@ pub enum TokenType {
     AsmSideEffects,
     OptFuzzing,
     Linkage,
+    Constructor,
+    Destructor,
 
     // --- Special ---
     Unreachable,

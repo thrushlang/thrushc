@@ -1,6 +1,6 @@
-use crate::back_end::llvm_codegen::anchors::PointerAnchor;
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::localanchor::PointerAnchor;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
 
 use crate::front_end::types::ast::Ast;

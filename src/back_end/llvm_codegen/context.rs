@@ -1,14 +1,16 @@
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::alloc;
-use crate::back_end::llvm_codegen::anchors::PointerAnchor;
 use crate::back_end::llvm_codegen::constgen;
 use crate::back_end::llvm_codegen::generation;
+use crate::back_end::llvm_codegen::localanchor::PointerAnchor;
 use crate::back_end::llvm_codegen::loopcontrol::LoopContext;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
 use crate::back_end::llvm_codegen::memory::SymbolToAllocate;
 use crate::back_end::llvm_codegen::symbols::SymbolsTable;
 use crate::back_end::llvm_codegen::typegen;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::types::repr::LLVMCtors;
+use crate::back_end::llvm_codegen::types::repr::LLVMDtors;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 
 use crate::core::compiler::options::CompilerOptions;
@@ -32,18 +34,23 @@ use crate::front_end::types::parser::repr::LocalConstant;
 use crate::front_end::types::parser::repr::LocalStatic;
 use crate::front_end::typesystem::types::Type;
 
-use std::fmt::Display;
 use std::path::PathBuf;
 
+use inkwell::AddressSpace;
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
+use inkwell::module::Linkage;
 use inkwell::module::Module;
 use inkwell::targets::TargetData;
 use inkwell::targets::TargetTriple;
+use inkwell::types::ArrayType;
 use inkwell::types::BasicTypeEnum;
+use inkwell::types::StructType;
 use inkwell::values::BasicValueEnum;
+use inkwell::values::GlobalValue;
 use inkwell::values::PointerValue;
+use inkwell::values::StructValue;
 
 #[derive(Debug)]
 pub struct LLVMCodeGenContext<'a, 'ctx> {
@@ -54,8 +61,9 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     target_triple: TargetTriple,
 
     table: SymbolsTable<'ctx>,
-
     loop_ctx: LoopContext<'ctx>,
+    ctors: LLVMCtors<'ctx>,
+    dtors: LLVMDtors<'ctx>,
 
     ptr_anchor: Option<PointerAnchor<'ctx>>,
     llvm_function: Option<LLVMFunction<'ctx>>,
@@ -83,6 +91,9 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 
             table: SymbolsTable::new(),
             loop_ctx: LoopContext::new(),
+
+            ctors: LLVMCtors::new(),
+            dtors: LLVMDtors::new(),
 
             ptr_anchor: None,
             llvm_function: None,
@@ -152,12 +163,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let llvm_type: BasicTypeEnum = typegen::generate(self, kind);
 
         let ptr: PointerValue = alloc::memstatic::global_constant(
-            self,
-            ascii_name,
-            llvm_type,
-            value,
-            &attributes,
-            metadata,
+            self, ascii_name, llvm_type, value, attributes, metadata,
         );
 
         let constant: SymbolAllocated = SymbolAllocated::new_constant(
@@ -270,7 +276,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
                 ascii_name,
                 llvm_type,
                 Some(value),
-                &attributes,
+                attributes,
                 metadata,
             );
 
@@ -289,12 +295,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             let llvm_type: inkwell::types::BasicTypeEnum = typegen::generate(self, kind);
 
             let ptr: PointerValue = alloc::memstatic::global_static(
-                self,
-                ascii_name,
-                llvm_type,
-                None,
-                &attributes,
-                metadata,
+                self, ascii_name, llvm_type, None, attributes, metadata,
             );
 
             let staticvar: SymbolAllocated = SymbolAllocated::new_static(
@@ -408,51 +409,49 @@ impl LLVMCodeGenContext<'_, '_> {
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     #[inline]
-    pub fn set_current_llvm_function(&mut self, new_function: LLVMFunction<'ctx>) {
-        self.llvm_function = Some(new_function);
-    }
-
-    #[inline]
-    pub fn get_current_llvm_function(&self) -> LLVMFunction<'ctx> {
-        self.llvm_function.unwrap_or_else(|| {
-            self::codegen_abort("The function currently being compiled couldn't be obtained.");
-        })
-    }
-
-    #[inline]
-    pub fn unset_current_llvm_function(&mut self) {
-        self.llvm_function = None;
-    }
-}
-
-impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    #[inline]
     pub fn set_pointer_anchor(&mut self, anchor: PointerAnchor<'ctx>) {
         self.ptr_anchor = Some(anchor);
-    }
-
-    #[inline]
-    pub fn get_pointer_anchor(&mut self) -> Option<PointerAnchor<'ctx>> {
-        self.ptr_anchor
     }
 
     #[inline]
     pub fn clear_pointer_anchor(&mut self) {
         self.ptr_anchor = None;
     }
-}
 
-impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     #[inline]
-    pub fn get_table(&self) -> &SymbolsTable<'ctx> {
-        &self.table
+    pub fn set_current_llvm_function(&mut self, new_function: LLVMFunction<'ctx>) {
+        self.llvm_function = Some(new_function);
     }
 
     #[inline]
-    pub fn get_last_builder_block(&self) -> BasicBlock<'ctx> {
-        self.builder.get_insert_block().unwrap_or_else(|| {
-            self::codegen_abort("The last builder block couldn't be obtained.");
-        })
+    pub fn unset_current_llvm_function(&mut self) {
+        self.llvm_function = None;
+    }
+
+    #[inline]
+    pub fn add_ctor(&mut self, ctor: PointerValue<'ctx>) {
+        let last: Option<&(PointerValue, u32)> = self.ctors.iter().last();
+
+        let order: u32 = if let Some(last_ctor) = last {
+            last_ctor.1 + 1
+        } else {
+            1
+        };
+
+        self.ctors.insert((ctor, order));
+    }
+
+    #[inline]
+    pub fn add_dtor(&mut self, dtor: PointerValue<'ctx>) {
+        let last: Option<&(PointerValue, u32)> = self.ctors.iter().last();
+
+        let order: u32 = if let Some(last_dtor) = last {
+            last_dtor.1 + 1
+        } else {
+            1
+        };
+
+        self.dtors.insert((dtor, order));
     }
 }
 
@@ -486,19 +485,63 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     pub fn get_compiler_options(&self) -> &CompilerOptions {
         self.options
     }
+
+    #[inline]
+    pub fn get_loop_ctx(&self) -> &LoopContext<'ctx> {
+        &self.loop_ctx
+    }
+
+    #[inline]
+    pub fn get_pointer_anchor(&mut self) -> Option<PointerAnchor<'ctx>> {
+        self.ptr_anchor
+    }
+
+    #[inline]
+    pub fn get_llvm_ctors(&self) -> &LLVMCtors<'ctx> {
+        &self.ctors
+    }
+
+    #[inline]
+    pub fn get_llvm_dtors(&self) -> &LLVMDtors<'ctx> {
+        &self.dtors
+    }
+
+    #[inline]
+    pub fn get_table(&self) -> &SymbolsTable<'ctx> {
+        &self.table
+    }
+
+    #[inline]
+    pub fn get_current_llvm_function(&mut self, span: Span) -> LLVMFunction<'ctx> {
+        self.llvm_function.unwrap_or_else(|| {
+            abort::abort_codegen(
+                self,
+                "Failed to compile a function internal reference!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        })
+    }
+
+    #[inline]
+    pub fn get_last_builder_block(&mut self, span: Span) -> BasicBlock<'ctx> {
+        self.builder.get_insert_block().unwrap_or_else(|| {
+            abort::abort_codegen(
+                self,
+                "Failed to get the last builder block!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        })
+    }
 }
 
 impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     #[inline]
     pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
         &mut self.diagnostician
-    }
-}
-
-impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
-    #[inline]
-    pub fn get_loop_ctx(&self) -> &LoopContext<'ctx> {
-        &self.loop_ctx
     }
 
     #[inline]
@@ -507,6 +550,118 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 }
 
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_panic(LoggingType::BackendPanic, &format!("{}", message));
+impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
+    pub fn generate_constructors(&mut self, span: Span) {
+        if self.ctors.is_empty() {
+            return;
+        }
+
+        let llvm_context: &Context = self.get_llvm_context();
+        let llvm_module: &Module = self.get_llvm_module();
+
+        let ctor_type: StructType = llvm_context.struct_type(
+            &[
+                llvm_context.i32_type().into(),
+                llvm_context.ptr_type(AddressSpace::default()).into(),
+                llvm_context.ptr_type(AddressSpace::default()).into(),
+            ],
+            false,
+        );
+
+        let mut llvm_ctors: Vec<StructValue> = Vec::with_capacity(self.ctors.len());
+        let mut last_counter: u32 = 0;
+
+        for (ctor, counter) in self.get_llvm_ctors().iter() {
+            if *counter > last_counter {
+                let ctor_value: StructValue = ctor_type.const_named_struct(&[
+                    llvm_context
+                        .i32_type()
+                        .const_int((*counter).into(), false)
+                        .into(),
+                    (*ctor).into(),
+                    llvm_context
+                        .ptr_type(AddressSpace::default())
+                        .const_null()
+                        .into(),
+                ]);
+
+                llvm_ctors.push(ctor_value);
+                last_counter = *counter;
+            }
+        }
+
+        let actual_size: u32 = u32::try_from(llvm_ctors.len()).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                self,
+                "Failed to parse the size for the ctors!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let llvm_ctors_type: ArrayType = ctor_type.array_type(actual_size);
+        let global: GlobalValue =
+            llvm_module.add_global(llvm_ctors_type, None, "llvm.global_ctors");
+
+        global.set_linkage(Linkage::Appending);
+        global.set_initializer(&ctor_type.const_array(&llvm_ctors));
+    }
+
+    pub fn generate_destructors(&mut self, span: Span) {
+        if self.dtors.is_empty() {
+            return;
+        }
+
+        let llvm_context: &Context = self.get_llvm_context();
+        let llvm_module: &Module = self.get_llvm_module();
+
+        let dtor_type: StructType = llvm_context.struct_type(
+            &[
+                llvm_context.i32_type().into(),
+                llvm_context.ptr_type(AddressSpace::default()).into(),
+                llvm_context.ptr_type(AddressSpace::default()).into(),
+            ],
+            false,
+        );
+
+        let mut llvm_dtors: Vec<StructValue> = Vec::with_capacity(self.dtors.len());
+        let mut last_counter: u32 = 0;
+
+        for (ctor, counter) in self.get_llvm_dtors().iter() {
+            if *counter > last_counter {
+                let dtor_value: StructValue = dtor_type.const_named_struct(&[
+                    llvm_context
+                        .i32_type()
+                        .const_int((*counter).into(), false)
+                        .into(),
+                    (*ctor).into(),
+                    llvm_context
+                        .ptr_type(AddressSpace::default())
+                        .const_null()
+                        .into(),
+                ]);
+
+                llvm_dtors.push(dtor_value);
+                last_counter = *counter;
+            }
+        }
+
+        let actual_size: u32 = u32::try_from(llvm_dtors.len()).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                self,
+                "Failed to parse the size for the dtors!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let llvm_dtors_type: ArrayType = dtor_type.array_type(actual_size);
+        let global: GlobalValue =
+            llvm_module.add_global(llvm_dtors_type, None, "llvm.global_dtors");
+
+        global.set_linkage(Linkage::Appending);
+        global.set_initializer(&dtor_type.const_array(&llvm_dtors));
+    }
 }

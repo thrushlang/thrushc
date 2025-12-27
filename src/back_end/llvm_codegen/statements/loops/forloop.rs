@@ -4,6 +4,7 @@ use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 
 use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
+use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
@@ -16,12 +17,12 @@ use inkwell::builder::Builder;
 use inkwell::values::FunctionValue;
 use inkwell::values::IntValue;
 
-pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>) {
+pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>) {
     let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
 
     let llvm_function: FunctionValue = codegen
-        .get_context()
-        .get_current_llvm_function()
+        .get_mut_context()
+        .get_current_llvm_function(node.get_span())
         .get_value();
 
     if let Ast::For {
@@ -31,8 +32,10 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         block,
         span,
         ..
-    } = stmt
+    } = node
     {
+        let block_span: Span = block.get_span();
+
         let start: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
         let cond: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
         let body: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
@@ -112,8 +115,8 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         }
 
         if codegen
-            .get_context()
-            .get_last_builder_block()
+            .get_mut_context()
+            .get_last_builder_block(block_span)
             .get_terminator()
             .is_none()
         {

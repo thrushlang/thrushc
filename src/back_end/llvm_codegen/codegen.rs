@@ -12,6 +12,7 @@ use crate::back_end::llvm_codegen::{binaryop, generation};
 use crate::back_end::llvm_codegen::{builtins, codegen, constgen};
 use crate::back_end::llvm_codegen::{refptr, statements};
 
+use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::traits::{
@@ -41,7 +42,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     fn compile(&mut self) {
-        self.declare_forward();
+        self.parse_forward();
+
+        self.context.generate_constructors(Span::default());
+        self.context.generate_destructors(Span::default());
 
         self.ast.iter().for_each(|ast| {
             self.codegen(ast);
@@ -96,7 +100,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         ########################################################################*/
 
         match node {
-            Ast::Block { nodes, .. } => {
+            Ast::Block { nodes, span, .. } => {
                 self.context.begin_scope();
 
                 nodes.iter().for_each(|node| {
@@ -105,7 +109,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 self.context.end_scope();
 
-                block::move_terminator_to_end(self.get_context());
+                block::move_terminator_to_end(self.get_mut_context(), *span);
             }
 
             node => self.stmt(node),
@@ -293,8 +297,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 if let Some(expr) = expression {
                     let cast_type: &Type = self
-                        .get_context()
-                        .get_current_llvm_function()
+                        .get_mut_context()
+                        .get_current_llvm_function(*span)
                         .get_return_type();
 
                     if llvm_builder
@@ -450,7 +454,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     ########################################################################*/
 
-    fn declare_forward(&mut self) {
+    fn parse_forward(&mut self) {
         self.ast.iter().for_each(|ast| match ast {
             Ast::Intrinsic { .. } => {
                 declarations::intrinsic::compile(self.context, ast.as_intrinsic());

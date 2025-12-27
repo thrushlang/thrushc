@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use crate::back_end::llvm_codegen::anchors::PointerAnchor;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::localanchor::PointerAnchor;
 use crate::back_end::llvm_codegen::memory::LLVMAllocationSite;
 use crate::back_end::llvm_codegen::{abort, memory};
 use crate::back_end::llvm_codegen::{codegen, typegen};
@@ -24,18 +24,16 @@ pub fn compile<'ctx>(
     span: Span,
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
-    if let Some(anchor) = context.get_pointer_anchor() {
-        if !anchor.is_triggered() {
-            self::compile_with_anchor(context, items, array_type, span, cast_type, anchor)
-        } else {
-            self::compile_without_anchor(context, items, array_type, span, cast_type)
+    match context.get_pointer_anchor() {
+        Some(anchor) if !anchor.is_triggered() => {
+            self::compile_array_with_anchor(context, items, array_type, span, cast_type, anchor)
         }
-    } else {
-        self::compile_without_anchor(context, items, array_type, span, cast_type)
+
+        _ => self::compile_array_without_anchor(context, items, array_type, span, cast_type),
     }
 }
 
-fn compile_without_anchor<'ctx>(
+fn compile_array_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
     array_type: &Type,
@@ -101,7 +99,7 @@ fn compile_without_anchor<'ctx>(
     array_ptr.into()
 }
 
-fn compile_with_anchor<'ctx>(
+fn compile_array_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     items: &'ctx [Ast],
     array_type: &Type,

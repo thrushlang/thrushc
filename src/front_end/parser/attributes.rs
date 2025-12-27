@@ -14,11 +14,11 @@ pub fn build_attributes<'parser>(
     let mut attributes: crate::middle_end::mir::attributes::ThrushAttributes =
         Vec::with_capacity(10);
 
-    while !limits.contains(&ctx.peek().kind) {
+    while !limits.contains(&ctx.peek().get_type()) {
         let current_tk: &Token = ctx.peek();
         let span: Span = current_tk.get_span();
 
-        match current_tk.kind {
+        match current_tk.get_type() {
             TokenType::Extern => {
                 attributes.push(crate::middle_end::mir::attributes::ThrushAttribute::Extern(
                     self::build_external_attribute(ctx)?,

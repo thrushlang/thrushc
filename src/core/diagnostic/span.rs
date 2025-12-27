@@ -17,6 +17,11 @@ impl Span {
     pub fn new(line: usize, span: (usize, usize)) -> Self {
         Self { line, span }
     }
+
+    #[inline]
+    pub fn default() -> Self {
+        Self::new(1, (0, 0))
+    }
 }
 
 impl Span {

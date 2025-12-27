@@ -43,6 +43,10 @@ pub enum ThrushAttribute {
     AsmSyntax(String, Span),
     AsmAlignStack(Span),
     AsmSideEffects(Span),
+
+    //Ctors & Dtors
+    Constructor(Span),
+    Destructor(Span),
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
@@ -64,6 +68,8 @@ pub enum ThrushAttributeComparator {
     NoUnwind,
     OptFuzzing,
 
+    Packed,
+
     Stack,
     Heap,
 
@@ -72,7 +78,8 @@ pub enum ThrushAttributeComparator {
     AsmAlignStack,
     AsmSideEffects,
 
-    Packed,
+    Constructor,
+    Destructor,
 }
 
 impl ThrushAttribute {
@@ -155,6 +162,16 @@ impl ThrushAttribute {
     pub fn is_conv_attribute(&self) -> bool {
         matches!(self, ThrushAttribute::Convention(..))
     }
+
+    #[inline]
+    pub fn is_constructor_attribute(&self) -> bool {
+        matches!(self, ThrushAttribute::Constructor(..))
+    }
+
+    #[inline]
+    pub fn is_destructor_attribute(&self) -> bool {
+        matches!(self, ThrushAttribute::Destructor(..))
+    }
 }
 
 impl ThrushAttribute {
@@ -184,6 +201,8 @@ impl ThrushAttribute {
             ThrushAttribute::Packed(span) => *span,
             ThrushAttribute::NoUnwind(span) => *span,
             ThrushAttribute::OptFuzzing(span) => *span,
+            ThrushAttribute::Constructor(span) => *span,
+            ThrushAttribute::Destructor(span) => *span,
         }
     }
 }
@@ -267,6 +286,12 @@ impl ThrushAttribute {
             ThrushAttribute::OptFuzzing(..) => {
                 Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::OptFuzzing)
             }
+            ThrushAttribute::Constructor(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Constructor)
+            }
+            ThrushAttribute::Destructor(..) => {
+                Some(crate::back_end::llvm_codegen::attributes::LLVMAttribute::Destructor)
+            }
         }
     }
 }
@@ -331,6 +356,12 @@ pub fn as_attribute(
         TokenType::OptFuzzing => {
             Some(crate::middle_end::mir::attributes::ThrushAttribute::OptFuzzing(span))
         }
+        TokenType::Constructor => {
+            Some(crate::middle_end::mir::attributes::ThrushAttribute::Constructor(span))
+        }
+        TokenType::Destructor => {
+            Some(crate::middle_end::mir::attributes::ThrushAttribute::Destructor(span))
+        }
 
         _ => None,
     }
@@ -364,6 +395,8 @@ impl Display for ThrushAttribute {
             ThrushAttribute::AsmAlignStack(..) => write!(f, "@asmalingstack"),
             ThrushAttribute::Packed(..) => write!(f, "@packed"),
             ThrushAttribute::OptFuzzing(..) => write!(f, "@optfuzzing"),
+            ThrushAttribute::Constructor(..) => write!(f, "@preentrypoint"),
+            ThrushAttribute::Destructor(..) => write!(f, "@postentrypoint"),
         }
     }
 }

@@ -1,4 +1,5 @@
 use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
+use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use inkwell::attributes::Attribute;
 use inkwell::attributes::AttributeLoc;
@@ -14,20 +15,17 @@ pub enum LLVMAttributeApplicant<'ctx> {
 
 #[derive(Debug)]
 pub struct AttributeBuilder<'ctx> {
-    llvm_context: &'ctx Context,
-    attributes: &'ctx [LLVMAttribute<'ctx>],
+    attributes: Vec<LLVMAttribute<'ctx>>,
     attribute_applicant: LLVMAttributeApplicant<'ctx>,
 }
 
 impl<'ctx> AttributeBuilder<'ctx> {
     #[inline]
     pub fn new(
-        llvm_context: &'ctx Context,
-        attributes: &'ctx [LLVMAttribute<'ctx>],
+        attributes: Vec<LLVMAttribute<'ctx>>,
         attribute_applicant: LLVMAttributeApplicant<'ctx>,
     ) -> Self {
         Self {
-            llvm_context,
             attributes,
             attribute_applicant,
         }
@@ -35,8 +33,10 @@ impl<'ctx> AttributeBuilder<'ctx> {
 }
 
 impl<'ctx> AttributeBuilder<'ctx> {
-    pub fn add_function_attributes(&self) {
+    pub fn add_function_attributes(&self, context: &mut LLVMCodeGenContext<'_, 'ctx>) {
         if let LLVMAttributeApplicant::Function(function) = self.attribute_applicant {
+            let llvm_context: &Context = context.get_llvm_context();
+
             self.attributes
                 .iter()
                 .for_each(|attribute| match attribute {
@@ -47,7 +47,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::AlwaysInline => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context.create_enum_attribute(
+                            llvm_context.create_enum_attribute(
                                 Attribute::get_named_enum_kind_id("alwaysinline"),
                                 0,
                             ),
@@ -57,14 +57,14 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::InlineHint => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self::create_inline_hint_attribute(self.llvm_context),
+                            self::create_inline_hint_attribute(llvm_context),
                         );
                     }
 
                     LLVMAttribute::NoInline => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context.create_enum_attribute(
+                            llvm_context.create_enum_attribute(
                                 Attribute::get_named_enum_kind_id("noinline"),
                                 0,
                             ),
@@ -74,7 +74,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::Hot => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context
+                            llvm_context
                                 .create_enum_attribute(Attribute::get_named_enum_kind_id("hot"), 0),
                         );
                     }
@@ -82,7 +82,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::MinSize => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context.create_enum_attribute(
+                            llvm_context.create_enum_attribute(
                                 Attribute::get_named_enum_kind_id("optsize"),
                                 0,
                             ),
@@ -92,7 +92,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::SafeStack => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context.create_enum_attribute(
+                            llvm_context.create_enum_attribute(
                                 Attribute::get_named_enum_kind_id("safestack"),
                                 0,
                             ),
@@ -102,7 +102,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::WeakStack => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context
+                            llvm_context
                                 .create_enum_attribute(Attribute::get_named_enum_kind_id("ssp"), 0),
                         );
                     }
@@ -110,7 +110,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::StrongStack => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context.create_enum_attribute(
+                            llvm_context.create_enum_attribute(
                                 Attribute::get_named_enum_kind_id("sspstrong"),
                                 0,
                             ),
@@ -120,7 +120,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::PreciseFloats => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context.create_enum_attribute(
+                            llvm_context.create_enum_attribute(
                                 Attribute::get_named_enum_kind_id("strictfp"),
                                 0,
                             ),
@@ -130,7 +130,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::NoUnwind => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context.create_enum_attribute(
+                            llvm_context.create_enum_attribute(
                                 Attribute::get_named_enum_kind_id("nounwind"),
                                 0,
                             ),
@@ -140,11 +140,18 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::OptFuzzing => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self.llvm_context.create_enum_attribute(
+                            llvm_context.create_enum_attribute(
                                 Attribute::get_named_enum_kind_id("optforfuzzing"),
                                 0,
                             ),
                         );
+                    }
+
+                    LLVMAttribute::Constructor => {
+                        context.add_ctor(function.as_global_value().as_pointer_value());
+                    }
+                    LLVMAttribute::Destructor => {
+                        context.add_dtor(function.as_global_value().as_pointer_value());
                     }
 
                     _ => (),

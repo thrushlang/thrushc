@@ -150,6 +150,8 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
             LLVMAttribute::Packed => LLVMAttributeComparator::Packed,
             LLVMAttribute::NoUnwind => LLVMAttributeComparator::NoUnwind,
             LLVMAttribute::OptFuzzing => LLVMAttributeComparator::OptFuzzing,
+            LLVMAttribute::Constructor => LLVMAttributeComparator::Constructor,
+            LLVMAttribute::Destructor => LLVMAttributeComparator::Destructor,
         }
     }
 }
@@ -182,6 +184,8 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::AsmAlignStack => write!(f, "@asmalingstack"),
             LLVMAttribute::Packed => write!(f, "@packed"),
             LLVMAttribute::OptFuzzing => write!(f, "@optfuzzing"),
+            LLVMAttribute::Constructor => write!(f, "@preentrypoint"),
+            LLVMAttribute::Destructor => write!(f, "@postentrypoint"),
         }
     }
 }

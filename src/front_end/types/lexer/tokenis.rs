@@ -131,6 +131,8 @@ impl TokenTypeExtensions for TokenType {
                 | TokenType::Packed
                 | TokenType::NoUnwind
                 | TokenType::OptFuzzing
+                | TokenType::Constructor
+                | TokenType::Destructor
         )
     }
 

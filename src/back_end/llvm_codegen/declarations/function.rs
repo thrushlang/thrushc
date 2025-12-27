@@ -22,7 +22,6 @@ use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
-use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::module::Module;
 use inkwell::types::FunctionType;
@@ -30,7 +29,6 @@ use inkwell::values::FunctionValue;
 
 pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: Function<'ctx>) {
     let llvm_module: &Module = context.get_llvm_module();
-    let llvm_context: &Context = context.get_llvm_context();
 
     let name: &str = function.0;
     let ascii_name: &str = function.1;
@@ -77,12 +75,8 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
         llvm_function.set_linkage(Linkage::LinkerPrivate);
     }
 
-    AttributeBuilder::new(
-        llvm_context,
-        &attributes,
-        LLVMAttributeApplicant::Function(llvm_function),
-    )
-    .add_function_attributes();
+    AttributeBuilder::new(attributes, LLVMAttributeApplicant::Function(llvm_function))
+        .add_function_attributes(context);
 
     let proto: LLVMFunction = (
         llvm_function,

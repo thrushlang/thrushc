@@ -36,6 +36,9 @@ pub enum LLVMAttribute<'ctx> {
     AsmSyntax(&'ctx str),
     AsmAlignStack,
     AsmSideEffects,
+
+    Constructor,
+    Destructor,
 }
 
 impl LLVMAttribute<'_> {
@@ -113,6 +116,16 @@ impl LLVMAttribute<'_> {
     pub fn is_linkage_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Linkage(..))
     }
+
+    #[inline]
+    pub fn is_constructor_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::Constructor)
+    }
+
+    #[inline]
+    pub fn is_destructor_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::Destructor)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
@@ -134,6 +147,8 @@ pub enum LLVMAttributeComparator {
     OptFuzzing,
     Linkage,
 
+    Packed,
+
     Stack,
     Heap,
 
@@ -142,5 +157,6 @@ pub enum LLVMAttributeComparator {
     AsmAlignStack,
     AsmSideEffects,
 
-    Packed,
+    Constructor,
+    Destructor,
 }

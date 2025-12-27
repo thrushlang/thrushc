@@ -6,6 +6,7 @@ use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 
 use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
+use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::typesystem::types::Type;
@@ -21,8 +22,8 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
     let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
 
     let llvm_function: FunctionValue = codegen
-        .get_context()
-        .get_current_llvm_function()
+        .get_mut_context()
+        .get_current_llvm_function(stmt.get_span())
         .get_value();
 
     if let Ast::If {
@@ -33,6 +34,8 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         ..
     } = stmt
     {
+        let block_span: Span = block.get_span();
+
         let then: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
         let merge: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
@@ -68,8 +71,8 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         codegen.codegen_block(block);
 
         if codegen
-            .get_context()
-            .get_last_builder_block()
+            .get_mut_context()
+            .get_last_builder_block(block_span)
             .get_terminator()
             .is_none()
         {
@@ -87,7 +90,20 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, stmt: &'ctx Ast<'ctx>)
         }
 
         if !elseif.is_empty() {
-            self::compile_elseif(codegen, elseif, next, merge);
+            let span: Span = elseif
+                .first()
+                .unwrap_or_else(|| {
+                    abort::abort_codegen(
+                        codegen.get_mut_context(),
+                        "Failed to get elif code location!",
+                        block.get_span(),
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                })
+                .get_span();
+
+            self::compile_elseif(codegen, elseif, next, merge, span);
         }
 
         if let Some(else_ast) = anyway {
@@ -103,11 +119,13 @@ fn compile_elseif<'ctx>(
     nested_elseif: &'ctx [Ast<'ctx>],
     first_block: BasicBlock<'ctx>,
     merge: BasicBlock<'ctx>,
+    span: Span,
 ) {
     let llvm_builder: &Builder = codegen.get_context().get_llvm_builder();
+
     let llvm_function: FunctionValue = codegen
-        .get_context()
-        .get_current_llvm_function()
+        .get_mut_context()
+        .get_current_llvm_function(span)
         .get_value();
 
     let mut current: BasicBlock = first_block;
@@ -117,6 +135,7 @@ fn compile_elseif<'ctx>(
             condition, block, ..
         } = elseif
         {
+            let block_span: Span = block.get_span();
             let is_last: bool = idx == nested_elseif.len().saturating_sub(1);
 
             llvm_builder.position_at_end(current);
@@ -153,8 +172,8 @@ fn compile_elseif<'ctx>(
             codegen.codegen_block(block);
 
             if codegen
-                .get_context()
-                .get_last_builder_block()
+                .get_mut_context()
+                .get_last_builder_block(block_span)
                 .get_terminator()
                 .is_none()
             {
@@ -192,8 +211,8 @@ pub fn compile_else<'ctx>(
         codegen.codegen_block(block);
 
         if codegen
-            .get_context()
-            .get_last_builder_block()
+            .get_mut_context()
+            .get_last_builder_block(block.get_span())
             .get_terminator()
             .is_none()
         {
