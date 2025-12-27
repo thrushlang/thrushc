@@ -36,15 +36,7 @@ pub fn build_constructor<'parser>(
     let name: &str = identifier_tk.get_lexeme();
     let span: Span = identifier_tk.get_span();
 
-    let object_result: Result<FoundSymbolId, CompilationIssue> =
-        ctx.get_symbols().get_symbols_id(name, span);
-
-    if let Err(issue) = object_result {
-        ctx.add_error(issue);
-        return Ok(Ast::invalid_ast(span));
-    }
-
-    let object: FoundSymbolId = object_result?;
+    let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
 
     let structure_id: (&str, usize) = object.expected_struct(span)?;
     let id: &str = structure_id.0;

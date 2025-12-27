@@ -218,7 +218,7 @@ impl CompilationIssueCode {
                 format!("MISSING FIELDS - {}", "E0027".bright_red())
             }
             CompilationIssueCode::E0028 => {
-                format!("UNKNOWN REFERENCE - {}", "E0029".bright_red())
+                format!("UNKNOWN REFERENCE - {}", "E0028".bright_red())
             }
             CompilationIssueCode::E0029 => {
                 format!("IMPORT ERROR - {}", "E0029".bright_red())

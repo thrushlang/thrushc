@@ -29,6 +29,7 @@ use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::symbols::types::{AssemblerFunctions, Functions};
 
 use ahash::AHashMap as HashMap;
+use either::Either;
 
 pub const PARSER_MINIMAL_AST_CAPACITY: usize = 10_000;
 pub const PARSER_MINIMAL_GLOBAL_CAPACITY: usize = 10_000;
@@ -49,8 +50,6 @@ pub struct ParserContext<'parser> {
 
     current: usize,
     scope: usize,
-
-    abort: bool,
 }
 
 #[derive(Debug)]
@@ -93,19 +92,16 @@ impl<'parser> Parser<'parser> {
                         ctx.add_error(error);
                     }
 
-                    ctx.sync();
-
-                    if ctx.need_abort() {
-                        break;
+                    if let Either::Left(ast) = ctx.sync() {
+                        ctx.add_ast(ast);
                     }
                 }
             }
         }
 
-        let abort: bool = ctx.need_abort();
         let throwed_errors: bool = ctx.verify();
 
-        (ctx, throwed_errors || abort)
+        (ctx, throwed_errors)
     }
 }
 
@@ -134,8 +130,6 @@ impl<'parser> ParserContext<'parser> {
 
             current: 0,
             scope: 0,
-
-            abort: false,
         }
     }
 }
@@ -191,13 +185,6 @@ impl<'parser> ParserContext<'parser> {
                 line!(),
             )
         })
-    }
-}
-
-impl<'parser> ParserContext<'parser> {
-    #[inline]
-    pub fn need_abort(&self) -> bool {
-        self.abort
     }
 }
 
@@ -283,11 +270,6 @@ impl<'parser> ParserContext<'parser> {
             None,
             self.peek().get_span(),
         ))
-    }
-
-    #[inline]
-    pub fn set_force_abort(&mut self) {
-        self.abort = true;
     }
 }
 

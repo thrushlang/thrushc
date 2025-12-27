@@ -29,7 +29,8 @@ pub fn build_local<'parser>(
     let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
 
-    let atom_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
+    let atom_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering> =
+        builder::build_atomic_ord(ctx)?;
 
     let local_tk: &Token = ctx.consume(
         TokenType::Identifier,

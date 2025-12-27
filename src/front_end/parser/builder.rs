@@ -5,10 +5,8 @@ use crate::front_end::parser::ParserContext;
 use crate::front_end::typesystem::modificators::GCCStructureTypeModificator;
 use crate::front_end::typesystem::modificators::LLVMStructureTypeModificator;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
-use crate::middle_end::mir::attributes::ThrushAttributes;
 
-use inkwell::AtomicOrdering;
-use inkwell::ThreadLocalMode;
+use crate::middle_end::mir::attributes::ThrushAttributes;
 
 #[inline]
 pub fn build_structure_modificator(attributes: &ThrushAttributes) -> StructureTypeModificator {
@@ -23,17 +21,29 @@ pub fn build_structure_modificator(attributes: &ThrushAttributes) -> StructureTy
 #[inline]
 pub fn build_thread_local_mode<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Option<ThreadLocalMode>, CompilationIssue> {
+) -> Result<Option<crate::middle_end::mir::threadmode::ThrushThreadMode>, CompilationIssue> {
     if ctx.match_token(TokenType::ThreadDynamic)? {
-        return Ok(Some(ThreadLocalMode::GeneralDynamicTLSModel));
+        return Ok(Some(
+            crate::middle_end::mir::threadmode::ThrushThreadMode::GeneralDynamicTLSModel,
+        ));
     }
 
     if ctx.match_token(TokenType::ThreadExec)? {
-        return Ok(Some(ThreadLocalMode::LocalExecTLSModel));
+        return Ok(Some(
+            crate::middle_end::mir::threadmode::ThrushThreadMode::LocalExecTLSModel,
+        ));
     }
 
     if ctx.match_token(TokenType::ThreadInit)? {
-        return Ok(Some(ThreadLocalMode::InitialExecTLSModel));
+        return Ok(Some(
+            crate::middle_end::mir::threadmode::ThrushThreadMode::InitialExecTLSModel,
+        ));
+    }
+
+    if ctx.match_token(TokenType::ThreadLDynamic)? {
+        return Ok(Some(
+            crate::middle_end::mir::threadmode::ThrushThreadMode::LocalDynamicTLSModel,
+        ));
     }
 
     Ok(None)
@@ -42,33 +52,47 @@ pub fn build_thread_local_mode<'parser>(
 #[inline]
 pub fn build_atomic_ord<'parser>(
     ctx: &mut ParserContext<'parser>,
-) -> Result<Option<AtomicOrdering>, CompilationIssue> {
+) -> Result<Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering>, CompilationIssue> {
     if ctx.match_token(TokenType::AtomNone)? {
-        return Ok(Some(AtomicOrdering::NotAtomic));
+        return Ok(Some(
+            crate::middle_end::mir::atomicord::ThrushAtomicOrdering::AtomicNone,
+        ));
     }
 
     if ctx.match_token(TokenType::AtomFree)? {
-        return Ok(Some(AtomicOrdering::Unordered));
+        return Ok(Some(
+            crate::middle_end::mir::atomicord::ThrushAtomicOrdering::AtomicFree,
+        ));
     }
 
     if ctx.match_token(TokenType::AtomRelax)? {
-        return Ok(Some(AtomicOrdering::Monotonic));
+        return Ok(Some(
+            crate::middle_end::mir::atomicord::ThrushAtomicOrdering::AtomicRelax,
+        ));
     }
 
     if ctx.match_token(TokenType::AtomGrab)? {
-        return Ok(Some(AtomicOrdering::Acquire));
+        return Ok(Some(
+            crate::middle_end::mir::atomicord::ThrushAtomicOrdering::AtomicGrab,
+        ));
     }
 
     if ctx.match_token(TokenType::AtomDrop)? {
-        return Ok(Some(AtomicOrdering::Release));
+        return Ok(Some(
+            crate::middle_end::mir::atomicord::ThrushAtomicOrdering::AtomicDrop,
+        ));
     }
 
     if ctx.match_token(TokenType::AtomSync)? {
-        return Ok(Some(AtomicOrdering::AcquireRelease));
+        return Ok(Some(
+            crate::middle_end::mir::atomicord::ThrushAtomicOrdering::AtomicSync,
+        ));
     }
 
     if ctx.match_token(TokenType::AtomStrict)? {
-        return Ok(Some(AtomicOrdering::SequentiallyConsistent));
+        return Ok(Some(
+            crate::middle_end::mir::atomicord::ThrushAtomicOrdering::AtomicStrict,
+        ));
     }
 
     Ok(None)

@@ -1,7 +1,7 @@
-use inkwell::AtomicOrdering;
-
 use crate::core::diagnostic::span::Span;
 use crate::core::errors::standard::CompilationIssue;
+
+use crate::middle_end::mir::attributes::ThrushAttributes;
 
 use crate::core::errors::standard::CompilationIssueCode;
 use crate::front_end::lexer::token::Token;
@@ -15,7 +15,6 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::typesystem::types::Type;
-use crate::middle_end::mir::attributes::ThrushAttributes;
 
 pub fn build_global_const<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -30,7 +29,8 @@ pub fn build_global_const<'parser>(
     let is_lazy: bool = ctx.match_token(TokenType::LazyThread)?;
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
 
-    let atom_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
+    let atom_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering> =
+        builder::build_atomic_ord(ctx)?;
 
     let const_tk: &Token = ctx.consume(
         TokenType::Identifier,
@@ -61,6 +61,8 @@ pub fn build_global_const<'parser>(
 
     let value: Ast = expressions::build_expression(ctx)?;
 
+    let metadata: ConstantMetadata = ConstantMetadata::new(true, is_lazy, is_volatile, atom_ord);
+
     if declare_forward {
         ctx.get_mut_symbols().new_global_constant(
             name,
@@ -75,7 +77,7 @@ pub fn build_global_const<'parser>(
         kind: const_type,
         value: value.into(),
         attributes,
-        metadata: ConstantMetadata::new(true, is_lazy, is_volatile, atom_ord),
+        metadata,
         span,
     })
 }

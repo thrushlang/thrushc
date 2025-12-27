@@ -78,6 +78,7 @@ impl std::fmt::Display for TokenType {
             TokenType::ThreadDynamic => write!(f, "threaddyn"),
             TokenType::ThreadExec => write!(f, "threadexec"),
             TokenType::ThreadInit => write!(f, "threadinit"),
+            TokenType::ThreadLDynamic => write!(f, "threadldyn"),
 
             // Attributes
             TokenType::Linkage => write!(f, "@linkage"),
@@ -106,8 +107,8 @@ impl std::fmt::Display for TokenType {
             TokenType::SafeStack => write!(f, "@safestack"),
             TokenType::StrongStack => write!(f, "@strongstack"),
             TokenType::WeakStack => write!(f, "@weakstack"),
-            TokenType::Destructor => write!(f, "@postentrypoint"),
-            TokenType::Constructor => write!(f, "@preentrypoint"),
+            TokenType::Destructor => write!(f, "@destructor"),
+            TokenType::Constructor => write!(f, "@constructor"),
 
             // Operators, Punctuation, and Special Constructs
             TokenType::Or => write!(f, "||"),

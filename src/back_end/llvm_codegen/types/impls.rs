@@ -184,8 +184,8 @@ impl Display for LLVMAttribute<'_> {
             LLVMAttribute::AsmAlignStack => write!(f, "@asmalingstack"),
             LLVMAttribute::Packed => write!(f, "@packed"),
             LLVMAttribute::OptFuzzing => write!(f, "@optfuzzing"),
-            LLVMAttribute::Constructor => write!(f, "@preentrypoint"),
-            LLVMAttribute::Destructor => write!(f, "@postentrypoint"),
+            LLVMAttribute::Constructor => write!(f, "@constructor"),
+            LLVMAttribute::Destructor => write!(f, "@destructor"),
         }
     }
 }

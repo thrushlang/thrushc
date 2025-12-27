@@ -168,16 +168,17 @@ pub fn lower_precedence<'parser>(
         },
 
         _ => {
-            ctx.set_force_abort();
-
             let previous: &Token = ctx.advance()?;
+            let span: Span = previous.get_span();
 
-            return Err(CompilationIssue::Error(
+            ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 format!("Expression '{}' don't allowed.", previous.lexeme),
                 None,
-                previous.span,
+                span,
             ));
+
+            return Ok(Ast::invalid_ast(span));
         }
     };
 

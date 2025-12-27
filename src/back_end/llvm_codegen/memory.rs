@@ -171,7 +171,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
-                            atomic_ord: metadata.atomic_ord,
+                            atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
                         },
                     );
 
@@ -189,7 +189,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
-                            atomic_ord: metadata.atomic_ord,
+                            atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
                         },
                     );
 
@@ -207,7 +207,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
-                            atomic_ord: metadata.atomic_ord,
+                            atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
                         },
                     );
 
@@ -421,7 +421,7 @@ pub fn dereference<'ctx>(
                 instr,
                 LLVMAtomicModificators {
                     atomic_volatile: metadata.volatile,
-                    atomic_ord: metadata.atomic_ord,
+                    atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
                 },
             );
 

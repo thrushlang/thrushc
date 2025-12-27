@@ -1,7 +1,11 @@
+use either::Either;
+
 use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::ParserContext;
 use crate::front_end::parser::contexts::sync::ParserSyncPosition;
+use crate::front_end::parser::statements::block;
+use crate::front_end::types::ast::Ast;
 
 pub const SYNC_STATEMENTS: [TokenType; 11] = [
     TokenType::Return,
@@ -26,20 +30,21 @@ pub const SYNC_DECLARATIONS: [TokenType; 6] = [
     TokenType::Static,
 ];
 
-impl ParserContext<'_> {
-    pub fn sync(&mut self) {
+impl<'parser> ParserContext<'parser> {
+    pub fn sync(&mut self) -> Either<Ast<'parser>, ()> {
         if let Some(position) = self.get_control_ctx().get_sync_position() {
-            match position {
-                ParserSyncPosition::Declaration => self::sync_with_declaration(self),
+            return match position {
+                ParserSyncPosition::Declaration => {
+                    self::sync_with_declaration(self);
+                    Either::Right(())
+                }
                 ParserSyncPosition::Statement => self::sync_with_statement(self),
                 ParserSyncPosition::Expression => self::sync_with_expression(self),
-
-                ParserSyncPosition::NoRelevant => (),
-            }
-
-            self.get_mut_control_ctx().pop_sync_position();
-            self.get_mut_type_ctx().reset_infered_types();
+                ParserSyncPosition::NoRelevant => Either::Right(()),
+            };
         }
+
+        Either::Right(())
     }
 }
 
@@ -64,16 +69,13 @@ fn sync_with_declaration(ctx: &mut ParserContext) {
     ctx.reset_scope();
 }
 
-fn sync_with_statement(ctx: &mut ParserContext) {
+fn sync_with_statement<'parser>(ctx: &mut ParserContext<'parser>) -> Either<Ast<'parser>, ()> {
     loop {
         if ctx.is_eof() {
             break;
         }
 
-        if ctx.check(TokenType::SemiColon) {
-            let _ = ctx.only_advance();
-            break;
-        } else if ctx.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             let _ = ctx.only_advance();
 
             ctx.get_mut_symbols().end_scope();
@@ -89,31 +91,47 @@ fn sync_with_statement(ctx: &mut ParserContext) {
         let peeked: &Token = ctx.peek();
 
         if SYNC_STATEMENTS.contains(&peeked.kind) || SYNC_DECLARATIONS.contains(&peeked.kind) {
+            if !ctx.is_main_scope() {
+                ctx.get_mut_symbols().end_scope();
+                ctx.end_scope();
+
+                if ctx.is_main_scope() {
+                    ctx.get_mut_symbols().finish_parameters();
+                }
+
+                if let Ok(ast) = block::build_block_without_start(ctx) {
+                    return Either::Left(ast);
+                } else {
+                    return Either::Right(());
+                }
+            }
+
             break;
         }
 
         let _ = ctx.only_advance();
     }
+
+    Either::Right(())
 }
 
-fn sync_with_expression(ctx: &mut ParserContext) {
+fn sync_with_expression<'parser>(ctx: &mut ParserContext<'parser>) -> Either<Ast<'parser>, ()> {
     loop {
         if ctx.is_eof() {
             break;
         }
 
-        if ctx.check(TokenType::SemiColon) {
-            let _ = ctx.only_advance();
-            break;
-        } else if ctx.check(TokenType::RBrace) {
+        if ctx.check(TokenType::RBrace) {
             let _ = ctx.only_advance();
 
-            ctx.get_mut_symbols().end_scope();
-            ctx.end_scope();
+            if !ctx.is_main_scope() {
+                ctx.get_mut_symbols().end_scope();
+                ctx.end_scope();
 
-            if ctx.is_main_scope() {
-                ctx.get_mut_symbols().finish_parameters();
+                break;
             }
+
+            ctx.get_mut_symbols().finish_parameters();
 
             break;
         }
@@ -121,9 +139,26 @@ fn sync_with_expression(ctx: &mut ParserContext) {
         let peeked: &Token = ctx.peek();
 
         if SYNC_STATEMENTS.contains(&peeked.kind) || SYNC_DECLARATIONS.contains(&peeked.kind) {
+            if !ctx.is_main_scope() {
+                ctx.get_mut_symbols().end_scope();
+                ctx.end_scope();
+
+                if ctx.is_main_scope() {
+                    ctx.get_mut_symbols().finish_parameters();
+                }
+
+                if let Ok(ast) = block::build_block_without_start(ctx) {
+                    return Either::Left(ast);
+                } else {
+                    return Either::Right(());
+                }
+            }
+
             break;
         }
 
         let _ = ctx.only_advance();
     }
+
+    Either::Right(())
 }

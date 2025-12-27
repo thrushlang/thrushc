@@ -1,5 +1,3 @@
-use inkwell::AtomicOrdering;
-
 #[derive(Debug, Clone, Copy)]
 pub struct LocalMetadata {
     is_undefined: bool,
@@ -11,7 +9,7 @@ pub struct LocalMetadata {
 #[derive(Debug, Clone, Copy)]
 pub struct LLVMLocalMetadata {
     pub volatile: bool,
-    pub atomic_ord: Option<AtomicOrdering>,
+    pub atomic_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering>,
 }
 
 impl LocalMetadata {
@@ -20,7 +18,7 @@ impl LocalMetadata {
         is_undefined: bool,
         is_mutable: bool,
         volatile: bool,
-        atomic_ord: Option<AtomicOrdering>,
+        atomic_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering>,
     ) -> Self {
         Self {
             is_undefined,

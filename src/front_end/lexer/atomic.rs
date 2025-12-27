@@ -21,6 +21,7 @@ lazy_static! {
         atomic.insert(b"threadinit", TokenType::ThreadInit);
         atomic.insert(b"threaddyn", TokenType::ThreadDynamic);
         atomic.insert(b"threadexec", TokenType::ThreadExec);
+        atomic.insert(b"threadldyn", TokenType::ThreadLDynamic);
 
         atomic
     };

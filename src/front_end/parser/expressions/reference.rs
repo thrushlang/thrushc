@@ -36,15 +36,7 @@ pub fn build_reference<'parser>(
     name: &'parser str,
     span: Span,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let object_result: Result<FoundSymbolId, CompilationIssue> =
-        ctx.get_symbols().get_symbols_id(name, span);
-
-    if let Err(issue) = object_result {
-        ctx.add_error(issue);
-        return Ok(Ast::invalid_ast(span));
-    }
-
-    let object: FoundSymbolId = object_result?;
+    let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
 
     if object.is_function() {
         let id: &str = object.expected_function(span)?;
@@ -198,7 +190,7 @@ pub fn build_reference<'parser>(
 
     ctx.add_error(CompilationIssue::Error(
         CompilationIssueCode::E0028,
-        "It is not a valid reference.".into(),
+        format!("'{}' isn't declared or defined.", name),
         None,
         span,
     ));

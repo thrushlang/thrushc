@@ -395,8 +395,8 @@ impl Display for ThrushAttribute {
             ThrushAttribute::AsmAlignStack(..) => write!(f, "@asmalingstack"),
             ThrushAttribute::Packed(..) => write!(f, "@packed"),
             ThrushAttribute::OptFuzzing(..) => write!(f, "@optfuzzing"),
-            ThrushAttribute::Constructor(..) => write!(f, "@preentrypoint"),
-            ThrushAttribute::Destructor(..) => write!(f, "@postentrypoint"),
+            ThrushAttribute::Constructor(..) => write!(f, "@constructor"),
+            ThrushAttribute::Destructor(..) => write!(f, "@destructor"),
         }
     }
 }

@@ -10,8 +10,8 @@ use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
 use crate::front_end::types::ast::metadata::constant::{ConstantMetadata, LLVMConstantMetadata};
 use crate::front_end::types::ast::metadata::staticvar::{LLVMStaticMetadata, StaticMetadata};
 
-use inkwell::ThreadLocalMode;
 use inkwell::module::Module;
+
 use inkwell::{
     AddressSpace,
     module::Linkage,
@@ -50,7 +50,7 @@ fn set_global_common<'ctx>(
     constant: bool,
     unnamed_addr: bool,
     thread_local: bool,
-    thread_mode: Option<ThreadLocalMode>,
+    thread_mode: Option<crate::middle_end::mir::threadmode::ThrushThreadMode>,
     initializer: Option<&BasicValueEnum<'ctx>>,
     alignment: Option<u32>,
     linkage: Option<Linkage>,
@@ -71,7 +71,7 @@ fn set_global_common<'ctx>(
         global.set_thread_local(true);
     }
     if let Some(mode) = thread_mode {
-        global.set_thread_local_mode(Some(mode));
+        global.set_thread_local_mode(Some(mode.as_llvm_threadmode()));
     }
     if let Some(init) = initializer {
         global.set_initializer(init);

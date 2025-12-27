@@ -20,7 +20,7 @@ pub fn float(lexeme: &str, span: Span) -> Result<(Type, f64), CompilationIssue> 
         .map_err(|_| {
             CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Float out of bounds.".into(),
+                "Float literal is too large to be represented in a standard float type.".into(),
                 None,
                 span,
             )

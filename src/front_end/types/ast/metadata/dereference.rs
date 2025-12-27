@@ -1,5 +1,3 @@
-use inkwell::AtomicOrdering;
-
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DereferenceMetadata {
     llvm_metadata: LLVMDereferenceMetadata,
@@ -8,12 +6,15 @@ pub struct DereferenceMetadata {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct LLVMDereferenceMetadata {
     pub volatile: bool,
-    pub atomic_ord: Option<AtomicOrdering>,
+    pub atomic_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering>,
 }
 
 impl DereferenceMetadata {
     #[inline]
-    pub fn new(is_volatile: bool, atomic_ord: Option<AtomicOrdering>) -> Self {
+    pub fn new(
+        is_volatile: bool,
+        atomic_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering>,
+    ) -> Self {
         Self {
             llvm_metadata: LLVMDereferenceMetadata {
                 volatile: is_volatile,

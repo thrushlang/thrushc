@@ -59,15 +59,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
             let name: &str = identifier_tk.get_lexeme();
             let span: Span = identifier_tk.get_span();
 
-            let object_result: Result<FoundSymbolId, CompilationIssue> =
-                ctx.get_symbols().get_symbols_id(name, span);
-
-            if let Err(issue) = object_result {
-                ctx.add_error(issue);
-                return Ok(Type::Void(span));
-            }
-
-            let object: FoundSymbolId = object_result?;
+            let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
 
             match object {
                 _ if object.is_structure() => {

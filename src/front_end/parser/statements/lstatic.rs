@@ -32,8 +32,10 @@ pub fn build_static<'parser>(
     let thread_local: bool = ctx.match_token(TokenType::LazyThread)?;
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
 
-    let atomic_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
-    let thread_mode: Option<ThreadLocalMode> = builder::build_thread_local_mode(ctx)?;
+    let atomic_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering> =
+        builder::build_atomic_ord(ctx)?;
+    let thread_mode: Option<crate::middle_end::mir::threadmode::ThrushThreadMode> =
+        builder::build_thread_local_mode(ctx)?;
 
     let static_tk: &Token = ctx.consume(
         TokenType::Identifier,

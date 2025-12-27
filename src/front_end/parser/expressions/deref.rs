@@ -22,7 +22,8 @@ pub fn build_dereference<'parser>(
     let span: Span = initial_deref_tk.span;
 
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
-    let atomic_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
+    let atomic_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering> =
+        builder::build_atomic_ord(ctx)?;
 
     let mut deref_count: u64 = 1;
 

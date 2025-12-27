@@ -29,7 +29,8 @@ pub fn build_const<'parser>(
     let is_lazy: bool = ctx.match_token(TokenType::LazyThread)?;
     let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
 
-    let atom_ord: Option<AtomicOrdering> = builder::build_atomic_ord(ctx)?;
+    let atom_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering> =
+        builder::build_atomic_ord(ctx)?;
 
     let const_tk: &Token = ctx.consume(
         TokenType::Identifier,
@@ -60,6 +61,8 @@ pub fn build_const<'parser>(
 
     let value: Ast = expressions::build_expression(ctx)?;
 
+    let metadata: ConstantMetadata = ConstantMetadata::new(false, is_lazy, is_volatile, atom_ord);
+
     ctx.get_mut_symbols()
         .new_constant(name, (const_type.clone(), attributes.clone()), span)?;
 
@@ -69,7 +72,7 @@ pub fn build_const<'parser>(
         kind: const_type,
         value: value.into(),
         attributes,
-        metadata: ConstantMetadata::new(false, is_lazy, is_volatile, atom_ord),
+        metadata,
         span,
     })
 }

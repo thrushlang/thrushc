@@ -89,6 +89,7 @@ pub enum TokenType {
     ThreadDynamic,
     ThreadExec,
     ThreadInit,
+    ThreadLDynamic,
 
     // --- LLI ---
     Alloc,

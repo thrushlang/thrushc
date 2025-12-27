@@ -104,11 +104,15 @@ pub fn build_function<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    let return_type: Type = typegen::build_type(ctx, false)?;
+    let return_type: Type = if ctx.check(TokenType::LBrace) {
+        let peeked: &Token = ctx.peek();
+        Type::Void(peeked.get_span())
+    } else {
+        typegen::build_type(ctx, false)?
+    };
 
     let attributes: ThrushAttributes =
         attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
-
     let function_has_ignore: bool = attributes.has_ignore_attribute();
 
     let mut function: Ast = Ast::Function {

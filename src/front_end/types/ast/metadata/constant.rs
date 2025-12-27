@@ -1,5 +1,3 @@
-use inkwell::AtomicOrdering;
-
 #[derive(Debug, Clone, Copy)]
 pub struct ConstantMetadata {
     is_global: bool,
@@ -11,7 +9,7 @@ pub struct ConstantMetadata {
 pub struct LLVMConstantMetadata {
     pub thread_local: bool,
     pub volatile: bool,
-    pub atomic_ord: Option<AtomicOrdering>,
+    pub atomic_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering>,
 }
 
 impl ConstantMetadata {
@@ -20,7 +18,7 @@ impl ConstantMetadata {
         is_global: bool,
         thread_local: bool,
         volatile: bool,
-        atomic_ord: Option<AtomicOrdering>,
+        atomic_ord: Option<crate::middle_end::mir::atomicord::ThrushAtomicOrdering>,
     ) -> Self {
         Self {
             is_global,
