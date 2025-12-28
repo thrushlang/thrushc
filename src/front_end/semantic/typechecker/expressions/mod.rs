@@ -29,7 +29,7 @@ use std::path::PathBuf;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker Asst,
+    node: &'type_checker Ast,
 ) -> Result<(), CompilationIssue> {
     match node {
         Ast::BinaryOp {
