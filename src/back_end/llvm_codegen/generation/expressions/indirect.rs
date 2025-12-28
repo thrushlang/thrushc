@@ -7,6 +7,7 @@ use crate::back_end::llvm_codegen::{codegen, typegen};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::AddressSpace;

@@ -13,6 +13,7 @@ use crate::back_end::llvm_codegen::symbols::LLVMSymbolsTable;
 use crate::back_end::llvm_codegen::typegen;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::repr::LLVMCtors;
+use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
 use crate::back_end::llvm_codegen::types::repr::LLVMDtors;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 
@@ -47,6 +48,7 @@ use inkwell::context::Context;
 use inkwell::module::Linkage;
 use inkwell::module::Module;
 use inkwell::targets::TargetData;
+use inkwell::targets::TargetMachine;
 use inkwell::targets::TargetTriple;
 use inkwell::types::ArrayType;
 use inkwell::types::BasicTypeEnum;
@@ -63,7 +65,8 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     builder: &'ctx Builder<'ctx>,
     target_data: TargetData,
     target_triple: TargetTriple,
-    dbg_context: Option<LLVMDebugContext<'ctx>>,
+    target_machine: &'a TargetMachine,
+    dbg_context: Option<LLVMDebugContext<'a, 'ctx>>,
 
     table: LLVMSymbolsTable<'ctx>,
     loop_ctx: LLVMLoopContext<'ctx>,
@@ -84,6 +87,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         builder: &'ctx Builder<'ctx>,
         target_data: TargetData,
         target_triple: TargetTriple,
+        target_machine: &'a TargetMachine,
         diagnostician: Diagnostician,
         options: &'ctx CompilerOptions,
         file: &CompilationUnit,
@@ -93,7 +97,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             .get_debug_config()
             .is_debug_mode()
         {
-            Some(LLVMDebugContext::new(module, options, file))
+            Some(LLVMDebugContext::new(module, target_machine, options, file))
         } else {
             None
         };
@@ -104,6 +108,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             builder,
             target_data,
             target_triple,
+            target_machine,
             dbg_context,
 
             table: LLVMSymbolsTable::new(),
@@ -501,6 +506,16 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
+    pub fn get_target_machine(&self) -> &TargetMachine {
+        self.target_machine
+    }
+
+    #[inline]
+    pub fn get_debug_context(&self) -> Option<&LLVMDebugContext<'a, 'ctx>> {
+        self.dbg_context.as_ref()
+    }
+
+    #[inline]
     pub fn get_compiler_options(&self) -> &CompilerOptions {
         self.options
     }
@@ -566,6 +581,18 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     #[inline]
     pub fn get_mut_loop_ctx(&mut self) -> &mut LLVMLoopContext<'ctx> {
         &mut self.loop_ctx
+    }
+}
+
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    pub fn dispatch_function_debug_data(&mut self, dbg_proto: &LLVMDBGFunction<'ctx>) {
+        let dbg_opt: Option<LLVMDebugContext<'_, '_>> = self.dbg_context.take();
+
+        if let Some(ref dbg) = dbg_opt {
+            dbg.dispatch_function_debug_data(dbg_proto, self);
+        }
+
+        self.dbg_context = dbg_opt;
     }
 }
 

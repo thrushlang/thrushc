@@ -14,6 +14,7 @@ use crate::front_end::types::ast::metadata::constant::LLVMConstantMetadata;
 use crate::front_end::types::ast::metadata::dereference::LLVMDereferenceMetadata;
 use crate::front_end::types::ast::metadata::local::LLVMLocalMetadata;
 use crate::front_end::types::ast::metadata::staticvar::LLVMStaticMetadata;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::fmt::Display;

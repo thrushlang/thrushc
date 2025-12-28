@@ -6,7 +6,7 @@ use crate::core::diagnostic::span::Span;
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
-use crate::front_end::typesystem::traits::TypePointerExtensions;
+use crate::front_end::typesystem::traits::{TypeIsExtensions, TypePointerExtensions};
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::values::IntValue;

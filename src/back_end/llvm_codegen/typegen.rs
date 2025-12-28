@@ -3,6 +3,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::typesystem::traits::TypeCodeLocation;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::AddressSpace;

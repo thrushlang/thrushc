@@ -5,6 +5,7 @@ use crate::front_end::types::ast::traits::{
     AstCodeBlockEntensions, AstConstantExtensions, AstGetType, AstMemoryExtensions,
     AstMutabilityExtensions, AstScopeExtensions, AstStandardExtensions, AstStatementExtentions,
 };
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 
 impl AstStandardExtensions for Ast<'_> {
     #[inline]

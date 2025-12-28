@@ -1,32 +1,57 @@
 #![allow(clippy::needless_bool)]
 
+use std::path::PathBuf;
+
+use inkwell::debug_info::AsDIScope;
 use inkwell::debug_info::DICompileUnit;
+use inkwell::debug_info::DIFile;
+use inkwell::debug_info::DIFlagsConstants;
+use inkwell::debug_info::DISubroutineType;
+use inkwell::debug_info::DIType;
 use inkwell::debug_info::DWARFEmissionKind;
 use inkwell::debug_info::DebugInfoBuilder;
 use inkwell::module::Module;
+use inkwell::targets::TargetData;
+use inkwell::targets::TargetMachine;
+use inkwell::types::BasicTypeEnum;
+use inkwell::values::FunctionValue;
 
+use crate::back_end::llvm_codegen::abort;
+use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::optimization::LLVMOptimizer;
+use crate::back_end::llvm_codegen::optimization::LLVMOptimizerOptimizableEntity;
+use crate::back_end::llvm_codegen::typegen;
+use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
+use crate::back_end::llvm_codegen::types::traits::LLVMDBGFunctionExtensions;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::constants::COMPILER_ID;
+use crate::core::diagnostic::span::Span;
+use crate::front_end::typesystem::types::Type;
 
 #[derive(Debug)]
-pub struct LLVMDebugContext<'ctx> {
+pub struct LLVMDebugContext<'a, 'ctx> {
     builder: DebugInfoBuilder<'ctx>,
     unit: DICompileUnit<'ctx>,
+    target_machine: &'a TargetMachine,
 }
 
-impl<'ctx> LLVMDebugContext<'ctx> {
-    pub fn new(module: &Module<'ctx>, options: &CompilerOptions, unit: &CompilationUnit) -> Self {
-        let is_optimized: bool = if options.omit_default_optimizations()
+impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
+    pub fn new(
+        module: &Module<'ctx>,
+        target_machine: &'a TargetMachine,
+        options: &CompilerOptions,
+        unit: &CompilationUnit,
+    ) -> Self {
+        let is_optimized: bool = (!options.omit_default_optimizations()
             && options
                 .get_llvm_backend_options()
                 .get_optimization()
-                .is_none_opt()
-        {
-            false
-        } else {
-            true
-        };
+                .is_none_opt())
+            || options
+                .get_llvm_backend_options()
+                .get_optimization()
+                .is_high_opt();
 
         let split_debug_inlining: bool = options
             .get_llvm_backend_options()
@@ -59,18 +84,106 @@ impl<'ctx> LLVMDebugContext<'ctx> {
         Self {
             builder,
             unit: dicompileunit,
+            target_machine,
         }
     }
 }
 
-impl<'ctx> LLVMDebugContext<'ctx> {
+impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
     #[inline]
-    pub fn finalize(self) {
+    pub fn finalize(&self) {
         self.builder.finalize();
     }
 }
 
-impl<'ctx> LLVMDebugContext<'ctx> {
+impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
+    pub fn dispatch_function_debug_data(
+        &self,
+        function: &LLVMDBGFunction<'ctx>,
+        context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    ) {
+        let dbg_builder: &DebugInfoBuilder<'_> = self.get_builder();
+        let target_data: TargetData = self.get_target_data();
+
+        let value: FunctionValue<'_> = function.get_value();
+        let name: &str = function.get_name();
+        let return_type: &Type = function.get_return_type();
+        let parameter_types: &[Type] = function.get_parameters_types();
+        let span: Span = function.get_span();
+        let line: u32 = u32::try_from(span.get_line()).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to parse the code location!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let llvm_return_type: BasicTypeEnum<'_> = typegen::generate(context, return_type);
+
+        let llvm_parameter_types: Vec<BasicTypeEnum<'_>> = parameter_types
+            .iter()
+            .map(|parameter_type| typegen::generate(context, parameter_type))
+            .collect();
+
+        let mut dbg_parameter_types: Vec<DIType<'_>> =
+            Vec::with_capacity(llvm_parameter_types.len());
+
+        for (parameter_type, llvm_parameter_type) in
+            parameter_types.iter().zip(llvm_parameter_types.iter())
+        {
+            let name: String = format!("{}", parameter_type);
+            let size: u64 = target_data.get_bit_size(llvm_parameter_type);
+
+            match dbg_builder.create_basic_type(&name, size, 0x00, DIFlagsConstants::PUBLIC) {
+                Ok(dbg_type) => dbg_parameter_types.push(dbg_type.as_type()),
+                Err(_) => return,
+            }
+        }
+
+        let Ok(dbg_return_type) = dbg_builder.create_basic_type(
+            &format!("{}", return_type),
+            target_data.get_bit_size(&llvm_return_type),
+            0x00,
+            DIFlagsConstants::PUBLIC,
+        ) else {
+            return;
+        };
+
+        let subroutine_type: DISubroutineType<'_> = dbg_builder.create_subroutine_type(
+            self.get_unit().get_file(),
+            Some(dbg_return_type.as_type()),
+            &dbg_parameter_types,
+            DIFlagsConstants::PUBLIC,
+        );
+
+        let is_optimized: bool = LLVMOptimizer::is_optimizable(
+            LLVMOptimizerOptimizableEntity::Function(value),
+            context.get_compiler_options(),
+        );
+
+        let file: DIFile<'_> = self.get_unit().get_file();
+
+        let function_dbg_personality = dbg_builder.create_function(
+            file.as_debug_info_scope(),
+            name,
+            None,
+            file,
+            line,
+            subroutine_type,
+            function.is_local(),
+            function.is_definition(),
+            0,
+            inkwell::debug_info::DIFlagsConstants::PUBLIC,
+            is_optimized,
+        );
+
+        value.set_subprogram(function_dbg_personality);
+    }
+}
+
+impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
     #[inline]
     pub fn get_builder(&self) -> &DebugInfoBuilder<'ctx> {
         &self.builder
@@ -79,5 +192,10 @@ impl<'ctx> LLVMDebugContext<'ctx> {
     #[inline]
     pub fn get_unit(&self) -> &DICompileUnit<'ctx> {
         &self.unit
+    }
+
+    #[inline]
+    pub fn get_target_data(&self) -> TargetData {
+        self.target_machine.get_target_data()
     }
 }

@@ -2,12 +2,15 @@ use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
 use crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm_codegen::callconventions::CallConvention;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 use crate::back_end::llvm_codegen::types::traits::AssemblerFunctionExtensions;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributeComparatorExtensions;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
+use crate::back_end::llvm_codegen::types::traits::LLVMDBGFunctionExtensions;
 use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
 use crate::back_end::llvm_codegen::types::traits::LLVMLinkageExtensions;
+use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::types::Type;
 
 use std::fmt::Display;
@@ -40,6 +43,43 @@ impl<'ctx> LLVMFunctionExtensions<'ctx> for LLVMFunction<'ctx> {
     #[inline]
     fn get_parameters_types(&self) -> &[Type] {
         self.2
+    }
+}
+
+impl<'ctx> LLVMDBGFunctionExtensions<'ctx> for LLVMDBGFunction<'ctx> {
+    #[inline]
+    fn get_name(&self) -> &str {
+        &self.0
+    }
+
+    #[inline]
+    fn get_value(&self) -> FunctionValue<'ctx> {
+        self.1
+    }
+
+    #[inline]
+    fn get_return_type(&self) -> &'ctx Type {
+        self.2
+    }
+
+    #[inline]
+    fn get_parameters_types(&self) -> &[Type] {
+        self.3
+    }
+
+    #[inline]
+    fn is_definition(&self) -> bool {
+        self.4
+    }
+
+    #[inline]
+    fn is_local(&self) -> bool {
+        self.5
+    }
+
+    #[inline]
+    fn get_span(&self) -> Span {
+        self.6
     }
 }
 

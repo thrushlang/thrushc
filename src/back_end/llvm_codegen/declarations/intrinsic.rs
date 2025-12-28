@@ -16,14 +16,12 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::parser::repr::Intrinsic;
 use crate::front_end::typesystem::types::Type;
 
-use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::types::FunctionType;
 use inkwell::values::FunctionValue;
 
 pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intrinsic<'ctx>) {
     let llvm_module: &Module = context.get_llvm_module();
-    let llvm_context: &Context = context.get_llvm_context();
 
     let name: &str = intrinsic.0;
     let external_name: &str = intrinsic.1;

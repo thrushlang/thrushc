@@ -182,7 +182,6 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         }
 
         let llvm_context: Context = Context::create();
-
         let llvm_builder: Builder = llvm_context.create_builder();
         let llvm_module: Module = llvm_context.create_module(file.get_name());
 
@@ -245,6 +244,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_builder,
             target_machine.get_target_data(),
             target_machine.get_triple(),
+            &target_machine,
             Diagnostician::new(file, self.options),
             self.options,
             file,
@@ -491,6 +491,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_builder,
             target_machine.get_target_data(),
             target_machine.get_triple(),
+            &target_machine,
             Diagnostician::new(file, self.options),
             self.options,
             file,

@@ -5,6 +5,7 @@ use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 use crate::front_end::semantic::analyzer::Analyzer;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstGetType};
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;

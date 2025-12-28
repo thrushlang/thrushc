@@ -14,6 +14,7 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::parser::repr::BinaryOperation;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;

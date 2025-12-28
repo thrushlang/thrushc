@@ -11,6 +11,7 @@ use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;

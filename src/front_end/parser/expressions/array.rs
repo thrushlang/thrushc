@@ -5,6 +5,7 @@ use crate::front_end::lexer::{token::Token, tokentype::TokenType};
 use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::{ast::Ast, parser::stmts::traits::TokenExtensions};
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::{traits::TypeArrayEntensions, types::Type};
 
 pub fn build_array<'parser>(

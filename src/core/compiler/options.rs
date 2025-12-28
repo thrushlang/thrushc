@@ -110,6 +110,7 @@ impl ThrushOptimization {
                 | ThrushOptimization::Mid
                 | ThrushOptimization::High
                 | ThrushOptimization::Size
+                | ThrushOptimization::Zize
         )
     }
 

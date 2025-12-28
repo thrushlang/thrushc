@@ -1,4 +1,5 @@
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
+use crate::core::compiler::options::CompilerOptions;
 use crate::core::compiler::options::ThrushOptimization;
 use crate::core::console::logging;
 
@@ -9,6 +10,7 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::TargetMachine;
+use inkwell::types::BasicTypeEnum;
 use inkwell::values::AsValueRef;
 use inkwell::values::BasicValueEnum;
 use inkwell::values::CallSiteValue;
@@ -222,6 +224,47 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
     pub fn get_machine(&self) -> &TargetMachine {
         self.machine
     }
+}
+
+impl LLVMOptimizer<'_, '_> {
+    pub fn is_optimizable(
+        entity: LLVMOptimizerOptimizableEntity,
+        options: &CompilerOptions,
+    ) -> bool {
+        let before: bool = (!options.omit_default_optimizations()
+            && options
+                .get_llvm_backend_options()
+                .get_optimization()
+                .is_none_opt())
+            || options
+                .get_llvm_backend_options()
+                .get_optimization()
+                .is_high_opt();
+
+        match entity {
+            LLVMOptimizerOptimizableEntity::Function(value) => {
+                let parameters_types: Vec<BasicTypeEnum> = value
+                    .get_param_iter()
+                    .map(|param| param.get_type())
+                    .collect();
+
+                if parameters_types
+                    .iter()
+                    .any(|parameter_type| parameter_type.is_pointer_type())
+                    || before
+                {
+                    return true;
+                }
+
+                false
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum LLVMOptimizerOptimizableEntity<'ctx> {
+    Function(FunctionValue<'ctx>),
 }
 
 #[derive(Debug, Clone, Copy)]

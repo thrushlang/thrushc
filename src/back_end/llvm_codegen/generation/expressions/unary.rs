@@ -10,6 +10,7 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstLLVMGetType};
 use crate::front_end::types::parser::repr::UnaryOperation;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::types::FloatType;

@@ -18,7 +18,7 @@ use crate::front_end::types::ast::metadata::local::LocalMetadata;
 use crate::front_end::types::ast::traits::{
     AstCodeLocation, AstLLVMGetType, AstStandardExtensions,
 };
-use crate::front_end::typesystem::traits::DereferenceExtensions;
+use crate::front_end::typesystem::traits::{DereferenceExtensions, TypeIsExtensions};
 use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
@@ -50,6 +50,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         self.ast.iter().for_each(|ast| {
             self.codegen(ast);
         });
+
+        if let Some(dbg_context) = self.get_context().get_debug_context() {
+            dbg_context.finalize()
+        }
     }
 
     fn codegen(&mut self, node: &'ctx Ast) {

@@ -22,13 +22,14 @@ use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::parser::stmts::types::Constructor;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    node: &'type_checker Ast,
+    node: &'type_checker Asst,
 ) -> Result<(), CompilationIssue> {
     match node {
         Ast::BinaryOp {

@@ -9,6 +9,7 @@ use crate::front_end::types::ast::traits::{
 };
 use crate::front_end::types::ast::{Ast, metadata::cast::CastMetadata};
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn cast_precedence<'parser>(

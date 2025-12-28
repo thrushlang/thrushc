@@ -6,6 +6,7 @@ use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::semantic::attrchecker::types::AttributeCheckerAttributeApplicant;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::middle_end::mir::attributes::traits::{
     ThrushAttributeComparatorExtensions, ThrushAttributesExtensions,
 };

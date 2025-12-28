@@ -13,6 +13,16 @@ pub type LLVMLocalConstants<'ctx> = Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>
 pub type LLVMGlobalStatics<'ctx> = HashMap<&'ctx str, SymbolAllocated<'ctx>>;
 pub type LLVMLocalStatics<'ctx> = Vec<HashMap<&'ctx str, SymbolAllocated<'ctx>>>;
 
+pub type LLVMDBGFunction<'ctx> = (
+    String,
+    FunctionValue<'ctx>,
+    &'ctx Type,
+    &'ctx [Type],
+    bool,
+    bool,
+    Span,
+);
+
 pub type LLVMFunction<'ctx> = (FunctionValue<'ctx>, &'ctx Type, &'ctx [Type], u32, Span);
 pub type LLVMFunctions<'ctx> = HashMap<&'ctx str, LLVMFunction<'ctx>>;
 

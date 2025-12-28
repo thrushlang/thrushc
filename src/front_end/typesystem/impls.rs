@@ -2,41 +2,42 @@ use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::traits::IndexExtensions;
 use crate::front_end::typesystem::traits::TypeCodeLocation;
 use crate::front_end::typesystem::traits::TypeExtensions;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
-impl Type {
+impl TypeIsExtensions for Type {
     #[inline(always)]
-    pub fn is_char_type(&self) -> bool {
+    fn is_char_type(&self) -> bool {
         matches!(self, Type::Char(..))
     }
 
     #[inline(always)]
-    pub fn is_void_type(&self) -> bool {
+    fn is_void_type(&self) -> bool {
         matches!(self, Type::Void(..))
     }
 
     #[inline(always)]
-    pub fn is_bool_type(&self) -> bool {
+    fn is_bool_type(&self) -> bool {
         matches!(self, Type::Bool(..))
     }
 
     #[inline(always)]
-    pub fn is_struct_type(&self) -> bool {
+    fn is_struct_type(&self) -> bool {
         matches!(self, Type::Struct(..))
     }
 
     #[inline(always)]
-    pub fn is_fixed_array_type(&self) -> bool {
+    fn is_fixed_array_type(&self) -> bool {
         matches!(self, Type::FixedArray(..))
     }
 
     #[inline(always)]
-    pub fn is_array_type(&self) -> bool {
+    fn is_array_type(&self) -> bool {
         matches!(self, Type::Array(..))
     }
 
     #[inline(always)]
-    pub fn is_float_type(&self) -> bool {
+    fn is_float_type(&self) -> bool {
         matches!(
             self,
             Type::F32(..) | Type::F64(..) | Type::F128(..) | Type::FX8680(..) | Type::FPPC128(..)
@@ -44,12 +45,12 @@ impl Type {
     }
 
     #[inline(always)]
-    pub fn is_ptr_type(&self) -> bool {
+    fn is_ptr_type(&self) -> bool {
         matches!(self, Type::Ptr(..))
     }
 
     #[inline(always)]
-    pub fn is_ptr_like_type(&self) -> bool {
+    fn is_ptr_like_type(&self) -> bool {
         matches!(
             self,
             Type::Ptr(..) | Type::Addr(..) | Type::Array(..) | Type::Fn(..)
@@ -57,27 +58,27 @@ impl Type {
     }
 
     #[inline(always)]
-    pub fn is_address_type(&self) -> bool {
+    fn is_address_type(&self) -> bool {
         matches!(self, Type::Addr(..))
     }
 
     #[inline(always)]
-    pub fn is_const_type(&self) -> bool {
+    fn is_const_type(&self) -> bool {
         matches!(self, Type::Const(..))
     }
 
     #[inline(always)]
-    pub fn is_fnref_type(&self) -> bool {
+    fn is_fnref_type(&self) -> bool {
         matches!(self, Type::Fn(..))
     }
 
     #[inline(always)]
-    pub fn is_numeric_type(&self) -> bool {
+    fn is_numeric_type(&self) -> bool {
         self.is_integer_type() || self.is_float_type() || self.is_char_type() || self.is_bool_type()
     }
 
     #[inline(always)]
-    pub fn is_unsigned_integer_type(&self) -> bool {
+    fn is_unsigned_integer_type(&self) -> bool {
         matches!(
             self,
             Type::U8(..)
@@ -90,7 +91,7 @@ impl Type {
     }
 
     #[inline(always)]
-    pub fn is_signed_integer_type(&self) -> bool {
+    fn is_signed_integer_type(&self) -> bool {
         matches!(
             self,
             Type::S8(..) | Type::S16(..) | Type::S32(..) | Type::S64(..) | Type::SSize(..)
@@ -98,12 +99,12 @@ impl Type {
     }
 
     #[inline(always)]
-    pub fn is_lesseq_unsigned32bit_integer(&self) -> bool {
+    fn is_lesseq_unsigned32bit_integer(&self) -> bool {
         matches!(self, Type::U8(..) | Type::U16(..) | Type::U32(..))
     }
 
     #[inline(always)]
-    pub fn is_integer_type(&self) -> bool {
+    fn is_integer_type(&self) -> bool {
         matches!(
             self,
             Type::S8(..)

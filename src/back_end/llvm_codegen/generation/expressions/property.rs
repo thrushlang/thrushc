@@ -6,6 +6,7 @@ use crate::back_end::llvm_codegen::{abort, codegen, memory, refptr, typegen};
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstLLVMGetType, AstMemoryExtensions};
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::traits::TypePointerExtensions;
 use crate::front_end::typesystem::types::Type;
 

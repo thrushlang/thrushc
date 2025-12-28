@@ -9,6 +9,7 @@ use crate::back_end::llvm_codegen::types::traits::{
 use crate::back_end::llvm_codegen::{codegen, typegen};
 
 use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use crate::core::console::logging::{self, LoggingType};

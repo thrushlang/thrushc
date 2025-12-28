@@ -9,6 +9,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::obfuscation;
 use crate::back_end::llvm_codegen::typegen;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
 
@@ -17,6 +18,7 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeBlockEntensions;
 use crate::front_end::types::parser::repr::Function;
 use crate::front_end::types::parser::repr::FunctionParameter;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
@@ -38,10 +40,12 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     let parameters: &[Ast<'ctx>] = function.3;
     let parameters_types: &[Type] = function.4;
     let attributes: LLVMAttributes = function.6.as_llvm_attributes();
+    let body: Option<&Ast<'ctx>> = function.5;
     let span: Span = function.7;
 
     let ignore_args: bool = attributes.has_ignore_attribute();
     let is_public: bool = attributes.has_public_attribute();
+    let is_local: bool = body.is_some();
 
     let call_convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
         attributes.get_attr(LLVMAttributeComparator::Convention)
@@ -51,14 +55,14 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
         CallConvention::Standard as u32
     };
 
-    let canonical_name: &str = if let Some(LLVMAttribute::Extern(extern_name, ..)) =
+    let canonical_name: String = if let Some(LLVMAttribute::Extern(extern_name, ..)) =
         attributes.get_attr(LLVMAttributeComparator::Extern)
     {
-        extern_name
+        extern_name.to_string()
     } else if is_public {
-        ascii_name
+        ascii_name.to_string()
     } else {
-        &format!(
+        format!(
             "__fn_{}_{}",
             obfuscation::generate_obfuscation_name(context, obfuscation::LONG_RANGE_OBFUSCATION),
             ascii_name
@@ -69,7 +73,7 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
         typegen::generate_fn_type(context, return_type, parameters, ignore_args);
 
     let llvm_function: FunctionValue =
-        llvm_module.add_function(canonical_name, function_type, None);
+        llvm_module.add_function(&canonical_name, function_type, None);
 
     if !is_public {
         llvm_function.set_linkage(Linkage::LinkerPrivate);
@@ -78,6 +82,16 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     AttributeBuilder::new(attributes, LLVMAttributeApplicant::Function(llvm_function))
         .add_function_attributes(context);
 
+    let dbg_proto: LLVMDBGFunction = (
+        canonical_name,
+        llvm_function,
+        return_type,
+        parameters_types,
+        true,
+        is_local,
+        span,
+    );
+
     let proto: LLVMFunction = (
         llvm_function,
         return_type,
@@ -85,6 +99,10 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
         call_convention,
         span,
     );
+
+    if is_local {
+        context.dispatch_function_debug_data(&dbg_proto);
+    }
 
     context.set_current_llvm_function(proto);
     context.new_function(name, proto);

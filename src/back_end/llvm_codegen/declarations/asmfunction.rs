@@ -15,6 +15,7 @@ use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
 
 use crate::core::diagnostic::span::Span;
 
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 
 use crate::front_end::types::ast::Ast;

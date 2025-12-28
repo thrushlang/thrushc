@@ -12,6 +12,7 @@ use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::typesystem::traits::LLVMTypeExtensions;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::cmp::Ordering;

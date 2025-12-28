@@ -7,7 +7,7 @@ use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
-use crate::front_end::typesystem::traits::TypeFixedArrayEntensions;
+use crate::front_end::typesystem::traits::{TypeFixedArrayEntensions, TypeIsExtensions};
 use crate::front_end::typesystem::types::Type;
 
 pub fn build_fixed_array<'parser>(

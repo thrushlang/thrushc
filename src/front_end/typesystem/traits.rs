@@ -10,6 +10,26 @@ pub trait LLVMTypeExtensions {
     ) -> bool;
 }
 
+pub trait TypeIsExtensions {
+    fn is_char_type(&self) -> bool;
+    fn is_void_type(&self) -> bool;
+    fn is_bool_type(&self) -> bool;
+    fn is_struct_type(&self) -> bool;
+    fn is_fixed_array_type(&self) -> bool;
+    fn is_array_type(&self) -> bool;
+    fn is_float_type(&self) -> bool;
+    fn is_ptr_type(&self) -> bool;
+    fn is_ptr_like_type(&self) -> bool;
+    fn is_address_type(&self) -> bool;
+    fn is_const_type(&self) -> bool;
+    fn is_fnref_type(&self) -> bool;
+    fn is_numeric_type(&self) -> bool;
+    fn is_unsigned_integer_type(&self) -> bool;
+    fn is_signed_integer_type(&self) -> bool;
+    fn is_lesseq_unsigned32bit_integer(&self) -> bool;
+    fn is_integer_type(&self) -> bool;
+}
+
 pub trait FunctionReferenceExtensions {
     fn get_fn_ref_type(&self) -> &Type;
 }

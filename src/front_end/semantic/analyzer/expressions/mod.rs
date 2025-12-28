@@ -11,6 +11,7 @@ use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::types::ast::traits::AstMemoryExtensions;
 use crate::front_end::types::ast::traits::AstStandardExtensions;
 use crate::front_end::types::parser::stmts::types::Constructor;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;

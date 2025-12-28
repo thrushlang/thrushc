@@ -29,6 +29,7 @@ use crate::front_end::types::parser::symbols::types::StaticSymbol;
 use crate::front_end::typesystem::modificators::FunctionReferenceTypeModificator;
 use crate::front_end::typesystem::modificators::GCCFunctionReferenceTypeModificator;
 use crate::front_end::typesystem::modificators::LLVMFunctionReferenceTypeModificator;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 pub fn build_reference<'parser>(

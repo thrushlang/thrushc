@@ -8,6 +8,7 @@ use crate::back_end::llvm_codegen::generation::cast;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 
 use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use inkwell::AddressSpace;

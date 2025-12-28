@@ -9,6 +9,7 @@ use crate::front_end::semantic::typechecker::{
 };
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstGetType, AstStandardExtensions};
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::{traits::TypePointerExtensions, types::Type};
 
 pub fn validate<'type_checker>(
