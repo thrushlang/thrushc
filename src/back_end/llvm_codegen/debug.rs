@@ -18,11 +18,11 @@ use inkwell::values::FunctionValue;
 
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDBGFunction;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMDBGFunctionExtensions;
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizer;
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizerOptimizableEntity;
 use crate::back_end::llvm_codegen::typegeneration;
-use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
-use crate::back_end::llvm_codegen::types::traits::LLVMDBGFunctionExtensions;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::constants::COMPILER_ID;
@@ -41,20 +41,12 @@ pub struct LLVMDebugContext<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
     pub fn new(
-        module: &Module<'ctx>,
+        llvm_module: &Module<'ctx>,
         target_machine: &'a TargetMachine,
         options: &CompilerOptions,
         unit: &CompilationUnit,
     ) -> Self {
-        let is_optimized: bool = (!options.omit_default_optimizations()
-            && options
-                .get_llvm_backend_options()
-                .get_optimization()
-                .is_none_opt())
-            || options
-                .get_llvm_backend_options()
-                .get_optimization()
-                .is_high_opt();
+        let is_optimized: bool = LLVMOptimizer::is_optimizable_module(llvm_module, options);
 
         let split_debug_inlining: bool = options
             .get_llvm_backend_options()
@@ -66,7 +58,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             .get_debug_config()
             .need_debug_info_for_profiling();
 
-        let (builder, dicompileunit) = module.create_debug_info_builder(
+        let (builder, dicompileunit) = llvm_module.create_debug_info_builder(
             true,
             inkwell::debug_info::DWARFSourceLanguage::C,
             unit.get_name(),

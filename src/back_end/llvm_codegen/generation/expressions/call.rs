@@ -5,7 +5,7 @@ use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::cast;
 
-use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunction;
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::typesystem::traits::TypeIsExtensions;

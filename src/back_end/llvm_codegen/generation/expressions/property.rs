@@ -1,6 +1,6 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
-use crate::back_end::llvm_codegen::types::LLVMGEPIndexes;
+use crate::back_end::llvm_codegen::helpertypes::LLVMGEPIndexes;
 use crate::back_end::llvm_codegen::{abort, codegen, memory, refptr, typegeneration};
 
 use crate::core::diagnostic::span::Span;

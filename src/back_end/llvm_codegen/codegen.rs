@@ -4,11 +4,11 @@ use crate::back_end::llvm_codegen::block;
 use crate::back_end::llvm_codegen::builtins::LLVMBuiltin;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::declarations::{self};
+use crate::back_end::llvm_codegen::generation;
 use crate::back_end::llvm_codegen::generation::{cast, float, integer};
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMFunctionExtensions;
 use crate::back_end::llvm_codegen::statements::lli;
-use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
 use crate::back_end::llvm_codegen::{abort, memory};
-use crate::back_end::llvm_codegen::{binaryop, generation};
 use crate::back_end::llvm_codegen::{builtins, codegen, constgen};
 use crate::back_end::llvm_codegen::{refptr, statements};
 
@@ -351,7 +351,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 expression,
                 ..
             } => {
-                generation::expressions::unary::compile(
+                generation::expressions::unaryop::compile(
                     self.context,
                     (operator, kind, expression),
                     None,
@@ -366,17 +366,32 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 span,
             } => {
                 if kind.is_integer_type() {
-                    binaryop::integer::compile(self.context, (left, operator, right, *span), None);
+                    generation::expressions::binaryop::integer::compile(
+                        self.context,
+                        (left, operator, right, *span),
+                        None,
+                    );
+
                     return;
                 }
 
                 if kind.is_float_type() {
-                    binaryop::float::compile(self.context, (left, operator, right, *span), None);
+                    generation::expressions::binaryop::float::compile(
+                        self.context,
+                        (left, operator, right, *span),
+                        None,
+                    );
+
                     return;
                 }
 
                 if kind.is_bool_type() {
-                    binaryop::boolean::compile(self.context, (left, operator, right, *span), None);
+                    generation::expressions::binaryop::boolean::compile(
+                        self.context,
+                        (left, operator, right, *span),
+                        None,
+                    );
+
                     return;
                 }
 
@@ -528,7 +543,7 @@ pub fn compile<'ctx>(
             ..
         } => {
             let float: BasicValueEnum =
-                float::generate_const(context, kind, *value, *signed, *span).into();
+                float::compile_const(context, kind, *value, *signed, *span).into();
 
             cast::try_cast(context, cast_type, kind, float, *span)
         }
@@ -541,7 +556,7 @@ pub fn compile<'ctx>(
             ..
         } => {
             let integer: BasicValueEnum =
-                integer::generate_const(context, kind, *value, *signed, *span).into();
+                integer::compile_const(context, kind, *value, *signed, *span).into();
 
             cast::try_cast(context, cast_type, kind, integer, *span)
         }
@@ -603,15 +618,21 @@ pub fn compile<'ctx>(
             span,
             ..
         } => match binaryop_type {
-            t if t.is_float_type() => {
-                binaryop::float::compile(context, (left, operator, right, *span), cast_type)
-            }
-            t if t.is_integer_type() => {
-                binaryop::integer::compile(context, (left, operator, right, *span), cast_type)
-            }
-            t if t.is_bool_type() => {
-                binaryop::boolean::compile(context, (left, operator, right, *span), cast_type)
-            }
+            t if t.is_float_type() => generation::expressions::binaryop::float::compile(
+                context,
+                (left, operator, right, *span),
+                cast_type,
+            ),
+            t if t.is_integer_type() => generation::expressions::binaryop::integer::compile(
+                context,
+                (left, operator, right, *span),
+                cast_type,
+            ),
+            t if t.is_bool_type() => generation::expressions::binaryop::boolean::compile(
+                context,
+                (left, operator, right, *span),
+                cast_type,
+            ),
 
             _ => {
                 abort::abort_codegen(
@@ -629,7 +650,7 @@ pub fn compile<'ctx>(
             kind,
             expression,
             ..
-        } => generation::expressions::unary::compile(
+        } => generation::expressions::unaryop::compile(
             context,
             (operator, kind, expression),
             cast_type,

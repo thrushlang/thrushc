@@ -1,6 +1,6 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::obfuscation;
-use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMFunctionExtensions;
 use crate::core::diagnostic::span::Span;
 
 use inkwell::basic_block::BasicBlock;

@@ -1,9 +1,7 @@
-use std::path::PathBuf;
-
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::cast;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
-use crate::back_end::llvm_codegen::{abort, codegen, constgen, typegeneration};
+use crate::back_end::llvm_codegen::{abort, codegen, constgen, refptr, typegeneration};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -19,6 +17,8 @@ use inkwell::{
     builder::Builder,
     values::{BasicValueEnum, FloatValue, IntValue},
 };
+
+use std::path::PathBuf;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -301,8 +301,13 @@ fn compile_logical_negation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = codegen::compile(context, expr, cast_type);
     let kind: &Type = expr.llvm_get_type(context);
+
+    let value: BasicValueEnum = if kind.is_ptr_like_type() {
+        refptr::compile(context, expr, cast_type)
+    } else {
+        codegen::compile(context, expr, cast_type)
+    };
 
     let span: Span = expr.get_span();
 
@@ -310,13 +315,34 @@ fn compile_logical_negation<'ctx>(
         kind if kind.is_bool_type() => {
             let int: IntValue = value.into_int_value();
 
-            if let Ok(result) = llvm_builder.build_not(int, "") {
-                let result: BasicValueEnum = result.into();
+            let result: IntValue = llvm_builder.build_not(int, "").unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to compile '!bool' operation!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
 
-                return cast::try_cast(context, cast_type, kind, result, span);
-            }
+            cast::try_cast(context, cast_type, kind, result.into(), span)
+        }
 
-            int.into()
+        kind if kind.is_ptr_type() => {
+            let ptr: PointerValue<'_> = value.into_pointer_value();
+
+            let result: IntValue<'_> =
+                llvm_builder.build_is_not_null(ptr, "").unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        &format!("Failed to compile '!{}' operation!", kind),
+                        span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                });
+
+            cast::try_cast(context, cast_type, kind, result.into(), span)
         }
 
         _ => abort::abort_codegen(
@@ -345,25 +371,34 @@ fn compile_arithmetic_negation<'ctx>(
         kind if kind.is_integer_type() => {
             let int: IntValue = value.into_int_value();
 
-            if let Ok(result) = llvm_builder.build_int_neg(int, "") {
-                let result: BasicValueEnum = result.into();
+            let result: IntValue<'_> = llvm_builder.build_int_neg(int, "").unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    &format!("Failed to compile '!{}' operation!", kind),
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
 
-                return cast::try_cast(context, cast_type, kind, result, span);
-            }
-
-            int.into()
+            cast::try_cast(context, cast_type, kind, result.into(), span)
         }
 
         _ => {
             let float: FloatValue = value.into_float_value();
 
-            if let Ok(result) = llvm_builder.build_float_neg(float, "") {
-                let result: BasicValueEnum = result.into();
+            let result: FloatValue<'_> =
+                llvm_builder.build_float_neg(float, "").unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        &format!("Failed to compile '!{}' operation!", kind),
+                        span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    )
+                });
 
-                return cast::try_cast(context, cast_type, kind, result, span);
-            }
-
-            float.into()
+            cast::try_cast(context, cast_type, kind, result.into(), span)
         }
     }
 }
@@ -384,25 +419,33 @@ fn compile_bitwise_not<'ctx>(
         kind if kind.is_integer_type() => {
             let int: IntValue = value.into_int_value();
 
-            if let Ok(result) = llvm_builder.build_not(int, "") {
-                let result: BasicValueEnum = result.into();
+            let result: IntValue = llvm_builder.build_not(int, "").unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    &format!("Failed to compile '~{}' operation!", kind),
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
 
-                return cast::try_cast(context, cast_type, kind, result, span);
-            }
-
-            int.into()
+            cast::try_cast(context, cast_type, kind, result.into(), span)
         }
 
         _ => {
             let ptr: PointerValue = value.into_pointer_value();
 
-            if let Ok(result) = llvm_builder.build_not(ptr, "") {
-                let result: BasicValueEnum = result.into();
+            let result: PointerValue<'_> = llvm_builder.build_not(ptr, "").unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    &format!("Failed to compile '~{}' operation!", kind),
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                )
+            });
 
-                return cast::try_cast(context, cast_type, kind, result, span);
-            }
-
-            ptr.into()
+            cast::try_cast(context, cast_type, kind, result.into(), span)
         }
     }
 }
@@ -512,14 +555,20 @@ fn compile_arithmetic_negation_const<'ctx>(
     match kind {
         kind if kind.is_integer_type() => value.into_int_value().const_neg().into(),
         _ => {
-            let mut float: FloatValue = value.into_float_value();
+            let float: FloatValue = value.into_float_value();
             let float_type: FloatType = float.get_type();
 
             if let Some(float_value) = float.get_constant() {
-                float = float_type.const_float(-float_value.0);
+                float_type.const_float(-float_value.0).into()
+            } else {
+                abort::abort_codegen(
+                    context,
+                    &format!("Failed to compile '-{}' operation!", kind),
+                    expr.get_span(),
+                    PathBuf::from(file!()),
+                    line!(),
+                )
             }
-
-            float.into()
         }
     }
 }

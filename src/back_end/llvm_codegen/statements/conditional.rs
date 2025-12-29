@@ -5,7 +5,7 @@ use crate::back_end::llvm_codegen::block;
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 
-use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMFunctionExtensions;
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;

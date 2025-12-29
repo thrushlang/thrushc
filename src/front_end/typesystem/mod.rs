@@ -5,7 +5,6 @@ pub mod display;
 pub mod farray;
 pub mod functionref;
 pub mod impls;
-pub mod llvm;
 pub mod modificators;
 pub mod property;
 pub mod ptr;

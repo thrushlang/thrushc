@@ -22,7 +22,7 @@ pub fn try_alloc_at_heap<'ctx>(
 
     abort::abort_codegen(
         context,
-        "Failed to allocate!",
+        "Failed to allocate at heap!",
         span,
         PathBuf::from(file!()),
         line!(),

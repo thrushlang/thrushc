@@ -1,4 +1,4 @@
-use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMAttributesExtensions;
 
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::options::{CompilationUnit, CompilerOptions};
@@ -77,7 +77,7 @@ impl CallConventionsChecker<'_> {
         attributes: &ThrushAttributes,
         applicant: CallConventionAplicant,
     ) {
-        let llvm_attributes: crate::back_end::llvm_codegen::types::repr::LLVMAttributes =
+        let llvm_attributes: crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes =
             attributes.as_llvm_attributes();
         let llvm_backend: &LLVMBackend = self.get_compiler_options().get_llvm_backend_options();
 

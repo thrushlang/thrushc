@@ -1,22 +1,22 @@
-use std::path::PathBuf;
-
-use inkwell::AddressSpace;
-use inkwell::{context::Context, values::BasicValueEnum};
-
 use crate::back_end::llvm_codegen::builtins;
 use crate::back_end::llvm_codegen::builtins::LLVMBuiltin;
 use crate::back_end::llvm_codegen::constgen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::generation::expressions::unary;
+use crate::back_end::llvm_codegen::generation::expressions::unaryop;
 use crate::back_end::llvm_codegen::generation::float;
 use crate::back_end::llvm_codegen::generation::integer;
+use crate::back_end::llvm_codegen::generation::{self, cast};
 use crate::back_end::llvm_codegen::{abort, refptr};
-use crate::back_end::llvm_codegen::{binaryop, generation};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstLLVMGetType};
 use crate::front_end::typesystem::traits::{TypeIsExtensions, TypeStructExtensions};
 use crate::front_end::typesystem::types::Type;
+
+use std::path::PathBuf;
+
+use inkwell::AddressSpace;
+use inkwell::{context::Context, values::BasicValueEnum};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -47,9 +47,9 @@ pub fn compile<'ctx>(
             ..
         } => {
             let float: BasicValueEnum =
-                float::generate_const(context, kind, *value, *signed, *span).into();
+                float::compile_const(context, kind, *value, *signed, *span).into();
 
-            generation::cast::const_numeric_cast(context, float, cast_type, *signed)
+            cast::const_numeric_cast(context, float, cast_type, *signed)
         }
 
         Ast::Integer {
@@ -60,9 +60,9 @@ pub fn compile<'ctx>(
             ..
         } => {
             let integer: BasicValueEnum =
-                integer::generate_const(context, kind, *value, *signed, *span).into();
+                integer::compile_const(context, kind, *value, *signed, *span).into();
 
-            generation::cast::const_numeric_cast(context, integer, cast_type, *signed)
+            cast::const_numeric_cast(context, integer, cast_type, *signed)
         }
 
         // Boolean true/false cases
@@ -104,7 +104,7 @@ pub fn compile<'ctx>(
             let lhs_type: &Type = from.llvm_get_type(context);
             let lhs: BasicValueEnum = constgen::compile(context, from, lhs_type);
 
-            generation::cast::try_cast_const(context, lhs, lhs_type, cast)
+            cast::try_cast_const(context, lhs, lhs_type, cast)
         }
 
         // Variable reference resolution
@@ -123,7 +123,7 @@ pub fn compile<'ctx>(
             ..
         } => {
             if binaryop_type.is_integer_type() {
-                return binaryop::integer::compile_const(
+                return generation::expressions::binaryop::integer::compile_const(
                     context,
                     (left, operator, right, *span),
                     cast_type,
@@ -131,7 +131,7 @@ pub fn compile<'ctx>(
             }
 
             if binaryop_type.is_bool_type() {
-                return binaryop::boolean::compile_const(
+                return generation::expressions::binaryop::boolean::compile_const(
                     context,
                     (left, operator, right, *span),
                     cast_type,
@@ -139,7 +139,7 @@ pub fn compile<'ctx>(
             }
 
             if binaryop_type.is_float_type() {
-                return binaryop::float::compile_const(
+                return generation::expressions::binaryop::float::compile_const(
                     context,
                     (left, operator, right, *span),
                     cast_type,
@@ -161,7 +161,7 @@ pub fn compile<'ctx>(
             expression,
             kind,
             ..
-        } => unary::compile_const(context, (operator, kind, expression), cast_type),
+        } => unaryop::compile_const(context, (operator, kind, expression), cast_type),
 
         // Direct Reference
         Ast::DirectRef { expr, .. } => refptr::compile(context, expr, None),

@@ -11,7 +11,7 @@ use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::AstCodeLocation;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
-use crate::front_end::typesystem::traits::LLVMTypeExtensions;
+use crate::front_end::typesystem::traits::TypeCodeLocation;
 use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
@@ -19,6 +19,7 @@ use std::cmp::Ordering;
 use std::path::PathBuf;
 
 use inkwell::builder::Builder;
+use inkwell::targets::TargetData;
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::FloatType;
 use inkwell::types::PointerType;
@@ -345,16 +346,30 @@ pub fn try_cast<'ctx>(
     from: BasicValueEnum<'ctx>,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
+    let is_int_signed: bool = from_type.is_signed_integer_type();
+    let is_int_unsigned: bool = from_type.is_unsigned_integer_type();
+
+    let comptime_int_signed_type: Type = Type::SSize(from_type.get_span());
+    let comptime_int_unsigned_type: Type = Type::USize(from_type.get_span());
+
     if from.is_float_value()
         && let Some(target_type) = target_type
+        && target_type.is_float_type()
     {
         return self::float(context, target_type, from_type, from, span).unwrap_or(from);
     }
 
     if from.is_int_value()
         && let Some(target_type) = target_type
+        && target_type.is_integer_type()
     {
         return self::integer(context, target_type, from_type, from, span).unwrap_or(from);
+    } else if from.is_int_value() && target_type.is_none() && is_int_signed {
+        return self::integer(context, &comptime_int_signed_type, from_type, from, span)
+            .unwrap_or(from);
+    } else if from.is_int_value() && target_type.is_none() && is_int_unsigned {
+        return self::integer(context, &comptime_int_unsigned_type, from_type, from, span)
+            .unwrap_or(from);
     }
 
     from
@@ -424,7 +439,7 @@ pub fn compile<'ctx>(
             let value: BasicValueEnum = codegen::compile(context, expr, None);
             let cast: BasicTypeEnum = typegeneration::compile_from(context, target_type);
 
-            if from_type.llvm_is_same_bit_size(context, target_type) {
+            if self::is_same_bit_size(context, from_type, target_type) {
                 return llvm_builder
                     .build_bit_cast(value, cast, "")
                     .unwrap_or_else(|_| {
@@ -588,4 +603,16 @@ pub fn const_numeric_cast<'ctx>(
     }
 
     value
+}
+
+#[inline]
+fn is_same_bit_size(context: &mut LLVMCodeGenContext<'_, '_>, lhs: &Type, rhs: &Type) -> bool {
+    let lhs: BasicTypeEnum =
+        crate::back_end::llvm_codegen::typegeneration::compile_from(context, lhs);
+    let rhs: BasicTypeEnum =
+        crate::back_end::llvm_codegen::typegeneration::compile_from(context, rhs);
+
+    let target_data: &TargetData = context.get_target_data();
+
+    target_data.get_bit_size(&lhs) == target_data.get_bit_size(&rhs)
 }

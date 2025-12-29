@@ -8,10 +8,10 @@ use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::obfuscation;
 use crate::back_end::llvm_codegen::typegeneration;
-use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
-use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
-use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
-use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDBGFunction;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunction;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMAttributesExtensions;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;

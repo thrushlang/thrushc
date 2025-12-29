@@ -24,7 +24,7 @@ pub fn compile<'ctx>(
 
     let indexes: Vec<IntValue> = if is_ptr_aggv_type {
         let base: IntValue =
-            integer::generate_const(context, &Type::U32(span), 0, false, index.get_span());
+            integer::compile_const(context, &Type::U32(span), 0, false, index.get_span());
         let depth: IntValue =
             codegen::compile(context, index, Some(&Type::U32(span))).into_int_value();
 
@@ -36,7 +36,7 @@ pub fn compile<'ctx>(
         vec![base]
     } else {
         let base: IntValue =
-            integer::generate_const(context, &Type::U32(span), 0, false, index.get_span());
+            integer::compile_const(context, &Type::U32(span), 0, false, index.get_span());
         let depth: IntValue =
             codegen::compile(context, index, Some(&Type::U32(span))).into_int_value();
 

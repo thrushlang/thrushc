@@ -332,6 +332,7 @@ fn validate_binary_arithmetic(
             Type::F32(..) | Type::F64(..) | Type::F128(..),
             Type::F32(..) | Type::F64(..) | Type::F128(..),
         ) => Ok(()),
+        (Type::Ptr(..), Type::Ptr(..)) if a == b => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,

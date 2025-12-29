@@ -251,13 +251,51 @@ impl LLVMOptimizer<'_, '_> {
                 if parameters_types
                     .iter()
                     .any(|parameter_type| parameter_type.is_pointer_type())
-                    || before
+                    && before
                 {
                     return true;
                 }
 
                 false
             }
+        }
+    }
+
+    pub fn is_optimizable_module(llvm_module: &Module, options: &CompilerOptions) -> bool {
+        let before: bool = (!options.omit_default_optimizations()
+            && options
+                .get_llvm_backend_options()
+                .get_optimization()
+                .is_none_opt())
+            || options
+                .get_llvm_backend_options()
+                .get_optimization()
+                .is_high_opt();
+
+        if !options.omit_default_optimizations()
+            && options
+                .get_llvm_backend_options()
+                .get_optimization()
+                .is_none_opt()
+        {
+            llvm_module
+                .get_functions()
+                .filter(|function| function.get_first_basic_block().is_some())
+                .any(|function| {
+                    function
+                        .get_param_iter()
+                        .any(|param_ty| param_ty.is_pointer_value())
+                })
+        } else {
+            llvm_module
+                .get_functions()
+                .filter(|function| function.get_first_basic_block().is_some())
+                .any(|function| {
+                    function
+                        .get_param_iter()
+                        .any(|param_ty| param_ty.is_pointer_value())
+                })
+                || before
         }
     }
 }

@@ -1,7 +1,7 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::back_end::llvm_codegen::abort;
-use crate::back_end::llvm_codegen::alloc;
+use crate::back_end::llvm_codegen::allocate;
 use crate::back_end::llvm_codegen::constgen;
 use crate::back_end::llvm_codegen::debug::LLVMDebugContext;
 use crate::back_end::llvm_codegen::generation;
@@ -11,11 +11,11 @@ use crate::back_end::llvm_codegen::memory::SymbolAllocated;
 use crate::back_end::llvm_codegen::memory::SymbolToAllocate;
 use crate::back_end::llvm_codegen::symbolstable::LLVMSymbolsTable;
 use crate::back_end::llvm_codegen::typegeneration;
-use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
-use crate::back_end::llvm_codegen::types::repr::LLVMCtors;
-use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
-use crate::back_end::llvm_codegen::types::repr::LLVMDtors;
-use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMCtors;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDBGFunction;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDtors;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunction;
 
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::compiler::options::CompilerOptions;
@@ -146,7 +146,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let llvm_type: inkwell::types::BasicTypeEnum = typegeneration::compile_from(self, kind);
 
         let ptr: PointerValue =
-            alloc::memstatic::allocate_local_constant(self, ascii_name, llvm_type, value, metadata);
+            allocate::memstatic::allocate_local_constant(self, ascii_name, llvm_type, value, metadata);
 
         let constant: SymbolAllocated = SymbolAllocated::new_constant(
             ptr.into(),
@@ -184,7 +184,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         let llvm_type: BasicTypeEnum = typegeneration::compile_from(self, kind);
 
-        let ptr: PointerValue = alloc::memstatic::allocate_global_constant(
+        let ptr: PointerValue = allocate::memstatic::allocate_global_constant(
             self, ascii_name, llvm_type, value, attributes, metadata,
         );
 
@@ -221,7 +221,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             let value: BasicValueEnum =
                 generation::cast::try_cast_const(self, llvm_value, value_type, kind);
 
-            let ptr: PointerValue = alloc::memstatic::allocate_local_static(
+            let ptr: PointerValue = allocate::memstatic::allocate_local_static(
                 self,
                 ascii_name,
                 llvm_type,
@@ -251,7 +251,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         } else {
             let llvm_type: BasicTypeEnum = typegeneration::compile_from(self, kind);
 
-            let ptr: PointerValue = alloc::memstatic::allocate_local_static(
+            let ptr: PointerValue = allocate::memstatic::allocate_local_static(
                 self, ascii_name, llvm_type, None, metadata,
             );
 
@@ -297,7 +297,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
             let value: BasicValueEnum =
                 generation::cast::try_cast_const(self, llvm_value, value_type, kind);
 
-            let ptr: PointerValue = alloc::memstatic::allocate_global_static(
+            let ptr: PointerValue = allocate::memstatic::allocate_global_static(
                 self,
                 ascii_name,
                 llvm_type,
@@ -320,7 +320,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         } else {
             let llvm_type: inkwell::types::BasicTypeEnum = typegeneration::compile_from(self, kind);
 
-            let ptr: PointerValue = alloc::memstatic::allocate_global_static(
+            let ptr: PointerValue = allocate::memstatic::allocate_global_static(
                 self, ascii_name, llvm_type, None, attributes, metadata,
             );
 
@@ -354,7 +354,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let span: Span = local.6;
 
         let ptr: PointerValue =
-            alloc::memstack::local_variable(self, ascii_name, kind, value, attributes, span);
+            allocate::memstack::local_variable(self, ascii_name, kind, value, attributes, span);
 
         let local: SymbolAllocated =
             SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata(), span);

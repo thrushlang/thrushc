@@ -2,8 +2,8 @@ use std::fmt::Display;
 
 use crate::back_end::llvm_codegen::attributes::{LLVMAttribute, LLVMAttributeComparator};
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
-use crate::back_end::llvm_codegen::types::traits::{
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::helpertypes::traits::{
     AssemblerFunctionExtensions, LLVMAttributesExtensions,
 };
 use crate::back_end::llvm_codegen::{codegen, typegeneration};

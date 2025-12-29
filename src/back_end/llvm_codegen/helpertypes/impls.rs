@@ -1,15 +1,15 @@
 use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
 use crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm_codegen::callconventions::CallConvention;
-use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
-use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
-use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
-use crate::back_end::llvm_codegen::types::traits::AssemblerFunctionExtensions;
-use crate::back_end::llvm_codegen::types::traits::LLVMAttributeComparatorExtensions;
-use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
-use crate::back_end::llvm_codegen::types::traits::LLVMDBGFunctionExtensions;
-use crate::back_end::llvm_codegen::types::traits::LLVMFunctionExtensions;
-use crate::back_end::llvm_codegen::types::traits::LLVMLinkageExtensions;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDBGFunction;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunction;
+use crate::back_end::llvm_codegen::helpertypes::traits::AssemblerFunctionExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMAttributeComparatorExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMAttributesExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMDBGFunctionExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMFunctionExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMLinkageExtensions;
 use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::types::Type;
 

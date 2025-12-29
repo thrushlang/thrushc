@@ -112,8 +112,8 @@ impl ThrushAttributesExtensions for ThrushAttributes {
     }
 
     #[inline]
-    fn as_llvm_attributes(&self) -> crate::back_end::llvm_codegen::types::repr::LLVMAttributes<'_> {
-        let mut llvm_attributes: crate::back_end::llvm_codegen::types::repr::LLVMAttributes =
+    fn as_llvm_attributes(&self) -> crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes<'_> {
+        let mut llvm_attributes: crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes =
             Vec::with_capacity(self.len());
 
         for attribute in self {

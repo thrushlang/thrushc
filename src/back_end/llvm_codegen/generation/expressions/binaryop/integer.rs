@@ -9,25 +9,29 @@ use crate::back_end::llvm_codegen::generation;
 use crate::back_end::llvm_codegen::generation::cast;
 use crate::back_end::llvm_codegen::predicates;
 
+use crate::back_end::llvm_codegen::typegeneration;
 use crate::core::diagnostic::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::types::ast::traits::AstLLVMGetType;
 use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::parser::repr::BinaryOperation;
+use crate::front_end::typesystem::traits::TypeExtensions;
 use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 use std::path::PathBuf;
 
 use inkwell::builder::Builder;
+use inkwell::types::BasicTypeEnum;
 use inkwell::values::BasicValueEnum;
 use inkwell::values::IntValue;
+use inkwell::values::PointerValue;
 
 fn int_operation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     lhs: BasicValueEnum<'ctx>,
     rhs: BasicValueEnum<'ctx>,
-    signatures: (bool, bool),
+    signatures: (bool, bool, &Type, &Type),
     operator: &TokenType,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
@@ -255,6 +259,40 @@ fn int_operation<'ctx>(
         };
     }
 
+    if lhs.is_pointer_value() && rhs.is_pointer_value() {
+        let lhs: PointerValue = lhs.into_pointer_value();
+        let rhs: PointerValue = rhs.into_pointer_value();
+
+        match operator {
+            TokenType::Minus => {
+                let lhs_type: &Type = signatures.2;
+                let subtype: &Type = lhs_type.get_type_with_depth(1);
+
+                let pointee_ty: BasicTypeEnum = typegeneration::compile_from(context, subtype);
+
+                return llvm_builder
+                    .build_ptr_diff(pointee_ty, lhs, rhs, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile '-' operation!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            }
+            _ => abort::abort_codegen(
+                context,
+                "Failed to compile without a valid operator!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            ),
+        }
+    }
+
     abort::abort_codegen(
         context,
         "Failed to compile constant integer binary operation!",
@@ -309,6 +347,8 @@ pub fn compile<'ctx>(
             (
                 lhs_type.is_signed_integer_type(),
                 rhs_type.is_signed_integer_type(),
+                lhs_type,
+                rhs_type,
             ),
             operator,
             span,
@@ -359,6 +399,40 @@ fn const_int_operation<'ctx>(
                                 .into();
                         }
                     }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    lhs_number
+                                        .overflowing_div(rhs_number.try_into().unwrap_or_default())
+                                        .0,
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(
+                                            lhs_number
+                                                .overflowing_div(
+                                                    rhs_number.try_into().unwrap_or_default(),
+                                                )
+                                                .0,
+                                        )
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
                 }
 
                 if let Some(lhs_number) = lhs.get_zero_extended_constant() {
@@ -376,6 +450,35 @@ fn const_int_operation<'ctx>(
                 if signatures.0 || signatures.1 {
                     if let Some(lhs_number) = lhs.get_sign_extended_constant() {
                         if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number.unbounded_shl(
+                                            rhs_number.try_into().unwrap_or_default(),
+                                        ))
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    lhs_number
+                                        .unbounded_shl(rhs_number.try_into().unwrap_or_default()),
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
                             return lhs
                                 .get_type()
                                 .const_int(
@@ -422,6 +525,35 @@ fn const_int_operation<'ctx>(
                                 .into();
                         }
                     }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    lhs_number
+                                        .unbounded_shr(rhs_number.try_into().unwrap_or_default()),
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number.unbounded_shr(
+                                            rhs_number.try_into().unwrap_or_default(),
+                                        ))
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
                 }
 
                 if let Some(lhs_number) = lhs.get_zero_extended_constant() {
@@ -447,6 +579,38 @@ fn const_int_operation<'ctx>(
                                 .const_int(
                                     unsafe {
                                         std::mem::transmute::<i64, u64>(lhs_number % rhs_number)
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            let casted_lhs = i64::try_from(lhs_number).unwrap_or_default();
+
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(casted_lhs % rhs_number)
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            let casted_rhs: i64 = i64::try_from(rhs_number).unwrap_or_default();
+
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number % casted_rhs)
                                     },
                                     true,
                                 )
@@ -483,6 +647,38 @@ fn const_int_operation<'ctx>(
                                 .into();
                         }
                     }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            let casted_lhs: i64 = i64::try_from(lhs_number).unwrap_or_default();
+
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(casted_lhs | rhs_number)
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            let casted_rhs: i64 = i64::try_from(rhs_number).unwrap_or_default();
+
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number | casted_rhs)
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
                 }
 
                 if let Some(lhs_number) = lhs.get_zero_extended_constant() {
@@ -506,6 +702,39 @@ fn const_int_operation<'ctx>(
                                 .const_int(
                                     unsafe {
                                         std::mem::transmute::<i64, u64>(lhs_number & rhs_number)
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_zero_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_sign_extended_constant() {
+                            let casted_lhs: i64 = i64::try_from(lhs_number).unwrap_or_default();
+
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(casted_lhs & rhs_number)
+                                    },
+                                    true,
+                                )
+                                .into();
+                        }
+                    }
+
+                    if let Some(lhs_number) = lhs.get_sign_extended_constant() {
+                        if let Some(rhs_number) = rhs.get_zero_extended_constant() {
+                            return lhs
+                                .get_type()
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(
+                                            lhs_number
+                                                & i64::try_from(rhs_number).unwrap_or_default(),
+                                        )
                                     },
                                     true,
                                 )

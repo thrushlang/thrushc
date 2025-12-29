@@ -27,7 +27,7 @@ pub fn try_alloc_at_stack<'ctx>(
 
     abort::abort_codegen(
         context,
-        "Failed to allocate!",
+        "Failed to allocate at stack!",
         span,
         PathBuf::from(file!()),
         line!(),
@@ -46,11 +46,11 @@ pub fn local_variable<'ctx>(
     let name: String = format!("local.{}", ascii_name);
 
     if attributes.has_heap_attr() {
-        crate::back_end::llvm_codegen::alloc::memheap::try_alloc_at_heap(
+        crate::back_end::llvm_codegen::allocate::memheap::try_alloc_at_heap(
             context, llvm_type, &name, span,
         )
     } else {
-        crate::back_end::llvm_codegen::alloc::memstack::try_alloc_at_stack(
+        crate::back_end::llvm_codegen::allocate::memstack::try_alloc_at_stack(
             context, llvm_type, &name, span,
         )
     }

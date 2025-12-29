@@ -2,14 +2,6 @@ use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::modificators::StructureTypeModificator;
 use crate::front_end::typesystem::types::Type;
 
-pub trait LLVMTypeExtensions {
-    fn llvm_is_same_bit_size(
-        &self,
-        context: &mut crate::back_end::llvm_codegen::context::LLVMCodeGenContext<'_, '_>,
-        other: &Type,
-    ) -> bool;
-}
-
 pub trait TypeIsExtensions {
     fn is_char_type(&self) -> bool;
     fn is_void_type(&self) -> bool;

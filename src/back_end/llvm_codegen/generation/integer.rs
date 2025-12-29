@@ -7,7 +7,7 @@ use crate::front_end::typesystem::types::Type;
 
 use inkwell::{context::Context, values::IntValue};
 
-pub fn generate_const<'ctx>(
+pub fn compile_const<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     number: u64,

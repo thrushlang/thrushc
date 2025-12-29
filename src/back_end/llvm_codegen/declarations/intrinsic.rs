@@ -5,8 +5,8 @@ use crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm_codegen::callconventions::CallConvention;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::typegeneration;
-use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
-use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMAttributesExtensions;
 
 use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
 

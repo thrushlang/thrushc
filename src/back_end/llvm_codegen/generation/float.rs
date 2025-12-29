@@ -7,7 +7,7 @@ use inkwell::{context::Context, values::FloatValue};
 
 use std::path::PathBuf;
 
-pub fn generate_const<'ctx>(
+pub fn compile_const<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     iee: f64,

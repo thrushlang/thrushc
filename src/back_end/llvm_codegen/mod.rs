@@ -1,9 +1,8 @@
 pub mod abort;
-pub mod alloc;
+pub mod allocate;
 pub mod atomic;
 pub mod attrbuilder;
 pub mod attributes;
-pub mod binaryop;
 pub mod block;
 pub mod builtins;
 pub mod callconventions;
@@ -30,7 +29,7 @@ pub mod statements;
 pub mod symbolstable;
 pub mod targettriple;
 pub mod typegeneration;
-pub mod types;
+pub mod helpertypes;
 
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;

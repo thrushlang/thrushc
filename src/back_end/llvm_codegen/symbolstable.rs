@@ -2,14 +2,14 @@ use crate::back_end::llvm_codegen::constants::LLVM_COMPILER_SYMBOLS_GLOBAL_MINIM
 use crate::back_end::llvm_codegen::constants::LLVM_COMPILER_SYMBOLS_LOCAL_MINIMAL_CAPACITY;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
 
-use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
-use crate::back_end::llvm_codegen::types::repr::LLVMFunctions;
-use crate::back_end::llvm_codegen::types::repr::LLVMFunctionsParameters;
-use crate::back_end::llvm_codegen::types::repr::LLVMGlobalConstants;
-use crate::back_end::llvm_codegen::types::repr::LLVMGlobalStatics;
-use crate::back_end::llvm_codegen::types::repr::LLVMInstructions;
-use crate::back_end::llvm_codegen::types::repr::LLVMLocalConstants;
-use crate::back_end::llvm_codegen::types::repr::LLVMLocalStatics;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunction;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunctions;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunctionsParameters;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMGlobalConstants;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMGlobalStatics;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMInstructions;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMLocalConstants;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMLocalStatics;
 
 use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
