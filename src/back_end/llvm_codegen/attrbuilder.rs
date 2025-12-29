@@ -57,7 +57,10 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     LLVMAttribute::InlineHint => {
                         function.add_attribute(
                             AttributeLoc::Function,
-                            self::create_inline_hint_attribute(llvm_context),
+                            llvm_context.create_enum_attribute(
+                                Attribute::get_named_enum_kind_id("inlinehint"),
+                                0,
+                            ),
                         );
                     }
 
@@ -168,9 +171,4 @@ impl<'ctx> AttributeBuilder<'ctx> {
             });
         }
     }
-}
-
-#[inline]
-pub fn create_inline_hint_attribute(llvm_context: &Context) -> Attribute {
-    llvm_context.create_enum_attribute(Attribute::get_named_enum_kind_id("inlinehint"), 0)
 }

@@ -1,14 +1,18 @@
+use crate::back_end::llvm_codegen::abort;
+use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
+use crate::back_end::llvm_codegen::typegeneration;
+use crate::core::diagnostic::span::Span;
+use crate::front_end::types::ast::Ast;
+use crate::front_end::typesystem::types::Type;
+use crate::middle_end::mir::attributes::ThrushAttributes;
+use crate::middle_end::mir::attributes::traits::ThrushAttributesExtensions;
+
+use inkwell::types::BasicTypeEnum;
+use inkwell::values::PointerValue;
 use std::path::PathBuf;
 
-use crate::{
-    back_end::llvm_codegen::{abort, context::LLVMCodeGenContext},
-    core::diagnostic::span::Span,
-};
-
-use inkwell::{types::BasicTypeEnum, values::PointerValue};
-
 #[inline]
-pub fn try_alloc_stack<'ctx>(
+pub fn try_alloc_at_stack<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
     ascii_name: &str,
@@ -28,4 +32,26 @@ pub fn try_alloc_stack<'ctx>(
         PathBuf::from(file!()),
         line!(),
     );
+}
+
+pub fn local_variable<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    ascii_name: &str,
+    kind: &Type,
+    value: Option<&Ast>,
+    attributes: &ThrushAttributes,
+    span: Span,
+) -> PointerValue<'ctx> {
+    let llvm_type: BasicTypeEnum = typegeneration::compile_local_type(context, kind, value);
+    let name: String = format!("local.{}", ascii_name);
+
+    if attributes.has_heap_attr() {
+        crate::back_end::llvm_codegen::alloc::memheap::try_alloc_at_heap(
+            context, llvm_type, &name, span,
+        )
+    } else {
+        crate::back_end::llvm_codegen::alloc::memstack::try_alloc_at_stack(
+            context, llvm_type, &name, span,
+        )
+    }
 }

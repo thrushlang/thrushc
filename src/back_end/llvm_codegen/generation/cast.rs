@@ -3,7 +3,7 @@
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::refptr;
-use crate::back_end::llvm_codegen::typegen;
+use crate::back_end::llvm_codegen::typegeneration;
 
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
@@ -267,7 +267,7 @@ pub fn integer<'ctx>(
         llvm_builder
             .build_int_cast_sign_flag(
                 from.into_int_value(),
-                typegen::generate(context, target_type).into_int_type(),
+                typegeneration::compile_from(context, target_type).into_int_type(),
                 from_type.is_signed_integer_type(),
                 "",
             )
@@ -313,7 +313,7 @@ pub fn float<'ctx>(
         llvm_builder
             .build_float_cast(
                 from.into_float_value(),
-                typegen::generate(context, target_type).into_float_type(),
+                typegeneration::compile_from(context, target_type).into_float_type(),
                 "",
             )
             .unwrap_or_else(|_| {
@@ -399,7 +399,8 @@ pub fn compile<'ctx>(
             let val: BasicValueEnum = refptr::compile(context, expr, None);
 
             if val.is_pointer_value() {
-                let integer_type: BasicTypeEnum = typegen::generate(context, target_type);
+                let integer_type: BasicTypeEnum =
+                    typegeneration::compile_from(context, target_type);
 
                 return llvm_builder
                     .build_ptr_to_int(val.into_pointer_value(), integer_type.into_int_type(), "")
@@ -421,7 +422,7 @@ pub fn compile<'ctx>(
 
         (_, to) if to.is_numeric_type() => {
             let value: BasicValueEnum = codegen::compile(context, expr, None);
-            let cast: BasicTypeEnum = typegen::generate(context, target_type);
+            let cast: BasicTypeEnum = typegeneration::compile_from(context, target_type);
 
             if from_type.llvm_is_same_bit_size(context, target_type) {
                 return llvm_builder
@@ -481,7 +482,8 @@ pub fn compile<'ctx>(
             let value: BasicValueEnum = refptr::compile(context, expr, None);
 
             if value.is_pointer_value() {
-                let cast: PointerType = typegen::generate(context, target_type).into_pointer_type();
+                let cast: PointerType =
+                    typegeneration::compile_from(context, target_type).into_pointer_type();
 
                 return llvm_builder
                     .build_pointer_cast(value.into_pointer_value(), cast, "")
@@ -505,7 +507,8 @@ pub fn compile<'ctx>(
             let value: BasicValueEnum = refptr::compile(context, expr, None);
 
             if value.is_pointer_value() {
-                let cast: PointerType = typegen::generate(context, target_type).into_pointer_type();
+                let cast: PointerType =
+                    typegeneration::compile_from(context, target_type).into_pointer_type();
 
                 return llvm_builder
                     .build_pointer_cast(value.into_pointer_value(), cast, "")
@@ -552,7 +555,7 @@ pub fn const_numeric_cast<'ctx>(
     target: &Type,
     is_signed: bool,
 ) -> BasicValueEnum<'ctx> {
-    let cast_type: BasicTypeEnum = typegen::generate(context, target);
+    let cast_type: BasicTypeEnum = typegeneration::compile_from(context, target);
 
     if value.is_int_value() && cast_type.is_int_type() {
         let integer: IntValue = value.into_int_value();

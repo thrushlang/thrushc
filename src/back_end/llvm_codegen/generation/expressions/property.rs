@@ -1,7 +1,7 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::back_end::llvm_codegen::types::LLVMGEPIndexes;
-use crate::back_end::llvm_codegen::{abort, codegen, memory, refptr, typegen};
+use crate::back_end::llvm_codegen::{abort, codegen, memory, refptr, typegeneration};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -107,7 +107,7 @@ fn compile_gep_property<'ctx>(
         let index: u32 = n.1;
         let index_type: &Type = &n.0;
 
-        let llvm_type: BasicTypeEnum = typegen::generate(context, index_type);
+        let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, index_type);
 
         property = llvm_builder
             .build_struct_gep(llvm_type, property, index, "")

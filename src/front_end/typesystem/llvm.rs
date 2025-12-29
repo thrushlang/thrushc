@@ -13,8 +13,10 @@ impl LLVMTypeExtensions for Type {
         context: &mut LLVMCodeGenContext<'_, '_>,
         other: &Type,
     ) -> bool {
-        let lhs: BasicTypeEnum = crate::back_end::llvm_codegen::typegen::generate(context, self);
-        let rhs: BasicTypeEnum = crate::back_end::llvm_codegen::typegen::generate(context, other);
+        let lhs: BasicTypeEnum =
+            crate::back_end::llvm_codegen::typegeneration::compile_from(context, self);
+        let rhs: BasicTypeEnum =
+            crate::back_end::llvm_codegen::typegeneration::compile_from(context, other);
 
         let target_data: &TargetData = context.get_target_data();
 

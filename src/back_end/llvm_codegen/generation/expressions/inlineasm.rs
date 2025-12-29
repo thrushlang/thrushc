@@ -6,7 +6,7 @@ use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::traits::{
     AssemblerFunctionExtensions, LLVMAttributesExtensions,
 };
-use crate::back_end::llvm_codegen::{codegen, typegen};
+use crate::back_end::llvm_codegen::{codegen, typegeneration};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::typesystem::traits::TypeIsExtensions;
@@ -31,7 +31,8 @@ pub fn compile<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let asm_function_type: FunctionType = typegen::generate_fn_type(context, kind, args, false);
+    let asm_function_type: FunctionType =
+        typegeneration::compile_as_function_type(context, kind, args, false);
 
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()

@@ -7,7 +7,10 @@ pub struct LLVMAtomicModificators {
 }
 
 #[inline]
-pub fn try_set_atomic_modificators(instr: InstructionValue, modificators: LLVMAtomicModificators) {
+pub fn configure_atomic_modificators<'ctx>(
+    instr: InstructionValue<'ctx>,
+    modificators: LLVMAtomicModificators,
+) {
     if modificators.atomic_volatile {
         let _ = instr.set_volatile(true);
     }

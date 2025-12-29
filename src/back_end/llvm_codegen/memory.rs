@@ -1,13 +1,10 @@
 #![allow(clippy::enum_variant_names)]
 
 use crate::back_end::llvm_codegen::abort;
-use crate::back_end::llvm_codegen::alloc::atomic;
-use crate::back_end::llvm_codegen::alloc::atomic::LLVMAtomicModificators;
+use crate::back_end::llvm_codegen::atomic;
+use crate::back_end::llvm_codegen::atomic::LLVMAtomicModificators;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::typegen;
-
-use crate::core::console::logging;
-use crate::core::console::logging::LoggingType;
+use crate::back_end::llvm_codegen::typegeneration;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::metadata::constant::LLVMConstantMetadata;
@@ -17,7 +14,6 @@ use crate::front_end::types::ast::metadata::staticvar::LLVMStaticMetadata;
 use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
-use std::fmt::Display;
 use std::path::PathBuf;
 
 use inkwell::AddressSpace;
@@ -156,11 +152,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
     pub fn load(&self, context: &mut LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
         let llvm_builder: &Builder = context.get_llvm_builder();
 
-        if self.get_type().is_ptr_like_type() {
+        if self.get_type(context).is_ptr_like_type() {
             return self.get_ptr().into();
         }
 
-        let llvm_type: BasicTypeEnum = typegen::generate(context, self.get_type());
+        let inner_type: &Type = self.get_type(context);
+        let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, inner_type);
+
         let alignment: u32 = context
             .get_target_data()
             .get_preferred_alignment(&llvm_type);
@@ -168,7 +166,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         if let Self::Local { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                 if let Some(instr) = loaded_value.as_instruction_value() {
-                    atomic::try_set_atomic_modificators(
+                    atomic::configure_atomic_modificators(
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
@@ -186,7 +184,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         if let Self::Constant { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                 if let Some(instr) = loaded_value.as_instruction_value() {
-                    atomic::try_set_atomic_modificators(
+                    atomic::configure_atomic_modificators(
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
@@ -204,7 +202,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         if let Self::Static { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                 if let Some(instr) = loaded_value.as_instruction_value() {
-                    atomic::try_set_atomic_modificators(
+                    atomic::configure_atomic_modificators(
                         instr,
                         LLVMAtomicModificators {
                             atomic_volatile: metadata.volatile,
@@ -297,7 +295,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
     }
 
     #[inline]
-    pub fn get_type(&self) -> &'ctx Type {
+    pub fn get_type(&self, context: &mut LLVMCodeGenContext<'_, '_>) -> &'ctx Type {
         match self {
             Self::Local { kind, .. } => kind,
             Self::Constant { kind, .. } => kind,
@@ -306,7 +304,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
             Self::LowLevelInstruction { kind, .. } => kind,
 
             _ => {
-                self::codegen_abort("Unable to get type of a allocated symbol.");
+                abort::abort_codegen(
+                    context,
+                    "Failed to get a type from a allocated symbol!",
+                    self.get_span(),
+                    PathBuf::from(file!()),
+                    line!(),
+                );
             }
         }
     }
@@ -378,7 +382,7 @@ pub fn load_anon<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate(context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, ptr_type);
 
     let alignment: u32 = context
         .get_target_data()
@@ -389,16 +393,16 @@ pub fn load_anon<'ctx>(
             let _ = instr.set_alignment(alignment);
         }
 
-        return loaded_value;
+        loaded_value
+    } else {
+        abort::abort_codegen(
+            context,
+            "Failed to load a value from memory!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        );
     }
-
-    abort::abort_codegen(
-        context,
-        "Failed to load a value from memory!",
-        span,
-        PathBuf::from(file!()),
-        line!(),
-    );
 }
 
 pub fn dereference<'ctx>(
@@ -410,7 +414,7 @@ pub fn dereference<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate(context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, ptr_type);
 
     let alignment: u32 = context
         .get_target_data()
@@ -418,7 +422,7 @@ pub fn dereference<'ctx>(
 
     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
         if let Some(instr) = loaded_value.as_instruction_value() {
-            atomic::try_set_atomic_modificators(
+            atomic::configure_atomic_modificators(
                 instr,
                 LLVMAtomicModificators {
                     atomic_volatile: metadata.volatile,
@@ -450,7 +454,7 @@ pub fn alloc_anon<'ctx>(
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegen::generate(context, kind);
+    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, kind);
 
     let alignment: u32 = context
         .get_target_data()
@@ -504,19 +508,22 @@ pub fn gep_struct_anon<'ctx>(
 ) -> PointerValue<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if let Ok(ptr) =
-        llvm_builder.build_struct_gep(typegen::generate_gep(context, ptr_type), ptr, index, "")
-    {
-        return ptr;
+    if let Ok(ptr) = llvm_builder.build_struct_gep(
+        typegeneration::compile_gep_type(context, ptr_type),
+        ptr,
+        index,
+        "",
+    ) {
+        ptr
+    } else {
+        abort::abort_codegen(
+            context,
+            "Failed to calculate memory address of an structure!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        );
     }
-
-    abort::abort_codegen(
-        context,
-        "Failed to calculate memory address of an structure!",
-        span,
-        PathBuf::from(file!()),
-        line!(),
-    );
 }
 
 pub fn gep_anon<'ctx>(
@@ -529,21 +536,21 @@ pub fn gep_anon<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let Ok(ptr) = unsafe {
-        llvm_builder.build_in_bounds_gep(typegen::generate_gep(context, ptr_type), ptr, indexes, "")
+        llvm_builder.build_in_bounds_gep(
+            typegeneration::compile_gep_type(context, ptr_type),
+            ptr,
+            indexes,
+            "",
+        )
     } {
-        return ptr;
+        ptr
+    } else {
+        abort::abort_codegen(
+            context,
+            "Failed to calculate memory address of an pointer!",
+            span,
+            PathBuf::from(file!()),
+            line!(),
+        );
     }
-
-    abort::abort_codegen(
-        context,
-        "Failed to calculate memory address of an pointer!",
-        span,
-        PathBuf::from(file!()),
-        line!(),
-    );
-}
-
-#[inline]
-fn codegen_abort<T: Display>(message: T) -> ! {
-    logging::print_backend_bug(LoggingType::BackendBug, &format!("{}", message));
 }

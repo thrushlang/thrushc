@@ -4,7 +4,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::back_end::llvm_codegen::generation::cast;
 use crate::back_end::llvm_codegen::refptr;
-use crate::back_end::llvm_codegen::{abort, codegen, typegen};
+use crate::back_end::llvm_codegen::{abort, codegen, typegeneration};
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstLLVMGetType};
@@ -89,8 +89,8 @@ pub fn compile<'ctx>(
             let source_type: &Type = source.llvm_get_type(context);
             let destination_type: &Type = destination.llvm_get_type(context);
 
-            let src_type: BasicTypeEnum = typegen::generate(context, source_type);
-            let dest_type: BasicTypeEnum = typegen::generate(context, destination_type);
+            let src_type: BasicTypeEnum = typegeneration::compile_from(context, source_type);
+            let dest_type: BasicTypeEnum = typegeneration::compile_from(context, destination_type);
 
             let src_alignment: u32 = context.get_target_data().get_preferred_alignment(&src_type);
             let dest_alignment: u32 = context
@@ -133,8 +133,8 @@ pub fn compile<'ctx>(
             let source_type: &Type = source.llvm_get_type(context);
             let destination_type: &Type = destination.llvm_get_type(context);
 
-            let src_type: BasicTypeEnum = typegen::generate(context, source_type);
-            let dest_type: BasicTypeEnum = typegen::generate(context, destination_type);
+            let src_type: BasicTypeEnum = typegeneration::compile_from(context, source_type);
+            let dest_type: BasicTypeEnum = typegeneration::compile_from(context, destination_type);
 
             let src_alignment: u32 = context.get_target_data().get_preferred_alignment(&src_type);
             let dest_alignment: u32 = context
@@ -172,7 +172,7 @@ pub fn compile<'ctx>(
 
             let destination_type: &Type = destination.llvm_get_type(context);
 
-            let dest_type: BasicTypeEnum = typegen::generate(context, destination_type);
+            let dest_type: BasicTypeEnum = typegeneration::compile_from(context, destination_type);
             let dest_alignment: u32 = context
                 .get_target_data()
                 .get_preferred_alignment(&dest_type);
@@ -192,7 +192,7 @@ pub fn compile<'ctx>(
         }
         LLVMBuiltin::Malloc { of, span } => context
             .get_llvm_builder()
-            .build_malloc(typegen::generate(context, of), "")
+            .build_malloc(typegeneration::compile_from(context, of), "")
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
@@ -204,7 +204,7 @@ pub fn compile<'ctx>(
             })
             .into(),
         LLVMBuiltin::AlignOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegen::generate(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
 
             let alignment: u32 = context
                 .get_target_data()
@@ -219,7 +219,7 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::U32(span), alignment, span)
         }
         LLVMBuiltin::SizeOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegen::generate(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
 
             let sizeof_value: BasicValueEnum = llvm_type
                 .size_of()
@@ -237,7 +237,7 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::USize(span), sizeof_value, span)
         }
         LLVMBuiltin::AbiSizeOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegen::generate(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
             let abi_size: u64 = context.get_target_data().get_abi_size(&llvm_type);
             let size: BasicValueEnum = context
                 .get_llvm_context()
@@ -248,7 +248,7 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::U64(span), size, span)
         }
         LLVMBuiltin::BitSizeOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegen::generate(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
             let bit_size: u64 = context.get_target_data().get_bit_size(&llvm_type);
             let size: BasicValueEnum = context
                 .get_llvm_context()
@@ -259,7 +259,7 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::U64(span), size, span)
         }
         LLVMBuiltin::AbiAlignOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegen::generate(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
             let abi_align: u32 = context.get_target_data().get_abi_alignment(&llvm_type);
 
             let align: BasicValueEnum = context

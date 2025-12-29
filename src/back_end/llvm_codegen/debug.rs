@@ -20,12 +20,13 @@ use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizer;
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizerOptimizableEntity;
-use crate::back_end::llvm_codegen::typegen;
+use crate::back_end::llvm_codegen::typegeneration;
 use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
 use crate::back_end::llvm_codegen::types::traits::LLVMDBGFunctionExtensions;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::constants::COMPILER_ID;
+use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
 use crate::front_end::typesystem::types::Type;
 
@@ -34,6 +35,7 @@ pub struct LLVMDebugContext<'a, 'ctx> {
     builder: DebugInfoBuilder<'ctx>,
     unit: DICompileUnit<'ctx>,
     target_machine: &'a TargetMachine,
+    diagnostician: Diagnostician,
 }
 
 impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
@@ -85,6 +87,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             builder,
             unit: dicompileunit,
             target_machine,
+            diagnostician: Diagnostician::new(unit, options),
         }
     }
 }
@@ -98,13 +101,10 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
     pub fn dispatch_function_debug_data(
-        &self,
+        &mut self,
         function: &LLVMDBGFunction<'ctx>,
         context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ) {
-        let dbg_builder: &DebugInfoBuilder<'_> = self.get_builder();
-        let target_data: TargetData = self.get_target_data();
-
         let value: FunctionValue<'_> = function.get_value();
         let name: &str = function.get_name();
         let return_type: &Type = function.get_return_type();
@@ -120,11 +120,12 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             )
         });
 
-        let llvm_return_type: BasicTypeEnum<'_> = typegen::generate(context, return_type);
+        let llvm_return_type: BasicTypeEnum<'_> =
+            typegeneration::compile_from(context, return_type);
 
         let llvm_parameter_types: Vec<BasicTypeEnum<'_>> = parameter_types
             .iter()
-            .map(|parameter_type| typegen::generate(context, parameter_type))
+            .map(|parameter_type| typegeneration::compile_from(context, parameter_type))
             .collect();
 
         let mut dbg_parameter_types: Vec<DIType<'_>> =
@@ -133,27 +134,18 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         for (parameter_type, llvm_parameter_type) in
             parameter_types.iter().zip(llvm_parameter_types.iter())
         {
-            let name: String = format!("{}", parameter_type);
-            let size: u64 = target_data.get_bit_size(llvm_parameter_type);
+            let ty: DIType<'_> =
+                typegeneration::compile_as_dbg_type(self, parameter_type, *llvm_parameter_type);
 
-            match dbg_builder.create_basic_type(&name, size, 0x00, DIFlagsConstants::PUBLIC) {
-                Ok(dbg_type) => dbg_parameter_types.push(dbg_type.as_type()),
-                Err(_) => return,
-            }
+            dbg_parameter_types.push(ty);
         }
 
-        let Ok(dbg_return_type) = dbg_builder.create_basic_type(
-            &format!("{}", return_type),
-            target_data.get_bit_size(&llvm_return_type),
-            0x00,
-            DIFlagsConstants::PUBLIC,
-        ) else {
-            return;
-        };
+        let dbg_return_type: DIType =
+            typegeneration::compile_as_dbg_type(self, return_type, llvm_return_type);
 
-        let subroutine_type: DISubroutineType<'_> = dbg_builder.create_subroutine_type(
+        let subroutine_type: DISubroutineType<'_> = self.get_builder().create_subroutine_type(
             self.get_unit().get_file(),
-            Some(dbg_return_type.as_type()),
+            Some(dbg_return_type),
             &dbg_parameter_types,
             DIFlagsConstants::PUBLIC,
         );
@@ -165,7 +157,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
 
         let file: DIFile<'_> = self.get_unit().get_file();
 
-        let function_dbg_personality = dbg_builder.create_function(
+        let function_dbg_personality = self.get_builder().create_function(
             file.as_debug_info_scope(),
             name,
             None,
@@ -197,5 +189,10 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
     #[inline]
     pub fn get_target_data(&self) -> TargetData {
         self.target_machine.get_target_data()
+    }
+
+    #[inline]
+    pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
+        &mut self.diagnostician
     }
 }

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::cast;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
-use crate::back_end::llvm_codegen::{abort, codegen, constgen, typegen};
+use crate::back_end::llvm_codegen::{abort, codegen, constgen, typegeneration};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -143,7 +143,7 @@ fn compile_increment_decrement_ref<'ctx>(
         _ => {
             let float: FloatValue = symbol.load(context).into_float_value();
 
-            let modifier: FloatValue = typegen::generate(context, kind)
+            let modifier: FloatValue = typegeneration::compile_from(context, kind)
                 .into_float_type()
                 .const_float(1.0);
 

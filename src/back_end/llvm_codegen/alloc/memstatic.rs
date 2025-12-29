@@ -1,24 +1,26 @@
 #![allow(clippy::too_many_arguments)]
 
-use crate::back_end::llvm_codegen::attrbuilder::{AttributeBuilder, LLVMAttributeApplicant};
-use crate::back_end::llvm_codegen::attributes::{LLVMAttribute, LLVMAttributeComparator};
+use crate::back_end::llvm_codegen::attrbuilder::AttributeBuilder;
+use crate::back_end::llvm_codegen::attrbuilder::LLVMAttributeApplicant;
+use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
+use crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::obfuscation;
-
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
-use crate::front_end::types::ast::metadata::constant::{ConstantMetadata, LLVMConstantMetadata};
-use crate::front_end::types::ast::metadata::staticvar::{LLVMStaticMetadata, StaticMetadata};
+use crate::front_end::types::ast::metadata::constant::ConstantMetadata;
+use crate::front_end::types::ast::metadata::constant::LLVMConstantMetadata;
+use crate::front_end::types::ast::metadata::staticvar::LLVMStaticMetadata;
+use crate::front_end::types::ast::metadata::staticvar::StaticMetadata;
 
+use inkwell::AddressSpace;
+use inkwell::module::Linkage;
 use inkwell::module::Module;
-
-use inkwell::{
-    AddressSpace,
-    module::Linkage,
-    targets::TargetData,
-    types::BasicTypeEnum,
-    values::{BasicValueEnum, GlobalValue, PointerValue},
-};
+use inkwell::targets::TargetData;
+use inkwell::types::BasicTypeEnum;
+use inkwell::values::BasicValueEnum;
+use inkwell::values::GlobalValue;
+use inkwell::values::PointerValue;
 
 fn generate_name(
     context: &LLVMCodeGenContext,
@@ -78,7 +80,7 @@ fn set_global_common<'ctx>(
     }
 }
 
-pub fn local_constant<'ctx>(
+pub fn allocate_local_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
@@ -108,7 +110,7 @@ pub fn local_constant<'ctx>(
     global.as_pointer_value()
 }
 
-pub fn global_constant<'ctx>(
+pub fn allocate_global_constant<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
@@ -150,7 +152,7 @@ pub fn global_constant<'ctx>(
     global.as_pointer_value()
 }
 
-pub fn local_static<'ctx>(
+pub fn allocate_local_static<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
@@ -185,7 +187,7 @@ pub fn local_static<'ctx>(
     global.as_pointer_value()
 }
 
-pub fn global_static<'ctx>(
+pub fn allocate_global_static<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,

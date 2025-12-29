@@ -1,5 +1,7 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
+use crate::back_end::llvm_codegen::debug::LLVMDebugContext;
+
 use crate::core::console::logging::LoggingType;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
@@ -10,6 +12,30 @@ use std::path::PathBuf;
 
 pub fn abort_codegen<'ctx>(
     context: &mut LLVMCodeGenContext<'ctx, '_>,
+    message: &str,
+    span: Span,
+    file: PathBuf,
+    line: u32,
+) -> ! {
+    let diagnostician: &mut Diagnostician = context.get_mut_diagnostician();
+
+    diagnostician.dispatch_diagnostic(
+        &CompilationIssue::BackenEndBug(
+            "Failed to Compile".into(),
+            message.into(),
+            span,
+            CompilationPosition::LLVMBackend,
+            file,
+            line,
+        ),
+        LoggingType::BackendBug,
+    );
+
+    std::process::exit(1);
+}
+
+pub fn abort_codegen_dbg<'ctx>(
+    context: &mut LLVMDebugContext<'ctx, '_>,
     message: &str,
     span: Span,
     file: PathBuf,

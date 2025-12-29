@@ -2,7 +2,7 @@ use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::localanchor::PointerAnchor;
 use crate::back_end::llvm_codegen::memory::{self, LLVMAllocationSite};
-use crate::back_end::llvm_codegen::typegen;
+use crate::back_end::llvm_codegen::typegeneration;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::parser::stmts::types::Constructor;
@@ -34,7 +34,7 @@ fn compile_with_anchor<'ctx>(
     span: Span,
     anchor: PointerAnchor<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let ptr_type: BasicTypeEnum<'_> = typegen::generate(context, struct_type);
+    let ptr_type: BasicTypeEnum<'_> = typegeneration::compile_from(context, struct_type);
     let ptr: PointerValue<'_> = anchor.get_pointer();
 
     context.set_pointer_anchor(PointerAnchor::new(ptr, true));
@@ -65,7 +65,7 @@ fn compile_without_anchor<'ctx>(
     struct_type: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let ptr_type: BasicTypeEnum<'_> = typegen::generate(context, struct_type);
+    let ptr_type: BasicTypeEnum<'_> = typegeneration::compile_from(context, struct_type);
     let ptr: PointerValue<'_> =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, struct_type, span);
 

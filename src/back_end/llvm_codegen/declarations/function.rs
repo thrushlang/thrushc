@@ -7,7 +7,7 @@ use crate::back_end::llvm_codegen::callconventions::CallConvention;
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::obfuscation;
-use crate::back_end::llvm_codegen::typegen;
+use crate::back_end::llvm_codegen::typegeneration;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::repr::LLVMDBGFunction;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
@@ -70,7 +70,7 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     };
 
     let function_type: FunctionType =
-        typegen::generate_fn_type(context, return_type, parameters, ignore_args);
+        typegeneration::compile_as_function_type(context, return_type, parameters, ignore_args);
 
     let llvm_function: FunctionValue =
         llvm_module.add_function(&canonical_name, function_type, None);

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::cast;
 use crate::back_end::llvm_codegen::{abort, refptr};
-use crate::back_end::llvm_codegen::{codegen, typegen};
+use crate::back_end::llvm_codegen::{codegen, typegeneration};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -30,7 +30,12 @@ pub fn compile<'ctx>(
     if let Type::Fn(parameters, kind, modificator, ..) = function_type {
         let need_ignore: bool = modificator.llvm().has_ignore();
         let function_type: FunctionType<'_> =
-            typegen::generate_function_type_from_type(context, kind, parameters, need_ignore);
+            typegeneration::compile_from_function_type_to_function_type(
+                context,
+                kind,
+                parameters,
+                need_ignore,
+            );
 
         let compiled_args: Vec<BasicMetadataValueEnum> = args
             .iter()

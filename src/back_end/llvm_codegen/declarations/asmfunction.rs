@@ -7,7 +7,7 @@ use crate::back_end::llvm_codegen::block;
 use crate::back_end::llvm_codegen::callconventions::CallConvention;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::obfuscation;
-use crate::back_end::llvm_codegen::typegen;
+use crate::back_end::llvm_codegen::typegeneration;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::repr::LLVMFunction;
 use crate::back_end::llvm_codegen::types::traits::AssemblerFunctionExtensions;
@@ -84,7 +84,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
     };
 
     let function_type: FunctionType =
-        typegen::generate_fn_type(context, return_type, parameters, false);
+        typegeneration::compile_as_function_type(context, return_type, parameters, false);
 
     let function_ptr: PointerValue = llvm_context.create_inline_asm(
         function_type,

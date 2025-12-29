@@ -444,7 +444,12 @@ fn const_int_operation<'ctx>(
                         if let Some(rhs_number) = rhs.get_sign_extended_constant() {
                             return lhs
                                 .get_type()
-                                .const_int((lhs_number % rhs_number) as u64, true)
+                                .const_int(
+                                    unsafe {
+                                        std::mem::transmute::<i64, u64>(lhs_number % rhs_number)
+                                    },
+                                    true,
+                                )
                                 .into();
                         }
                     }

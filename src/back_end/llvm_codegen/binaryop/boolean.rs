@@ -97,9 +97,7 @@ pub fn bool_operation<'ctx>(
                 line!(),
             ),
         };
-    }
-
-    if lhs.is_float_value() && rhs.is_float_value() {
+    } else if lhs.is_float_value() && rhs.is_float_value() {
         let (lhs, rhs) = cast::float_together(
             context,
             lhs.into_float_value(),
@@ -128,9 +126,7 @@ pub fn bool_operation<'ctx>(
                 line!(),
             ),
         };
-    }
-
-    if lhs.is_pointer_value() && rhs.is_pointer_value() {
+    } else if lhs.is_pointer_value() && rhs.is_pointer_value() {
         let lhs: PointerValue<'_> = lhs.into_pointer_value();
         let rhs: PointerValue<'_> = rhs.into_pointer_value();
 
@@ -312,9 +308,7 @@ pub fn const_bool_operation<'ctx>(
                 line!(),
             ),
         };
-    }
-
-    if lhs.is_float_value() && rhs.is_float_value() {
+    } else if lhs.is_float_value() && rhs.is_float_value() {
         let (lhs, rhs) =
             generation::cast::const_float_together(lhs.into_float_value(), rhs.into_float_value());
 
@@ -330,9 +324,7 @@ pub fn const_bool_operation<'ctx>(
                 line!(),
             ),
         };
-    }
-
-    if lhs.is_pointer_value() && rhs.is_pointer_value() {
+    } else if lhs.is_pointer_value() && rhs.is_pointer_value() {
         let lhs = lhs.into_pointer_value();
         let rhs = rhs.into_pointer_value();
 

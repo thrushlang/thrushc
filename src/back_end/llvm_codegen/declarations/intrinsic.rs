@@ -4,7 +4,7 @@ use crate::back_end::llvm_codegen::attributes::LLVMAttribute;
 use crate::back_end::llvm_codegen::attributes::LLVMAttributeComparator;
 use crate::back_end::llvm_codegen::callconventions::CallConvention;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::typegen;
+use crate::back_end::llvm_codegen::typegeneration;
 use crate::back_end::llvm_codegen::types::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::types::traits::LLVMAttributesExtensions;
 
@@ -43,7 +43,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
     };
 
     let function_type: FunctionType =
-        typegen::generate_fn_type(context, return_type, parameters, ignore_args);
+        typegeneration::compile_as_function_type(context, return_type, parameters, ignore_args);
 
     let llvm_function: FunctionValue = llvm_module.add_function(external_name, function_type, None);
 

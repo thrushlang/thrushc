@@ -4,7 +4,7 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::localanchor::PointerAnchor;
 use crate::back_end::llvm_codegen::memory::LLVMAllocationSite;
 use crate::back_end::llvm_codegen::{abort, memory};
-use crate::back_end::llvm_codegen::{codegen, typegen};
+use crate::back_end::llvm_codegen::{codegen, typegeneration};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -57,7 +57,7 @@ fn compile_array_without_anchor<'ctx>(
 
     let array_type: Type = Type::FixedArray(items_type.clone().into(), array_size, span);
 
-    let llvm_type: BasicTypeEnum = typegen::generate(context, &array_type);
+    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, &array_type);
 
     let array_ptr: PointerValue =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, &array_type, span);
@@ -125,7 +125,7 @@ fn compile_array_with_anchor<'ctx>(
     let items_type: Type = base_type.get_array_base_type();
 
     let array_type: Type = Type::FixedArray(items_type.clone().into(), array_size, span);
-    let llvm_type: BasicTypeEnum = typegen::generate(context, &array_type);
+    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, &array_type);
 
     context.set_pointer_anchor(PointerAnchor::new(anchor, true));
 
