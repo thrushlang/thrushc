@@ -198,7 +198,7 @@ pub fn compile_as_dbg_type<'ctx>(
         BasicTypeEnum::FloatType(fp_ty) => context
             .get_builder()
             .create_basic_type(
-                &format!("{}", fp_ty),
+                format!("{}", from_type).trim(),
                 target_data.get_bit_size(&fp_ty),
                 0x00,
                 DIFlagsConstants::PUBLIC,
@@ -217,7 +217,7 @@ pub fn compile_as_dbg_type<'ctx>(
         BasicTypeEnum::IntType(int_ty) => context
             .get_builder()
             .create_basic_type(
-                &format!("{}", int_ty),
+                format!("{}", from_type).trim(),
                 target_data.get_bit_size(&int_ty),
                 0x00,
                 DIFlagsConstants::PUBLIC,
@@ -239,7 +239,7 @@ pub fn compile_as_dbg_type<'ctx>(
             context
                 .get_builder()
                 .create_pointer_type(
-                    &format!("{}", pt_ty),
+                    format!("{}", from_type).trim(),
                     inner_type,
                     target_data.get_bit_size(&pt_ty),
                     target_data.get_abi_alignment(&pt_ty),
@@ -272,7 +272,7 @@ pub fn compile_as_dbg_type<'ctx>(
                 .get_builder()
                 .create_struct_type(
                     context.get_unit().get_file().as_debug_info_scope(),
-                    &format!("{}", struct_ty),
+                    format!("{}", from_type).trim(),
                     context.get_unit().get_file(),
                     line,
                     target_data.get_bit_size(&struct_ty),

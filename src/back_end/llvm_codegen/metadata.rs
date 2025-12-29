@@ -67,7 +67,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
 
         {
             if llvm_backend.get_debug_config().is_debug_mode() {
-                const DWARF_VERSION: u64 = 5;
+                let dwarf_version: u64 = llvm_backend.get_debug_config().get_dwarf_version();
                 const DEBUG_VERSION_INFO: u64 = 3;
 
                 let dwarf_v: MetadataValue =
@@ -80,7 +80,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                         self.get_context()
                             .get_llvm_context()
                             .i32_type()
-                            .const_int(DWARF_VERSION, false)
+                            .const_int(dwarf_version, false)
                             .into(),
                     ]);
 

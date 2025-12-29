@@ -6,12 +6,13 @@ use crate::back_end::llvm_codegen::block;
 use crate::back_end::llvm_codegen::callconventions::CallConvention;
 use crate::back_end::llvm_codegen::codegen::LLVMCodegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
-use crate::back_end::llvm_codegen::obfuscation;
-use crate::back_end::llvm_codegen::typegeneration;
 use crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes;
 use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDBGFunction;
 use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunction;
 use crate::back_end::llvm_codegen::helpertypes::traits::LLVMAttributesExtensions;
+use crate::back_end::llvm_codegen::helpertypes::traits::LLVMFunctionExtensions;
+use crate::back_end::llvm_codegen::obfuscation;
+use crate::back_end::llvm_codegen::typegeneration;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -40,12 +41,10 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     let parameters: &[Ast<'ctx>] = function.3;
     let parameters_types: &[Type] = function.4;
     let attributes: LLVMAttributes = function.6.as_llvm_attributes();
-    let body: Option<&Ast<'ctx>> = function.5;
     let span: Span = function.7;
 
     let ignore_args: bool = attributes.has_ignore_attribute();
     let is_public: bool = attributes.has_public_attribute();
-    let is_local: bool = body.is_some();
 
     let call_convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
         attributes.get_attr(LLVMAttributeComparator::Convention)
@@ -82,16 +81,6 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
     AttributeBuilder::new(attributes, LLVMAttributeApplicant::Function(llvm_function))
         .add_function_attributes(context);
 
-    let dbg_proto: LLVMDBGFunction = (
-        canonical_name,
-        llvm_function,
-        return_type,
-        parameters_types,
-        true,
-        is_local,
-        span,
-    );
-
     let proto: LLVMFunction = (
         llvm_function,
         return_type,
@@ -99,10 +88,6 @@ pub fn compile_decl<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: 
         call_convention,
         span,
     );
-
-    if is_local {
-        context.dispatch_function_debug_data(&dbg_proto);
-    }
 
     context.set_current_llvm_function(proto);
     context.new_function(name, proto);
@@ -121,6 +106,11 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
         .get_table()
         .get_function(function_name);
 
+    let value: FunctionValue<'_> = proto.get_value();
+    let return_type: &Type = proto.get_return_type();
+    let parameters_types: Vec<Type> = proto.get_parameters_types().to_vec();
+    let span: Span = proto.get_span();
+
     let llvm_function: FunctionValue = proto.0;
     let llvm_function_block: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
@@ -133,7 +123,23 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
     });
 
     if let Some(function_body) = function_body {
+        let dbg_proto: LLVMDBGFunction = (
+            function_name.to_owned(),
+            value,
+            return_type,
+            parameters_types,
+            true,
+            true,
+            span,
+        );
+
+        codegen
+            .get_mut_context()
+            .start_function_debug_data(&dbg_proto);
+
         codegen.codegen_block(function_body);
+
+        codegen.get_mut_context().finish_dbg_debug_data();
 
         if function_type.is_void_type() && !function_body.has_terminator() {
             let _ = llvm_builder.build_return(None);

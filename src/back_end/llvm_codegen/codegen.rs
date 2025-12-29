@@ -105,6 +105,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
         match node {
             Ast::Block { nodes, span, .. } => {
+                self.get_mut_context().add_dbg_block_data(*span);
+
                 self.context.begin_scope();
 
                 nodes.iter().for_each(|node| {
@@ -173,8 +175,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
             // Control Flow
             Ast::Break { span } => {
-                let llvm_builder: &Builder = self.context.get_llvm_builder();
+                self.get_mut_context().mark_dbg_location(*span);
 
+                let llvm_builder: &Builder = self.context.get_llvm_builder();
                 let break_block: BasicBlock = self.context.get_loop_ctx().get_last_break_branch();
 
                 llvm_builder
@@ -190,8 +193,9 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     });
             }
             Ast::Continue { span } => {
-                let llvm_builder: &Builder = self.context.get_llvm_builder();
+                self.get_mut_context().mark_dbg_location(*span);
 
+                let llvm_builder: &Builder = self.context.get_llvm_builder();
                 let continue_block: BasicBlock =
                     self.context.get_loop_ctx().get_last_continue_branch();
 
@@ -284,6 +288,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             Ast::Return {
                 expression, span, ..
             } => {
+                self.get_mut_context().mark_dbg_location(*span);
+
                 let llvm_builder: &Builder = self.context.get_llvm_builder();
 
                 if expression.is_none() {

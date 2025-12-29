@@ -17,7 +17,7 @@ pub type LLVMDBGFunction<'ctx> = (
     String,
     FunctionValue<'ctx>,
     &'ctx Type,
-    &'ctx [Type],
+    Vec<Type>,
     bool,
     bool,
     Span,

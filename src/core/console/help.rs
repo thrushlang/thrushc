@@ -40,11 +40,10 @@ pub fn show_help() -> ! {
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {}, {}, {} {}\n\n",
+            "{} {}, {} {}\n\n",
             "•".bold(),
             "-v".custom_color((141, 141, 142)).bold(),
             "--version".custom_color((141, 141, 142)).bold(),
-            "version".custom_color((141, 141, 142)).bold(),
             "Show the version.",
         ),
     );
@@ -211,6 +210,17 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-dbg-for-profiling".custom_color((141, 141, 142)).bold(),
             "Emit extra debug info to support source-level profiling tools.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
+            "-dbg-dwarf-version".custom_color((141, 141, 142)).bold(),
+            "[v4|v5]",
+            "Configure the Dwarf version for debugging purposes.",
         ),
     );
 

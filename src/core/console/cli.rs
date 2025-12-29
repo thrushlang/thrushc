@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use crate::core::compiler;
 use crate::core::compiler::backends::llvm;
+use crate::core::compiler::backends::llvm::debug::DwarfVersion;
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
 use crate::core::compiler::options::CompilerOptions;
@@ -162,7 +163,7 @@ impl CommandLine {
                 }
             }
 
-            "-v" | "--version" | "version" => {
+            "-v" | "--version" => {
                 self.advance();
                 logging::write(logging::OutputIn::Stdout, COMPILER_VERSION);
                 std::process::exit(0);
@@ -404,6 +405,20 @@ impl CommandLine {
                     .get_mut_llvm_backend_options()
                     .get_mut_debug_config()
                     .set_debug_for_profiling();
+            }
+
+            "-dbg-dwarf-version" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let dwarf_v: DwarfVersion = self.parse_dwarf_version(self.peek());
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_debug_config()
+                    .set_dwarf_version(dwarf_v);
+
+                self.advance();
             }
 
             "--link-check" => {
@@ -798,6 +813,17 @@ impl CommandLine {
 }
 
 impl CommandLine {
+    fn parse_dwarf_version(&self, dwarf: &str) -> DwarfVersion {
+        match dwarf.to_lowercase().as_str() {
+            "v4" => DwarfVersion::V4,
+            "v5" => DwarfVersion::V5,
+
+            any => {
+                self.report_error(&format!("Unknown dwarf version: '{}'.", any));
+            }
+        }
+    }
+
     #[inline]
     fn parse_optimization_level(&self, opt: &str) -> ThrushOptimization {
         match opt {

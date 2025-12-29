@@ -44,6 +44,11 @@ impl<'ctx> LLVMFunctionExtensions<'ctx> for LLVMFunction<'ctx> {
     fn get_parameters_types(&self) -> &[Type] {
         self.2
     }
+
+    #[inline]
+    fn get_span(&self) -> Span {
+        self.4
+    }
 }
 
 impl<'ctx> LLVMDBGFunctionExtensions<'ctx> for LLVMDBGFunction<'ctx> {
@@ -63,8 +68,8 @@ impl<'ctx> LLVMDBGFunctionExtensions<'ctx> for LLVMDBGFunction<'ctx> {
     }
 
     #[inline]
-    fn get_parameters_types(&self) -> &[Type] {
-        self.3
+    fn get_parameters_types(&self) -> Vec<Type> {
+        self.3.clone()
     }
 
     #[inline]

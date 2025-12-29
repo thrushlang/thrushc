@@ -2,10 +2,16 @@
 
 use std::path::PathBuf;
 
+use inkwell::builder::Builder;
+use inkwell::context::Context;
 use inkwell::debug_info::AsDIScope;
 use inkwell::debug_info::DICompileUnit;
 use inkwell::debug_info::DIFile;
 use inkwell::debug_info::DIFlagsConstants;
+use inkwell::debug_info::DILexicalBlock;
+use inkwell::debug_info::DILocation;
+use inkwell::debug_info::DIScope;
+use inkwell::debug_info::DISubprogram;
 use inkwell::debug_info::DISubroutineType;
 use inkwell::debug_info::DIType;
 use inkwell::debug_info::DWARFEmissionKind;
@@ -37,6 +43,9 @@ pub struct LLVMDebugContext<'a, 'ctx> {
     unit: DICompileUnit<'ctx>,
     target_machine: &'a TargetMachine,
     diagnostician: Diagnostician,
+    subprograms: Vec<DISubprogram<'ctx>>,
+    lexical_blocks: Vec<DILexicalBlock<'ctx>>,
+    debug_locations: Vec<DILocation<'ctx>>,
 }
 
 impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
@@ -81,6 +90,9 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             unit: dicompileunit,
             target_machine,
             diagnostician: Diagnostician::new(unit, options),
+            subprograms: Vec::with_capacity(100),
+            lexical_blocks: Vec::with_capacity(100),
+            debug_locations: Vec::with_capacity(100),
         }
     }
 }
@@ -101,7 +113,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         let value: FunctionValue<'_> = function.get_value();
         let name: &str = function.get_name();
         let return_type: &Type = function.get_return_type();
-        let parameter_types: &[Type] = function.get_parameters_types();
+        let parameter_types: Vec<Type> = function.get_parameters_types();
         let span: Span = function.get_span();
         let line: u32 = u32::try_from(span.get_line()).unwrap_or_else(|_| {
             abort::abort_codegen(
@@ -154,7 +166,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
 
         let file: DIFile<'_> = self.get_unit().get_file();
 
-        let function_dbg_personality = self.get_builder().create_function(
+        let subprogram: DISubprogram<'_> = self.get_builder().create_function(
             file.as_debug_info_scope(),
             name,
             None,
@@ -168,7 +180,128 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             is_optimized,
         );
 
-        value.set_subprogram(function_dbg_personality);
+        self.add_subprogram(subprogram);
+
+        value.set_subprogram(subprogram);
+    }
+}
+
+impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
+    pub fn add_dbg_location(&mut self, context: &mut LLVMCodeGenContext<'_, 'ctx>, span: Span) {
+        let llvm_context: &Context = context.get_llvm_context();
+        let llvm_builder: &Builder = context.get_llvm_builder();
+
+        llvm_builder.unset_current_debug_location();
+
+        let line: u32 = u32::try_from(span.get_line()).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to parse the code location!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let column: u32 = u32::try_from(span.get_span_start()).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to parse the code location!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let debug_loc: DILocation<'_> = self.get_builder().create_debug_location(
+            llvm_context,
+            line,
+            column,
+            self.get_scope(),
+            None,
+        );
+
+        self.debug_locations.push(debug_loc);
+        llvm_builder.set_current_debug_location(debug_loc);
+    }
+
+    pub fn add_dbg_block(&mut self, context: &mut LLVMCodeGenContext<'_, 'ctx>, span: Span) {
+        let line: u32 = u32::try_from(span.get_line()).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to parse the code location!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let column: u32 = u32::try_from(span.get_span_start()).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to parse the code location!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+        let parent_scope: DIScope = self.get_scope();
+
+        let block: DILexicalBlock<'_> = self.get_builder().create_lexical_block(
+            parent_scope,
+            self.get_unit().get_file(),
+            line,
+            column,
+        );
+
+        self.lexical_blocks.push(block);
+    }
+
+    #[inline]
+    pub fn reset_blocks(&mut self) {
+        self.lexical_blocks.clear();
+    }
+
+    #[inline]
+    pub fn reset_debug_locations(&mut self) {
+        self.lexical_blocks.clear();
+    }
+
+    #[inline]
+    pub fn add_subprogram(&mut self, subprogram: DISubprogram<'ctx>) {
+        self.subprograms.push(subprogram);
+    }
+
+    #[inline]
+    pub fn finish_subprogram(&mut self) {
+        self.subprograms.pop();
+
+        self.reset_debug_locations();
+        self.reset_blocks();
+    }
+}
+
+impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
+    #[inline]
+    pub fn get_last_debug_lexical_block(&self) -> Option<DILexicalBlock<'ctx>> {
+        self.lexical_blocks.last().copied()
+    }
+
+    #[inline]
+    pub fn get_last_subprogram(&self) -> Option<DISubprogram<'ctx>> {
+        self.subprograms.last().copied()
+    }
+
+    #[inline]
+    pub fn get_scope(&self) -> DIScope<'ctx> {
+        if let Some(lexical_block) = self.get_last_debug_lexical_block() {
+            lexical_block.as_debug_info_scope()
+        } else if let Some(subprogram) = self.get_last_subprogram() {
+            subprogram.as_debug_info_scope()
+        } else {
+            self.get_unit().as_debug_info_scope()
+        }
     }
 }
 

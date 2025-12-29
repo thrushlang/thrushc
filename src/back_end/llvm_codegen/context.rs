@@ -5,17 +5,17 @@ use crate::back_end::llvm_codegen::allocate;
 use crate::back_end::llvm_codegen::constgen;
 use crate::back_end::llvm_codegen::debug::LLVMDebugContext;
 use crate::back_end::llvm_codegen::generation;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMCtors;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDBGFunction;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDtors;
+use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunction;
 use crate::back_end::llvm_codegen::localanchor::PointerAnchor;
 use crate::back_end::llvm_codegen::loopcontrol::LLVMLoopContext;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
 use crate::back_end::llvm_codegen::memory::SymbolToAllocate;
 use crate::back_end::llvm_codegen::symbolstable::LLVMSymbolsTable;
 use crate::back_end::llvm_codegen::typegeneration;
-use crate::back_end::llvm_codegen::helpertypes::repr::LLVMAttributes;
-use crate::back_end::llvm_codegen::helpertypes::repr::LLVMCtors;
-use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDBGFunction;
-use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDtors;
-use crate::back_end::llvm_codegen::helpertypes::repr::LLVMFunction;
 
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::compiler::options::CompilerOptions;
@@ -145,8 +145,9 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
 
         let llvm_type: inkwell::types::BasicTypeEnum = typegeneration::compile_from(self, kind);
 
-        let ptr: PointerValue =
-            allocate::memstatic::allocate_local_constant(self, ascii_name, llvm_type, value, metadata);
+        let ptr: PointerValue = allocate::memstatic::allocate_local_constant(
+            self, ascii_name, llvm_type, value, metadata,
+        );
 
         let constant: SymbolAllocated = SymbolAllocated::new_constant(
             ptr.into(),
@@ -520,6 +521,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
+    pub fn get_mut_debug_context(&mut self) -> Option<&mut LLVMDebugContext<'a, 'ctx>> {
+        self.dbg_context.as_mut()
+    }
+
+    #[inline]
     pub fn get_compiler_options(&self) -> &CompilerOptions {
         self.options
     }
@@ -589,11 +595,37 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 }
 
 impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
-    pub fn dispatch_function_debug_data(&mut self, dbg_proto: &LLVMDBGFunction<'ctx>) {
+    pub fn start_function_debug_data(&mut self, dbg_proto: &LLVMDBGFunction<'ctx>) {
         let mut dbg_opt: Option<LLVMDebugContext<'_, '_>> = self.dbg_context.take();
 
         if let Some(ref mut dbg) = dbg_opt {
             dbg.dispatch_function_debug_data(dbg_proto, self);
+        }
+
+        self.dbg_context = dbg_opt;
+    }
+
+    pub fn finish_dbg_debug_data(&mut self) {
+        if let Some(dbg_context) = self.get_mut_debug_context() {
+            dbg_context.finish_subprogram();
+        }
+    }
+
+    pub fn add_dbg_block_data(&mut self, span: Span) {
+        let mut dbg_opt: Option<LLVMDebugContext<'_, '_>> = self.dbg_context.take();
+
+        if let Some(ref mut dbg) = dbg_opt {
+            dbg.add_dbg_block(self, span);
+        }
+
+        self.dbg_context = dbg_opt;
+    }
+
+    pub fn mark_dbg_location(&mut self, span: Span) {
+        let mut dbg_opt: Option<LLVMDebugContext<'_, '_>> = self.dbg_context.take();
+
+        if let Some(ref mut dbg) = dbg_opt {
+            dbg.add_dbg_location(self, span);
         }
 
         self.dbg_context = dbg_opt;
