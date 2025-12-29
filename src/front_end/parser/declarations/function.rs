@@ -10,6 +10,7 @@ use crate::front_end::parser::statements::block;
 use crate::front_end::parser::typegen;
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::metadata::fnparam::FunctionParameterMetadata;
+use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::symbols::types::ParametersTypes;
 use crate::front_end::typesystem::types::Type;
@@ -104,7 +105,8 @@ pub fn build_function<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    let return_type: Type = if ctx.check(TokenType::LBrace) {
+    let return_type: Type = if ctx.check(TokenType::LBrace) || ctx.peek().get_type().is_attribute()
+    {
         let peeked: &Token = ctx.peek();
         Type::Void(peeked.get_span())
     } else {

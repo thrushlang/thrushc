@@ -13,6 +13,14 @@ impl TypeIsExtensions for Type {
 
     #[inline(always)]
     fn is_void_type(&self) -> bool {
+        if let Type::Const(subtype, ..) = self {
+            return subtype.is_void_type();
+        }
+
+        if let Type::Ptr(Some(subtype), ..) = self {
+            return subtype.is_void_type();
+        }
+
         matches!(self, Type::Void(..))
     }
 

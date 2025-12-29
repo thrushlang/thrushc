@@ -6,7 +6,8 @@ use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::parser::{attributes, typegen};
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstCodeLocation;
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstStandardExtensions};
+use crate::front_end::types::lexer::traits::TokenTypeExtensions;
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 use crate::front_end::types::parser::symbols::types::ParametersTypes;
 use crate::front_end::typesystem::types::Type;
@@ -89,7 +90,8 @@ pub fn build_assembler_function<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    let return_type: Type = if ctx.check(TokenType::LBrace) {
+    let return_type: Type = if ctx.check(TokenType::LBrace) || ctx.peek().get_type().is_attribute()
+    {
         let peeked: &Token = ctx.peek();
         Type::Void(peeked.get_span())
     } else {
@@ -116,13 +118,26 @@ pub fn build_assembler_function<'parser>(
         let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        let assembly: &str = raw_str.get_str_literal_content(raw_str_span)?;
+        if !raw_str.is_str() {
+            ctx.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                "Expected string literal value.".into(),
+                None,
+                raw_str_span,
+            ));
+        }
+
+        let assembly: String = if let Ast::Str { bytes, .. } = raw_str {
+            String::from_utf8_lossy(&bytes).to_string()
+        } else {
+            String::new()
+        };
 
         if assembler_pos != 0 {
             assembler.push('\n');
         }
 
-        assembler.push_str(assembly);
+        assembler.push_str(&assembly);
 
         if ctx.check(TokenType::RBrace) {
             break;
@@ -160,13 +175,26 @@ pub fn build_assembler_function<'parser>(
         let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        let constraint: &str = raw_str.get_str_literal_content(raw_str_span)?;
+        if !raw_str.is_str() {
+            ctx.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                "Expected string literal value.".into(),
+                None,
+                raw_str_span,
+            ));
+        }
+
+        let constraint: String = if let Ast::Str { bytes, .. } = raw_str {
+            String::from_utf8_lossy(&bytes).to_string()
+        } else {
+            String::new()
+        };
 
         if constraint_pos != 0 {
             constraints.push('\n');
         }
 
-        constraints.push_str(constraint);
+        constraints.push_str(&constraint);
 
         if ctx.check(TokenType::RBrace) {
             break;

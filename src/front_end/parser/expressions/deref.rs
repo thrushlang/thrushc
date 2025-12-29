@@ -13,8 +13,6 @@ use crate::front_end::types::ast::traits::AstGetType;
 use crate::front_end::typesystem::traits::DereferenceExtensions;
 use crate::front_end::typesystem::types::Type;
 
-use inkwell::AtomicOrdering;
-
 pub fn build_dereference<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {

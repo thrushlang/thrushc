@@ -29,6 +29,7 @@ use crate::front_end::types::parser::symbols::types::Struct;
 use crate::front_end::typesystem::modificators::FunctionReferenceTypeModificator;
 use crate::front_end::typesystem::modificators::GCCFunctionReferenceTypeModificator;
 use crate::front_end::typesystem::modificators::LLVMFunctionReferenceTypeModificator;
+use crate::front_end::typesystem::traits::TypeCodeLocation;
 use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
@@ -143,7 +144,18 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Co
             break;
         }
 
-        parameter_types.push(self::build_type(ctx, false)?);
+        let param_type: Type = self::build_type(ctx, false)?;
+
+        if param_type.is_void_type() {
+            ctx.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0019,
+                "Void type isn't a value.".into(),
+                None,
+                param_type.get_span(),
+            ));
+        }
+
+        parameter_types.push(param_type);
 
         if ctx.check(TokenType::RBracket) {
             break;
@@ -185,17 +197,37 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Co
 }
 
 fn build_const_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
-    Ok(Type::Const(self::build_type(ctx, false)?.into(), span))
+    let inner_type: Type = self::build_type(ctx, false)?;
+
+    if inner_type.is_void_type() {
+        ctx.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "Void type isn't a value.".into(),
+            None,
+            inner_type.get_span(),
+        ));
+    }
+
+    Ok(Type::Const(inner_type.into(), span))
 }
 
 fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
-        CompilationIssueCode::E0001,
+        CompilationIssueCode::E0019,
         "Expected '['.".into(),
     )?;
 
     let array_type: Type = self::build_type(ctx, false)?;
+
+    if array_type.is_void_type() {
+        ctx.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "Void type isn't a value.".into(),
+            None,
+            array_type.get_span(),
+        ));
+    }
 
     if ctx.check(TokenType::SemiColon) {
         ctx.consume(
@@ -208,16 +240,16 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         let size_type: &Type = size.get_value_type()?;
 
         if !size.is_integer() {
-            return Err(CompilationIssue::Error(
+            ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected literal integer value.".into(),
+                "Expected literal integer value as a size indicator.".into(),
                 None,
                 span,
             ));
         }
 
         if !size_type.is_unsigned_integer_type() || !size_type.is_lesseq_unsigned32bit_integer() {
-            return Err(CompilationIssue::Error(
+            ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected unsigned integer value less than or equal to 32 bits.".into(),
                 None,
@@ -225,22 +257,32 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
             ));
         }
 
-        let raw_array_size: u64 = size.get_integer_value()?;
+        let raw_array_size: u64 = if let Ast::Integer { value, .. } = size {
+            value
+        } else {
+            0
+        };
 
-        if let Ok(array_size) = u32::try_from(raw_array_size) {
-            ctx.consume(
-                TokenType::RBracket,
+        let array_size: Result<u32, std::num::TryFromIntError> = u32::try_from(raw_array_size);
+
+        if array_size.is_err() {
+            ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected ']'.".into(),
-            )?;
-
-            return Ok(Type::FixedArray(array_type.into(), array_size, span));
+                "Expected any unsigned 32 bits integer value.".into(),
+                None,
+                span,
+            ));
         }
 
-        return Err(CompilationIssue::Error(
+        ctx.consume(
+            TokenType::RBracket,
             CompilationIssueCode::E0001,
-            "Expected any unsigned 32 bits integer value.".into(),
-            None,
+            "Expected ']'.".into(),
+        )?;
+
+        return Ok(Type::FixedArray(
+            array_type.into(),
+            array_size.unwrap_or_default(),
             span,
         ));
     }
@@ -268,8 +310,26 @@ fn build_recursive_type(
     if let Type::Ptr(..) = &mut before_type {
         let mut inner_type: Type = self::build_type(ctx, false)?;
 
+        if inner_type.is_void_type() {
+            ctx.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0019,
+                "Void type isn't a value.".into(),
+                None,
+                inner_type.get_span(),
+            ));
+        }
+
         while ctx.check(TokenType::LBracket) {
             inner_type = self::build_recursive_type(ctx, inner_type, span)?;
+
+            if inner_type.is_void_type() {
+                ctx.add_error(CompilationIssue::Error(
+                    CompilationIssueCode::E0019,
+                    "Void type isn't a value.".into(),
+                    None,
+                    inner_type.get_span(),
+                ));
+            }
         }
 
         ctx.consume(

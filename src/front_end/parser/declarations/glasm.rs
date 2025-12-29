@@ -5,7 +5,7 @@ use crate::front_end::lexer::token::Token;
 use crate::front_end::lexer::tokentype::TokenType;
 use crate::front_end::parser::{ParserContext, expressions};
 use crate::front_end::types::ast::Ast;
-use crate::front_end::types::ast::traits::AstCodeLocation;
+use crate::front_end::types::ast::traits::{AstCodeLocation, AstStandardExtensions};
 use crate::front_end::types::parser::stmts::traits::TokenExtensions;
 
 pub fn build_global_assembler<'parser>(
@@ -28,6 +28,15 @@ pub fn build_global_assembler<'parser>(
     let assembler: Ast = expressions::build_expr(ctx)?;
     let asssembler_span: Span = assembler.get_span();
 
+    if !assembler.is_str() {
+        ctx.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0001,
+            "Expected string literal value.".into(),
+            None,
+            asssembler_span,
+        ));
+    }
+
     ctx.consume(
         TokenType::RParen,
         CompilationIssueCode::E0001,
@@ -40,10 +49,11 @@ pub fn build_global_assembler<'parser>(
         "Expected ';'.".into(),
     )?;
 
-    let asm: &str = assembler.get_str_literal_content(asssembler_span)?;
+    let asm: String = if let Ast::Str { bytes, .. } = assembler {
+        String::from_utf8_lossy(&bytes).to_string()
+    } else {
+        String::new()
+    };
 
-    Ok(Ast::GlobalAssembler {
-        asm: asm.to_string(),
-        span,
-    })
+    Ok(Ast::GlobalAssembler { asm, span })
 }

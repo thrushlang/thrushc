@@ -45,7 +45,7 @@ impl<'ctx> LLVMJITCompiler<'ctx> {
         self.load_with_libc()?;
         self.load_with_external_libraries();
 
-        let entrypoint: FunctionValue = self.get_entrypoint()?;
+        let entrypoint_v: FunctionValue = self.get_entrypoint()?;
 
         let program_path: PathBuf = env::current_exe().unwrap_or_default();
         let start_path: &str = program_path.to_str().unwrap_or_default();
@@ -53,7 +53,11 @@ impl<'ctx> LLVMJITCompiler<'ctx> {
         let mut args: Vec<String> = vec![start_path.into()];
         args.extend(self.config.get_args().iter().cloned());
 
-        Ok(unsafe { self.engine.run_function_as_main(entrypoint, &args) })
+        self.engine.run_static_constructors();
+        let result: i32 = unsafe { self.engine.run_function_as_main(entrypoint_v, &args) };
+        self.engine.run_static_destructors();
+
+        Ok(result)
     }
 }
 

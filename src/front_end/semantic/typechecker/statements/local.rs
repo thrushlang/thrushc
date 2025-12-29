@@ -34,7 +34,7 @@ pub fn validate<'type_checker>(
             if local_type.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type isn't a value.".into(),
+                    "Void type isn't a value.".into(),
                     None,
                     *span,
                 ));
@@ -49,7 +49,7 @@ pub fn validate<'type_checker>(
                 if local_type.is_void_type() {
                     typechecker.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type isn't a value.".into(),
+                        "Void type isn't a value.".into(),
                         None,
                         *span,
                     ));

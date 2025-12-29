@@ -73,7 +73,7 @@ pub fn build_asm_code_block<'parser>(
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_str() {
-            return Err(CompilationIssue::Error(
+            ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected string literal value.".into(),
                 None,
@@ -81,13 +81,17 @@ pub fn build_asm_code_block<'parser>(
             ));
         }
 
-        let assembly: &str = raw_str.get_str_literal_content(raw_str_span)?;
+        let assembly: String = if let Ast::Str { bytes, .. } = raw_str {
+            String::from_utf8_lossy(&bytes).to_string()
+        } else {
+            String::new()
+        };
 
         if assembler_pos != 0 {
             assembler.push('\n');
         }
 
-        assembler.push_str(assembly);
+        assembler.push_str(&assembly);
 
         if ctx.check(TokenType::RBrace) {
             break;
@@ -125,13 +129,26 @@ pub fn build_asm_code_block<'parser>(
         let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        let constraint: &str = raw_str.get_str_literal_content(raw_str_span)?;
+        if !raw_str.is_str() {
+            ctx.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                "Expected string literal value.".into(),
+                None,
+                raw_str_span,
+            ));
+        }
+
+        let constraint: String = if let Ast::Str { bytes, .. } = raw_str {
+            String::from_utf8_lossy(&bytes).to_string()
+        } else {
+            String::new()
+        };
 
         if constraint_pos != 0 {
             constraints.push('\n');
         }
 
-        constraints.push_str(constraint);
+        constraints.push_str(&constraint);
 
         if ctx.check(TokenType::RBrace) {
             break;

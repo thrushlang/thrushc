@@ -28,6 +28,7 @@ use crate::core::compiler::options::CompilerOptions;
 use crate::core::constants::COMPILER_ID;
 use crate::core::diagnostic::diagnostician::Diagnostician;
 use crate::core::diagnostic::span::Span;
+use crate::front_end::typesystem::traits::TypeIsExtensions;
 use crate::front_end::typesystem::types::Type;
 
 #[derive(Debug)]
@@ -120,8 +121,11 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             )
         });
 
-        let llvm_return_type: BasicTypeEnum<'_> =
-            typegeneration::compile_from(context, return_type);
+        let llvm_return_type: Option<BasicTypeEnum<'_>> = if !return_type.is_void_type() {
+            Some(typegeneration::compile_from(context, return_type))
+        } else {
+            None
+        };
 
         let llvm_parameter_types: Vec<BasicTypeEnum<'_>> = parameter_types
             .iter()
@@ -140,12 +144,13 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             dbg_parameter_types.push(ty);
         }
 
-        let dbg_return_type: DIType =
-            typegeneration::compile_as_dbg_type(self, return_type, llvm_return_type);
+        let dbg_return_type: Option<DIType> = llvm_return_type.map(|llvm_return_type| {
+            typegeneration::compile_as_dbg_type(self, return_type, llvm_return_type)
+        });
 
         let subroutine_type: DISubroutineType<'_> = self.get_builder().create_subroutine_type(
             self.get_unit().get_file(),
-            Some(dbg_return_type),
+            dbg_return_type,
             &dbg_parameter_types,
             DIFlagsConstants::PUBLIC,
         );

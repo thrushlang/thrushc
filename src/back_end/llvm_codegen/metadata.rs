@@ -56,6 +56,58 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             .const_int(1, false)
             .into();
 
+        let lvl_warn: BasicMetadataValueEnum = self
+            .get_context()
+            .get_llvm_context()
+            .i32_type()
+            .const_int(2, false)
+            .into();
+
+        {
+            if llvm_backend.get_debug_config().is_debug_mode() {
+                const DWARF_VERSION: u64 = 5;
+                const DEBUG_VERSION_INFO: u64 = 3;
+
+                let dwarf_v: MetadataValue =
+                    self.get_context().get_llvm_context().metadata_node(&[
+                        lvl_max,
+                        self.get_context()
+                            .get_llvm_context()
+                            .metadata_string("Dwarf Version")
+                            .into(),
+                        self.get_context()
+                            .get_llvm_context()
+                            .i32_type()
+                            .const_int(DWARF_VERSION, false)
+                            .into(),
+                    ]);
+
+                let _ = self
+                    .get_context()
+                    .get_llvm_module()
+                    .add_global_metadata("llvm.module.flags", &dwarf_v);
+
+                let debug_info_v: MetadataValue =
+                    self.get_context().get_llvm_context().metadata_node(&[
+                        lvl_warn,
+                        self.get_context()
+                            .get_llvm_context()
+                            .metadata_string("Debug Info Version")
+                            .into(),
+                        self.get_context()
+                            .get_llvm_context()
+                            .i32_type()
+                            .const_int(DEBUG_VERSION_INFO, false)
+                            .into(),
+                    ]);
+
+                let _ = self
+                    .get_context()
+                    .get_llvm_module()
+                    .add_global_metadata("llvm.module.flags", &debug_info_v);
+            }
+        }
+
         {
             let repr: u64 = llvm_backend.get_reloc_mode().to_metadata_repr();
 

@@ -19,7 +19,7 @@ pub fn validate<'type_checker>(
                 if parameter.get_value_type()?.is_void_type() {
                     typechecker.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type isn't a value.".into(),
+                        "Void type isn't a value.".into(),
                         None,
                         parameter.get_span(),
                     ));
@@ -36,7 +36,7 @@ pub fn validate<'type_checker>(
                 if parameter.get_value_type()?.is_void_type() {
                     typechecker.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type isn't a value.".into(),
+                        "Void type isn't a value.".into(),
                         None,
                         parameter.get_span(),
                     ));
@@ -59,7 +59,7 @@ pub fn validate<'type_checker>(
                 if parameter.get_any_type()?.is_void_type() {
                     typechecker.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type isn't a value.".into(),
+                        "Void type isn't a value.".into(),
                         None,
                         parameter.get_span(),
                     ));

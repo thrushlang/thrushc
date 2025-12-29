@@ -2,7 +2,6 @@ use crate::back_end;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::core::diagnostic::span::Span;
-use crate::core::errors::position::CompilationPosition;
 use crate::core::errors::standard::{CompilationIssue, CompilationIssueCode};
 
 use crate::front_end::types::ast::Ast;
@@ -243,47 +242,6 @@ impl AstLLVMGetType for Ast<'_> {
                 line!(),
             ),
         }
-    }
-}
-
-impl Ast<'_> {
-    #[inline]
-    pub fn get_str_literal_content(&self, span: Span) -> Result<&str, CompilationIssue> {
-        if let Ast::Str { bytes, .. } = self {
-            if let Ok(content) = std::str::from_utf8(bytes) {
-                return Ok(content);
-            }
-
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0001,
-                "Expected string literal.".into(),
-                None,
-                span,
-            ));
-        }
-
-        Err(CompilationIssue::Error(
-            CompilationIssueCode::E0001,
-            "Expected string literal.".into(),
-            None,
-            span,
-        ))
-    }
-
-    #[inline]
-    pub fn get_integer_value(&self) -> Result<u64, CompilationIssue> {
-        if let Ast::Integer { value, .. } = self {
-            return Ok(*value);
-        }
-
-        Err(CompilationIssue::FrontEndBug(
-            String::from("Integer not caught"),
-            String::from("Expected a integer value"),
-            self.get_span(),
-            CompilationPosition::Parser,
-            PathBuf::from(file!()),
-            line!(),
-        ))
     }
 }
 
