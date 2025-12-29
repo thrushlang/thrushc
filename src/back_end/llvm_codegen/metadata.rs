@@ -5,6 +5,8 @@ use crate::back_end::llvm_codegen::targettriple::LLVMTargetTriple;
 
 use crate::core::compiler::backends::llvm::LLVMBackend;
 use crate::core::compiler::options::CompilerOptions;
+use crate::core::console::logging;
+use crate::core::console::logging::LoggingType;
 use crate::core::constants::COMPILER_ID;
 
 use inkwell::values::BasicMetadataValueEnum;
@@ -82,10 +84,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                             .into(),
                     ]);
 
-                let _ = self
-                    .get_context()
+                self.get_context()
                     .get_llvm_module()
-                    .add_global_metadata("llvm.module.flags", &dwarf_v);
+                    .add_global_metadata("llvm.module.flags", &dwarf_v)
+                    .unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "'Dwarf Version' metadata failed to set up.",
+                        );
+                    });
 
                 let debug_info_v: MetadataValue =
                     self.get_context().get_llvm_context().metadata_node(&[
@@ -101,10 +108,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                             .into(),
                     ]);
 
-                let _ = self
-                    .get_context()
+                self.get_context()
                     .get_llvm_module()
-                    .add_global_metadata("llvm.module.flags", &debug_info_v);
+                    .add_global_metadata("llvm.module.flags", &debug_info_v)
+                    .unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "'Debug Info Version' metadata failed to set up.",
+                        );
+                    });
             }
         }
 
@@ -124,10 +136,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                     .into(),
             ]);
 
-            let _ = self
-                .get_context()
+            self.get_context()
                 .get_llvm_module()
-                .add_global_metadata("llvm.module.flags", &pic_level);
+                .add_global_metadata("llvm.module.flags", &pic_level)
+                .unwrap_or_else(|_| {
+                    logging::print_warn(
+                        LoggingType::Warning,
+                        "'PIC Level' metadata failed to set up.",
+                    );
+                });
         }
 
         {
@@ -146,10 +163,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                     .into(),
             ]);
 
-            let _ = self
-                .get_context()
+            self.get_context()
                 .get_llvm_module()
-                .add_global_metadata("llvm.module.flags", &pie_level);
+                .add_global_metadata("llvm.module.flags", &pie_level)
+                .unwrap_or_else(|_| {
+                    logging::print_warn(
+                        LoggingType::Warning,
+                        "'PIE Level' metadata failed to set up.",
+                    );
+                });
         }
 
         {
@@ -168,10 +190,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                     .into(),
             ]);
 
-            let _ = self
-                .get_context()
+            self.get_context()
                 .get_llvm_module()
-                .add_global_metadata("llvm.module.flags", &code_level);
+                .add_global_metadata("llvm.module.flags", &code_level)
+                .unwrap_or_else(|_| {
+                    logging::print_warn(
+                        LoggingType::Warning,
+                        "'Code Model' metadata failed to set up.",
+                    );
+                });
         }
 
         #[cfg(target_vendor = "apple")]
@@ -214,10 +241,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                         .into(),
                 ]);
 
-                let _ = self
-                    .get_context()
+                self.get_context()
                     .get_llvm_module()
-                    .add_global_metadata("llvm.module.flags", &sdk_v);
+                    .add_global_metadata("llvm.module.flags", &sdk_v)
+                    .unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "'MacOS SDK Version' metadata failed to set up.",
+                        );
+                    });
             }
 
             if let Some(sdk_ios_version) = llvm_backend.get_target().get_ios_version() {
@@ -251,10 +283,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                         .into(),
                 ]);
 
-                let _ = self
-                    .get_context()
+                self.get_context()
                     .get_llvm_module()
-                    .add_global_metadata("llvm.module.flags", &sdk_v);
+                    .add_global_metadata("llvm.module.flags", &sdk_v)
+                    .unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "'IOS SDK Version' metadata failed to set up.",
+                        );
+                    });
             }
         }
 
@@ -278,10 +315,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                             .into(),
                     ]);
 
-                let _ = self
-                    .get_context()
+                self.get_context()
                     .get_llvm_module()
-                    .add_global_metadata("llvm.module.flags", &metadata);
+                    .add_global_metadata("llvm.module.flags", &metadata)
+                    .unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "'Target ABI' metadata failed to set up.",
+                        );
+                    });
             }
         }
 
@@ -303,10 +345,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                             .into(),
                     ]);
 
-                let _ = self
-                    .get_context()
+                self.get_context()
                     .get_llvm_module()
-                    .add_global_metadata("llvm.module.flags", &direct_access_external_data);
+                    .add_global_metadata("llvm.module.flags", &direct_access_external_data)
+                    .unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "'Direct Access External Data' metadata failed to set up.",
+                        );
+                    });
             }
         }
 
@@ -332,10 +379,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                             .into(),
                     ]);
 
-                let _ = self
-                    .get_context()
+                self.get_context()
                     .get_llvm_module()
-                    .add_global_metadata("llvm.module.flags", &code_level);
+                    .add_global_metadata("llvm.module.flags", &code_level)
+                    .unwrap_or_else(|_| {
+                        logging::print_warn(
+                            LoggingType::Warning,
+                            "'Darwin Target Triple' metadata failed to set up.",
+                        );
+                    });
             }
         }
 
@@ -362,10 +414,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                                 .into(),
                         ]);
 
-                    let _ = self
-                        .get_context()
+                    self.get_context()
                         .get_llvm_module()
-                        .add_global_metadata("llvm.module.flags", &rt_lib_use_got);
+                        .add_global_metadata("llvm.module.flags", &rt_lib_use_got)
+                        .unwrap_or_else(|_| {
+                            logging::print_warn(
+                                LoggingType::Warning,
+                                "'RtLibUseGOT' metadata failed to set up.",
+                            );
+                        });
                 }
             }
         }
@@ -385,10 +442,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                         .into(),
                 ]);
 
-            let _ = self
-                .get_context()
+            self.get_context()
                 .get_llvm_module()
-                .add_global_metadata("llvm.module.flags", &frame_pointer);
+                .add_global_metadata("llvm.module.flags", &frame_pointer)
+                .unwrap_or_else(|_| {
+                    logging::print_warn(
+                        LoggingType::Warning,
+                        "'Frame Pointer' metadata failed to set up.",
+                    );
+                });
         }
 
         if !llvm_backend.omit_uwtable() {
@@ -405,10 +467,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                     .into(),
             ]);
 
-            let _ = self
-                .get_context()
+            self.get_context()
                 .get_llvm_module()
-                .add_global_metadata("llvm.module.flags", &uwtable);
+                .add_global_metadata("llvm.module.flags", &uwtable)
+                .unwrap_or_else(|_| {
+                    logging::print_warn(
+                        LoggingType::Warning,
+                        "'Unwind Table' metadata failed to set up.",
+                    );
+                });
         }
     }
 
@@ -452,10 +519,15 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             .get_llvm_context()
             .metadata_node(&[build_id.into(), llvm_v.into()]);
 
-        let _ = self
-            .get_context()
+        self.get_context()
             .get_llvm_module()
-            .add_global_metadata("build", &node);
+            .add_global_metadata("build", &node)
+            .unwrap_or_else(|_| {
+                logging::print_warn(
+                    LoggingType::Warning,
+                    "'Build Compiler Info' metadata failed to set up.",
+                );
+            });
     }
 }
 

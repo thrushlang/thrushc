@@ -1,7 +1,7 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::cast;
 use crate::back_end::llvm_codegen::memory::SymbolAllocated;
-use crate::back_end::llvm_codegen::{abort, codegen, constgen, refptr, typegeneration};
+use crate::back_end::llvm_codegen::{abort, codegen, constgen, typegeneration};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::lexer::tokentype::TokenType;
@@ -304,7 +304,7 @@ fn compile_logical_negation<'ctx>(
     let kind: &Type = expr.llvm_get_type(context);
 
     let value: BasicValueEnum = if kind.is_ptr_like_type() {
-        refptr::compile(context, expr, cast_type)
+        codegen::compile_as_ptr(context, expr, cast_type)
     } else {
         codegen::compile(context, expr, cast_type)
     };

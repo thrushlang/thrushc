@@ -7,10 +7,10 @@ use crate::back_end::llvm_codegen::declarations::{self};
 use crate::back_end::llvm_codegen::generation;
 use crate::back_end::llvm_codegen::generation::{cast, float, integer};
 use crate::back_end::llvm_codegen::helpertypes::traits::LLVMFunctionExtensions;
+use crate::back_end::llvm_codegen::statements;
 use crate::back_end::llvm_codegen::statements::lli;
 use crate::back_end::llvm_codegen::{abort, memory};
 use crate::back_end::llvm_codegen::{builtins, codegen, constgen};
-use crate::back_end::llvm_codegen::{refptr, statements};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -419,8 +419,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     source_type.clone()
                 };
 
-                let ptr: BasicValueEnum = refptr::compile(self.context, source, None);
-
+                let ptr: BasicValueEnum = self::compile_as_ptr(self.context, source, None);
                 let value: BasicValueEnum = codegen::compile(self.context, value, Some(&cast_type));
 
                 memory::store_anon(self.context, ptr.into_pointer_value(), value, *span);
@@ -657,7 +656,7 @@ pub fn compile<'ctx>(
         ),
 
         // Direct Reference
-        Ast::DirectRef { expr, .. } => refptr::compile(context, expr, cast_type),
+        Ast::DirectRef { expr, .. } => self::compile_as_ptr(context, expr, cast_type),
 
         // Symbol/Property Access
         // Compiles a reference to a variable or symbol
@@ -682,7 +681,7 @@ pub fn compile<'ctx>(
             span,
             ..
         } => {
-            let value: BasicValueEnum = refptr::compile(context, value, Some(kind));
+            let value: BasicValueEnum = self::compile_as_ptr(context, value, Some(kind));
 
             let deref_value: BasicValueEnum = if value.is_pointer_value() {
                 memory::dereference(
@@ -762,5 +761,16 @@ pub fn compile<'ctx>(
                 line!(),
             );
         }
+    }
+}
+
+pub fn compile_as_ptr<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expr: &'ctx Ast,
+    cast_type: Option<&Type>,
+) -> BasicValueEnum<'ctx> {
+    match expr {
+        Ast::Reference { name, .. } => context.get_table().get_symbol(name).get_ptr().into(),
+        _ => codegen::compile(context, expr, cast_type),
     }
 }

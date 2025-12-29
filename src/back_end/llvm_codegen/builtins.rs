@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::back_end::llvm_codegen::generation::cast;
-use crate::back_end::llvm_codegen::refptr;
 use crate::back_end::llvm_codegen::{abort, codegen, typegeneration};
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -76,12 +75,12 @@ pub fn compile<'ctx>(
 
             let src_span: Span = source.get_span();
             let src: PointerValue =
-                refptr::compile(context, source, Some(&Type::Ptr(None, src_span)))
+                codegen::compile_as_ptr(context, source, Some(&Type::Ptr(None, src_span)))
                     .into_pointer_value();
 
             let dest_span: Span = destination.get_span();
             let dest: PointerValue =
-                refptr::compile(context, destination, Some(&Type::Ptr(None, dest_span)))
+                codegen::compile_as_ptr(context, destination, Some(&Type::Ptr(None, dest_span)))
                     .into_pointer_value();
 
             let size: IntValue = codegen::compile(context, size, None).into_int_value();
@@ -120,12 +119,12 @@ pub fn compile<'ctx>(
 
             let src_span: Span = source.get_span();
             let src: PointerValue =
-                refptr::compile(context, source, Some(&Type::Ptr(None, src_span)))
+                codegen::compile_as_ptr(context, source, Some(&Type::Ptr(None, src_span)))
                     .into_pointer_value();
 
             let dest_span: Span = destination.get_span();
             let dest: PointerValue =
-                refptr::compile(context, destination, Some(&Type::Ptr(None, dest_span)))
+                codegen::compile_as_ptr(context, destination, Some(&Type::Ptr(None, dest_span)))
                     .into_pointer_value();
 
             let size: IntValue = codegen::compile(context, size, None).into_int_value();
@@ -164,7 +163,7 @@ pub fn compile<'ctx>(
 
             let dest_span: Span = destination.get_span();
             let dest: PointerValue =
-                refptr::compile(context, destination, Some(&Type::Ptr(None, dest_span)))
+                codegen::compile_as_ptr(context, destination, Some(&Type::Ptr(None, dest_span)))
                     .into_pointer_value();
 
             let new_size: IntValue = codegen::compile(context, new_size, None).into_int_value();

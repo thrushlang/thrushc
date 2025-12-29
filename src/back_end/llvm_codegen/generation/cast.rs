@@ -2,7 +2,6 @@
 
 use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::codegen;
-use crate::back_end::llvm_codegen::refptr;
 use crate::back_end::llvm_codegen::typegeneration;
 
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
@@ -411,7 +410,7 @@ pub fn compile<'ctx>(
 
     match (from_type, target_type) {
         (from, to) if from.is_ptr_like_type() && to.is_integer_type() => {
-            let val: BasicValueEnum = refptr::compile(context, expr, None);
+            let val: BasicValueEnum = codegen::compile_as_ptr(context, expr, None);
 
             if val.is_pointer_value() {
                 let integer_type: BasicTypeEnum =
@@ -494,7 +493,7 @@ pub fn compile<'ctx>(
         }
 
         (_, to) if to.is_ptr_type() => {
-            let value: BasicValueEnum = refptr::compile(context, expr, None);
+            let value: BasicValueEnum = codegen::compile_as_ptr(context, expr, None);
 
             if value.is_pointer_value() {
                 let cast: PointerType =
@@ -519,7 +518,7 @@ pub fn compile<'ctx>(
         }
 
         (_, to) if to.is_const_type() => {
-            let value: BasicValueEnum = refptr::compile(context, expr, None);
+            let value: BasicValueEnum = codegen::compile_as_ptr(context, expr, None);
 
             if value.is_pointer_value() {
                 let cast: PointerType =

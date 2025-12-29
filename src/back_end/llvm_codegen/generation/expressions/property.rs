@@ -1,7 +1,7 @@
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 
 use crate::back_end::llvm_codegen::helpertypes::LLVMGEPIndexes;
-use crate::back_end::llvm_codegen::{abort, codegen, memory, refptr, typegeneration};
+use crate::back_end::llvm_codegen::{abort, codegen, memory, typegeneration};
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -97,7 +97,7 @@ fn compile_gep_property<'ctx>(
 
     let span: Span = source.get_span();
 
-    let ptr: PointerValue = refptr::compile(context, source, None).into_pointer_value();
+    let ptr: PointerValue = codegen::compile_as_ptr(context, source, None).into_pointer_value();
     let ptr_type: &Type = source.llvm_get_type(context);
 
     let mut property: PointerValue =

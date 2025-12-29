@@ -1,7 +1,6 @@
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::memory;
-use crate::back_end::llvm_codegen::refptr;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -18,7 +17,7 @@ pub fn compile<'ctx>(
     write_value: &'ctx Ast,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let ptr: PointerValue = refptr::compile(context, source, None).into_pointer_value();
+    let ptr: PointerValue = codegen::compile_as_ptr(context, source, None).into_pointer_value();
     let value: BasicValueEnum = codegen::compile(context, write_value, Some(write_type));
 
     memory::store_anon(context, ptr, value, span);

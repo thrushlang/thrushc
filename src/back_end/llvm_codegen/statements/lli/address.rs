@@ -1,7 +1,6 @@
 use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::memory;
-use crate::back_end::llvm_codegen::refptr;
 
 use crate::core::diagnostic::span::Span;
 use crate::front_end::types::ast::Ast;
@@ -27,7 +26,7 @@ pub fn compile<'ctx>(
 
     let span: Span = source.get_span();
     let kind: &Type = source.llvm_get_type(context);
-    let ptr: PointerValue = refptr::compile(context, source, None).into_pointer_value();
+    let ptr: PointerValue = codegen::compile_as_ptr(context, source, None).into_pointer_value();
 
     memory::gep_anon(context, ptr, kind, &indexes, span).into()
 }

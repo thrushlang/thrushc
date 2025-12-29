@@ -1,8 +1,6 @@
-use std::path::PathBuf;
-
+use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::cast;
-use crate::back_end::llvm_codegen::{abort, refptr};
 use crate::back_end::llvm_codegen::{codegen, typegeneration};
 
 use crate::core::diagnostic::span::Span;
@@ -15,6 +13,8 @@ use inkwell::builder::Builder;
 use inkwell::types::FunctionType;
 use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum, PointerValue};
 
+use std::path::PathBuf;
+
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     pointer: &'ctx Ast,
@@ -25,7 +25,7 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder<'_> = context.get_llvm_builder();
     let function_ptr: PointerValue<'_> =
-        refptr::compile(context, pointer, cast_type).into_pointer_value();
+        codegen::compile_as_ptr(context, pointer, cast_type).into_pointer_value();
 
     if let Type::Fn(parameters, kind, modificator, ..) = function_type {
         let need_ignore: bool = modificator.llvm().has_ignore();

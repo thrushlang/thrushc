@@ -1,12 +1,13 @@
+use crate::back_end::llvm_codegen::abort;
 use crate::back_end::llvm_codegen::builtins;
 use crate::back_end::llvm_codegen::builtins::LLVMBuiltin;
+use crate::back_end::llvm_codegen::codegen;
 use crate::back_end::llvm_codegen::constgen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::generation::expressions::unaryop;
 use crate::back_end::llvm_codegen::generation::float;
 use crate::back_end::llvm_codegen::generation::integer;
 use crate::back_end::llvm_codegen::generation::{self, cast};
-use crate::back_end::llvm_codegen::{abort, refptr};
 
 use crate::front_end::types::ast::Ast;
 use crate::front_end::types::ast::traits::{AstCodeLocation, AstLLVMGetType};
@@ -164,7 +165,7 @@ pub fn compile<'ctx>(
         } => unaryop::compile_const(context, (operator, kind, expression), cast_type),
 
         // Direct Reference
-        Ast::DirectRef { expr, .. } => refptr::compile(context, expr, None),
+        Ast::DirectRef { expr, .. } => codegen::compile_as_ptr(context, expr, None),
 
         // Builtins
         Ast::Builtin { builtin, .. } => {
