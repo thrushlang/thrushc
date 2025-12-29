@@ -219,12 +219,12 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-dbg-dwarf-version".custom_color((141, 141, 142)).bold(),
-            "[v4|v5]",
+            "v4|v5",
             "Configure the Dwarf version for debugging purposes.",
         ),
     );
 
-    logging::write(logging::OutputIn::Stderr, "\nJIT Compiler flags:\n\n");
+    logging::write(logging::OutputIn::Stderr, "\nJIT compiler flags:\n\n");
 
     logging::write(
         logging::OutputIn::Stderr,

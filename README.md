@@ -56,7 +56,7 @@ Usage: thrushc [-flags|--flags] [files..]
 General Commands:
 
 • -h, --help optional[opt|emit|print|code-model|reloc-model] Show help message.
-• -v, --version, version Show the version.
+• -v, --version Show the version.
 
 General flags:
 
@@ -81,8 +81,9 @@ Compiler flags:
 • -dbg Enable generation of debug information (DWARF).
 • -dbg-for-inlining Enable debug information specifically optimized for inlined functions.
 • -dbg-for-profiling Emit extra debug info to support source-level profiling tools.
+• -dbg-dwarf-version [v4|v5] Configure the Dwarf version for debugging purposes.
 
-JIT Compiler flags:
+JIT compiler flags:
 
 • -jit Enable the use of the JIT Compiler for code execution.
 • -jit-libc Specify the C runtime to link for code execution via the JIT Compiler.
