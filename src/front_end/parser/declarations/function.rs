@@ -108,7 +108,15 @@ pub fn build_function<'parser>(
     let return_type: Type = if ctx.check(TokenType::LBrace) || ctx.peek().get_type().is_attribute()
     {
         let peeked: &Token = ctx.peek();
-        Type::Void(peeked.get_span())
+        let peeked_type: TokenType = peeked.get_type();
+
+        let span: Span = if peeked_type.is_attribute() {
+            peeked.get_span()
+        } else {
+            ctx.previous().get_span()
+        };
+
+        Type::Void(span)
     } else {
         typegen::build_type(ctx, false)?
     };

@@ -1,3 +1,4 @@
+use crate::core::compiler::backends::llvm::debug::DebugConfiguration;
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::compiler::options::ThrushOptimization;
@@ -10,7 +11,6 @@ use inkwell::context::Context;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::TargetMachine;
-use inkwell::types::BasicTypeEnum;
 use inkwell::values::AsValueRef;
 use inkwell::values::BasicValueEnum;
 use inkwell::values::CallSiteValue;
@@ -23,9 +23,9 @@ pub struct LLVMOptimizer<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
     machine: &'a TargetMachine,
+    config: LLVMOptimizationConfig,
     flags: LLVMOptimizerFlags,
     passes: LLVMOptimizerPasses<'ctx>,
-    opt_level: ThrushOptimization,
 }
 
 impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
@@ -33,17 +33,17 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
         module: &'a Module<'ctx>,
         context: &'ctx Context,
         machine: &'a TargetMachine,
+        config: LLVMOptimizationConfig,
         flags: LLVMOptimizerFlags,
         passes: LLVMOptimizerPasses<'ctx>,
-        opt_level: ThrushOptimization,
     ) -> Self {
         Self {
             module,
             context,
             machine,
+            config,
             flags,
             passes,
-            opt_level,
         }
     }
 }
@@ -54,6 +54,7 @@ impl LLVMOptimizer<'_, '_> {
         let custom_passes: &str = self.get_passes().get_llvm_custom_passes();
         let machine: &TargetMachine = self.get_machine();
         let options: PassBuilderOptions = self.create_passes_builder();
+        let config: LLVMOptimizationConfig = self.get_config();
 
         if !custom_passes.is_empty() {
             if let Err(error) = self
@@ -69,13 +70,21 @@ impl LLVMOptimizer<'_, '_> {
                 );
             }
         } else {
-            match self.opt_level {
+            match config.get_thrushc_optimization() {
                 ThrushOptimization::None => {
                     if !self.get_flags().get_disable_default_opt() {
+                        let module: &Module = self.get_module();
+                        let context: &Context = self.get_context();
+
                         let mut param_opt: LLVMParameterOptimizer =
-                            LLVMParameterOptimizer::new(self.get_module(), self.get_context());
+                            LLVMParameterOptimizer::new(module, context);
 
                         param_opt.start();
+
+                        let mut functions_opt: LLVMFunctionOptimizer =
+                            LLVMFunctionOptimizer::new(module, context, config.get_debug_config());
+
+                        functions_opt.start();
                     }
                 }
 
@@ -224,14 +233,17 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
     pub fn get_machine(&self) -> &TargetMachine {
         self.machine
     }
+
+    #[inline]
+    pub fn get_config(&self) -> LLVMOptimizationConfig {
+        self.config
+    }
 }
 
 impl LLVMOptimizer<'_, '_> {
-    pub fn is_optimizable(
-        entity: LLVMOptimizerOptimizableEntity,
-        options: &CompilerOptions,
-    ) -> bool {
-        let before: bool = (!options.omit_default_optimizations()
+    #[inline]
+    pub fn is_optimizable(options: &CompilerOptions) -> bool {
+        (!options.omit_default_optimizations()
             && options
                 .get_llvm_backend_options()
                 .get_optimization()
@@ -239,70 +251,8 @@ impl LLVMOptimizer<'_, '_> {
             || options
                 .get_llvm_backend_options()
                 .get_optimization()
-                .is_high_opt();
-
-        match entity {
-            LLVMOptimizerOptimizableEntity::Function(value) => {
-                let parameters_types: Vec<BasicTypeEnum> = value
-                    .get_param_iter()
-                    .map(|param| param.get_type())
-                    .collect();
-
-                if parameters_types
-                    .iter()
-                    .any(|parameter_type| parameter_type.is_pointer_type())
-                    && before
-                {
-                    return true;
-                }
-
-                false
-            }
-        }
+                .is_high_opt()
     }
-
-    pub fn is_optimizable_module(llvm_module: &Module, options: &CompilerOptions) -> bool {
-        let before: bool = (!options.omit_default_optimizations()
-            && options
-                .get_llvm_backend_options()
-                .get_optimization()
-                .is_none_opt())
-            || options
-                .get_llvm_backend_options()
-                .get_optimization()
-                .is_high_opt();
-
-        if !options.omit_default_optimizations()
-            && options
-                .get_llvm_backend_options()
-                .get_optimization()
-                .is_none_opt()
-        {
-            llvm_module
-                .get_functions()
-                .filter(|function| function.get_first_basic_block().is_some())
-                .any(|function| {
-                    function
-                        .get_param_iter()
-                        .any(|param_ty| param_ty.is_pointer_value())
-                })
-        } else {
-            llvm_module
-                .get_functions()
-                .filter(|function| function.get_first_basic_block().is_some())
-                .any(|function| {
-                    function
-                        .get_param_iter()
-                        .any(|param_ty| param_ty.is_pointer_value())
-                })
-                || before
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum LLVMOptimizerOptimizableEntity<'ctx> {
-    Function(FunctionValue<'ctx>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -337,6 +287,34 @@ pub struct LLVMOptimizerFlags {
     disable_default_opt: bool,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct LLVMOptimizationConfig {
+    debug_config: DebugConfiguration,
+    thrushc_optimization: ThrushOptimization,
+}
+
+impl LLVMOptimizationConfig {
+    #[inline]
+    pub fn new(debug_config: DebugConfiguration, thrushc_optimization: ThrushOptimization) -> Self {
+        Self {
+            debug_config,
+            thrushc_optimization,
+        }
+    }
+}
+
+impl LLVMOptimizationConfig {
+    #[inline]
+    pub fn get_debug_config(&self) -> DebugConfiguration {
+        self.debug_config
+    }
+
+    #[inline]
+    pub fn get_thrushc_optimization(&self) -> ThrushOptimization {
+        self.thrushc_optimization
+    }
+}
+
 impl LLVMOptimizerFlags {
     #[inline]
     pub fn new(disable_default_opt: bool) -> Self {
@@ -350,6 +328,319 @@ impl LLVMOptimizerFlags {
     #[inline]
     pub fn get_disable_default_opt(&self) -> bool {
         self.disable_default_opt
+    }
+}
+
+#[derive(Debug)]
+pub struct LLVMFunctionOptimizer<'a, 'ctx> {
+    module: &'a Module<'ctx>,
+    context: &'ctx Context,
+
+    function: Option<FunctionValue<'ctx>>,
+    optimizations: Option<LLVMFunctionOptimizations>,
+    debug_config: DebugConfiguration,
+}
+
+impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
+    #[inline]
+    pub fn new(
+        module: &'a Module<'ctx>,
+        context: &'ctx Context,
+        debug_config: DebugConfiguration,
+    ) -> Self {
+        Self {
+            module,
+            context,
+
+            function: None,
+            optimizations: None,
+            debug_config,
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
+    pub fn start(&mut self) {
+        self.module.get_functions().for_each(|function| {
+            self.visit_function_once(function);
+        });
+    }
+}
+
+impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
+    fn visit_function_once(&mut self, function: FunctionValue<'ctx>) {
+        self.set_function(function);
+
+        if function.get_first_basic_block().is_none() {
+            self.reset_function();
+            return;
+        } else {
+            let mut optimizations: LLVMFunctionOptimizations =
+                LLVMFunctionOptimizations::new(self.get_debug_config());
+
+            const MAX_OPT_INSTRUCTIONS_LEN: usize = 5;
+            const CONSIDERABLE_BASIC_BLOCKS_LEN: usize = 5;
+            const CONSIDERABLE_INSTRUCTIONS_LEN: usize = 250;
+
+            let blocks_count: usize = function.get_basic_block_iter().count();
+            let instructions_count: usize = function
+                .get_basic_block_iter()
+                .map(|basic_block| basic_block.get_instructions().count())
+                .sum();
+
+            let applicable_norecurse: bool = function
+                .get_basic_block_iter()
+                .flat_map(|bb| bb.get_instructions())
+                .filter(|instr| instr.get_opcode() == InstructionOpcode::Call)
+                .any(|instr| {
+                    let callsite: CallSiteValue =
+                        unsafe { CallSiteValue::new(instr.as_value_ref()) };
+                    let called: FunctionValue = callsite.get_called_fn_value();
+
+                    self.function.is_some_and(|current| current == called)
+                });
+
+            if MAX_OPT_INSTRUCTIONS_LEN > instructions_count {
+                optimizations.set_inlinehint(true);
+            } else if blocks_count >= CONSIDERABLE_BASIC_BLOCKS_LEN
+                && instructions_count >= CONSIDERABLE_INSTRUCTIONS_LEN
+            {
+                optimizations.set_optsize(true);
+            }
+
+            if !applicable_norecurse {
+                optimizations.set_nocurse(true);
+            }
+
+            self.set_optimizations(optimizations);
+            self.optimize_function();
+            self.reset_optimizations_state();
+        }
+
+        self.reset_function();
+    }
+}
+
+impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
+    fn optimize_function(&mut self) {
+        if let Some(optimizations) = self.get_optimizations() {
+            if optimizations.has_inlinehint() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("inlinehint");
+
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+
+            if optimizations.has_norecurse() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("norecurse");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+
+            if optimizations.has_optsize() {
+                let optsize_id: u32 = Attribute::get_named_enum_kind_id("optsize");
+                let minsize_id: u32 = Attribute::get_named_enum_kind_id("minsize");
+
+                let optsize: Attribute = self.context.create_enum_attribute(optsize_id, 0);
+                let minsize: Attribute = self.context.create_enum_attribute(minsize_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, optsize);
+                    function.add_attribute(AttributeLoc::Function, minsize);
+                }
+            }
+
+            if optimizations.has_nounwind() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("nounwind");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+
+            if optimizations.has_sanitizer() {
+                let sanitize_address_id: u32 =
+                    Attribute::get_named_enum_kind_id("sanitize_address");
+                let sanitize_memory_id: u32 = Attribute::get_named_enum_kind_id("sanitize_memory");
+                let sanitize_thread_id: u32 = Attribute::get_named_enum_kind_id("sanitize_thread");
+                let sanitize_hwaddress_id: u32 =
+                    Attribute::get_named_enum_kind_id("sanitize_hwaddress");
+                let sanitize_memtag_id: u32 = Attribute::get_named_enum_kind_id("sanitize_memtag");
+
+                let sanitize_address: Attribute =
+                    self.context.create_enum_attribute(sanitize_address_id, 0);
+                let sanitize_memory: Attribute =
+                    self.context.create_enum_attribute(sanitize_memory_id, 0);
+                let sanitize_thread: Attribute =
+                    self.context.create_enum_attribute(sanitize_thread_id, 0);
+                let sanitize_hwaddress: Attribute =
+                    self.context.create_enum_attribute(sanitize_hwaddress_id, 0);
+                let sanitize_memtag: Attribute =
+                    self.context.create_enum_attribute(sanitize_memtag_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, sanitize_address);
+                    function.add_attribute(AttributeLoc::Function, sanitize_memory);
+                    function.add_attribute(AttributeLoc::Function, sanitize_thread);
+                    function.add_attribute(AttributeLoc::Function, sanitize_hwaddress);
+                    function.add_attribute(AttributeLoc::Function, sanitize_memtag);
+                }
+            }
+
+            if optimizations.has_uwtable() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("uwtable");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+
+            if optimizations.has_sspstrong() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("sspstrong");
+
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
+    #[inline]
+    fn set_function(&mut self, function: FunctionValue<'ctx>) {
+        self.function = Some(function);
+    }
+
+    #[inline]
+    fn reset_function(&mut self) {
+        self.function = None;
+    }
+
+    #[inline]
+    fn set_optimizations(&mut self, optimizations: LLVMFunctionOptimizations) {
+        self.optimizations = Some(optimizations);
+    }
+
+    #[inline]
+    fn reset_optimizations_state(&mut self) {
+        self.optimizations = None;
+    }
+}
+
+impl LLVMFunctionOptimizer<'_, '_> {
+    #[inline]
+    fn get_optimizations(&self) -> Option<LLVMFunctionOptimizations> {
+        self.optimizations
+    }
+
+    #[inline]
+    fn get_debug_config(&self) -> DebugConfiguration {
+        self.debug_config
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LLVMFunctionOptimizations {
+    norecurse: bool,
+    nounwind: bool,
+    inlinehint: bool,
+    optsize: bool,
+    uwtable: bool,
+    sanitize_address: bool,
+    sanitize_memory: bool,
+    sanitize_thread: bool,
+    sanitize_hwaddress: bool,
+    sanitize_memtag: bool,
+    sspstrong: bool,
+}
+
+impl LLVMFunctionOptimizations {
+    #[inline]
+    pub fn new(debug_config: DebugConfiguration) -> Self {
+        let is_dbg_enabled: bool = debug_config.is_debug_mode();
+
+        Self {
+            norecurse: false,
+            nounwind: true,
+            inlinehint: false,
+            optsize: false,
+            uwtable: true,
+            sanitize_address: is_dbg_enabled,
+            sanitize_memory: is_dbg_enabled,
+            sanitize_thread: is_dbg_enabled,
+            sanitize_hwaddress: is_dbg_enabled,
+            sanitize_memtag: is_dbg_enabled,
+            sspstrong: true,
+        }
+    }
+}
+
+impl LLVMFunctionOptimizations {
+    #[inline]
+    pub fn set_nocurse(&mut self, value: bool) {
+        self.norecurse = value;
+    }
+
+    #[inline]
+    pub fn set_inlinehint(&mut self, value: bool) {
+        self.inlinehint = value;
+    }
+
+    #[inline]
+    pub fn set_optsize(&mut self, value: bool) {
+        self.optsize = value;
+    }
+}
+
+impl LLVMFunctionOptimizations {
+    #[inline]
+    pub fn has_norecurse(&self) -> bool {
+        self.norecurse
+    }
+
+    #[inline]
+    pub fn has_nounwind(&self) -> bool {
+        self.nounwind
+    }
+
+    #[inline]
+    pub fn has_inlinehint(&self) -> bool {
+        self.inlinehint
+    }
+
+    #[inline]
+    pub fn has_optsize(&self) -> bool {
+        self.optsize
+    }
+
+    #[inline]
+    pub fn has_sanitizer(&self) -> bool {
+        self.sanitize_address
+            && self.sanitize_memory
+            && self.sanitize_thread
+            && self.sanitize_hwaddress
+            && self.sanitize_memtag
+    }
+
+    #[inline]
+    pub fn has_uwtable(&self) -> bool {
+        self.uwtable
+    }
+
+    #[inline]
+    pub fn has_sspstrong(&self) -> bool {
+        self.sspstrong
     }
 }
 
@@ -464,11 +755,9 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     fn visit_instruction_once(&mut self, instruction: InstructionValue<'ctx>) {
         if instruction.get_opcode() == InstructionOpcode::Call {
             let callsite: CallSiteValue = unsafe { CallSiteValue::new(instruction.as_value_ref()) };
+            let called: FunctionValue = callsite.get_called_fn_value();
 
-            let callfn: FunctionValue = callsite.get_called_fn_value();
-
-            if !callsite.is_tail_call() && self.function.is_some_and(|function| function == callfn)
-            {
+            if !callsite.is_tail_call() && self.function.is_some_and(|current| current == called) {
                 callsite.set_tail_call(true);
             }
         }

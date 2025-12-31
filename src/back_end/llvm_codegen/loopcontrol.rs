@@ -38,14 +38,14 @@ impl<'ctx> LLVMLoopContext<'ctx> {
     #[inline]
     pub fn get_last_break_branch(&self) -> BasicBlock<'ctx> {
         *self.break_branches.last().unwrap_or_else(|| {
-            self::codegen_abort("Break point branch couldn't be obtained.");
+            self::codegen_abort("loop control flow 'breaker' branch couldn't be obtained.");
         })
     }
 
     #[inline]
     pub fn get_last_continue_branch(&self) -> BasicBlock<'ctx> {
         *self.continue_branches.last().unwrap_or_else(|| {
-            self::codegen_abort("Continue point branch couldn't be obtained.");
+            self::codegen_abort("loop control flow 'continue' branch couldn't be obtained.");
         })
     }
 }

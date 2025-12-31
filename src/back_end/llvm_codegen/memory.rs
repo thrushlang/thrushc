@@ -163,6 +163,8 @@ impl<'ctx> SymbolAllocated<'ctx> {
             .get_target_data()
             .get_preferred_alignment(&llvm_type);
 
+        context.mark_dbg_location(self.get_span());
+
         if let Self::Local { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                 if let Some(instr) = loaded_value.as_instruction_value() {
@@ -252,10 +254,11 @@ impl<'ctx> SymbolAllocated<'ctx> {
         new_value: BasicValueEnum<'ctx>,
     ) {
         let llvm_builder: &Builder = context.get_llvm_builder();
-
         let target_data: &TargetData = context.get_target_data();
 
         let alignment: u32 = target_data.get_preferred_alignment(&new_value.get_type());
+
+        context.mark_dbg_location(self.get_span());
 
         if let Self::Local { ptr, .. } = self {
             if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
@@ -389,6 +392,8 @@ pub fn load_anon<'ctx>(
         .get_preferred_alignment(&llvm_type);
 
     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
+        context.mark_dbg_location(span);
+
         if let Some(instr) = loaded_value.as_instruction_value() {
             let _ = instr.set_alignment(alignment);
         }
@@ -421,6 +426,8 @@ pub fn dereference<'ctx>(
         .get_preferred_alignment(&llvm_type);
 
     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
+        context.mark_dbg_location(span);
+
         if let Some(instr) = loaded_value.as_instruction_value() {
             atomic::configure_atomic_modificators(
                 instr,
@@ -463,6 +470,8 @@ pub fn alloc_anon<'ctx>(
     match site {
         LLVMAllocationSite::Stack => {
             if let Ok(ptr) = llvm_builder.build_alloca(llvm_type, "") {
+                context.mark_dbg_location(span);
+
                 if let Some(instruction) = ptr.as_instruction() {
                     let _ = instruction.set_alignment(alignment);
                 }
@@ -481,6 +490,8 @@ pub fn alloc_anon<'ctx>(
 
         LLVMAllocationSite::Heap => {
             if let Ok(ptr) = llvm_builder.build_malloc(llvm_type, "") {
+                context.mark_dbg_location(span);
+
                 return ptr;
             }
 
@@ -514,6 +525,8 @@ pub fn gep_struct_anon<'ctx>(
         index,
         "",
     ) {
+        context.mark_dbg_location(span);
+
         ptr
     } else {
         abort::abort_codegen(
@@ -543,6 +556,8 @@ pub fn gep_anon<'ctx>(
             "",
         )
     } {
+        context.mark_dbg_location(span);
+
         ptr
     } else {
         abort::abort_codegen(

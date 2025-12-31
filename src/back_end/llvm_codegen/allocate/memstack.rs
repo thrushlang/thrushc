@@ -45,6 +45,8 @@ pub fn local_variable<'ctx>(
     let llvm_type: BasicTypeEnum = typegeneration::compile_local_type(context, kind, value);
     let name: String = format!("local.{}", ascii_name);
 
+    context.mark_dbg_location(span);
+
     if attributes.has_heap_attr() {
         crate::back_end::llvm_codegen::allocate::memheap::try_alloc_at_heap(
             context, llvm_type, &name, span,

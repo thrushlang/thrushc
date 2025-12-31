@@ -9,6 +9,7 @@ use crate::core::console::logging;
 use crate::core::console::logging::LoggingType;
 use crate::core::constants::COMPILER_ID;
 
+use inkwell::debug_info;
 use inkwell::values::BasicMetadataValueEnum;
 use inkwell::values::MetadataValue;
 
@@ -68,7 +69,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         {
             if llvm_backend.get_debug_config().is_debug_mode() {
                 let dwarf_version: u64 = llvm_backend.get_debug_config().get_dwarf_version();
-                const DEBUG_VERSION_INFO: u64 = 3;
+                let debug_info_version: u32 = debug_info::debug_metadata_version();
 
                 let dwarf_v: MetadataValue =
                     self.get_context().get_llvm_context().metadata_node(&[
@@ -104,7 +105,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                         self.get_context()
                             .get_llvm_context()
                             .i32_type()
-                            .const_int(DEBUG_VERSION_INFO, false)
+                            .const_int(debug_info_version as u64, false)
                             .into(),
                     ]);
 

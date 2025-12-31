@@ -9,6 +9,7 @@ mod validate;
 use crate::back_end::llvm_codegen;
 use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::jit::LLVMJITCompiler;
+use crate::back_end::llvm_codegen::optimization::LLVMOptimizationConfig;
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizerFlags;
 
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizerPasses;
@@ -192,8 +193,8 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let llvm_cpu_name: &str = llvm_backend.get_target_cpu().get_cpu_name();
         let llvm_cpu_features: &str = llvm_backend.get_target_cpu().get_cpu_features();
 
-        let thrush_opt: ThrushOptimization = llvm_backend.get_optimization();
-        let llvm_opt: OptimizationLevel = thrush_opt.to_llvm_opt();
+        let thrushc_opt: ThrushOptimization = llvm_backend.get_optimization();
+        let llvm_opt: OptimizationLevel = thrushc_opt.to_llvm_opt();
 
         llvm_module.set_triple(llvm_triple);
 
@@ -273,12 +274,12 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_module,
             &llvm_context,
             &target_machine,
+            LLVMOptimizationConfig::new(*llvm_backend.get_debug_config(), thrushc_opt),
             LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
             LLVMOptimizerPasses::new(
                 llvm_backend.get_opt_passes(),
                 llvm_backend.get_modificator_passes(),
             ),
-            thrush_opt,
         )
         .optimize();
 
@@ -447,8 +448,8 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let llvm_cpu_name: &str = llvm_backend.get_target_cpu().get_cpu_name();
         let llvm_cpu_features: &str = llvm_backend.get_target_cpu().get_cpu_features();
 
-        let thrush_opt: ThrushOptimization = llvm_backend.get_optimization();
-        let llvm_opt: OptimizationLevel = thrush_opt.to_llvm_opt();
+        let thrushc_opt: ThrushOptimization = llvm_backend.get_optimization();
+        let llvm_opt: OptimizationLevel = thrushc_opt.to_llvm_opt();
 
         llvm_module.set_triple(llvm_triple);
 
@@ -520,12 +521,12 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             &llvm_module,
             &llvm_context,
             &target_machine,
+            LLVMOptimizationConfig::new(*llvm_backend.get_debug_config(), thrushc_opt),
             LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
             LLVMOptimizerPasses::new(
                 llvm_backend.get_opt_passes(),
                 llvm_backend.get_modificator_passes(),
             ),
-            thrush_opt,
         )
         .optimize();
 

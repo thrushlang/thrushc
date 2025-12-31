@@ -605,7 +605,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         self.dbg_context = dbg_opt;
     }
 
-    pub fn finish_dbg_debug_data(&mut self) {
+    pub fn finish_function_debug_data(&mut self) {
         if let Some(dbg_context) = self.get_mut_debug_context() {
             dbg_context.finish_subprogram();
         }

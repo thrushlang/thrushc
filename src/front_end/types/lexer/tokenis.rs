@@ -128,11 +128,16 @@ impl TokenTypeExtensions for TokenType {
                 | TokenType::AsmThrow
                 | TokenType::AsmSideEffects
                 | TokenType::AsmAlignStack
+                | TokenType::AsmSyntax
                 | TokenType::Packed
                 | TokenType::NoUnwind
                 | TokenType::OptFuzzing
                 | TokenType::Constructor
                 | TokenType::Destructor
+                | TokenType::Public
+                | TokenType::Linkage
+                | TokenType::Extern
+                | TokenType::Convention
         )
     }
 

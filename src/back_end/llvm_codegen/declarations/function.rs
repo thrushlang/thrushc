@@ -139,7 +139,7 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
 
         codegen.codegen_block(function_body);
 
-        codegen.get_mut_context().finish_dbg_debug_data();
+        codegen.get_mut_context().finish_function_debug_data();
 
         if function_type.is_void_type() && !function_body.has_terminator() {
             let _ = llvm_builder.build_return(None);

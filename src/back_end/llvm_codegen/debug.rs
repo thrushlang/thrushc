@@ -27,7 +27,6 @@ use crate::back_end::llvm_codegen::context::LLVMCodeGenContext;
 use crate::back_end::llvm_codegen::helpertypes::repr::LLVMDBGFunction;
 use crate::back_end::llvm_codegen::helpertypes::traits::LLVMDBGFunctionExtensions;
 use crate::back_end::llvm_codegen::optimization::LLVMOptimizer;
-use crate::back_end::llvm_codegen::optimization::LLVMOptimizerOptimizableEntity;
 use crate::back_end::llvm_codegen::typegeneration;
 use crate::core::compiler::options::CompilationUnit;
 use crate::core::compiler::options::CompilerOptions;
@@ -55,7 +54,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         options: &CompilerOptions,
         unit: &CompilationUnit,
     ) -> Self {
-        let is_optimized: bool = LLVMOptimizer::is_optimizable_module(llvm_module, options);
+        let is_optimized: bool = LLVMOptimizer::is_optimizable(options);
 
         let split_debug_inlining: bool = options
             .get_llvm_backend_options()
@@ -159,10 +158,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             DIFlagsConstants::PUBLIC,
         );
 
-        let is_optimized: bool = LLVMOptimizer::is_optimizable(
-            LLVMOptimizerOptimizableEntity::Function(value),
-            context.get_compiler_options(),
-        );
+        let is_optimized: bool = LLVMOptimizer::is_optimizable(context.get_compiler_options());
 
         let file: DIFile<'_> = self.get_unit().get_file();
 

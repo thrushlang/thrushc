@@ -13,6 +13,8 @@ pub fn try_alloc_at_heap<'ctx>(
     ascii_name: &str,
     span: Span,
 ) -> PointerValue<'ctx> {
+    context.mark_dbg_location(span);
+
     if let Ok(ptr) = context
         .get_llvm_builder()
         .build_malloc(llvm_type, ascii_name)
