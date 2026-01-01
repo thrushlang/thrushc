@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use crate::core::compiler;
 use crate::core::compiler::backends::llvm;
+use crate::core::compiler::backends::llvm::Sanitizer;
 use crate::core::compiler::backends::llvm::debug::DwarfVersion;
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
@@ -427,6 +428,19 @@ impl CommandLine {
                 self.validate_aot_is_enable(arg);
             }
 
+            "--sanitizer" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let sanitizer: Sanitizer = self.parse_sanitizer(self.peek());
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_sanitizer(sanitizer);
+
+                self.advance();
+            }
+
             "--macos-version" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -813,6 +827,22 @@ impl CommandLine {
 }
 
 impl CommandLine {
+    #[inline]
+    fn parse_sanitizer(&self, sanitizer: &str) -> Sanitizer {
+        match sanitizer {
+            "address" => Sanitizer::Address,
+            "hwaddress" => Sanitizer::Hwaddress,
+            "memory" => Sanitizer::Memory,
+            "thread" => Sanitizer::Thread,
+            "memtag" => Sanitizer::Memtag,
+
+            any => {
+                self.report_error(&format!("Unknown sanitizer: '{}'.", any));
+            }
+        }
+    }
+
+    #[inline]
     fn parse_dwarf_version(&self, dwarf: &str) -> DwarfVersion {
         match dwarf.to_lowercase().as_str() {
             "v4" => DwarfVersion::V4,

@@ -1,4 +1,4 @@
-use crate::core::compiler::backends::llvm::debug::DebugConfiguration;
+use crate::core::compiler::backends::llvm::Sanitizer;
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
 use crate::core::compiler::options::CompilerOptions;
 use crate::core::compiler::options::ThrushOptimization;
@@ -56,6 +56,11 @@ impl LLVMOptimizer<'_, '_> {
         let options: PassBuilderOptions = self.create_passes_builder();
         let config: LLVMOptimizationConfig = self.get_config();
 
+        let module: &Module = self.get_module();
+        let context: &Context = self.get_context();
+
+        LLVMSanitizer::new(module, context, config).run();
+
         if !custom_passes.is_empty() {
             if let Err(error) = self
                 .get_module()
@@ -70,21 +75,11 @@ impl LLVMOptimizer<'_, '_> {
                 );
             }
         } else {
-            match config.get_thrushc_optimization() {
+            match config.get_compiler_optimization() {
                 ThrushOptimization::None => {
                     if !self.get_flags().get_disable_default_opt() {
-                        let module: &Module = self.get_module();
-                        let context: &Context = self.get_context();
-
-                        let mut param_opt: LLVMParameterOptimizer =
-                            LLVMParameterOptimizer::new(module, context);
-
-                        param_opt.start();
-
-                        let mut functions_opt: LLVMFunctionOptimizer =
-                            LLVMFunctionOptimizer::new(module, context, config.get_debug_config());
-
-                        functions_opt.start();
+                        LLVMParameterOptimizer::new(module, context).run();
+                        LLVMFunctionOptimizer::new(module, context).run();
                     }
                 }
 
@@ -289,29 +284,29 @@ pub struct LLVMOptimizerFlags {
 
 #[derive(Debug, Clone, Copy)]
 pub struct LLVMOptimizationConfig {
-    debug_config: DebugConfiguration,
-    thrushc_optimization: ThrushOptimization,
+    compiler_optimization: ThrushOptimization,
+    sanitizer: Sanitizer,
 }
 
 impl LLVMOptimizationConfig {
     #[inline]
-    pub fn new(debug_config: DebugConfiguration, thrushc_optimization: ThrushOptimization) -> Self {
+    pub fn new(compiler_optimization: ThrushOptimization, sanitizer: Sanitizer) -> Self {
         Self {
-            debug_config,
-            thrushc_optimization,
+            compiler_optimization,
+            sanitizer,
         }
     }
 }
 
 impl LLVMOptimizationConfig {
     #[inline]
-    pub fn get_debug_config(&self) -> DebugConfiguration {
-        self.debug_config
+    pub fn get_compiler_optimization(&self) -> ThrushOptimization {
+        self.compiler_optimization
     }
 
     #[inline]
-    pub fn get_thrushc_optimization(&self) -> ThrushOptimization {
-        self.thrushc_optimization
+    pub fn get_sanitizer(&self) -> Sanitizer {
+        self.sanitizer
     }
 }
 
@@ -338,29 +333,23 @@ pub struct LLVMFunctionOptimizer<'a, 'ctx> {
 
     function: Option<FunctionValue<'ctx>>,
     optimizations: Option<LLVMFunctionOptimizations>,
-    debug_config: DebugConfiguration,
 }
 
 impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
     #[inline]
-    pub fn new(
-        module: &'a Module<'ctx>,
-        context: &'ctx Context,
-        debug_config: DebugConfiguration,
-    ) -> Self {
+    pub fn new(module: &'a Module<'ctx>, context: &'ctx Context) -> Self {
         Self {
             module,
             context,
 
             function: None,
             optimizations: None,
-            debug_config,
         }
     }
 }
 
 impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
-    pub fn start(&mut self) {
+    pub fn run(&mut self) {
         self.module.get_functions().for_each(|function| {
             self.visit_function_once(function);
         });
@@ -375,8 +364,7 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
             self.reset_function();
             return;
         } else {
-            let mut optimizations: LLVMFunctionOptimizations =
-                LLVMFunctionOptimizations::new(self.get_debug_config());
+            let mut optimizations: LLVMFunctionOptimizations = LLVMFunctionOptimizations::new();
 
             const MAX_OPT_INSTRUCTIONS_LEN: usize = 5;
             const CONSIDERABLE_BASIC_BLOCKS_LEN: usize = 5;
@@ -465,35 +453,6 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
                 }
             }
 
-            if optimizations.has_sanitizer() {
-                let sanitize_address_id: u32 =
-                    Attribute::get_named_enum_kind_id("sanitize_address");
-                let sanitize_memory_id: u32 = Attribute::get_named_enum_kind_id("sanitize_memory");
-                let sanitize_thread_id: u32 = Attribute::get_named_enum_kind_id("sanitize_thread");
-                let sanitize_hwaddress_id: u32 =
-                    Attribute::get_named_enum_kind_id("sanitize_hwaddress");
-                let sanitize_memtag_id: u32 = Attribute::get_named_enum_kind_id("sanitize_memtag");
-
-                let sanitize_address: Attribute =
-                    self.context.create_enum_attribute(sanitize_address_id, 0);
-                let sanitize_memory: Attribute =
-                    self.context.create_enum_attribute(sanitize_memory_id, 0);
-                let sanitize_thread: Attribute =
-                    self.context.create_enum_attribute(sanitize_thread_id, 0);
-                let sanitize_hwaddress: Attribute =
-                    self.context.create_enum_attribute(sanitize_hwaddress_id, 0);
-                let sanitize_memtag: Attribute =
-                    self.context.create_enum_attribute(sanitize_memtag_id, 0);
-
-                if let Some(function) = self.function {
-                    function.add_attribute(AttributeLoc::Function, sanitize_address);
-                    function.add_attribute(AttributeLoc::Function, sanitize_memory);
-                    function.add_attribute(AttributeLoc::Function, sanitize_thread);
-                    function.add_attribute(AttributeLoc::Function, sanitize_hwaddress);
-                    function.add_attribute(AttributeLoc::Function, sanitize_memtag);
-                }
-            }
-
             if optimizations.has_uwtable() {
                 let kind_id: u32 = Attribute::get_named_enum_kind_id("uwtable");
                 let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
@@ -543,11 +502,6 @@ impl LLVMFunctionOptimizer<'_, '_> {
     fn get_optimizations(&self) -> Option<LLVMFunctionOptimizations> {
         self.optimizations
     }
-
-    #[inline]
-    fn get_debug_config(&self) -> DebugConfiguration {
-        self.debug_config
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -557,30 +511,18 @@ struct LLVMFunctionOptimizations {
     inlinehint: bool,
     optsize: bool,
     uwtable: bool,
-    sanitize_address: bool,
-    sanitize_memory: bool,
-    sanitize_thread: bool,
-    sanitize_hwaddress: bool,
-    sanitize_memtag: bool,
     sspstrong: bool,
 }
 
 impl LLVMFunctionOptimizations {
     #[inline]
-    pub fn new(debug_config: DebugConfiguration) -> Self {
-        let is_dbg_enabled: bool = debug_config.is_debug_mode();
-
+    fn new() -> Self {
         Self {
             norecurse: false,
             nounwind: true,
             inlinehint: false,
             optsize: false,
             uwtable: true,
-            sanitize_address: is_dbg_enabled,
-            sanitize_memory: is_dbg_enabled,
-            sanitize_thread: is_dbg_enabled,
-            sanitize_hwaddress: is_dbg_enabled,
-            sanitize_memtag: is_dbg_enabled,
             sspstrong: true,
         }
     }
@@ -625,15 +567,6 @@ impl LLVMFunctionOptimizations {
     }
 
     #[inline]
-    pub fn has_sanitizer(&self) -> bool {
-        self.sanitize_address
-            && self.sanitize_memory
-            && self.sanitize_thread
-            && self.sanitize_hwaddress
-            && self.sanitize_memtag
-    }
-
-    #[inline]
     pub fn has_uwtable(&self) -> bool {
         self.uwtable
     }
@@ -641,6 +574,222 @@ impl LLVMFunctionOptimizations {
     #[inline]
     pub fn has_sspstrong(&self) -> bool {
         self.sspstrong
+    }
+}
+
+#[derive(Debug)]
+pub struct LLVMSanitizer<'a, 'ctx> {
+    module: &'a Module<'ctx>,
+    context: &'ctx Context,
+
+    function: Option<FunctionValue<'ctx>>,
+    optimization: Option<LLVMSanitizerOptimization>,
+    config: LLVMOptimizationConfig,
+}
+
+impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
+    #[inline]
+    pub fn new(
+        module: &'a Module<'ctx>,
+        context: &'ctx Context,
+        config: LLVMOptimizationConfig,
+    ) -> Self {
+        Self {
+            module,
+            context,
+
+            function: None,
+            optimization: None,
+            config,
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
+    pub fn run(&mut self) {
+        let config: LLVMOptimizationConfig = self.get_config();
+        let optimization: LLVMSanitizerOptimization = LLVMSanitizerOptimization::new(config);
+
+        if optimization.is_neither() {
+            return;
+        }
+
+        self.module.get_functions().for_each(|function| {
+            self.visit_function_once(function);
+        });
+    }
+}
+
+impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
+    fn visit_function_once(&mut self, function: FunctionValue<'ctx>) {
+        self.set_function(function);
+
+        let config: LLVMOptimizationConfig = self.get_config();
+        let optimization: LLVMSanitizerOptimization = LLVMSanitizerOptimization::new(config);
+
+        self.set_optimizations(optimization);
+        self.apply();
+        self.reset_optimizations_state();
+
+        self.reset_function();
+    }
+}
+
+impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
+    fn apply(&mut self) {
+        if let Some(optimizations) = self.get_optimizations() {
+            if optimizations.has_sanitize_address() {
+                let sanitize_address_id: u32 =
+                    Attribute::get_named_enum_kind_id("sanitize_address");
+
+                let sanitize_address: Attribute =
+                    self.context.create_enum_attribute(sanitize_address_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, sanitize_address);
+                }
+            }
+
+            if optimizations.has_sanitize_memory() {
+                let sanitize_memory_id: u32 = Attribute::get_named_enum_kind_id("sanitize_memory");
+                let sanitize_memory: Attribute =
+                    self.context.create_enum_attribute(sanitize_memory_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, sanitize_memory);
+                }
+            }
+
+            if optimizations.has_sanitize_thread() {
+                let sanitize_thread_id: u32 = Attribute::get_named_enum_kind_id("sanitize_thread");
+                let sanitize_thread: Attribute =
+                    self.context.create_enum_attribute(sanitize_thread_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, sanitize_thread);
+                }
+            }
+
+            if optimizations.has_sanitize_hwaddress() {
+                let sanitize_hwaddress_id: u32 =
+                    Attribute::get_named_enum_kind_id("sanitize_hwaddress");
+
+                let sanitize_hwaddress: Attribute =
+                    self.context.create_enum_attribute(sanitize_hwaddress_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, sanitize_hwaddress);
+                }
+            }
+
+            if optimizations.has_sanitize_memtag() {
+                let sanitize_memtag_id: u32 = Attribute::get_named_enum_kind_id("sanitize_memtag");
+                let sanitize_memtag: Attribute =
+                    self.context.create_enum_attribute(sanitize_memtag_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, sanitize_memtag);
+                }
+            }
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
+    #[inline]
+    fn set_function(&mut self, function: FunctionValue<'ctx>) {
+        self.function = Some(function);
+    }
+
+    #[inline]
+    fn reset_function(&mut self) {
+        self.function = None;
+    }
+
+    #[inline]
+    fn set_optimizations(&mut self, optimization: LLVMSanitizerOptimization) {
+        self.optimization = Some(optimization);
+    }
+
+    #[inline]
+    fn reset_optimizations_state(&mut self) {
+        self.optimization = None;
+    }
+}
+
+impl LLVMSanitizer<'_, '_> {
+    #[inline]
+    fn get_optimizations(&self) -> Option<LLVMSanitizerOptimization> {
+        self.optimization
+    }
+
+    #[inline]
+    fn get_config(&self) -> LLVMOptimizationConfig {
+        self.config
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LLVMSanitizerOptimization {
+    sanitize_address: bool,
+    sanitize_memory: bool,
+    sanitize_thread: bool,
+    sanitize_hwaddress: bool,
+    sanitize_memtag: bool,
+}
+
+impl LLVMSanitizerOptimization {
+    #[inline]
+    fn new(config: LLVMOptimizationConfig) -> Self {
+        let is_sanitize_address_enabled: bool = config.get_sanitizer().is_address();
+        let is_sanitize_memory_enabled: bool = config.get_sanitizer().is_memory();
+        let is_sanitize_thread_enabled: bool = config.get_sanitizer().is_thread();
+        let is_sanitize_hwaddres_enabled: bool = config.get_sanitizer().is_hwaddress();
+        let is_sanitize_memtag_enabled: bool = config.get_sanitizer().is_memtag();
+
+        Self {
+            sanitize_address: is_sanitize_address_enabled,
+            sanitize_memory: is_sanitize_memory_enabled,
+            sanitize_thread: is_sanitize_thread_enabled,
+            sanitize_hwaddress: is_sanitize_hwaddres_enabled,
+            sanitize_memtag: is_sanitize_memtag_enabled,
+        }
+    }
+}
+
+impl LLVMSanitizerOptimization {
+    #[inline]
+    pub fn has_sanitize_address(&self) -> bool {
+        self.sanitize_address
+    }
+
+    #[inline]
+    pub fn has_sanitize_memory(&self) -> bool {
+        self.sanitize_memory
+    }
+
+    #[inline]
+    pub fn has_sanitize_thread(&self) -> bool {
+        self.sanitize_thread
+    }
+
+    #[inline]
+    pub fn has_sanitize_hwaddress(&self) -> bool {
+        self.sanitize_hwaddress
+    }
+
+    #[inline]
+    pub fn has_sanitize_memtag(&self) -> bool {
+        self.sanitize_memtag
+    }
+
+    #[inline]
+    pub fn is_neither(&self) -> bool {
+        !(self.sanitize_address
+            || self.sanitize_memory
+            || self.sanitize_thread
+            || self.sanitize_hwaddress
+            || self.sanitize_memtag)
     }
 }
 
@@ -671,7 +820,7 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
-    pub fn start(&mut self) {
+    pub fn run(&mut self) {
         self.module.get_functions().for_each(|function_value| {
             self.visit_function_once(function_value);
         });

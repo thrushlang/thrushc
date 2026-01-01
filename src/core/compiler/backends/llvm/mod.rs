@@ -24,6 +24,7 @@ pub struct LLVMBackend {
     optimization: ThrushOptimization,
     reloc_mode: RelocMode,
     code_model: CodeModel,
+    sanitizer: Sanitizer,
     dbg_config: DebugConfiguration,
 
     modificator_passes: Vec<LLVMModificatorPasses>,
@@ -63,6 +64,7 @@ impl LLVMBackend {
             optimization: ThrushOptimization::None,
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
+            sanitizer: Sanitizer::None,
             dbg_config: DebugConfiguration::new(),
 
             modificator_passes: Vec::with_capacity(10),
@@ -122,6 +124,11 @@ impl LLVMBackend {
     #[inline]
     pub fn get_debug_config(&self) -> &DebugConfiguration {
         &self.dbg_config
+    }
+
+    #[inline]
+    pub fn get_sanitizer(&self) -> &Sanitizer {
+        &self.sanitizer
     }
 
     #[inline]
@@ -189,6 +196,11 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn set_sanitizer(&mut self, sanitizer: Sanitizer) {
+        self.sanitizer = sanitizer;
+    }
+
+    #[inline]
     pub fn set_omit_frame_pointer(&mut self) {
         self.omit_frame_pointer = true;
     }
@@ -221,5 +233,43 @@ impl LLVMBackend {
     #[inline]
     pub fn set_jit(&mut self, use_jit: bool) {
         self.use_jit = use_jit;
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Sanitizer {
+    Address,
+    Memory,
+    Thread,
+    Hwaddress,
+    Memtag,
+
+    None,
+}
+
+impl Sanitizer {
+    #[inline]
+    pub fn is_address(&self) -> bool {
+        matches!(self, Sanitizer::Address)
+    }
+
+    #[inline]
+    pub fn is_memory(&self) -> bool {
+        matches!(self, Sanitizer::Memory)
+    }
+
+    #[inline]
+    pub fn is_thread(&self) -> bool {
+        matches!(self, Sanitizer::Thread)
+    }
+
+    #[inline]
+    pub fn is_hwaddress(&self) -> bool {
+        matches!(self, Sanitizer::Hwaddress)
+    }
+
+    #[inline]
+    pub fn is_memtag(&self) -> bool {
+        matches!(self, Sanitizer::Memtag)
     }
 }

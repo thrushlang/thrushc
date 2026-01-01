@@ -1,13 +1,5 @@
 use crate::core::console::logging;
 
-/* ######################################################################
-
-
-    LLVM BACKEND PASSES - START
-
-
-########################################################################*/
-
 #[derive(Debug, Clone, Copy)]
 pub enum LLVMModificatorPasses {
     LoopVectorization,

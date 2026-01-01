@@ -256,7 +256,18 @@ pub fn show_help() -> ! {
         ),
     );
 
-    logging::write(logging::OutputIn::Stderr, "\nExtra compiler flags:\n\n");
+    logging::write(logging::OutputIn::Stderr, "\nOthers compiler flags:\n\n");
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--sanitizer".custom_color((141, 141, 142)).bold(),
+            "[address|hwaddress|memory|thread|memtag]",
+            "Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.",
+        ),
+    );
 
     logging::write(
         logging::OutputIn::Stderr,

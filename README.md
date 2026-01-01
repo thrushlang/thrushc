@@ -89,8 +89,9 @@ JIT compiler flags:
 • -jit-libc Specify the C runtime to link for code execution via the JIT Compiler.
 • -jit-link Specify, add, and link an external dynamic library for code execution via the JIT Compiler.
 
-Extra compiler flags:
+Others compiler flags:
 
+• --sanitizer [address|hwaddress|memory|thread|memtag] Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
 • --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes.
 • --reloc-model [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
