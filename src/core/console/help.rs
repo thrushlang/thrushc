@@ -68,7 +68,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-clang-link".custom_color((141, 141, 142)).bold(),
-            "/usr/bin/clang",
+            "path/to/clang",
             "Specifies the path for use of an external Clang for linking purpose.",
         ),
     );
@@ -79,7 +79,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-gcc-link".custom_color((141, 141, 142)).bold(),
-            "usr/bin/gcc",
+            "path/to/gcc",
             "Specifies GNU Compiler Collection (GCC) for linking purpose.",
         ),
     );
@@ -232,27 +232,40 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-jit".custom_color((141, 141, 142)).bold(),
-            "Enable the use of the JIT Compiler for code execution.",
+            "Enable the use of the JIT compiler for code execution.",
         ),
     );
 
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n",
+            "{} {} [{}] {}\n",
             "•".bold(),
             "-jit-libc".custom_color((141, 141, 142)).bold(),
-            "Specify the C runtime to link for code execution via the JIT Compiler.",
+            "path/to/libc.so",
+            "Specify the C runtime to link for code execution via the JIT compiler.",
         ),
     );
 
     logging::write(
         logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n",
+            "{} {} [{}] {}\n",
             "•".bold(),
             "-jit-link".custom_color((141, 141, 142)).bold(),
-            "Specify, add, and link an external dynamic library for code execution via the JIT Compiler.",
+            "path/to/raylib.so",
+            "Specify, add, and link an external dynamic library for code execution via the JIT compiler.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
+            "-jit-entry".custom_color((141, 141, 142)).bold(),
+            "main",
+            "Specify the entry point name for the JIT compiler.",
         ),
     );
 
@@ -266,6 +279,17 @@ pub fn show_help() -> ! {
             "--sanitizer".custom_color((141, 141, 142)).bold(),
             "[address|hwaddress|memory|thread|memtag]",
             "Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.",
+        ),
+    );
+
+    logging::write(
+        logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--no-sanitize".custom_color((141, 141, 142)).bold(),
+            "[bounds;coverage]",
+            "Modifies certain code emissions for the selected sanitizer.",
         ),
     );
 

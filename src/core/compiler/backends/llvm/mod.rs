@@ -177,6 +177,11 @@ impl LLVMBackend {
     pub fn get_mut_debug_config(&mut self) -> &mut DebugConfiguration {
         &mut self.dbg_config
     }
+
+    #[inline]
+    pub fn get_mut_sanitizer(&mut self) -> &mut Sanitizer {
+        &mut self.sanitizer
+    }
 }
 
 impl LLVMBackend {
@@ -237,12 +242,52 @@ impl LLVMBackend {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct SanitizerConfiguration {
+    nosanitize_bounds: bool,
+    nosanitize_coverage: bool,
+}
+
+impl SanitizerConfiguration {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            nosanitize_bounds: false,
+            nosanitize_coverage: false,
+        }
+    }
+}
+
+impl SanitizerConfiguration {
+    #[inline]
+    pub fn has_nosanitize_bounds(&self) -> bool {
+        self.nosanitize_bounds
+    }
+
+    #[inline]
+    pub fn has_nosanitize_coverage(&self) -> bool {
+        self.nosanitize_coverage
+    }
+}
+
+impl SanitizerConfiguration {
+    #[inline]
+    pub fn set_nosanitize_bounds(&mut self, value: bool) {
+        self.nosanitize_bounds = value;
+    }
+
+    #[inline]
+    pub fn set_nosanitize_coverage(&mut self, value: bool) {
+        self.nosanitize_coverage = value;
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Sanitizer {
-    Address,
-    Memory,
-    Thread,
-    Hwaddress,
-    Memtag,
+    Address(SanitizerConfiguration),
+    Memory(SanitizerConfiguration),
+    Thread(SanitizerConfiguration),
+    Hwaddress(SanitizerConfiguration),
+    Memtag(SanitizerConfiguration),
 
     None,
 }
@@ -250,26 +295,26 @@ pub enum Sanitizer {
 impl Sanitizer {
     #[inline]
     pub fn is_address(&self) -> bool {
-        matches!(self, Sanitizer::Address)
+        matches!(self, Sanitizer::Address(..))
     }
 
     #[inline]
     pub fn is_memory(&self) -> bool {
-        matches!(self, Sanitizer::Memory)
+        matches!(self, Sanitizer::Memory(..))
     }
 
     #[inline]
     pub fn is_thread(&self) -> bool {
-        matches!(self, Sanitizer::Thread)
+        matches!(self, Sanitizer::Thread(..))
     }
 
     #[inline]
     pub fn is_hwaddress(&self) -> bool {
-        matches!(self, Sanitizer::Hwaddress)
+        matches!(self, Sanitizer::Hwaddress(..))
     }
 
     #[inline]
     pub fn is_memtag(&self) -> bool {
-        matches!(self, Sanitizer::Memtag)
+        matches!(self, Sanitizer::Memtag(..))
     }
 }

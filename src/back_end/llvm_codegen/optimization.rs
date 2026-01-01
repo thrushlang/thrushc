@@ -691,6 +691,29 @@ impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
                     function.add_attribute(AttributeLoc::Function, sanitize_memtag);
                 }
             }
+
+            if optimizations.has_nosanitize_bounds() {
+                let nosanitize_bounds_id: u32 =
+                    Attribute::get_named_enum_kind_id("nosanitize_bounds");
+                let nosanitize_bounds: Attribute =
+                    self.context.create_enum_attribute(nosanitize_bounds_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, nosanitize_bounds);
+                }
+            }
+
+            if optimizations.has_nosanitize_coverage() {
+                let nosanitize_coverage_id: u32 =
+                    Attribute::get_named_enum_kind_id("nosanitize_coverage");
+                let nosanitize_coverage: Attribute = self
+                    .context
+                    .create_enum_attribute(nosanitize_coverage_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, nosanitize_coverage);
+                }
+            }
         }
     }
 }
@@ -736,6 +759,8 @@ struct LLVMSanitizerOptimization {
     sanitize_thread: bool,
     sanitize_hwaddress: bool,
     sanitize_memtag: bool,
+    nosanitize_bounds: bool,
+    nosanitize_coverage: bool,
 }
 
 impl LLVMSanitizerOptimization {
@@ -747,12 +772,38 @@ impl LLVMSanitizerOptimization {
         let is_sanitize_hwaddres_enabled: bool = config.get_sanitizer().is_hwaddress();
         let is_sanitize_memtag_enabled: bool = config.get_sanitizer().is_memtag();
 
+        let (nosanitize_bounds, nosanitize_coverage) = match config.get_sanitizer() {
+            Sanitizer::Address(config) => (
+                config.has_nosanitize_bounds(),
+                config.has_nosanitize_coverage(),
+            ),
+            Sanitizer::Hwaddress(config) => (
+                config.has_nosanitize_bounds(),
+                config.has_nosanitize_coverage(),
+            ),
+            Sanitizer::Memory(config) => (
+                config.has_nosanitize_bounds(),
+                config.has_nosanitize_coverage(),
+            ),
+            Sanitizer::Memtag(config) => (
+                config.has_nosanitize_bounds(),
+                config.has_nosanitize_coverage(),
+            ),
+            Sanitizer::Thread(config) => (
+                config.has_nosanitize_bounds(),
+                config.has_nosanitize_coverage(),
+            ),
+            _ => (false, false),
+        };
+
         Self {
             sanitize_address: is_sanitize_address_enabled,
             sanitize_memory: is_sanitize_memory_enabled,
             sanitize_thread: is_sanitize_thread_enabled,
             sanitize_hwaddress: is_sanitize_hwaddres_enabled,
             sanitize_memtag: is_sanitize_memtag_enabled,
+            nosanitize_bounds,
+            nosanitize_coverage,
         }
     }
 }
@@ -781,6 +832,16 @@ impl LLVMSanitizerOptimization {
     #[inline]
     pub fn has_sanitize_memtag(&self) -> bool {
         self.sanitize_memtag
+    }
+
+    #[inline]
+    pub fn has_nosanitize_bounds(&self) -> bool {
+        self.nosanitize_bounds
+    }
+
+    #[inline]
+    pub fn has_nosanitize_coverage(&self) -> bool {
+        self.nosanitize_coverage
     }
 
     #[inline]

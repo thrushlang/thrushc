@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use crate::core::compiler;
 use crate::core::compiler::backends::llvm;
 use crate::core::compiler::backends::llvm::Sanitizer;
+use crate::core::compiler::backends::llvm::SanitizerConfiguration;
 use crate::core::compiler::backends::llvm::debug::DwarfVersion;
 use crate::core::compiler::backends::llvm::passes::LLVMModificatorPasses;
 use crate::core::compiler::linking::LinkingCompilersConfiguration;
@@ -232,6 +233,21 @@ impl CommandLine {
                 self.advance();
             }
 
+            "-jit-entry" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+                self.validate_jit_required(arg);
+
+                let entrypoint: Vec<u8> = self.peek().as_bytes().to_vec();
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_jit_config()
+                    .set_entry(entrypoint);
+
+                self.advance();
+            }
+
             "-start" => {
                 self.advance();
                 self.position = CommandLinePosition::External;
@@ -437,6 +453,47 @@ impl CommandLine {
                 self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .set_sanitizer(sanitizer);
+
+                self.advance();
+            }
+
+            "--no-sanitize" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let (nosanitize_bounds, nosanitize_coverage) =
+                    self.parse_sanitizer_config(self.peek());
+
+                match self
+                    .get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_sanitizer()
+                {
+                    Sanitizer::Address(config) => {
+                        config.set_nosanitize_bounds(nosanitize_bounds);
+                        config.set_nosanitize_coverage(nosanitize_coverage);
+                    }
+                    Sanitizer::Hwaddress(config) => {
+                        config.set_nosanitize_bounds(nosanitize_bounds);
+                        config.set_nosanitize_coverage(nosanitize_coverage);
+                    }
+                    Sanitizer::Memory(config) => {
+                        config.set_nosanitize_bounds(nosanitize_bounds);
+                        config.set_nosanitize_coverage(nosanitize_coverage);
+                    }
+                    Sanitizer::Memtag(config) => {
+                        config.set_nosanitize_bounds(nosanitize_bounds);
+                        config.set_nosanitize_coverage(nosanitize_coverage);
+                    }
+                    Sanitizer::Thread(config) => {
+                        config.set_nosanitize_bounds(nosanitize_bounds);
+                        config.set_nosanitize_coverage(nosanitize_coverage);
+                    }
+
+                    Sanitizer::None => {
+                        self.report_error("Cannot modify a sanitizer settings without this option enabled. First, use \"--sanitize.\".");
+                    }
+                }
 
                 self.advance();
             }
@@ -827,14 +884,39 @@ impl CommandLine {
 }
 
 impl CommandLine {
+    fn parse_sanitizer_config(&self, spec: &str) -> (bool, bool) {
+        let splitted: std::str::Split<'_, &str> = spec.split(";");
+
+        let mut bounds: bool = false;
+        let mut coverage: bool = false;
+
+        for config in splitted {
+            let (b, c) = match config {
+                "bounds" => (true, false),
+                "coverage" => (false, true),
+
+                any => {
+                    self.report_error(&format!("Unknown sanitizer modificator: '{}'.", any));
+                }
+            };
+
+            bounds = bounds || b;
+            coverage = coverage || c;
+        }
+
+        (bounds, coverage)
+    }
+
     #[inline]
     fn parse_sanitizer(&self, sanitizer: &str) -> Sanitizer {
+        let config: SanitizerConfiguration = SanitizerConfiguration::new();
+
         match sanitizer {
-            "address" => Sanitizer::Address,
-            "hwaddress" => Sanitizer::Hwaddress,
-            "memory" => Sanitizer::Memory,
-            "thread" => Sanitizer::Thread,
-            "memtag" => Sanitizer::Memtag,
+            "address" => Sanitizer::Address(config),
+            "hwaddress" => Sanitizer::Hwaddress(config),
+            "memory" => Sanitizer::Memory(config),
+            "thread" => Sanitizer::Thread(config),
+            "memtag" => Sanitizer::Memtag(config),
 
             any => {
                 self.report_error(&format!("Unknown sanitizer: '{}'.", any));

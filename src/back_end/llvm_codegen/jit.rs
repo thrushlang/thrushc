@@ -173,13 +173,15 @@ impl<'ctx> LLVMJITCompiler<'ctx> {
 
 impl<'ctx> LLVMJITCompiler<'ctx> {
     fn get_entrypoint(&self) -> Result<FunctionValue<'ctx>, ()> {
+        let entrypoint_name: &[u8] = self.config.get_entry();
+
         self.modules
             .iter()
             .flat_map(|module| module.get_functions())
-            .find(|function| function.get_name() == c"main")
+            .find(|function| function.get_name().to_bytes() == entrypoint_name)
             .ok_or_else(|| {
                 logging::print_error(
-                    LoggingType::JITCompiler,
+                    LoggingType::Error,
                     "The program entrypoint couldn't be found.",
                 );
             })

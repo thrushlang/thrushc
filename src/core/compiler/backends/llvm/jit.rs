@@ -9,6 +9,7 @@ pub struct JITConfiguration {
     libc_path: PathBuf,
     libraries: Vec<PathBuf>,
     args: Vec<String>,
+    entry: Vec<u8>,
 }
 
 impl JITConfiguration {
@@ -18,6 +19,7 @@ impl JITConfiguration {
             libc_path: PathBuf::from(self::get_common_c_runtime_path()),
             libraries: Vec::with_capacity(100),
             args: Vec::with_capacity(100),
+            entry: "main".as_bytes().to_vec(),
         }
     }
 }
@@ -34,6 +36,11 @@ impl JITConfiguration {
     }
 
     #[inline]
+    pub fn get_entry(&self) -> &[u8] {
+        &self.entry
+    }
+
+    #[inline]
     pub fn get_args(&self) -> &[String] {
         &self.args
     }
@@ -43,6 +50,11 @@ impl JITConfiguration {
     #[inline]
     pub fn set_libc_path(&mut self, value: PathBuf) {
         self.libc_path = value;
+    }
+
+    #[inline]
+    pub fn set_entry(&mut self, value: Vec<u8>) {
+        self.entry = value;
     }
 
     #[inline]

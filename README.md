@@ -64,8 +64,8 @@ General flags:
 
 Linkage flags:
 
-• -clang-link [/usr/bin/clang] Specifies the path for use of an external Clang for linking purpose.
-• -gcc-link [usr/bin/gcc] Specifies GNU Compiler Collection (GCC) for linking purpose.
+• -clang-link [path/to/clang] Specifies the path for use of an external Clang for linking purpose.
+• -gcc-link [path/to/gcc] Specifies GNU Compiler Collection (GCC) for linking purpose.
 • -start Marks the start of arguments to the active external or built-in linking compiler.
 • -end Marks the end of arguments to the active external or built-in linker compiler.
 
@@ -85,13 +85,15 @@ Compiler flags:
 
 JIT compiler flags:
 
-• -jit Enable the use of the JIT Compiler for code execution.
-• -jit-libc Specify the C runtime to link for code execution via the JIT Compiler.
-• -jit-link Specify, add, and link an external dynamic library for code execution via the JIT Compiler.
+• -jit Enable the use of the JIT compiler for code execution.
+• -jit-libc [path/to/libc.so] Specify the C runtime to link for code execution via the JIT compiler.
+• -jit-link [path/to/raylib.so] Specify, add, and link an external dynamic library for code execution via the JIT compiler.
+• -jit-entry [main] Specify the entry point name for the JIT compiler.
 
 Others compiler flags:
 
 • --sanitizer [address|hwaddress|memory|thread|memtag] Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.
+• --no-sanitize [bounds;coverage] Modifies certain code emissions for the selected sanitizer.
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
 • --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes.
 • --reloc-model [static|pic|dynamic] Indicate how references to memory addresses and linkage symbols are handled.
