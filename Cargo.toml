@@ -1,6 +1,41 @@
-[package]
+[workspace]
+members = [
+    "thrushc_compiler",
+    "thrushc_compiler_cli",
+    "thrushc_ast",
+    "thrushc_lexer",
+    "thrushc_parser",
+    "thrushc_typesystem", 
+    "thrushc_span", 
+    "thrushc_diagnostician", 
+    "thrushc_errors", 
+    "thrushc_logging",
+    "thrushc_options",
+    "thrushc_mir", 
+    "thrushc_token", 
+    "thrushc_attributes", 
+    "thrushc_typechecker", 
+    "thrushc_scoper", 
+    "thrushc_analyzer", 
+    "thrushc_linter", 
+    "thrushc_constants", 
+    "thrushc_reader", 
+    "thrushc_frontend_abort", 
+    "thrushc_semantic", 
+    "thrushc_entities", 
+    "thrushc_llvm_codegen", 
+    "thrushc_llvm_attributes", 
+    "thrushc_llvm_callconventions", 
+    "thrushc_llvm_builtins", 
+    "thrushc_attribute_checker", 
+    "thrushc_llvm_intrinsic_checker", 
+    "thrushc_llvm_callconventions_checker"
+]
+resolver = "2"
+
+[workspace.package]
 name = "thrushc"
-description = "The Compiler for Thrush Programming Language."
+description = "The compiler for Thrush Programming Language."
 edition = "2024"
 license = "GPL-3.0"
 version = "0.1.0"
@@ -13,42 +48,21 @@ authors = [
 
 homepage = "https://github.com/thrushlang/thrushc"
 repository = "https://github.com/thrushlang/thrushc"
-build = "build.rs"
 
-[dependencies]
-inkwell = { path = "wrappers/llvm/inkwell", optional = true }
-gcc = { path = "wrappers/gcc/gccjit",  optional = true }
-clang = { path = "wrappers/llvm/clang", optional = true }
+[patch.crates-io]
+clang-sys = { path = "crates/llvm/17/clang-sys" }
+llvm-sys = { path = "crates/llvm/17/llvm-sys" }
 
-unicode_categories = "0.1.1"
-colored = "3.0.0"
-ahash = "0.8.11"
-lazy_static = "1.5.0"
-fastrand = "2.3.0"
-libloading = "0.8.9"
-either = "1.15.0"
-uuid = { version = "1.19.0", features = ["v4"] }
-object = { version = "0.38.0", features = ["read"] }
-encoding_rs = "0.8.35"
-encoding_rs_io = "0.1.7"
-const_format = "0.2.35"
-
-[features]
-default = ["llvm_backend_static", "cbindgen_static"]
-
-llvm_backend_dynamic = ["inkwell/llvm17-0", "inkwell/llvm17-0-force-dynamic"]
-llvm_backend_static = ["inkwell/llvm17-0", "inkwell/llvm17-0-force-static"]
-
-gcc_backend_dynamic = ["gcc"]
-
-cbindgen_static = ["clang/static"]
-cbindgen_dynamic = ["clang"]
-
-[build-dependencies]
-libloading = "0.8.9"
+[workspace.dependencies]
+inkwell = { path = "crates/llvm/inkwell" }
+clang = { path = "crates/llvm/clang" }
 
 [profile.dev]
 incremental = true
+
+[profile.dev.package."*"]
+incremental = true
+opt-level = 2
 
 [profile.release]
 incremental = true

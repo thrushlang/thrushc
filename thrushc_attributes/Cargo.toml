@@ -1,0 +1,26 @@
+[package]
+name = "thrushc_attributes"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+inkwell = { workspace = true, optional = true }
+clang = { workspace = true, optional = true }
+
+thrushc_logging = { path = "../thrushc_logging" }
+thrushc_errors = { path = "../thrushc_errors" }
+thrushc_span = { path = "../thrushc_span" }
+thrushc_token = { path = "../thrushc_token" }
+
+[features]
+default = ["llvm_backend_static", "cbindgen_static"]
+
+llvm_backend_dynamic = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-dynamic"]
+llvm_backend_static  = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-static"]
+
+cbindgen_static      = ["dep:clang", "clang/static"]
+cbindgen_dynamic     = ["dep:clang"]

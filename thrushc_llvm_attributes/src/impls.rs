@@ -1,0 +1,175 @@
+use inkwell::module::Linkage;
+
+use crate::{
+    LLVMAttribute, LLVMAttributeComparator, LLVMAttributes,
+    traits::{LLVMAttributeComparatorExtensions, LLVMAttributesExtensions},
+};
+
+impl LLVMAttributesExtensions for LLVMAttributes<'_> {
+    #[inline]
+    fn has_extern_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_extern_attribute())
+    }
+
+    #[inline]
+    fn has_linkage_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_linkage_attribute())
+    }
+
+    #[inline]
+    fn has_ignore_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_ignore_attribute())
+    }
+
+    #[inline]
+    fn has_heap_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_heap_attribute())
+    }
+
+    #[inline]
+    fn has_public_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_public_attribute())
+    }
+
+    #[inline]
+    fn has_hot_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_hot_attribute())
+    }
+
+    #[inline]
+    fn has_inline_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_inline_attribute())
+    }
+
+    #[inline]
+    fn has_minsize_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_minsize_attribute())
+    }
+
+    #[inline]
+    fn has_inlinealways_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_alwaysinline_attribute())
+    }
+
+    #[inline]
+    fn has_noinline_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_noinline_attribute())
+    }
+
+    #[inline]
+    fn has_asmalignstack_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmalingstack_attribute())
+    }
+
+    #[inline]
+    fn has_asmsideffects_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmsideeffects_attribute())
+    }
+
+    #[inline]
+    fn has_asmthrow_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmthrow_attribute())
+    }
+
+    #[inline]
+    fn has_asmsyntax_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmsyntax_attribute())
+    }
+
+    #[inline]
+    fn get_attr(&self, cmp: LLVMAttributeComparator) -> Option<LLVMAttribute<'_>> {
+        if let Some(attr_found) = self.iter().find(|attr| attr.as_attr_cmp() == cmp) {
+            return Some(*attr_found);
+        }
+
+        None
+    }
+}
+
+impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
+    fn as_attr_cmp(&self) -> LLVMAttributeComparator {
+        match self {
+            LLVMAttribute::Extern(..) => LLVMAttributeComparator::Extern,
+            LLVMAttribute::Linkage(..) => LLVMAttributeComparator::Linkage,
+            LLVMAttribute::Convention(..) => LLVMAttributeComparator::Convention,
+            LLVMAttribute::Stack => LLVMAttributeComparator::Stack,
+            LLVMAttribute::Heap => LLVMAttributeComparator::Heap,
+            LLVMAttribute::Public => LLVMAttributeComparator::Public,
+            LLVMAttribute::Ignore => LLVMAttributeComparator::Ignore,
+            LLVMAttribute::Hot => LLVMAttributeComparator::Hot,
+            LLVMAttribute::NoInline => LLVMAttributeComparator::NoInline,
+            LLVMAttribute::InlineHint => LLVMAttributeComparator::InlineHint,
+            LLVMAttribute::MinSize => LLVMAttributeComparator::MinSize,
+            LLVMAttribute::AlwaysInline => LLVMAttributeComparator::AlwaysInline,
+            LLVMAttribute::SafeStack => LLVMAttributeComparator::SafeStack,
+            LLVMAttribute::StrongStack => LLVMAttributeComparator::StrongStack,
+            LLVMAttribute::WeakStack => LLVMAttributeComparator::WeakStack,
+            LLVMAttribute::PreciseFloats => LLVMAttributeComparator::PreciseFloats,
+            LLVMAttribute::AsmAlignStack => LLVMAttributeComparator::AsmAlignStack,
+            LLVMAttribute::AsmSyntax(..) => LLVMAttributeComparator::AsmSyntax,
+            LLVMAttribute::AsmThrow => LLVMAttributeComparator::AsmThrow,
+            LLVMAttribute::AsmSideEffects => LLVMAttributeComparator::AsmSideEffects,
+            LLVMAttribute::Packed => LLVMAttributeComparator::Packed,
+            LLVMAttribute::NoUnwind => LLVMAttributeComparator::NoUnwind,
+            LLVMAttribute::OptFuzzing => LLVMAttributeComparator::OptFuzzing,
+            LLVMAttribute::Constructor => LLVMAttributeComparator::Constructor,
+            LLVMAttribute::Destructor => LLVMAttributeComparator::Destructor,
+        }
+    }
+}
+
+impl std::fmt::Display for LLVMAttribute<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LLVMAttribute::AlwaysInline => write!(f, "@alwaysinline"),
+            LLVMAttribute::NoInline => write!(f, "@noinline"),
+            LLVMAttribute::InlineHint => write!(f, "@inline"),
+            LLVMAttribute::Extern(name, ..) => write!(f, "@extern({})", name),
+            LLVMAttribute::Linkage(linkage, ..) => {
+                let display: &str = match *linkage {
+                    Linkage::Appending => "Appending",
+                    Linkage::Common => "Common",
+                    Linkage::AvailableExternally => "AvailableExternally",
+                    Linkage::External => "External",
+                    Linkage::ExternalWeak => "ExternalWeak",
+                    Linkage::Internal => "Internal",
+                    Linkage::LinkOnceAny => "LinkOnceAny",
+                    Linkage::LinkOnceODR => "LinkOnceODR",
+                    Linkage::LinkOnceODRAutoHide => "LinkOnceODRAutoHide",
+                    Linkage::Private => "Private",
+                    Linkage::WeakAny => "WeakAny",
+                    Linkage::WeakODR => "WeakODR",
+                    Linkage::DLLExport => "DLLExport",
+                    Linkage::DLLImport => "DLLImport",
+                    Linkage::Ghost => "Ghost",
+                    Linkage::LinkerPrivate => "LinkerPrivate",
+                    Linkage::LinkerPrivateWeak => "LinkerPrivateWeak",
+                };
+
+                write!(f, "@linkage(\"{}\")", display)
+            }
+            LLVMAttribute::Convention(convention, ..) => {
+                write!(f, "@convention(\"{}\")", convention)
+            }
+            LLVMAttribute::Stack => write!(f, "@stack"),
+            LLVMAttribute::Heap => write!(f, "@heap"),
+            LLVMAttribute::Public => write!(f, "@public"),
+            LLVMAttribute::StrongStack => write!(f, "@strongstack"),
+            LLVMAttribute::WeakStack => write!(f, "@weakstack"),
+            LLVMAttribute::SafeStack => write!(f, "@safestack"),
+            LLVMAttribute::PreciseFloats => write!(f, "@precisefp"),
+            LLVMAttribute::MinSize => write!(f, "@minsize"),
+            LLVMAttribute::Hot => write!(f, "@hot"),
+            LLVMAttribute::Ignore => write!(f, "@ignore"),
+            LLVMAttribute::NoUnwind => write!(f, "@nounwind"),
+            LLVMAttribute::AsmThrow => write!(f, "@asmthrow"),
+            LLVMAttribute::AsmSyntax(..) => write!(f, "@asmsyntax"),
+            LLVMAttribute::AsmSideEffects => write!(f, "@asmeffects"),
+            LLVMAttribute::AsmAlignStack => write!(f, "@asmalingstack"),
+            LLVMAttribute::Packed => write!(f, "@packed"),
+            LLVMAttribute::OptFuzzing => write!(f, "@optfuzzing"),
+            LLVMAttribute::Constructor => write!(f, "@constructor"),
+            LLVMAttribute::Destructor => write!(f, "@destructor"),
+        }
+    }
+}

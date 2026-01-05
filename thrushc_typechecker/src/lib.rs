@@ -1,0 +1,585 @@
+use thrushc_ast::{
+    Ast,
+    metadata::LocalMetadata,
+    traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
+};
+use thrushc_attributes::traits::ThrushAttributesExtensions;
+use thrushc_diagnostician::Diagnostician;
+use thrushc_errors::{CompilationIssue, CompilationIssueCode};
+use thrushc_options::{CompilationUnit, CompilerOptions};
+use thrushc_span::Span;
+use thrushc_typesystem::{
+    Type,
+    traits::{TypeCodeLocation, TypeIsExtensions},
+};
+
+use crate::{metadata::TypeCheckerExpressionMetadata, table::TypeCheckerSymbolsTable};
+
+mod checking;
+mod expressions;
+mod globals;
+mod metadata;
+mod operations;
+mod table;
+
+#[derive(Debug)]
+pub struct TypeChecker<'type_checker> {
+    ast: &'type_checker [Ast<'type_checker>],
+    position: usize,
+
+    bugs: Vec<CompilationIssue>,
+    errors: Vec<CompilationIssue>,
+    warnings: Vec<CompilationIssue>,
+
+    symbols: TypeCheckerSymbolsTable<'type_checker>,
+    diagnostician: Diagnostician,
+}
+
+impl<'type_checker> TypeChecker<'type_checker> {
+    pub fn new(
+        ast: &'type_checker [Ast<'type_checker>],
+        file: &'type_checker CompilationUnit,
+        options: &CompilerOptions,
+    ) -> Self {
+        Self {
+            ast,
+            position: 0,
+
+            bugs: Vec::with_capacity(100),
+            errors: Vec::with_capacity(100),
+            warnings: Vec::with_capacity(100),
+
+            symbols: TypeCheckerSymbolsTable::new(),
+            diagnostician: Diagnostician::new(file, options),
+        }
+    }
+}
+
+impl<'type_checker> TypeChecker<'type_checker> {
+    pub fn start(&mut self) -> bool {
+        self.parse_top();
+
+        while !self.is_eof() {
+            let node: &Ast = self.peek();
+
+            if let Err(error) = self.analyze_decl(node) {
+                self.add_error(error);
+            }
+
+            self.advance();
+        }
+
+        self.warnings.iter().for_each(|warn| {
+            self.diagnostician
+                .dispatch_diagnostic(warn, thrushc_logging::LoggingType::Warning);
+        });
+
+        if !self.errors.is_empty() || !self.bugs.is_empty() {
+            self.bugs.iter().for_each(|warn| {
+                self.diagnostician
+                    .dispatch_diagnostic(warn, thrushc_logging::LoggingType::Bug);
+            });
+
+            self.errors.iter().for_each(|error| {
+                self.diagnostician
+                    .dispatch_diagnostic(error, thrushc_logging::LoggingType::Error);
+            });
+
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl<'type_checker> TypeChecker<'type_checker> {
+    pub fn analyze_decl(&mut self, node: &'type_checker Ast) -> Result<(), CompilationIssue> {
+        match node {
+            Ast::Intrinsic { .. } | Ast::AssemblerFunction { .. } | Ast::Function { .. } => {
+                globals::functions::validate(self, node)
+            }
+            Ast::CustomType { .. } | Ast::GlobalAssembler { .. } | Ast::Struct { .. } => Ok(()),
+            Ast::Enum { fields, .. } => {
+                fields.iter().try_for_each(|field| {
+                    let target_type: Type = field.1.clone();
+                    let from_type: &Type = field.2.get_value_type()?;
+
+                    let value: &Ast = &field.2;
+
+                    let metadata: TypeCheckerExpressionMetadata =
+                        TypeCheckerExpressionMetadata::new(value.is_literal_value());
+
+                    checking::check_types(
+                        &target_type,
+                        from_type,
+                        Some(value),
+                        None,
+                        metadata,
+                        value.get_span(),
+                    )?;
+
+                    self.analyze_expr(value)?;
+
+                    Ok(())
+                })?;
+
+                Ok(())
+            }
+            Ast::Static {
+                kind: static_type,
+                value,
+                ..
+            } => {
+                if let Some(value) = value {
+                    let metadata: TypeCheckerExpressionMetadata =
+                        TypeCheckerExpressionMetadata::new(value.is_literal_value());
+
+                    let value_type: &Type = value.get_value_type()?;
+
+                    checking::check_types(
+                        static_type,
+                        value_type,
+                        Some(value),
+                        None,
+                        metadata,
+                        node.get_span(),
+                    )?;
+
+                    self.analyze_expr(value)?;
+                }
+
+                Ok(())
+            }
+            Ast::Const {
+                kind: target_type,
+                value,
+                ..
+            } => {
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
+
+                let from_type: &Type = value.get_value_type()?;
+
+                checking::check_types(
+                    target_type,
+                    &Type::Const(from_type.clone().into(), from_type.get_span()),
+                    Some(value),
+                    None,
+                    metadata,
+                    node.get_span(),
+                )?;
+
+                self.analyze_expr(value)?;
+
+                Ok(())
+            }
+
+            _ => Ok(()),
+        }
+    }
+
+    fn analyze_stmt(&mut self, node: &'type_checker Ast) -> Result<(), CompilationIssue> {
+        match node {
+            Ast::CustomType { .. }
+            | Ast::Struct { .. }
+            | Ast::Continue { .. }
+            | Ast::Break { .. } => Ok(()),
+            Ast::Enum { fields, .. } => {
+                fields.iter().try_for_each(|field| {
+                    let target_type: Type = field.1.clone();
+                    let from_type: &Type = field.2.get_value_type()?;
+
+                    let value: &Ast = &field.2;
+
+                    let metadata: TypeCheckerExpressionMetadata =
+                        TypeCheckerExpressionMetadata::new(value.is_literal_value());
+
+                    checking::check_types(
+                        &target_type,
+                        from_type,
+                        Some(value),
+                        None,
+                        metadata,
+                        value.get_span(),
+                    )?;
+
+                    self.analyze_expr(value)?;
+
+                    Ok(())
+                })?;
+
+                Ok(())
+            }
+            Ast::Static {
+                kind: static_type,
+                value,
+                ..
+            } => {
+                if let Some(value) = value {
+                    let metadata: TypeCheckerExpressionMetadata =
+                        TypeCheckerExpressionMetadata::new(value.is_literal_value());
+
+                    let value_type: &Type = value.get_value_type()?;
+
+                    checking::check_types(
+                        static_type,
+                        value_type,
+                        Some(value),
+                        None,
+                        metadata,
+                        node.get_span(),
+                    )?;
+
+                    self.analyze_expr(value)?;
+                }
+
+                Ok(())
+            }
+            Ast::Const {
+                kind: target_type,
+                value,
+                ..
+            } => {
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
+
+                let from_type: &Type = value.get_value_type()?;
+
+                checking::check_types(
+                    target_type,
+                    &Type::Const(from_type.clone().into(), from_type.get_span()),
+                    Some(value),
+                    None,
+                    metadata,
+                    node.get_span(),
+                )?;
+
+                self.analyze_expr(value)?;
+
+                Ok(())
+            }
+            Ast::Local {
+                name,
+                kind: local_type,
+                value,
+                span,
+                metadata,
+                ..
+            } => {
+                self.symbols.new_local(name, local_type);
+
+                if local_type.is_void_type() {
+                    self.add_error(CompilationIssue::Error(
+                        CompilationIssueCode::E0019,
+                        "Void type isn't a value.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                if let Some(local_value) = value {
+                    let metadata: &LocalMetadata = metadata;
+
+                    let type_metadata: TypeCheckerExpressionMetadata =
+                        TypeCheckerExpressionMetadata::new(local_value.is_literal_value());
+
+                    if local_type.is_void_type() {
+                        self.add_error(CompilationIssue::Error(
+                            CompilationIssueCode::E0019,
+                            "Void type isn't a value.".into(),
+                            None,
+                            *span,
+                        ));
+                    }
+
+                    if !metadata.is_undefined() {
+                        let local_value_type: &Type = local_value.get_value_type()?;
+
+                        checking::check_types(
+                            local_type,
+                            local_value_type,
+                            Some(local_value),
+                            None,
+                            type_metadata,
+                            node.get_span(),
+                        )?;
+
+                        self.analyze_expr(local_value)?;
+                    }
+                }
+
+                Ok(())
+            }
+            Ast::Block { nodes, .. } => {
+                self.begin_scope();
+
+                nodes.iter().try_for_each(|node| self.analyze_stmt(node))?;
+
+                self.end_scope();
+
+                Ok(())
+            }
+
+            Ast::If {
+                condition,
+                block,
+                elseif,
+                anyway,
+                ..
+            } => {
+                self.analyze_expr(condition)?;
+
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(condition.is_literal_value());
+
+                let span: Span = condition.get_span();
+
+                checking::check_types(
+                    &Type::Bool(span),
+                    condition.get_value_type()?,
+                    Some(condition),
+                    None,
+                    metadata,
+                    span,
+                )?;
+
+                elseif.iter().try_for_each(|elif| self.analyze_stmt(elif))?;
+
+                if let Some(otherwise) = anyway {
+                    self.analyze_stmt(otherwise)?;
+                }
+
+                self.analyze_stmt(block)?;
+
+                Ok(())
+            }
+            Ast::Elif {
+                condition, block, ..
+            } => {
+                self.analyze_expr(condition)?;
+
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(condition.is_literal_value());
+
+                let span: Span = condition.get_span();
+
+                checking::check_types(
+                    &Type::Bool(condition.get_span()),
+                    condition.get_value_type()?,
+                    Some(condition),
+                    None,
+                    metadata,
+                    span,
+                )?;
+
+                self.analyze_stmt(block)?;
+
+                Ok(())
+            }
+            Ast::Else { block, .. } => {
+                self.analyze_stmt(block)?;
+
+                Ok(())
+            }
+
+            Ast::For {
+                local,
+                condition,
+                actions,
+                block,
+                ..
+            } => {
+                self.analyze_stmt(local)?;
+
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(condition.is_literal_value());
+
+                let span: Span = condition.get_span();
+
+                checking::check_types(
+                    &Type::Bool(span),
+                    condition.get_value_type()?,
+                    Some(condition),
+                    None,
+                    metadata,
+                    span,
+                )?;
+
+                self.analyze_expr(condition)?;
+                self.analyze_expr(actions)?;
+                self.analyze_stmt(block)?;
+
+                Ok(())
+            }
+            Ast::While {
+                condition, block, ..
+            } => {
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(condition.is_literal_value());
+
+                let span: Span = condition.get_span();
+
+                checking::check_types(
+                    &Type::Bool(span),
+                    condition.get_value_type()?,
+                    Some(condition),
+                    None,
+                    metadata,
+                    span,
+                )?;
+
+                self.analyze_expr(condition)?;
+                self.analyze_stmt(block)?;
+
+                Ok(())
+            }
+            Ast::Loop { block, .. } => {
+                self.analyze_stmt(block)?;
+
+                Ok(())
+            }
+
+            Ast::Return {
+                expression, kind, ..
+            } => {
+                if let Some(expr) = expression {
+                    let metadata: TypeCheckerExpressionMetadata =
+                        TypeCheckerExpressionMetadata::new(expr.is_literal_value());
+
+                    checking::check_types(
+                        kind,
+                        expr.get_value_type()?,
+                        Some(expr),
+                        None,
+                        metadata,
+                        node.get_span(),
+                    )?;
+
+                    self.analyze_expr(expr)?;
+                }
+
+                Ok(())
+            }
+            Ast::Mut { source, value, .. } => {
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
+
+                let value_type: &Type = value.get_value_type()?;
+                let source_type: &Type = source.get_value_type()?;
+
+                if !source_type.is_ptr_type() {
+                    let lhs_type: &Type = source_type;
+                    let rhs_type: &Type = value_type;
+
+                    checking::check_types(
+                        lhs_type,
+                        rhs_type,
+                        Some(value),
+                        None,
+                        metadata,
+                        source.get_span(),
+                    )?;
+                }
+
+                self.analyze_expr(value)?;
+
+                Ok(())
+            }
+            _ => self.analyze_expr(node),
+        }
+    }
+
+    fn analyze_expr(&mut self, node: &'type_checker Ast) -> Result<(), CompilationIssue> {
+        expressions::validate(self, node)
+    }
+}
+
+impl TypeChecker<'_> {
+    fn parse_top(&mut self) {
+        {
+            for node in self.ast.iter().rev() {
+                match node {
+                    Ast::AssemblerFunction {
+                        name,
+                        parameters_types: types,
+                        attributes,
+                        ..
+                    } => {
+                        self.symbols
+                            .new_asm_function(name, (types, attributes.has_ignore_attribute()));
+                    }
+                    Ast::Function {
+                        name,
+                        parameter_types: types,
+                        attributes,
+                        ..
+                    } => {
+                        self.symbols
+                            .new_function(name, (types, attributes.has_ignore_attribute()));
+                    }
+                    Ast::Intrinsic {
+                        name,
+                        parameters_types: types,
+                        attributes,
+                        ..
+                    } => {
+                        self.symbols
+                            .new_intrinsic(name, (types, attributes.has_ignore_attribute()));
+                    }
+
+                    _ => (),
+                }
+            }
+        }
+    }
+}
+
+impl<'type_checker> TypeChecker<'type_checker> {
+    #[inline]
+    fn advance(&mut self) {
+        if !self.is_eof() {
+            self.position += 1;
+        }
+    }
+
+    #[inline]
+    fn peek(&self) -> &'type_checker Ast<'type_checker> {
+        &self.ast[self.position]
+    }
+
+    #[inline]
+    fn is_eof(&self) -> bool {
+        self.position >= self.ast.len()
+    }
+}
+
+impl TypeChecker<'_> {
+    #[inline]
+    fn add_error(&mut self, error: CompilationIssue) {
+        self.errors.push(error);
+    }
+
+    #[inline]
+    fn add_bug(&mut self, error: CompilationIssue) {
+        self.bugs.push(error);
+    }
+}
+
+impl<'type_checker> TypeChecker<'type_checker> {
+    #[inline]
+    fn get_symbols(&self) -> &TypeCheckerSymbolsTable<'type_checker> {
+        &self.symbols
+    }
+}
+
+impl TypeChecker<'_> {
+    #[inline]
+    fn begin_scope(&mut self) {
+        self.symbols.begin_scope();
+    }
+
+    #[inline]
+    fn end_scope(&mut self) {
+        self.symbols.end_scope();
+    }
+}

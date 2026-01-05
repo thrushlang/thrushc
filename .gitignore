@@ -1,10 +1,4 @@
-.vscode
-/target
-/guide
-/tests
-build
-compiler-builder/target
-dist
-embedded
 Cargo.lock
-versions
+target
+tests
+build

@@ -1,0 +1,16 @@
+[package]
+name = "thrushc_semantic"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thrushc_ast = { path = "../thrushc_ast" }
+thrushc_options = { path = "../thrushc_options" }
+thrushc_analyzer = { path = "../thrushc_analyzer" }
+thrushc_typechecker = { path = "../thrushc_typechecker" }
+thrushc_scoper = { path = "../thrushc_scoper" }
+thrushc_attribute_checker = { path = "../thrushc_attribute_checker" }
+thrushc_linter = { path = "../thrushc_linter" }

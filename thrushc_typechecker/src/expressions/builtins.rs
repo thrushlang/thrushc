@@ -1,0 +1,201 @@
+use thrushc_ast::{
+    Ast,
+    builitins::ThrushBuiltin,
+    traits::{AstCodeLocation, AstGetType},
+};
+use thrushc_errors::{CompilationIssue, CompilationIssueCode};
+use thrushc_span::Span;
+use thrushc_typesystem::{Type, traits::TypeIsExtensions};
+
+use crate::TypeChecker;
+
+pub fn validate<'type_checker>(
+    typechecker: &mut TypeChecker<'type_checker>,
+    builtin: &'type_checker ThrushBuiltin,
+) -> Result<(), CompilationIssue> {
+    match builtin {
+        ThrushBuiltin::MemSet {
+            dst,
+            new_size,
+            size,
+            ..
+        } => self::validate_memset(typechecker, dst, new_size, size),
+
+        ThrushBuiltin::MemMove { dst, src, size, .. } => {
+            self::validate_memmove(typechecker, dst, src, size)
+        }
+
+        ThrushBuiltin::MemCpy { dst, src, size, .. } => {
+            self::validate_memcpy(typechecker, dst, src, size)
+        }
+
+        ThrushBuiltin::Halloc { .. }
+        | ThrushBuiltin::AlignOf { .. }
+        | ThrushBuiltin::SizeOf { .. }
+        | ThrushBuiltin::AbiSizeOf { .. }
+        | ThrushBuiltin::BitSizeOf { .. }
+        | ThrushBuiltin::AbiAlignOf { .. } => Ok(()),
+    }
+}
+
+pub fn validate_memmove<'type_checker>(
+    typechecker: &mut TypeChecker<'type_checker>,
+    destination: &'type_checker Ast,
+    source: &'type_checker Ast,
+    size: &'type_checker Ast,
+) -> Result<(), CompilationIssue> {
+    let source_type: &Type = source.get_value_type()?;
+    let source_span: Span = source.get_span();
+
+    let destination_type: &Type = destination.get_value_type()?;
+    let destination_span: Span = destination.get_span();
+
+    let size_type: &Type = size.get_value_type()?;
+    let size_span: Span = size.get_span();
+
+    if !source_type.is_ptr_type() && !source_type.is_address_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            format!(
+                "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', got '{}' type.",
+                source_type
+            ),
+            None,
+            source_span,
+        ));
+    }
+
+    if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            format!(
+                "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', got '{}' type.",
+                destination_type
+            ),
+            None,
+            destination_span,
+        ));
+    }
+
+    if !size_type.is_unsigned_integer_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            format!("Expected unsigned integer type, got '{}' type.", size_type),
+            None,
+            size_span,
+        ));
+    }
+
+    typechecker.analyze_expr(source)?;
+    typechecker.analyze_expr(destination)?;
+    typechecker.analyze_expr(size)?;
+
+    Ok(())
+}
+
+pub fn validate_memcpy<'type_checker>(
+    typechecker: &mut TypeChecker<'type_checker>,
+    destination: &'type_checker Ast,
+    source: &'type_checker Ast,
+    size: &'type_checker Ast,
+) -> Result<(), CompilationIssue> {
+    let source_type: &Type = source.get_value_type()?;
+    let source_span: Span = source.get_span();
+
+    let destination_type: &Type = destination.get_value_type()?;
+    let destination_span: Span = destination.get_span();
+
+    let size_type: &Type = size.get_value_type()?;
+    let size_span: Span = size.get_span();
+
+    if !source_type.is_ptr_type() && !source_type.is_address_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            format!(
+                "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', got '{}' type.",
+                source_type
+            ),
+            None,
+            source_span,
+        ));
+    }
+
+    if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr'.".into(),
+            None,
+            destination_span,
+        ));
+    }
+
+    if size_type.is_unsigned_integer_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            format!("Expected unsigned integer type, got '{}' type.", size_type),
+            None,
+            size_span,
+        ));
+    }
+
+    typechecker.analyze_expr(source)?;
+    typechecker.analyze_expr(destination)?;
+    typechecker.analyze_expr(size)?;
+
+    Ok(())
+}
+
+pub fn validate_memset<'type_checker>(
+    typechecker: &mut TypeChecker<'type_checker>,
+    destination: &'type_checker Ast,
+    new_size: &'type_checker Ast,
+    size: &'type_checker Ast,
+) -> Result<(), CompilationIssue> {
+    let destination_type: &Type = destination.get_value_type()?;
+    let destination_span: Span = destination.get_span();
+
+    let new_size_type: &Type = new_size.get_value_type()?;
+    let new_size_span: Span = new_size.get_span();
+
+    let size_type: &Type = size.get_value_type()?;
+    let size_span: Span = size.get_span();
+
+    if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            format!(
+                "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', got '{}' type.",
+                size_type
+            ),
+            None,
+            destination_span,
+        ));
+    }
+
+    if !new_size_type.is_unsigned_integer_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            format!(
+                "Expected unsigned integer type, got '{}' type.",
+                new_size_type
+            ),
+            None,
+            new_size_span,
+        ));
+    }
+
+    if !size_type.is_unsigned_integer_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            format!("Expected unsigned integer type, got '{}' type.", size_type),
+            None,
+            size_span,
+        ));
+    }
+
+    typechecker.analyze_expr(destination)?;
+    typechecker.analyze_expr(new_size)?;
+    typechecker.analyze_expr(size)?;
+
+    Ok(())
+}

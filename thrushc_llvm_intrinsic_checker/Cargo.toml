@@ -1,0 +1,26 @@
+[package]
+name = "thrushc_llvm_intrinsic_checker"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+inkwell = { workspace = true, optional = true }
+clang = { workspace = true, optional = true }
+
+thrushc_options = { path = "../thrushc_options" }
+thrushc_logging = { path = "../thrushc_logging" }
+thrushc_diagnostician = { path = "../thrushc_diagnostician" }
+thrushc_ast = { path = "../thrushc_ast" }
+thrushc_errors = { path = "../thrushc_errors" }
+
+[features]
+default = ["llvm_backend_static", "cbindgen_static"]
+
+llvm_backend_dynamic = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-dynamic"]
+llvm_backend_static  = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-static"]
+
+cbindgen_static      = ["dep:clang", "clang/static"]
+cbindgen_dynamic     = ["dep:clang"]

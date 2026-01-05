@@ -2,7 +2,7 @@
 
 # The Thrush Compiler 
 
-The **Thrush Compiler** is a monolithic compiler that transfers the source code of Thrush files directly to the specified destination. The process includes static type analysis, code generation, destination-specific optimizations, machine-specific code compilation, and finally, emitting or linking.
+The **Thrush Compiler** is a compiler that transfers the source code of Thrush files directly to the specified destination. The process includes static type analysis, code generation, destination-specific optimizations, machine-specific code compilation, and finally, emitting or linking.
 
 > [!WARNING]  
 > The compiler is in an early development phase. It may contain bugs when testing certain syntax. Continue on your own.

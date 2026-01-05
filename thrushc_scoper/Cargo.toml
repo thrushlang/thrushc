@@ -1,0 +1,14 @@
+[package]
+name = "thrushc_scoper"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thrushc_errors = { path = "../thrushc_errors" }
+thrushc_ast = { path = "../thrushc_ast" }
+thrushc_options = { path = "../thrushc_options" }
+thrushc_diagnostician = { path = "../thrushc_diagnostician" }
+thrushc_logging = { path = "../thrushc_logging" }
