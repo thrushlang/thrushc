@@ -5,7 +5,7 @@ use thrushc_span::Span;
 use thrushc_token::{
     Token,
     tokentype::TokenType,
-    traits::{TokenExtensions, TokenTypeExtensions},
+    traits::{TokenExtensions, TokenTypeAttributesExtensions, TokenTypeExtensions},
 };
 use thrushc_typesystem::Type;
 

@@ -5,7 +5,10 @@ use thrushc_typesystem::Type;
 use crate::{
     Token,
     tokentype::TokenType,
-    traits::{TokenTypeBuiltinExtensions, TokenTypeExtensions, TokenTypeTypeTransform},
+    traits::{
+        TokenTypeAttributesExtensions, TokenTypeBuiltinExtensions, TokenTypeExtensions,
+        TokenTypeTypeTransform,
+    },
 };
 
 impl TokenTypeTypeTransform for TokenType {
@@ -158,6 +161,13 @@ impl TokenTypeExtensions for TokenType {
     }
 
     #[inline]
+    fn is_identifier(&self) -> bool {
+        matches!(self, TokenType::Identifier)
+    }
+}
+
+impl TokenTypeAttributesExtensions for TokenType {
+    #[inline]
     fn is_attribute(&self) -> bool {
         matches!(
             self,
@@ -186,12 +196,8 @@ impl TokenTypeExtensions for TokenType {
                 | TokenType::Linkage
                 | TokenType::Extern
                 | TokenType::Convention
+                | TokenType::Pure
         )
-    }
-
-    #[inline]
-    fn is_identifier(&self) -> bool {
-        matches!(self, TokenType::Identifier)
     }
 }
 
@@ -329,6 +335,7 @@ impl std::fmt::Display for TokenType {
             TokenType::SafeStack => write!(f, "@safestack"),
             TokenType::StrongStack => write!(f, "@strongstack"),
             TokenType::WeakStack => write!(f, "@weakstack"),
+            TokenType::Pure => write!(f, "@pure"),
             TokenType::Destructor => write!(f, "@destructor"),
             TokenType::Constructor => write!(f, "@constructor"),
 

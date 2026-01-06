@@ -6,8 +6,8 @@ use crate::Lexer;
 
 #[inline]
 pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), CompilationIssue> {
-    let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
     let span: Span = Span::new(lexer.line, lexer.span);
+    let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
     if dot_count > 1 {
         return Err(CompilationIssue::Error(
@@ -16,7 +16,9 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilation
             None,
             span,
         ));
-    } else if lexeme.parse::<f32>().is_ok() || lexeme.parse::<f64>().is_ok() {
+    }
+
+    if lexeme.parse::<f32>().is_ok() || lexeme.parse::<f64>().is_ok() {
         return Ok(());
     }
 
@@ -49,6 +51,10 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilati
 
     if let Some(rest) = lexeme.strip_prefix("0b") {
         return self::check_integer_radix_format(rest, 2, span);
+    }
+
+    if let Some(rest) = lexeme.strip_prefix("0o") {
+        return self::check_integer_radix_format(rest, 8, span);
     }
 
     let cleaned: String = lexeme.replace('_', "");
@@ -93,6 +99,14 @@ fn check_integer_radix_format(
 ) -> Result<(), CompilationIssue> {
     let cleaned: String = lexeme.replace('_', "");
 
+    let prefix_name: &str = if radix == 16 {
+        "hexadecimal"
+    } else if radix == 8 {
+        "octal"
+    } else {
+        "binary"
+    };
+
     match isize::from_str_radix(&cleaned, radix) {
         Ok(num)
             if (I8_MIN..=I8_MAX).contains(&num)
@@ -104,10 +118,7 @@ fn check_integer_radix_format(
         }
         Ok(_) => Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            format!(
-                "Integer out of bounds signed {} format.",
-                if radix == 16 { "hexadecimal" } else { "binary" }
-            ),
+            format!("Integer out of bounds signed {} format.", prefix_name),
             None,
             span,
         )),
@@ -117,19 +128,13 @@ fn check_integer_radix_format(
             }
             Ok(_) => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                format!(
-                    "Integer out of bounds unsigned {} format.",
-                    if radix == 16 { "hexadecimal" } else { "binary" }
-                ),
+                format!("Integer out of bounds unsigned {} format.", prefix_name),
                 None,
                 span,
             )),
             Err(_) => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                format!(
-                    "Integer invalid {} format.",
-                    if radix == 16 { "hexadecimal" } else { "binary" }
-                ),
+                format!("Integer invalid {} format.", prefix_name),
                 None,
                 span,
             )),
@@ -140,14 +145,15 @@ fn check_integer_radix_format(
 pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     let mut is_hexadecimal: bool = false;
     let mut is_binary: bool = false;
+    let mut is_octal: bool = false;
 
-    while lexer.is_number_boundary(is_hexadecimal, is_binary) {
+    while lexer.is_number_boundary(is_hexadecimal, is_binary, is_octal) {
         if is_hexadecimal && lexer.previous() == '0' && lexer.peek() == 'x' {
             lexer.end_span();
 
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Integer hexadecimal identifier '0x' cannot be repeated.".into(),
+                "Integer hexadecimal prefix '0x' cannot be repeated.".into(),
                 None,
                 Span::new(lexer.line, lexer.span),
             ));
@@ -158,18 +164,34 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Integer binary identifier '0b' cannot be repeated.".into(),
+                "Integer binary prefix '0b' cannot be repeated.".into(),
                 None,
                 Span::new(lexer.line, lexer.span),
             ));
         }
 
-        if is_hexadecimal && !lexer.peek().is_ascii_alphanumeric() {
+        if is_octal && lexer.previous() == '0' && lexer.peek() == 'o' {
+            lexer.end_span();
+
+            return Err(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                "Integer octal prefix '0o' cannot be repeated.".into(),
+                None,
+                Span::new(lexer.line, lexer.span),
+            ));
+        }
+
+        if is_hexadecimal && (!lexer.peek().is_ascii_alphanumeric() && lexer.peek() != '_') {
             lexer.end_span();
             break;
         }
 
-        if is_binary && !lexer.peek().is_ascii_digit() {
+        if is_binary && (!lexer.peek().is_ascii_digit() && lexer.peek() != '_') {
+            lexer.end_span();
+            break;
+        }
+
+        if is_octal && (!lexer.peek().is_ascii_digit() && lexer.peek() != '_') {
             lexer.end_span();
             break;
         }
@@ -180,6 +202,10 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
         if lexer.peek() == 'b' && lexer.peek_next().is_ascii_digit() {
             is_binary = true;
+        }
+
+        if lexer.peek() == 'o' && lexer.peek_next().is_ascii_digit() {
+            is_octal = true;
         }
 
         let _ = lexer.advance();

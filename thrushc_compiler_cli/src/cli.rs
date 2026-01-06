@@ -473,6 +473,7 @@ impl CommandLine {
             "--no-sanitize" => {
                 self.advance();
                 self.validate_llvm_required(arg);
+                self.validate_sanitizer_required(arg);
 
                 let (nosanitize_bounds, nosanitize_coverage) =
                     self.parse_sanitizer_config(self.peek());
@@ -1072,6 +1073,20 @@ impl CommandLine {
             .get_use_clang()
         {
             self.report_error("Can't use '-gcc-link' flag.");
+        }
+    }
+
+    fn validate_sanitizer_required(&self, arg: &str) {
+        if !self
+            .options
+            .get_llvm_backend_options()
+            .get_sanitizer()
+            .is_none()
+        {
+            self.report_error(&format!(
+                "Can't use '{}' without '--satinizer' flag previously.",
+                arg
+            ));
         }
     }
 

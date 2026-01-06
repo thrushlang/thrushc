@@ -112,6 +112,7 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
             LLVMAttribute::Packed => LLVMAttributeComparator::Packed,
             LLVMAttribute::NoUnwind => LLVMAttributeComparator::NoUnwind,
             LLVMAttribute::OptFuzzing => LLVMAttributeComparator::OptFuzzing,
+            LLVMAttribute::Pure => LLVMAttributeComparator::Pure,
             LLVMAttribute::Constructor => LLVMAttributeComparator::Constructor,
             LLVMAttribute::Destructor => LLVMAttributeComparator::Destructor,
         }
@@ -168,6 +169,7 @@ impl std::fmt::Display for LLVMAttribute<'_> {
             LLVMAttribute::AsmAlignStack => write!(f, "@asmalingstack"),
             LLVMAttribute::Packed => write!(f, "@packed"),
             LLVMAttribute::OptFuzzing => write!(f, "@optfuzzing"),
+            LLVMAttribute::Pure => write!(f, "@pure"),
             LLVMAttribute::Constructor => write!(f, "@constructor"),
             LLVMAttribute::Destructor => write!(f, "@destructor"),
         }

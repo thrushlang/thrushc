@@ -27,6 +27,7 @@ pub enum LLVMAttribute<'ctx> {
     PreciseFloats,
     NoUnwind,
     OptFuzzing,
+    Pure,
 
     // LLVM Structure Modificator
     Packed,
@@ -150,6 +151,7 @@ pub enum LLVMAttributeComparator {
     NoUnwind,
     OptFuzzing,
     Linkage,
+    Pure,
 
     Packed,
 
@@ -195,6 +197,7 @@ pub fn into_llvm_attribute(attribute: &ThrushAttribute) -> Option<LLVMAttribute<
         ThrushAttribute::Packed(..) => Some(LLVMAttribute::Packed),
         ThrushAttribute::NoUnwind(..) => Some(LLVMAttribute::NoUnwind),
         ThrushAttribute::OptFuzzing(..) => Some(LLVMAttribute::OptFuzzing),
+        ThrushAttribute::Pure(..) => Some(LLVMAttribute::Pure),
         ThrushAttribute::Constructor(..) => Some(LLVMAttribute::Constructor),
         ThrushAttribute::Destructor(..) => Some(LLVMAttribute::Destructor),
     }

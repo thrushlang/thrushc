@@ -316,4 +316,9 @@ impl Sanitizer {
     pub fn is_memtag(&self) -> bool {
         matches!(self, Sanitizer::Memtag(..))
     }
+
+    #[inline]
+    pub fn is_none(&self) -> bool {
+        matches!(self, Sanitizer::None)
+    }
 }

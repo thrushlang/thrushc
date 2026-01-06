@@ -70,9 +70,15 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
         }
     }
 
-    let (radix, prefix, base) = if lexeme.starts_with("0x") {
+    let hexadecimal: bool = lexeme.strip_prefix("0x").is_some();
+    let octal: bool = lexeme.strip_prefix("0o").is_some();
+    let binary: bool = lexeme.strip_prefix("0b").is_some();
+
+    let (radix, prefix, base) = if hexadecimal {
         (16, "0x", "hexadecimal")
-    } else if lexeme.starts_with("0b") {
+    } else if octal {
+        (8, "0o", "octal")
+    } else if binary {
         (2, "0b", "binary")
     } else {
         (10, "", "decimal")
@@ -84,7 +90,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
             .unwrap_or(lexeme)
             .replace('_', "");
 
-        return isize::from_str_radix(&cleaned, radix)
+        isize::from_str_radix(&cleaned, radix)
             .map(|n| match_signed(n, span))
             .unwrap_or_else(|_| {
                 usize::from_str_radix(&cleaned, radix)
@@ -97,19 +103,19 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
                             span,
                         ))
                     })
-            });
+            })
+    } else {
+        lexeme
+            .parse::<usize>()
+            .map(|n| match_unsigned(n, span))
+            .or_else(|_| lexeme.parse::<isize>().map(|n| match_signed(n, span)))
+            .unwrap_or_else(|_| {
+                Err(CompilationIssue::Error(
+                    CompilationIssueCode::E0001,
+                    "Literal is too large to be represented in a integer type.".into(),
+                    None,
+                    span,
+                ))
+            })
     }
-
-    lexeme
-        .parse::<usize>()
-        .map(|n| match_unsigned(n, span))
-        .or_else(|_| lexeme.parse::<isize>().map(|n| match_signed(n, span)))
-        .unwrap_or_else(|_| {
-            Err(CompilationIssue::Error(
-                CompilationIssueCode::E0001,
-                "Literal is too large to be represented in a integer type.".into(),
-                None,
-                span,
-            ))
-        })
 }

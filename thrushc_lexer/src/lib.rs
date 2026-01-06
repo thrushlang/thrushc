@@ -105,7 +105,9 @@ impl Lexer {
             span,
         });
     }
+}
 
+impl Lexer {
     #[must_use]
     pub fn char_match(&mut self, char: char) -> bool {
         if !self.is_eof() && self.code[self.current] == char {
@@ -220,14 +222,21 @@ impl Lexer {
 impl Lexer {
     #[must_use]
     #[inline]
-    pub fn is_number_boundary(&self, is_hexadecimal: bool, is_binary: bool) -> bool {
+    pub fn is_number_boundary(
+        &self,
+        is_hexadecimal: bool,
+        is_binary: bool,
+        is_octal: bool,
+    ) -> bool {
         self.peek().is_ascii_digit()
             || self.peek() == '_'
             || self.peek() == '.'
             || self.peek() == 'x'
             || self.peek() == 'b'
+            || self.peek() == 'o'
             || is_hexadecimal
             || is_binary
+            || is_octal
     }
 
     #[must_use]

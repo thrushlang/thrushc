@@ -68,6 +68,7 @@ pub enum TokenType {
     AsmSideEffects,
     OptFuzzing,
     Linkage,
+    Pure,
     Constructor,
     Destructor,
 

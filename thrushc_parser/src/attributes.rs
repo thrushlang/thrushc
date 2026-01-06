@@ -4,7 +4,7 @@ use thrushc_span::Span;
 use thrushc_token::{
     Token,
     tokentype::TokenType,
-    traits::{TokenExtensions, TokenTypeExtensions},
+    traits::{TokenExtensions, TokenTypeAttributesExtensions},
 };
 
 use crate::ParserContext;

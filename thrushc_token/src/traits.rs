@@ -32,8 +32,11 @@ pub trait TokenTypeExtensions {
     fn is_fn_ref(&self) -> bool;
     fn is_integer(&self) -> bool;
     fn is_type(&self) -> bool;
-    fn is_attribute(&self) -> bool;
     fn is_identifier(&self) -> bool;
+}
+
+pub trait TokenTypeAttributesExtensions {
+    fn is_attribute(&self) -> bool;
 }
 
 pub trait TokenTypeTypeTransform {

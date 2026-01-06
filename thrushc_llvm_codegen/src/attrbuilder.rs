@@ -157,10 +157,20 @@ impl<'ctx> AttributeBuilder<'ctx> {
                             ),
                         );
                     }
+                    LLVMAttribute::Pure => {
+                        function.add_attribute(
+                            AttributeLoc::Function,
+                            llvm_context.create_enum_attribute(
+                                Attribute::get_named_enum_kind_id("naked"),
+                                0,
+                            ),
+                        );
+                    }
 
                     LLVMAttribute::Constructor => {
                         context.add_ctor(function.as_global_value().as_pointer_value());
                     }
+
                     LLVMAttribute::Destructor => {
                         context.add_dtor(function.as_global_value().as_pointer_value());
                     }
