@@ -127,11 +127,8 @@ impl AstStandardExtensions for Ast<'_> {
     }
 
     #[inline]
-    fn is_lli(&self) -> bool {
-        matches!(
-            self,
-            Ast::Write { .. } | Ast::Load { .. } | Ast::Address { .. }
-        )
+    fn is_conditional(&self) -> bool {
+        matches!(self, Ast::If { .. } | Ast::Elif { .. } | Ast::Else { .. })
     }
 }
 
@@ -173,7 +170,50 @@ impl AstCodeBlockEntensions for Ast<'_> {
             return false;
         };
 
-        nodes.iter().any(|node| node.is_terminator())
+        {
+            for node in nodes.iter() {
+                if node.is_terminator() {
+                    return true;
+                }
+
+                if let Ast::If {
+                    block,
+                    elseif,
+                    anyway,
+                    ..
+                } = node
+                {
+                    let if_branch_returns: bool = block.has_terminator();
+
+                    let all_elif_return: bool = elseif.iter().all(|elif_node| {
+                        if let Ast::Elif { block, .. } = elif_node {
+                            block.has_terminator()
+                        } else {
+                            false
+                        }
+                    });
+
+                    let else_branch_returns: bool = anyway.as_ref().is_some_and(|otherwise| {
+                        if let Ast::Else { block, .. } = &**otherwise {
+                            block.has_terminator()
+                        } else {
+                            false
+                        }
+                    });
+
+                    let if_else_returns: bool =
+                        if_branch_returns && else_branch_returns && elseif.is_empty();
+                    let full_returns: bool =
+                        if_branch_returns && all_elif_return && else_branch_returns;
+
+                    if if_else_returns || full_returns {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
     }
 }
 

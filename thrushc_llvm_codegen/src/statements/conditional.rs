@@ -3,6 +3,7 @@ use inkwell::builder::Builder;
 use inkwell::values::FunctionValue;
 use inkwell::values::IntValue;
 use thrushc_ast::Ast;
+use thrushc_ast::traits::AstCodeBlockEntensions;
 use thrushc_ast::traits::AstCodeLocation;
 use thrushc_span::Span;
 use thrushc_typesystem::Type;
@@ -38,11 +39,30 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
     let then: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
     let merge: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
-    let next: BasicBlock = if !elseif.is_empty() || anyway.is_some() {
-        block::append_block(codegen.get_context(), llvm_function)
-    } else {
-        merge
-    };
+    let is_if_returns: bool = block.has_terminator();
+
+    let is_elif_returns: bool = elseif.iter().all(|node| {
+        if let Ast::Elif { block, .. } = node {
+            block.has_terminator()
+        } else {
+            false
+        }
+    });
+
+    let is_else_returns: bool = anyway.as_ref().is_some_and(|otherwise| match &**otherwise {
+        Ast::Else { block, .. } => block.has_terminator(),
+        _ => false,
+    });
+
+    let is_if_else_returns: bool = is_if_returns && is_else_returns && elseif.is_empty();
+    let is_full_returns: bool = is_if_returns && is_elif_returns && is_else_returns;
+
+    let next: BasicBlock =
+        if (!elseif.is_empty() || anyway.is_some()) && !(is_if_else_returns || is_full_returns) {
+            block::append_block(codegen.get_context(), llvm_function)
+        } else {
+            merge
+        };
 
     let condition_type: &Type = condition.llvm_get_type();
 

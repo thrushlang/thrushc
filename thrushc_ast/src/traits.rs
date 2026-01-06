@@ -35,7 +35,7 @@ pub trait AstStandardExtensions {
     fn is_custom_type(&self) -> bool;
     fn is_break(&self) -> bool;
     fn is_continue(&self) -> bool;
-    fn is_lli(&self) -> bool;
+    fn is_conditional(&self) -> bool;
 }
 
 pub trait AstCodeBlockEntensions {

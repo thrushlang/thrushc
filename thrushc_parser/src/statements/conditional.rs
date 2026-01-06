@@ -22,7 +22,9 @@ pub fn build_conditional<'parser>(
 
     let mut elseif: Vec<Ast> = Vec::with_capacity(10);
 
-    while ctx.match_token(TokenType::Elif)? {
+    while ctx.match_token(TokenType::Elif)?
+        || (ctx.match_token(TokenType::Else)? && ctx.match_token(TokenType::If)?)
+    {
         let span: Span = ctx.previous().get_span();
 
         let condition: Ast = expressions::build_expr(ctx)?;

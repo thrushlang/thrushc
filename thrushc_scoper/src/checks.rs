@@ -113,4 +113,88 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
             ));
         }
     }
+
+    let Some((unreacheable_condition_idx, _)) =
+        nodes.iter().enumerate().find_map(|(idx, stmt)| match stmt {
+            Ast::If {
+                block,
+                elseif,
+                anyway,
+                ..
+            } => {
+                let mut is_if_unreacheable: bool = false;
+                let mut is_else_if_unreacheable: bool = false;
+                let mut is_else_unreacheable: bool = false;
+
+                {
+                    if let Ast::Block { nodes, .. } = block.as_ref() {
+                        is_if_unreacheable = nodes.iter().any(|stmt| {
+                            stmt.is_terminator()
+                                || stmt.is_unreacheable()
+                                || stmt.is_break()
+                                || stmt.is_continue()
+                        });
+                    }
+                }
+
+                {
+                    for node in elseif {
+                        if let Ast::Elif { block, .. } = node {
+                            if let Ast::Block { nodes, .. } = &**block {
+                                is_else_if_unreacheable = nodes.iter().any(|stmt| {
+                                    stmt.is_terminator()
+                                        || stmt.is_unreacheable()
+                                        || stmt.is_break()
+                                        || stmt.is_continue()
+                                });
+                            }
+                        }
+                    }
+                }
+
+                {
+                    if let Some(otherwise) = anyway {
+                        if let Ast::Else { block, .. } = &**otherwise {
+                            if let Ast::Block { nodes, .. } = block.as_ref() {
+                                is_else_unreacheable = nodes.iter().any(|stmt| {
+                                    stmt.is_terminator()
+                                        || stmt.is_unreacheable()
+                                        || stmt.is_break()
+                                        || stmt.is_continue()
+                                });
+                            }
+                        }
+                    }
+                }
+
+                let is_unreacheable_if_else: bool =
+                    is_if_unreacheable && is_else_unreacheable && elseif.is_empty();
+
+                let is_full_unreacheable: bool =
+                    is_if_unreacheable && is_else_if_unreacheable && is_else_unreacheable;
+
+                if is_unreacheable_if_else || is_full_unreacheable {
+                    Some((idx, stmt))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
+    else {
+        return;
+    };
+
+    let unreachable_range: std::ops::Range<usize> = (unreacheable_condition_idx + 1)..total_nodes;
+
+    for idx in unreachable_range {
+        if let Some(unreachable_node) = nodes.get(idx) {
+            scoper.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0014,
+                "This instruction will never be executed due to a conditional pattern with terminators (return/unreacheable/break/continue). Remove it.".to_string(),
+                None,
+                unreachable_node.get_span(),
+            ));
+        }
+    }
 }
