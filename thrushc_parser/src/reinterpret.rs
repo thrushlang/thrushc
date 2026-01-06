@@ -4,26 +4,27 @@ use thrushc_typesystem::Type;
 
 pub fn floating_point(lexeme: &str, span: Span) -> Result<(Type, f64), CompilationIssue> {
     if lexeme.bytes().filter(|&b| b == b'.').count() > 1 {
-        return Err(CompilationIssue::Error(
+        Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            "Only one decimal marker was expected.".into(),
+            "Floating-point number only expects a one decimal marker.".into(),
             None,
             span,
-        ));
+        ))
+    } else {
+        lexeme
+            .parse::<f32>()
+            .map(|f| (Type::F32(span), f as f64))
+            .or_else(|_| lexeme.parse::<f64>().map(|f| (Type::F64(span), f)))
+            .map_err(|_| {
+                CompilationIssue::Error(
+                    CompilationIssueCode::E0001,
+                    "Literal is too large to be represented in a standard floating-point type."
+                        .into(),
+                    None,
+                    span,
+                )
+            })
     }
-
-    lexeme
-        .parse::<f32>()
-        .map(|f| (Type::F32(span), f as f64))
-        .or_else(|_| lexeme.parse::<f64>().map(|f| (Type::F64(span), f)))
-        .map_err(|_| {
-            CompilationIssue::Error(
-                CompilationIssueCode::E0001,
-                "Literal is too large to be represented in a standard floating-point type.".into(),
-                None,
-                span,
-            )
-        })
 }
 
 pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue> {

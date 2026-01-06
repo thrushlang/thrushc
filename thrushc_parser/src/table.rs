@@ -1,5 +1,7 @@
 use thrushc_ast::Ast;
+use thrushc_diagnostician::Diagnostician;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition};
+use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
 
 use crate::entities::{
@@ -13,7 +15,7 @@ use crate::entities::{
 pub const PREALLOCATED_GLOBAL_TABLE_CAPACITY: usize = 1000;
 pub const PREALLOCATED_LOCAL_TABLE_CAPACITY: usize = 255;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct SymbolsTable<'parser> {
     functions: Functions<'parser>,
     asm_functions: AssemblerFunctions<'parser>,
@@ -34,12 +36,16 @@ pub struct SymbolsTable<'parser> {
     locals: Locals<'parser>,
     llis: LLIs<'parser>,
     parameters: Parameters<'parser>,
+
+    diagnostician: Diagnostician,
 }
 
 impl<'parser> SymbolsTable<'parser> {
     pub fn with_functions(
         functions: Functions<'parser>,
         asm_functions: AssemblerFunctions<'parser>,
+        options: &CompilerOptions,
+        file: &CompilationUnit,
     ) -> Self {
         Self {
             functions,
@@ -62,6 +68,7 @@ impl<'parser> SymbolsTable<'parser> {
             llis: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
 
             parameters: ahash::AHashMap::with_capacity(10),
+            diagnostician: Diagnostician::new(file, options),
         }
     }
 }
@@ -140,7 +147,7 @@ impl<'parser> SymbolsTable<'parser> {
                 if self.parameters.contains_key(id) {
                     return Err(CompilationIssue::Error(
                         CompilationIssueCode::E0004,
-                        format!("'{}' parameter already declared before.", id),
+                        format!("'{}' parameter was already declared before.", id),
                         None,
                         *span,
                     ));
@@ -157,30 +164,6 @@ impl<'parser> SymbolsTable<'parser> {
 }
 
 impl<'parser> SymbolsTable<'parser> {
-    pub fn new_lli(
-        &mut self,
-        id: &'parser str,
-        lli: LLISymbol<'parser>,
-        span: Span,
-    ) -> Result<(), CompilationIssue> {
-        if let Some(last_scope) = self.llis.last_mut() {
-            if last_scope.contains_key(id) {
-                return Err(CompilationIssue::Error(
-                    CompilationIssueCode::E0004,
-                    format!("Low level instruction '{}' already declared before.", id),
-                    None,
-                    span,
-                ));
-            }
-
-            last_scope.insert(id, lli);
-
-            return Ok(());
-        }
-
-        Ok(())
-    }
-
     pub fn new_local(
         &mut self,
         id: &'parser str,
@@ -188,21 +171,19 @@ impl<'parser> SymbolsTable<'parser> {
         span: Span,
     ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.locals.last_mut() {
-            if last_scope.contains_key(id) || self.parameters.contains_key(id) {
-                return Err(CompilationIssue::Error(
-                    CompilationIssueCode::E0004,
-                    format!("'{}' local variable already declared before.", id),
-                    None,
-                    span,
-                ));
-            }
-
             last_scope.insert(id, local);
 
-            return Ok(());
+            Ok(())
+        } else {
+            thrushc_frontend_abort::abort_compilation(
+                &mut self.diagnostician,
+                CompilationPosition::Parser,
+                "Unable to get the last scope!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         }
-
-        Ok(())
     }
 
     pub fn new_global_static(
@@ -214,7 +195,7 @@ impl<'parser> SymbolsTable<'parser> {
         if self.global_statics.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' static already declared before.", id),
+                format!("Static '{}' was already declared before.", id),
                 None,
                 span,
             ));
@@ -232,21 +213,19 @@ impl<'parser> SymbolsTable<'parser> {
         span: Span,
     ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_statics.last_mut() {
-            if last_scope.contains_key(id) {
-                return Err(CompilationIssue::Error(
-                    CompilationIssueCode::E0004,
-                    format!("'{}' static already declared before.", id),
-                    None,
-                    span,
-                ));
-            }
-
             last_scope.insert(id, static_);
 
-            return Ok(());
+            Ok(())
+        } else {
+            thrushc_frontend_abort::abort_compilation(
+                &mut self.diagnostician,
+                CompilationPosition::Parser,
+                "Unable to get the last scope!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         }
-
-        Ok(())
     }
 
     pub fn new_global_constant(
@@ -258,7 +237,7 @@ impl<'parser> SymbolsTable<'parser> {
         if self.global_constants.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' constant already declared before.", id),
+                format!("Constant '{}' was already declared before.", id),
                 None,
                 span,
             ));
@@ -276,21 +255,19 @@ impl<'parser> SymbolsTable<'parser> {
         span: Span,
     ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_constants.last_mut() {
-            if last_scope.contains_key(id) {
-                return Err(CompilationIssue::Error(
-                    CompilationIssueCode::E0004,
-                    format!("'{}' constant already declared before.", id),
-                    None,
-                    span,
-                ));
-            }
-
             last_scope.insert(id, constant);
 
-            return Ok(());
+            Ok(())
+        } else {
+            thrushc_frontend_abort::abort_compilation(
+                &mut self.diagnostician,
+                CompilationPosition::Parser,
+                "Unable to get the last scope!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         }
-
-        Ok(())
     }
 
     pub fn new_global_custom_type(
@@ -302,7 +279,7 @@ impl<'parser> SymbolsTable<'parser> {
         if self.global_custom_types.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' custom type already declared before.", id),
+                format!("Type '{}' was already declared before.", id),
                 None,
                 span,
             ));
@@ -320,21 +297,19 @@ impl<'parser> SymbolsTable<'parser> {
         span: Span,
     ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_custom_types.last_mut() {
-            if last_scope.contains_key(id) {
-                return Err(CompilationIssue::Error(
-                    CompilationIssueCode::E0004,
-                    format!("'{}' Custom already declared before.", id),
-                    None,
-                    span,
-                ));
-            }
-
             last_scope.insert(id, ctype);
 
-            return Ok(());
+            Ok(())
+        } else {
+            thrushc_frontend_abort::abort_compilation(
+                &mut self.diagnostician,
+                CompilationPosition::Parser,
+                "Unable to get the last scope!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         }
-
-        Ok(())
     }
 
     pub fn new_global_struct(
@@ -346,7 +321,7 @@ impl<'parser> SymbolsTable<'parser> {
         if self.global_structs.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' structure already declared before.", id),
+                format!("Structure '{}' was already declared before.", id),
                 None,
                 span,
             ));
@@ -367,7 +342,7 @@ impl<'parser> SymbolsTable<'parser> {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
                     CompilationIssueCode::E0004,
-                    format!("'{}' structure already declared before.", id),
+                    format!("Structure '{}' was already declared before.", id),
                     None,
                     span,
                 ));
@@ -375,10 +350,17 @@ impl<'parser> SymbolsTable<'parser> {
 
             last_scope.insert(id, fields);
 
-            return Ok(());
+            Ok(())
+        } else {
+            thrushc_frontend_abort::abort_compilation(
+                &mut self.diagnostician,
+                CompilationPosition::Parser,
+                "Unable to get the last scope!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         }
-
-        Ok(())
     }
 
     pub fn new_global_enum(
@@ -390,7 +372,7 @@ impl<'parser> SymbolsTable<'parser> {
         if self.global_enums.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' enum already declared before.", id),
+                format!("Enum '{}' was already declared before.", id),
                 None,
                 span,
             ));
@@ -411,7 +393,7 @@ impl<'parser> SymbolsTable<'parser> {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
                     CompilationIssueCode::E0004,
-                    format!("'{}' enum already declared before.", id),
+                    format!("Enum '{}' was already declared before.", id),
                     None,
                     span,
                 ));
@@ -419,10 +401,17 @@ impl<'parser> SymbolsTable<'parser> {
 
             last_scope.insert(id, union);
 
-            return Ok(());
+            Ok(())
+        } else {
+            thrushc_frontend_abort::abort_compilation(
+                &mut self.diagnostician,
+                CompilationPosition::Parser,
+                "Unable to get the last scope!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
         }
-
-        Ok(())
     }
 
     pub fn new_asm_function(
@@ -434,7 +423,7 @@ impl<'parser> SymbolsTable<'parser> {
         if self.asm_functions.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' assembler function already declared before.", id),
+                format!("'{}' assembler function was already declared before.", id),
                 None,
                 span,
             ));
@@ -454,7 +443,7 @@ impl<'parser> SymbolsTable<'parser> {
         if self.functions.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' function already declared before.", id),
+                format!("'{}' function was already declared before.", id),
                 None,
                 span,
             ));
@@ -474,7 +463,7 @@ impl<'parser> SymbolsTable<'parser> {
         if self.intrinsics.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' intrinsic already declared before.", id),
+                format!("'{}' intrinsic was already declared before.", id),
                 None,
                 span,
             ));
@@ -810,7 +799,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            String::from("Assembler function not found."),
+            format!("Assembler Function '{}' not found in this scope.", id),
             None,
             span,
         ))
@@ -828,7 +817,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            "Function not found.".into(),
+            format!("Function '{}' not found in this scope.", id),
             None,
             span,
         ))
@@ -846,7 +835,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            "Intrinsic not found.".into(),
+            format!("Compiler Intrinsic '{}' not found in this scope.", id),
             None,
             span,
         ))
@@ -1038,7 +1027,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            String::from("Parameter not found in this scope."),
+            format!("Parameter '{}' not found in this scope.", parameter_id),
             None,
             span,
         ))

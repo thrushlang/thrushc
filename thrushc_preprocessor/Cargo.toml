@@ -1,0 +1,25 @@
+[package]
+name = "thrushc_preprocessor"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+ahash = "0.8.11"
+uuid = { version = "1.19.0", features = ["v4"] }
+
+thrushc_frontend_abort = { path = "../thrushc_frontend_abort" }
+thrushc_errors = { path = "../thrushc_errors" }
+thrushc_options = { path = "../thrushc_options" }
+thrushc_diagnostician = { path = "../thrushc_diagnostician" }
+thrushc_span = { path = "../thrushc_span" }
+thrushc_attributes = { path = "../thrushc_attributes" }
+thrushc_typesystem = { path = "../thrushc_typesystem" }
+thrushc_ast = { path = "../thrushc_ast" }
+thrushc_token = { path = "../thrushc_token" }
+thrushc_lexer = { path = "../thrushc_lexer" }

@@ -23,13 +23,14 @@ members = [
     "thrushc_frontend_abort", 
     "thrushc_semantic", 
     "thrushc_entities", 
+    "thrushc_preprocessor",
     "thrushc_llvm_codegen", 
     "thrushc_llvm_attributes", 
     "thrushc_llvm_callconventions", 
     "thrushc_llvm_builtins", 
     "thrushc_attribute_checker", 
     "thrushc_llvm_intrinsic_checker", 
-    "thrushc_llvm_callconventions_checker"
+    "thrushc_llvm_callconventions_checker",
 ]
 resolver = "2"
 

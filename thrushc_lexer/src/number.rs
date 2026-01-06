@@ -12,7 +12,7 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilation
     if dot_count > 1 {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            "Only one decimal marker was expected.".into(),
+            "Floating-point number only expects a one decimal marker.".into(),
             None,
             span,
         ));

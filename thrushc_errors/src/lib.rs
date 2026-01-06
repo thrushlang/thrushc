@@ -98,7 +98,7 @@ pub enum CompilationIssueCode {
     E0001, // Syntax Error.
     E0002, // EOF.
     E0003, // Unknown compiler built-in.
-    E0004, // Already declared.
+    E0004, // Duplicated.
     E0005, // Duplicated global assembler.
     E0006, // Non-constant value
     E0007, // Reference without an address
@@ -157,7 +157,9 @@ impl CompilationIssueCode {
             CompilationIssueCode::E0003 => {
                 format!("UNKNOWN COMPILER BUILT-IN - {}", "E0003".bright_red())
             }
-            CompilationIssueCode::E0004 => format!("ALREADY DEFINED - {}", "E0004".bright_red()),
+            CompilationIssueCode::E0004 => {
+                format!("ALREADY DEFINED OR DECLARED - {}", "E0004".bright_red())
+            }
             CompilationIssueCode::E0005 => {
                 format!("DUPLICATED GLOBAL ASSEMBLER - {}", "E0005".bright_red())
             }

@@ -115,7 +115,7 @@ impl<'parser> ParserContext<'parser> {
             type_ctx: ParserTypeContext::default(),
 
             diagnostician: Diagnostician::new(file, options),
-            table: SymbolsTable::with_functions(functions, asm_functions),
+            table: SymbolsTable::with_functions(functions, asm_functions, options, file),
 
             current: 0,
             scope: 0,
@@ -162,11 +162,29 @@ impl<'parser> ParserContext<'parser> {
 
     #[must_use]
     pub fn previous(&mut self) -> &'parser Token {
-        self.tokens.get(self.current - 1).unwrap_or_else(|| {
-            let span: Span = self.previous().get_span();
+        let index: (usize, bool) = self.current.overflowing_sub(1);
+
+        let is_overflow: bool = index.1;
+        let idx: usize = index.0;
+
+        if is_overflow {
+            let span: Span = self.peek().get_span();
 
             thrushc_frontend_abort::abort_compilation(
-                self.get_mut_diagnostician(),
+                &mut self.diagnostician,
+                CompilationPosition::Parser,
+                "Unable to parse previous token position!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        }
+
+        self.tokens.get(idx).unwrap_or_else(|| {
+            let span: Span = self.peek().get_span();
+
+            thrushc_frontend_abort::abort_compilation(
+                &mut self.diagnostician,
                 CompilationPosition::Parser,
                 "Unable to get a lexical token!",
                 span,
