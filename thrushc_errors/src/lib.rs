@@ -128,6 +128,7 @@ pub enum CompilationIssueCode {
     E0032, // Incompatible Type Cast
     E0033, // Attribute Conflict
     E0034, // Invalid Intrinsic compiler syntax
+    E0035, // Import Error
 
     W0001, // Irrelevant Attribute
     W0002, // Unknown Call Convention
@@ -239,6 +240,9 @@ impl CompilationIssueCode {
             }
             CompilationIssueCode::E0034 => {
                 format!("INTRINSIC SYNTAX - {}", "E0034".bright_red())
+            }
+            CompilationIssueCode::E0035 => {
+                format!("IMPORT ERROR - {}", "E0035".bright_red())
             }
             CompilationIssueCode::W0001 => {
                 format!("IRRELEVANT ATTRIBUTE - {}", "W0001".bright_yellow())

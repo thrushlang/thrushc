@@ -154,11 +154,11 @@ pub fn validate<'type_checker>(
         Ast::Call {
             name, args, span, ..
         } => {
-            if let Some(metadata) = typechecker.get_symbols().get_function(name) {
+            if let Some(metadata) = typechecker.get_table().get_function(name) {
                 return call::validate(typechecker, *metadata, args, span);
-            } else if let Some(metadata) = typechecker.get_symbols().get_intrinsic(name) {
+            } else if let Some(metadata) = typechecker.get_table().get_intrinsic(name) {
                 return call::validate(typechecker, *metadata, args, span);
-            } else if let Some(metadata) = typechecker.get_symbols().get_asm_function(name) {
+            } else if let Some(metadata) = typechecker.get_table().get_asm_function(name) {
                 return call::validate(typechecker, *metadata, args, span);
             }
 
@@ -174,51 +174,6 @@ pub fn validate<'type_checker>(
             Ok(())
         }
 
-        Ast::Indirect {
-            function,
-            function_type,
-            args,
-            span,
-            ..
-        } => {
-            let function_ref: &Type = function.get_value_type()?;
-
-            if !function_ref.is_fnref_type() {
-                typechecker.add_error(CompilationIssue::Error(
-                    CompilationIssueCode::E0019,
-                    format!(
-                        "Expected function reference 'Fn[..] -> T' type, got '{}'.",
-                        function_ref
-                    ),
-                    None,
-                    *span,
-                ));
-            }
-
-            if let Type::Fn(parameter_types, _, modificator, ..) = function_type {
-                call::validate(
-                    typechecker,
-                    (parameter_types, modificator.llvm().has_ignore()),
-                    args,
-                    span,
-                )?;
-            } else {
-                typechecker.add_error(CompilationIssue::Error(
-                    CompilationIssueCode::E0019,
-                    format!(
-                        "Expected function reference 'Fn[..] -> T' type, got '{}'.",
-                        function_type
-                    ),
-                    None,
-                    *span,
-                ));
-            }
-
-            args.iter()
-                .try_for_each(|arg| typechecker.analyze_expr(arg))?;
-
-            Ok(())
-        }
         Ast::Deref { value, .. } => {
             let value_type: &Type = value.get_value_type()?;
 

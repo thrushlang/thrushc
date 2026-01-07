@@ -1,3 +1,5 @@
+#![allow(clippy::result_unit_err)]
+
 use thrushc_diagnostician::Diagnostician;
 use thrushc_errors::CompilationIssue;
 use thrushc_logging::LoggingType;
@@ -48,6 +50,27 @@ impl Lexer {
         }
         .start()
     }
+
+    pub fn lex_for_preprocessor(
+        file: &CompilationUnit,
+        options: &CompilerOptions,
+    ) -> Result<Vec<Token>, ()> {
+        let code: Vec<char> = file.get_unit_content().chars().collect();
+        let bytes: Vec<u8> = file.get_unit_content().as_bytes().to_vec();
+
+        Self {
+            tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
+            errors: Vec::with_capacity(100),
+            code,
+            bytes,
+            start: 0,
+            current: 0,
+            line: 1,
+            span: (0, 0),
+            diagnostician: Diagnostician::new(file, options),
+        }
+        .start_for_preprocessor()
+    }
 }
 
 impl Lexer {
@@ -78,6 +101,31 @@ impl Lexer {
             });
 
             std::mem::take(&mut self.tokens)
+        }
+    }
+
+    fn start_for_preprocessor(&mut self) -> Result<Vec<Token>, ()> {
+        while !self.is_eof() {
+            self.start = self.current;
+            self.start_span();
+
+            if let Err(error) = lex::analyze(self) {
+                self.add_error(error);
+            }
+        }
+
+        if !self.errors.is_empty() {
+            Err(())
+        } else {
+            self.tokens.push(Token {
+                lexeme: String::default(),
+                bytes: Vec::default(),
+                ascii: String::default(),
+                kind: TokenType::Eof,
+                span: Span::new(self.line, self.span),
+            });
+
+            Ok(std::mem::take(&mut self.tokens))
         }
     }
 }

@@ -3,7 +3,7 @@ use thrushc_ast::{
     metadata::LocalMetadata,
     traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
 };
-use thrushc_attributes::traits::ThrushAttributesExtensions;
+
 use thrushc_diagnostician::Diagnostician;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_options::{CompilationUnit, CompilerOptions};
@@ -13,9 +13,13 @@ use thrushc_typesystem::{
     traits::{TypeCodeLocation, TypeIsExtensions},
 };
 
-use crate::{metadata::TypeCheckerExpressionMetadata, table::TypeCheckerSymbolsTable};
+use crate::{
+    context::TypeCheckerTypeContext, metadata::TypeCheckerExpressionMetadata,
+    table::TypeCheckerSymbolsTable,
+};
 
 mod checking;
+mod context;
 mod expressions;
 mod globals;
 mod metadata;
@@ -31,7 +35,8 @@ pub struct TypeChecker<'type_checker> {
     errors: Vec<CompilationIssue>,
     warnings: Vec<CompilationIssue>,
 
-    symbols: TypeCheckerSymbolsTable<'type_checker>,
+    context: TypeCheckerTypeContext<'type_checker>,
+    table: TypeCheckerSymbolsTable<'type_checker>,
     diagnostician: Diagnostician,
 }
 
@@ -49,7 +54,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
             errors: Vec::with_capacity(100),
             warnings: Vec::with_capacity(100),
 
-            symbols: TypeCheckerSymbolsTable::new(),
+            context: TypeCheckerTypeContext::new(),
+            table: TypeCheckerSymbolsTable::new(),
             diagnostician: Diagnostician::new(file, options),
         }
     }
@@ -185,28 +191,28 @@ impl<'type_checker> TypeChecker<'type_checker> {
             | Ast::Continue { .. }
             | Ast::Break { .. } => Ok(()),
             Ast::Enum { fields, .. } => {
-                fields.iter().try_for_each(|field| {
-                    let target_type: Type = field.1.clone();
-                    let from_type: &Type = field.2.get_value_type()?;
+                {
+                    for node in fields.iter() {
+                        let target_type: Type = node.1.clone();
+                        let from_type: &Type = node.2.get_value_type()?;
 
-                    let value: &Ast = &field.2;
+                        let value: &Ast = &node.2;
 
-                    let metadata: TypeCheckerExpressionMetadata =
-                        TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                        let metadata: TypeCheckerExpressionMetadata =
+                            TypeCheckerExpressionMetadata::new(value.is_literal_value());
 
-                    checking::check_types(
-                        &target_type,
-                        from_type,
-                        Some(value),
-                        None,
-                        metadata,
-                        value.get_span(),
-                    )?;
+                        checking::check_types(
+                            &target_type,
+                            from_type,
+                            Some(value),
+                            None,
+                            metadata,
+                            value.get_span(),
+                        )?;
 
-                    self.analyze_expr(value)?;
-
-                    Ok(())
-                })?;
+                        self.analyze_expr(value)?;
+                    }
+                }
 
                 Ok(())
             }
@@ -266,7 +272,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 metadata,
                 ..
             } => {
-                self.symbols.new_local(name, local_type);
+                self.get_mut_table().new_local(name, (local_type, *span));
 
                 if local_type.is_void_type() {
                     self.add_error(CompilationIssue::Error(
@@ -439,20 +445,29 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 Ok(())
             }
 
-            Ast::Return {
-                expression, kind, ..
-            } => {
+            Ast::Return { expression, .. } => {
                 if let Some(expr) = expression {
                     let metadata: TypeCheckerExpressionMetadata =
                         TypeCheckerExpressionMetadata::new(expr.is_literal_value());
 
+                    let Some((return_type, function_loc)) =
+                        self.get_context().get_current_function_type()
+                    else {
+                        return Err(CompilationIssue::Error(
+                            CompilationIssueCode::E0020,
+                            "Return statement outside of a function.".into(),
+                            None,
+                            expr.get_span(),
+                        ));
+                    };
+
                     checking::check_types(
-                        kind,
+                        return_type,
                         expr.get_value_type()?,
                         Some(expr),
                         None,
                         metadata,
-                        node.get_span(),
+                        function_loc,
                     )?;
 
                     self.analyze_expr(expr)?;
@@ -503,28 +518,31 @@ impl TypeChecker<'_> {
                         name,
                         parameters_types: types,
                         attributes,
+                        return_type,
                         ..
                     } => {
-                        self.symbols
-                            .new_asm_function(name, (types, attributes.has_ignore_attribute()));
+                        self.get_mut_table()
+                            .new_asm_function(name, (return_type, types, attributes));
                     }
                     Ast::Function {
                         name,
                         parameter_types: types,
                         attributes,
+                        return_type,
                         ..
                     } => {
-                        self.symbols
-                            .new_function(name, (types, attributes.has_ignore_attribute()));
+                        self.get_mut_table()
+                            .new_function(name, (return_type, types, attributes));
                     }
                     Ast::Intrinsic {
                         name,
                         parameters_types: types,
                         attributes,
+                        return_type,
                         ..
                     } => {
-                        self.symbols
-                            .new_intrinsic(name, (types, attributes.has_ignore_attribute()));
+                        self.get_mut_table()
+                            .new_intrinsic(name, (return_type, types, attributes));
                     }
 
                     _ => (),
@@ -567,19 +585,36 @@ impl TypeChecker<'_> {
 
 impl<'type_checker> TypeChecker<'type_checker> {
     #[inline]
-    fn get_symbols(&self) -> &TypeCheckerSymbolsTable<'type_checker> {
-        &self.symbols
+    fn get_table(&self) -> &TypeCheckerSymbolsTable<'type_checker> {
+        &self.table
+    }
+
+    #[inline]
+    fn get_context(&self) -> &TypeCheckerTypeContext<'type_checker> {
+        &self.context
+    }
+}
+
+impl<'type_checker> TypeChecker<'type_checker> {
+    #[inline]
+    fn get_mut_table(&mut self) -> &mut TypeCheckerSymbolsTable<'type_checker> {
+        &mut self.table
+    }
+
+    #[inline]
+    fn get_mut_context(&mut self) -> &mut TypeCheckerTypeContext<'type_checker> {
+        &mut self.context
     }
 }
 
 impl TypeChecker<'_> {
     #[inline]
     fn begin_scope(&mut self) {
-        self.symbols.begin_scope();
+        self.table.begin_scope();
     }
 
     #[inline]
     fn end_scope(&mut self) {
-        self.symbols.end_scope();
+        self.table.end_scope();
     }
 }

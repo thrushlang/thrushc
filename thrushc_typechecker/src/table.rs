@@ -1,6 +1,9 @@
 use ahash::AHashMap as HashMap;
 
+use thrushc_diagnostician::Diagnostician;
 use thrushc_entities::typechecker::*;
+
+use crate::TypeChecker;
 
 #[derive(Debug)]
 pub struct TypeCheckerSymbolsTable<'symbol> {
@@ -73,6 +76,23 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     #[inline]
     pub fn get_intrinsic(&self, name: &'symbol str) -> Option<&TypeCheckerIntrinsic<'symbol>> {
         self.intrinsics.get(name)
+    }
+}
+
+impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
+    #[inline]
+    pub fn constains_function(&self, name: &'symbol str) -> bool {
+        self.functions.contains_key(name)
+    }
+
+    #[inline]
+    pub fn constains_asm_function(&self, name: &'symbol str) -> bool {
+        self.asm_functions.contains_key(name)
+    }
+
+    #[inline]
+    pub fn constains_intrinsic(&self, name: &'symbol str) -> bool {
+        self.intrinsics.contains_key(name)
     }
 }
 

@@ -2,6 +2,8 @@ use thrushc_ast::{
     Ast,
     traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
 };
+use thrushc_attributes::traits::ThrushAttributesExtensions;
+use thrushc_entities::typechecker::TypeCheckerFunction;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_typesystem::Type;
@@ -10,16 +12,18 @@ use crate::{TypeChecker, checking, metadata::TypeCheckerExpressionMetadata};
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    metadata: (&[Type], bool),
+    metadata: TypeCheckerFunction<'type_checker>,
     args: &'type_checker [Ast],
     span: &Span,
 ) -> Result<(), CompilationIssue> {
-    let (parameter_types, ignore_more_arguments) = metadata;
+    let (_, parameter_types, attributes) = metadata;
 
     let required_count: usize = parameter_types.len();
     let provided_count: usize = args.len();
 
-    if required_count != provided_count && !ignore_more_arguments {
+    let var_args: bool = attributes.has_ignore_attribute();
+
+    if required_count != provided_count && !var_args {
         typechecker.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0022,
             format!(
@@ -49,23 +53,27 @@ pub fn validate<'type_checker>(
         return Ok(());
     }
 
-    for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
-        let from_type: &Type = expr.get_value_type()?;
-        let expr_metadata: TypeCheckerExpressionMetadata =
-            TypeCheckerExpressionMetadata::new(expr.is_literal_value());
+    {
+        for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
+            let from_type: &Type = expr.get_value_type()?;
+            let expr_metadata: TypeCheckerExpressionMetadata =
+                TypeCheckerExpressionMetadata::new(expr.is_literal_value());
 
-        checking::check_types(
-            target_type,
-            from_type,
-            Some(expr),
-            None,
-            expr_metadata,
-            expr.get_span(),
-        )?;
+            checking::check_types(
+                target_type,
+                from_type,
+                Some(expr),
+                None,
+                expr_metadata,
+                expr.get_span(),
+            )?;
+        }
     }
 
-    for arg in args.iter() {
-        typechecker.analyze_expr(arg)?;
+    {
+        for arg in args.iter() {
+            typechecker.analyze_expr(arg)?;
+        }
     }
 
     Ok(())

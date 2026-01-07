@@ -1,73 +1,33 @@
 use thrushc_diagnostician::Diagnostician;
-use thrushc_errors::{CompilationIssue, CompilationPosition};
+use thrushc_errors::CompilationPosition;
 use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
 
-use crate::{modparsing, module::Module};
-
 #[derive(Debug)]
-pub struct ModuleParser<'module_parser> {
-    module: Module<'module_parser>,
-    tokens: Vec<Token>,
+pub struct PreprocessorContext<'preprocessor> {
+    tokens: &'preprocessor [Token],
+    options: &'preprocessor CompilerOptions,
     diagnostician: Diagnostician,
-    errors: Vec<CompilationIssue>,
-    options: &'module_parser CompilerOptions,
     current: usize,
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl<'preprocessor> PreprocessorContext<'preprocessor> {
     pub fn new(
-        name: String,
-        tokens: Vec<Token>,
-        options: &'module_parser CompilerOptions,
+        tokens: &'preprocessor [Token],
+        options: &'preprocessor CompilerOptions,
         file: &CompilationUnit,
     ) -> Self {
         Self {
-            module: Module::new(name),
             tokens,
-            diagnostician: Diagnostician::new(file, options),
-            errors: Vec::with_capacity(255),
             options,
+            diagnostician: Diagnostician::new(file, options),
             current: 0,
         }
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
-    pub fn parse(mut self) -> Result<Module<'module_parser>, Vec<CompilationIssue>> {
-        while !self.is_eof() {
-            if self.start().is_err() {}
-
-            let _ = self.only_advance();
-        }
-
-        if !self.errors.is_empty() {
-            return Err(self.errors);
-        }
-
-        Ok(self.module)
-    }
-}
-
-impl<'module_parser> ModuleParser<'module_parser> {
-    pub fn start(&mut self) -> Result<(), ()> {
-        if self.check(TokenType::Import) {
-            modparsing::import::parse_import(self)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl ModuleParser<'_> {
-    #[inline]
-    pub fn add_error(&mut self, error: CompilationIssue) {
-        self.errors.push(error);
-    }
-}
-
-impl ModuleParser<'_> {
+impl PreprocessorContext<'_> {
     #[inline]
     pub fn consume(&mut self, kind: TokenType) -> Result<&Token, ()> {
         if self.peek().kind == kind {
@@ -78,7 +38,7 @@ impl ModuleParser<'_> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl<'module_parser> PreprocessorContext<'module_parser> {
     #[must_use]
     pub fn peek(&mut self) -> &Token {
         self.tokens.get(self.current).unwrap_or_else(|| {
@@ -128,7 +88,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl ModuleParser<'_> {
+impl PreprocessorContext<'_> {
     #[must_use]
     pub fn check(&mut self, kind: TokenType) -> bool {
         if self.is_eof() {
@@ -152,7 +112,7 @@ impl ModuleParser<'_> {
     }
 }
 
-impl ModuleParser<'_> {
+impl PreprocessorContext<'_> {
     #[inline]
     pub fn match_token(&mut self, kind: TokenType) -> Result<bool, ()> {
         if self.peek().kind == kind {
@@ -164,7 +124,7 @@ impl ModuleParser<'_> {
     }
 }
 
-impl ModuleParser<'_> {
+impl PreprocessorContext<'_> {
     #[inline]
     pub fn advance_until(&mut self, kind: TokenType) -> Result<(), ()> {
         while !self.match_token(kind)? {
@@ -204,7 +164,7 @@ impl ModuleParser<'_> {
     }
 }
 
-impl ModuleParser<'_> {
+impl PreprocessorContext<'_> {
     #[inline]
     pub fn only_advance(&mut self) -> Result<(), ()> {
         if !self.is_eof() {
@@ -226,26 +186,14 @@ impl ModuleParser<'_> {
     }
 }
 
-impl ModuleParser<'_> {
+impl PreprocessorContext<'_> {
     #[must_use]
     pub fn is_eof(&mut self) -> bool {
         self.peek().kind == TokenType::Eof
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
-    #[inline]
-    pub fn get_mut_module(&mut self) -> &mut Module<'module_parser> {
-        &mut self.module
-    }
-
-    #[inline]
-    pub fn get_module(&self) -> &Module<'module_parser> {
-        &self.module
-    }
-}
-
-impl<'module_parser> ModuleParser<'module_parser> {
+impl<'module_parser> PreprocessorContext<'module_parser> {
     #[inline]
     pub fn get_options(&self) -> &'module_parser CompilerOptions {
         self.options

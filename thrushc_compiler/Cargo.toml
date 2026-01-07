@@ -14,6 +14,7 @@ colored = "3.0.0"
 inkwell = { workspace = true, optional = true }
 clang = { workspace = true, optional = true }
 
+thrushc_preprocessor = { path = "../thrushc_preprocessor" }
 thrushc_llvm_callconventions_checker = { path = "../thrushc_llvm_callconventions_checker" }
 thrushc_llvm_intrinsic_checker = { path = "../thrushc_llvm_intrinsic_checker" }
 thrushc_constants = { path = "../thrushc_constants" }

@@ -69,9 +69,11 @@ pub fn check_types(
                 ));
             }
 
-            lhs.iter().zip(rhs.iter()).try_for_each(|(lhs, rhs)| {
-                self::check_types(lhs, rhs, None, None, metadata, span)
-            })?;
+            {
+                for (lhs, rhs) in lhs.iter().zip(rhs) {
+                    self::check_types(lhs, rhs, None, None, metadata, span)?;
+                }
+            }
 
             Ok(())
         }
@@ -99,9 +101,11 @@ pub fn check_types(
                 ));
             }
 
-            lhs.iter().zip(rhs.iter()).try_for_each(|(lhs, rhs)| {
-                self::check_types(lhs, rhs, None, None, metadata, span)
-            })?;
+            {
+                for (lhs, rhs) in lhs.iter().zip(rhs) {
+                    self::check_types(lhs, rhs, None, None, metadata, span)?;
+                }
+            }
 
             Ok(())
         }

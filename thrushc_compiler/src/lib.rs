@@ -42,6 +42,7 @@ use thrushc_options::backends::llvm::target::LLVMTarget;
 use thrushc_options::linkage::LinkingCompilersConfiguration;
 use thrushc_parser::Parser;
 use thrushc_parser::ParserContext;
+use thrushc_preprocessor::Preprocessor;
 use thrushc_semantic::SemantiAnalysis;
 use thrushc_token::Token;
 
@@ -135,6 +136,10 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation(self, file_time, file);
         }
+
+        let mut preprocessor: Preprocessor = Preprocessor::new();
+        let modules: &[thrushc_preprocessor::module::Module] =
+            preprocessor.generate_modules(&tokens, self.options, file);
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
 
