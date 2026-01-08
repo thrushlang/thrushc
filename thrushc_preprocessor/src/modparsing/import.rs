@@ -100,6 +100,7 @@ pub fn parse_import<'module_parser>(parser: &mut ModuleParser<'module_parser>) -
     let submodule: Module<'module_parser> = match subparser.parse() {
         Ok(module) => module,
         Err(errors) => {
+            parser.merge_errors(errors);
             return Err(());
         }
     };

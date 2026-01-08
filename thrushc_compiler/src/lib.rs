@@ -138,8 +138,22 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         }
 
         let mut preprocessor: Preprocessor = Preprocessor::new();
-        let modules: &[thrushc_preprocessor::module::Module] =
+        let modules: Result<&[thrushc_preprocessor::module::Module<'_>], ()> =
             preprocessor.generate_modules(&tokens, self.options, file);
+
+        if modules.is_err() {
+            return interrupt::archive_compilation_unit(self, file, file_time);
+        }
+
+        let modules: &[thrushc_preprocessor::module::Module<'_>] = modules.map_err(|_| {
+            let _ = interrupt::archive_compilation_unit_with_message(
+                self,
+                thrushc_logging::LoggingType::Error,
+                "Failed to get all modules from the preprocessor. Maybe this is a issue.",
+                file,
+                file_time,
+            );
+        })?;
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
 
@@ -362,6 +376,11 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             let llvm_jit_result: i32 = llvm_jit.compile_and_run().unwrap_or(1);
 
             std::process::exit(llvm_jit_result)
+        } else {
+            thrushc_logging::print_warn(
+                thrushc_logging::LoggingType::Warning,
+                "Nothing to compile for the JIT compiler. Skipping compilation.",
+            );
         }
 
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
@@ -387,6 +406,24 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
+
+        let mut preprocessor: Preprocessor = Preprocessor::new();
+        let modules: Result<&[thrushc_preprocessor::module::Module<'_>], ()> =
+            preprocessor.generate_modules(&tokens, self.options, file);
+
+        if modules.is_err() {
+            return interrupt::archive_compilation_unit_jit(self, file, file_time);
+        }
+
+        let modules: &[thrushc_preprocessor::module::Module<'_>] = modules.map_err(|_| {
+            let _ = interrupt::archive_compilation_unit_with_message(
+                self,
+                thrushc_logging::LoggingType::Error,
+                "Failed to get all modules from the preprocessor. Maybe this is a issue.",
+                file,
+                file_time,
+            );
+        })?;
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
 

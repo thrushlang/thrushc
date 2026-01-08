@@ -1,4 +1,5 @@
 use thrushc_attributes::ThrushAttributes;
+use thrushc_modificators::Modificators;
 use thrushc_span::Span;
 use thrushc_token::tokentype::TokenType;
 use thrushc_typesystem::Type;
@@ -252,6 +253,7 @@ pub enum Ast<'ctx> {
         kind: Type,
         value: Option<std::boxed::Box<Ast<'ctx>>>,
         attributes: ThrushAttributes,
+        modificators: Modificators,
         metadata: StaticMetadata,
         span: Span,
     },
@@ -263,6 +265,7 @@ pub enum Ast<'ctx> {
         kind: Type,
         value: std::boxed::Box<Ast<'ctx>>,
         attributes: ThrushAttributes,
+        modificators: Modificators,
         metadata: ConstantMetadata,
         span: Span,
     },
@@ -274,6 +277,7 @@ pub enum Ast<'ctx> {
         kind: Type,
         value: Option<std::boxed::Box<Ast<'ctx>>>,
         attributes: ThrushAttributes,
+        modificators: Modificators,
         metadata: LocalMetadata,
         span: Span,
     },
@@ -317,6 +321,7 @@ pub enum Ast<'ctx> {
     Deref {
         value: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
+        modificators: Modificators,
         metadata: DereferenceMetadata,
         span: Span,
     },

@@ -1,8 +1,9 @@
 use thrushc_ast::{Ast, metadata::DereferenceMetadata, traits::AstGetType};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_mir::atomicord::ThrushAtomicOrdering;
+use thrushc_modificators::{Modificators, traits::ModificatorsExtensions};
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType};
+use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
 use thrushc_typesystem::{Type, traits::DereferenceExtensions};
 
 use crate::{ParserContext, builder, expressions};
@@ -11,10 +12,13 @@ pub fn build_dereference<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let initial_deref_tk: &Token = ctx.advance()?;
-    let span: Span = initial_deref_tk.span;
+    let span: Span = initial_deref_tk.get_span();
 
-    let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
-    let atomic_ord: Option<ThrushAtomicOrdering> = builder::build_atomic_ord(ctx)?;
+    let modificators: Modificators =
+        builder::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+
+    let is_volatile: bool = modificators.has_volatile();
+    let atomic_ord: Option<ThrushAtomicOrdering> = modificators.get_atomic_ordering();
 
     let mut deref_count: u64 = 1;
 
@@ -40,6 +44,7 @@ pub fn build_dereference<'parser>(
         current_expr = Ast::Deref {
             value: current_expr.clone().into(),
             kind: current_type.dereference(),
+            modificators: modificators.clone(),
             metadata: DereferenceMetadata::new(is_volatile, atomic_ord),
             span,
         };

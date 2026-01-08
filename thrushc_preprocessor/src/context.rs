@@ -1,5 +1,5 @@
 use thrushc_diagnostician::Diagnostician;
-use thrushc_errors::CompilationPosition;
+use thrushc_errors::{CompilationIssue, CompilationPosition};
 use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
@@ -9,6 +9,7 @@ pub struct PreprocessorContext<'preprocessor> {
     tokens: &'preprocessor [Token],
     options: &'preprocessor CompilerOptions,
     diagnostician: Diagnostician,
+    errors: Vec<CompilationIssue>,
     current: usize,
 }
 
@@ -22,8 +23,24 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
             tokens,
             options,
             diagnostician: Diagnostician::new(file, options),
+            errors: Vec::with_capacity(100),
             current: 0,
         }
+    }
+}
+
+impl PreprocessorContext<'_> {
+    pub fn check_status(&mut self) -> Result<(), ()> {
+        if !self.errors.is_empty() {
+            {
+                for error in self.errors.iter() {
+                    self.diagnostician
+                        .dispatch_diagnostic(error, thrushc_logging::LoggingType::Error);
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -190,6 +207,13 @@ impl PreprocessorContext<'_> {
     #[must_use]
     pub fn is_eof(&mut self) -> bool {
         self.peek().kind == TokenType::Eof
+    }
+}
+
+impl PreprocessorContext<'_> {
+    #[inline]
+    pub fn merge_errors(&mut self, other: Vec<CompilationIssue>) {
+        self.errors.extend(other);
     }
 }
 

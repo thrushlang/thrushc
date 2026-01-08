@@ -32,7 +32,7 @@ impl<'preprocessor> Preprocessor<'preprocessor> {
         tokens: &'preprocessor [Token],
         options: &'preprocessor CompilerOptions,
         file: &CompilationUnit,
-    ) -> &[Module<'preprocessor>] {
+    ) -> Result<&[Module<'preprocessor>], ()> {
         let mut context: PreprocessorContext<'_> = PreprocessorContext::new(tokens, options, file);
 
         while !context.is_eof() {
@@ -45,6 +45,8 @@ impl<'preprocessor> Preprocessor<'preprocessor> {
             let _ = context.only_advance();
         }
 
-        self.modules.as_slice()
+        context.check_status()?;
+
+        Ok(self.modules.as_slice())
     }
 }

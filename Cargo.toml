@@ -30,7 +30,7 @@ members = [
     "thrushc_llvm_builtins", 
     "thrushc_attribute_checker", 
     "thrushc_llvm_intrinsic_checker", 
-    "thrushc_llvm_callconventions_checker",
+    "thrushc_llvm_callconventions_checker", "thrushc_modificators",
 ]
 resolver = "2"
 

@@ -1,6 +1,6 @@
 use thrushc_ast::{
-    types::{Constructor, EnumField, EnumFields, StructFields},
     metadata::{FunctionParameterMetadata, LocalMetadata, StaticMetadata},
+    types::{Constructor, EnumField, EnumFields, StructFields},
 };
 use thrushc_span::Span;
 use thrushc_typesystem::{

@@ -10,6 +10,7 @@ rust-version.workspace = true
 thrushc_span = { path = "../thrushc_span" }
 thrushc_typesystem = { path = "../thrushc_typesystem" }
 thrushc_attributes = { path = "../thrushc_attributes" }
+thrushc_modificators = { path = "../thrushc_modificators" }
 thrushc_mir = { path = "../thrushc_mir" }
 thrushc_token = { path = "../thrushc_token" }
 thrushc_errors = { path = "../thrushc_errors" }

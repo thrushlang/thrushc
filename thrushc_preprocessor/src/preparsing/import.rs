@@ -66,6 +66,7 @@ pub fn parse_import<'preprocessor>(
     let submodule: Module<'preprocessor> = match subparser.parse() {
         Ok(submodule) => submodule,
         Err(errors) => {
+            parser.merge_errors(errors);
             return Err(());
         }
     };

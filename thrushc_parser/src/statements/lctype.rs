@@ -19,7 +19,7 @@ pub fn build_custom_type<'parser>(
     let name_tk: &Token = ctx.consume(
         TokenType::Identifier,
         CompilationIssueCode::E0001,
-        "Expected type name.".into(),
+        "Expected identifier.".into(),
     )?;
 
     let name: &str = name_tk.get_lexeme();

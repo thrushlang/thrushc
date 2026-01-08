@@ -20,7 +20,7 @@ pub fn build_enum<'parser>(
     let name: &Token = ctx.consume(
         TokenType::Identifier,
         CompilationIssueCode::E0001,
-        "Expected enum name.".into(),
+        "Expected identifier.".into(),
     )?;
 
     let enum_name: &str = name.get_lexeme();

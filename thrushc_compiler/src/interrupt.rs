@@ -27,15 +27,11 @@ pub fn archive_compilation_unit(
 }
 
 #[inline]
-pub fn archive_compilation_unit_with_message(
+pub fn archive_compilation_unit_jit(
     compiler: &mut ThrushCompiler,
-    log_type: LoggingType,
-    msg: &str,
     file: &CompilationUnit,
     file_time: std::time::Instant,
-) -> Result<(), ()> {
-    thrushc_logging::print_error(log_type, msg);
-
+) -> Result<either::Either<MemoryBuffer, ()>, ()> {
     compiler.thrushc_time += file_time.elapsed();
 
     thrushc_logging::write(
@@ -52,11 +48,15 @@ pub fn archive_compilation_unit_with_message(
 }
 
 #[inline]
-pub fn archive_compilation_unit_jit(
+pub fn archive_compilation_unit_with_message(
     compiler: &mut ThrushCompiler,
+    log_type: LoggingType,
+    msg: &str,
     file: &CompilationUnit,
     file_time: std::time::Instant,
-) -> Result<either::Either<MemoryBuffer, ()>, ()> {
+) -> Result<(), ()> {
+    thrushc_logging::print_error(log_type, msg);
+
     compiler.thrushc_time += file_time.elapsed();
 
     thrushc_logging::write(

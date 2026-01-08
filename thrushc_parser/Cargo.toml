@@ -10,6 +10,7 @@ rust-version.workspace = true
 ahash = "0.8.11"
 either = "1.15.0"
 
+thrushc_modificators = { path = "../thrushc_modificators" }
 thrushc_mir = { path = "../thrushc_mir" }
 thrushc_frontend_abort = { path = "../thrushc_frontend_abort" }
 thrushc_attributes = { path = "../thrushc_attributes" }

@@ -5,7 +5,7 @@ use thrushc_span::Span;
 use thrushc_token::{
     Token,
     tokentype::TokenType,
-    traits::{TokenExtensions, TokenTypeAttributesExtensions, TokenTypeExtensions},
+    traits::{TokenExtensions, TokenTypeAttributesExtensions},
 };
 use thrushc_typesystem::Type;
 
@@ -41,7 +41,6 @@ pub fn build_function<'parser>(
 
     let mut parameters: Vec<Ast> = Vec::with_capacity(10);
     let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
-
     let mut parameter_position: u32 = 0;
 
     loop {

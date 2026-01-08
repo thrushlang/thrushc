@@ -13,6 +13,7 @@ repository.workspace = true
 ahash = "0.8.11"
 uuid = { version = "1.19.0", features = ["v4"] }
 
+thrushc_logging = { path = "../thrushc_logging"  }
 thrushc_reader = { path = "../thrushc_reader" }
 thrushc_constants = { path = "../thrushc_constants" }
 thrushc_frontend_abort = { path = "../thrushc_frontend_abort" }

@@ -1,4 +1,5 @@
 use either::Either;
+
 use thrushc_ast::Ast;
 use thrushc_diagnostician::Diagnostician;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition};

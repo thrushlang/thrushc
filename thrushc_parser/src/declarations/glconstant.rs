@@ -2,6 +2,7 @@ use thrushc_ast::{Ast, metadata::ConstantMetadata};
 use thrushc_attributes::ThrushAttributes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_mir::atomicord::ThrushAtomicOrdering;
+use thrushc_modificators::{Modificators, traits::ModificatorsExtensions};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
 use thrushc_typesystem::Type;
@@ -18,15 +19,17 @@ pub fn build_global_const<'parser>(
         "Expected 'const' keyword.".into(),
     )?;
 
-    let is_lazy: bool = ctx.match_token(TokenType::LazyThread)?;
-    let is_volatile: bool = ctx.match_token(TokenType::Volatile)?;
+    let modificators: Modificators =
+        builder::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
 
-    let atom_ord: Option<ThrushAtomicOrdering> = builder::build_atomic_ord(ctx)?;
+    let thread_local: bool = modificators.has_lazythread();
+    let is_volatile: bool = modificators.has_volatile();
+    let atomic_ord: Option<ThrushAtomicOrdering> = modificators.get_atomic_ordering();
 
     let const_tk: &Token = ctx.consume(
         TokenType::Identifier,
         CompilationIssueCode::E0001,
-        "Expected name.".into(),
+        "Expected identifier.".into(),
     )?;
 
     let name: &str = const_tk.get_lexeme();
@@ -52,7 +55,8 @@ pub fn build_global_const<'parser>(
 
     let value: Ast = expressions::build_expression(ctx)?;
 
-    let metadata: ConstantMetadata = ConstantMetadata::new(true, is_lazy, is_volatile, atom_ord);
+    let metadata: ConstantMetadata =
+        ConstantMetadata::new(true, thread_local, is_volatile, atomic_ord);
 
     if declare_forward {
         ctx.get_mut_symbols().new_global_constant(
@@ -68,6 +72,7 @@ pub fn build_global_const<'parser>(
         kind: const_type,
         value: value.into(),
         attributes,
+        modificators,
         metadata,
         span,
     })

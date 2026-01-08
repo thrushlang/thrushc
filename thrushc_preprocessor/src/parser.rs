@@ -247,6 +247,13 @@ impl<'module_parser> ModuleParser<'module_parser> {
 
 impl<'module_parser> ModuleParser<'module_parser> {
     #[inline]
+    pub fn merge_errors(&mut self, other: Vec<CompilationIssue>) {
+        self.errors.extend(other);
+    }
+}
+
+impl<'module_parser> ModuleParser<'module_parser> {
+    #[inline]
     pub fn get_options(&self) -> &'module_parser CompilerOptions {
         self.options
     }

@@ -1,6 +1,6 @@
 use thrushc_ast::{
-    types::{EnumField, EnumFields, StructFields},
     metadata::{FunctionParameterMetadata, LocalMetadata, StaticMetadata},
+    types::{EnumField, EnumFields, StructFields},
 };
 use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
