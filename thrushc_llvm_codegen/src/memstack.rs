@@ -1,6 +1,5 @@
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::PointerValue;
-use thrushc_ast::Ast;
 use thrushc_attributes::ThrushAttributes;
 use thrushc_attributes::traits::ThrushAttributesExtensions;
 use thrushc_span::Span;
@@ -15,11 +14,10 @@ pub fn local_variable<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ascii_name: &str,
     kind: &Type,
-    value: Option<&Ast>,
     attributes: &ThrushAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
-    let llvm_type: BasicTypeEnum = typegeneration::compile_local_type(context, kind, value);
+    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, kind);
     let name: String = format!("local.{}", ascii_name);
 
     context.mark_dbg_location(span);

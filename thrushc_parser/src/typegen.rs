@@ -1,7 +1,7 @@
 use thrushc_ast::{
     Ast,
-    types::StructFields,
     traits::{AstGetType, AstStandardExtensions},
+    types::StructFields,
 };
 use thrushc_attributes::{ThrushAttributes, traits::ThrushAttributesExtensions};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
@@ -239,7 +239,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         if !size.is_integer() {
             ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected literal integer value as a size indicator.".into(),
+                "Expected literal integer value as a max size indicator.".into(),
                 None,
                 span,
             ));
@@ -290,7 +290,11 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         "Expected ']'.".into(),
     )?;
 
-    Ok(Type::Array(array_type.into(), span))
+    Ok(Type::Array {
+        base_type: array_type.into(),
+        infered_type: None,
+        span,
+    })
 }
 
 fn build_recursive_type(

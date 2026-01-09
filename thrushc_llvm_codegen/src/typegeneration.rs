@@ -124,6 +124,11 @@ pub fn compile_from<'ctx>(
             ),
         },
 
+        Type::Array {
+            infered_type: Some((infered_type, 0 | 1)),
+            ..
+        } => self::compile_from(context, infered_type),
+
         t if t.is_ptr_like_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
 
         Type::Const(any, ..) => self::compile_from(context, any),
@@ -304,34 +309,14 @@ pub fn compile_gep_type<'ctx>(
 ) -> BasicTypeEnum<'ctx> {
     match kind {
         Type::Const(subtype, ..) => self::compile_gep_type(context, subtype),
-        Type::Array(subtype, ..) => self::compile_from(context, subtype),
+        Type::Array {
+            infered_type: Some((infered_type, 0 | 1)),
+            ..
+        } => self::compile_from(context, infered_type),
+        Type::Array {
+            base_type: subtype, ..
+        } => self::compile_from(context, subtype),
         Type::Ptr(Some(subtype), ..) => self::compile_from(context, subtype),
-
-        _ => self::compile_from(context, kind),
-    }
-}
-
-#[inline]
-pub fn compile_local_type<'ctx>(
-    context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    kind: &Type,
-    value: Option<&Ast>,
-) -> BasicTypeEnum<'ctx> {
-    let llvm_context: &Context = context.get_llvm_context();
-
-    match kind {
-        Type::Const(subtype, ..) => self::compile_local_type(context, subtype, value),
-        Type::Array(subtype, ..) if matches!(value, Some(Ast::Array { .. })) => {
-            if let Some(Ast::Array { items, span, .. }) = value {
-                self::compile_local_type(
-                    context,
-                    &Type::FixedArray(subtype.clone(), items.len() as u32, *span),
-                    value,
-                )
-            } else {
-                llvm_context.ptr_type(AddressSpace::default()).into()
-            }
-        }
 
         _ => self::compile_from(context, kind),
     }

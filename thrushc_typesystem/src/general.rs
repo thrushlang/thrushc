@@ -39,7 +39,7 @@ impl TypeIsExtensions for Type {
 
     #[inline(always)]
     fn is_array_type(&self) -> bool {
-        matches!(self, Type::Array(..))
+        matches!(self, Type::Array { .. })
     }
 
     #[inline(always)]
@@ -59,7 +59,7 @@ impl TypeIsExtensions for Type {
     fn is_ptr_like_type(&self) -> bool {
         matches!(
             self,
-            Type::Ptr(..) | Type::Addr(..) | Type::Array(..) | Type::Fn(..)
+            Type::Ptr(..) | Type::Addr(..) | Type::Array { .. } | Type::Fn(..)
         )
     }
 
@@ -154,7 +154,14 @@ impl TypeExtensions for Type {
 
         match self {
             Type::FixedArray(element_type, ..) => element_type.get_type_with_depth(base_depth - 1),
-            Type::Array(element_type, ..) => element_type.get_type_with_depth(base_depth - 1),
+            Type::Array {
+                infered_type: Some((infered_type, 0)),
+                ..
+            } => infered_type.get_type_with_depth(base_depth),
+            Type::Array {
+                base_type: element_type,
+                ..
+            } => element_type.get_type_with_depth(base_depth - 1),
             Type::Const(inner_type, ..) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Ptr(Some(inner_type), ..) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Struct(..) => self,
@@ -185,11 +192,7 @@ impl TypeExtensions for Type {
 
     #[inline]
     fn get_type_ref(&self) -> Type {
-        if self.is_ptr_like_type() {
-            self.clone()
-        } else {
-            Type::Ptr(Some(self.clone().into()), self.get_span())
-        }
+        Type::Ptr(Some(self.clone().into()), self.get_span())
     }
 }
 
@@ -214,7 +217,14 @@ impl PartialEq for Type {
                 type_a == type_b && size_a == size_b
             }
 
-            (Type::Array(target, ..), Type::Array(from, ..)) => target == from,
+            (
+                Type::Array {
+                    base_type: target, ..
+                },
+                Type::Array {
+                    base_type: from, ..
+                },
+            ) => target == from,
             (Type::Const(target, ..), Type::Const(from, ..)) => target == from,
 
             (Type::Char(..), Type::Char(..)) => true,
@@ -290,8 +300,8 @@ impl std::fmt::Display for Type {
             Type::FixedArray(kind, size, ..) => {
                 write!(f, "array[{}; {}]", kind, size)
             }
-            Type::Array(kind, ..) => {
-                write!(f, "array[{}]", kind)
+            Type::Array { base_type, .. } => {
+                write!(f, "array[{}]", base_type)
             }
             Type::Struct(name, fields, modificator, ..) => {
                 let is_llvm_packed: &str = if modificator.llvm().is_packed() {

@@ -1,9 +1,6 @@
 use ahash::AHashMap as HashMap;
 
-use thrushc_diagnostician::Diagnostician;
 use thrushc_entities::typechecker::*;
-
-use crate::TypeChecker;
 
 #[derive(Debug)]
 pub struct TypeCheckerSymbolsTable<'symbol> {

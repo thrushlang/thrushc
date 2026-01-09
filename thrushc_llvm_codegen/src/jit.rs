@@ -1,3 +1,5 @@
+#![allow(clippy::result_unit_err)]
+
 use thrushc_options::backends::llvm::jit::JITConfiguration;
 
 use inkwell::execution_engine::ExecutionEngine;

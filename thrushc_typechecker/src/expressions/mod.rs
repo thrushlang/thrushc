@@ -7,7 +7,9 @@ use thrushc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition
 use thrushc_span::Span;
 use thrushc_typesystem::{
     Type,
-    traits::{TypeIsExtensions, TypePointerExtensions},
+    traits::{
+        TypeArrayEntensions, TypeFixedArrayEntensions, TypeIsExtensions, TypePointerExtensions,
+    },
 };
 
 use crate::{TypeChecker, checking, metadata::TypeCheckerExpressionMetadata, operations};
@@ -68,9 +70,23 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            items
-                .iter()
-                .try_for_each(|item| typechecker.analyze_expr(item))?;
+            items.iter().try_for_each(|item| {
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(item.is_literal_value());
+                let item_type: &Type = item.get_value_type()?;
+                let base_type: Type = kind.get_fixed_array_base_type();
+
+                checking::check_types(
+                    &base_type,
+                    item_type,
+                    Some(item),
+                    None,
+                    metadata,
+                    item.get_span(),
+                )?;
+
+                typechecker.analyze_expr(item)
+            })?;
 
             Ok(())
         }
@@ -87,9 +103,23 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            items
-                .iter()
-                .try_for_each(|item| typechecker.analyze_expr(item))?;
+            items.iter().try_for_each(|item| {
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(item.is_literal_value());
+                let item_type: &Type = item.get_value_type()?;
+                let base_type: Type = kind.get_array_base_type();
+
+                checking::check_types(
+                    &base_type,
+                    item_type,
+                    Some(item),
+                    None,
+                    metadata,
+                    item.get_span(),
+                )?;
+
+                typechecker.analyze_expr(item)
+            })?;
 
             Ok(())
         }

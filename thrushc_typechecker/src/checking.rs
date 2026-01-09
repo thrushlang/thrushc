@@ -127,7 +127,7 @@ pub fn check_types(
             Err(error)
         }
 
-        (Type::Array(lhs, ..), Type::Array(rhs, ..), None) => {
+        (Type::Array { base_type: lhs, .. }, Type::Array { base_type: rhs, .. }, None) => {
             self::check_types(lhs, rhs, None, None, metadata, span)?;
             Ok(())
         }
@@ -647,7 +647,7 @@ pub fn check_type_cast(
             | Type::FPPC128(..)
             | Type::Bool(..)
             | Type::Struct(..)
-            | Type::Array(..)
+            | Type::Array { .. }
             | Type::FixedArray(..)
             | Type::Fn(..),
             Type::Ptr(..) | Type::Addr(..),

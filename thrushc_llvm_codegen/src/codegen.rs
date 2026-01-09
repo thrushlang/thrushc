@@ -311,7 +311,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let ascii_name: &str = localvar.1;
 
                     let kind: &Type = localvar.2;
-                    let value: Option<&Ast> = localvar.3;
 
                     let attributes: &ThrushAttributes = localvar.4;
                     let metadata: LocalMetadata = localvar.5;
@@ -321,7 +320,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         self.get_mut_context(),
                         ascii_name,
                         kind,
-                        value,
                         attributes,
                         span,
                     );
@@ -347,7 +345,6 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         self.get_mut_context(),
                         ascii_name,
                         kind,
-                        value,
                         attributes,
                         span,
                     );
@@ -373,7 +370,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         Some(anchor) if !anchor.is_triggered() => {
                             symbol.store(self.get_mut_context(), value);
                         }
-                        _ => symbol.store(self.get_mut_context(), value),
+
+                        _ => {}
                     }
 
                     self.context.clear_pointer_anchor();

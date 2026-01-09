@@ -83,3 +83,10 @@ pub trait TypeCodeLocation {
 pub trait DereferenceExtensions {
     fn dereference(&self) -> Type;
 }
+
+pub trait InfererTypeExtensions {
+    fn inferer_inner_type_from_type(&mut self, other: &Type);
+    fn has_inferer_inner_type(&self) -> bool;
+    fn is_inferer_inner_type_valid(&self) -> bool;
+    fn get_inferer_inner_type(&self) -> Type;
+}

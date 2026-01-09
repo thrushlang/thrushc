@@ -3,8 +3,6 @@ use inkwell::values::FunctionValue;
 use thrushc_span::Span;
 use thrushc_typesystem::Type;
 
-use crate::context::LLVMCodeGenContext;
-
 pub trait AstLLVMGetType {
     fn llvm_get_type(&self) -> &Type;
 }

@@ -1,11 +1,11 @@
-use thrushc_ast::{Ast, metadata::LocalMetadata};
+use thrushc_ast::{Ast, metadata::LocalMetadata, traits::AstGetType};
 use thrushc_attributes::ThrushAttributes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_mir::atomicord::ThrushAtomicOrdering;
 use thrushc_modificators::{Modificators, traits::ModificatorsExtensions};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
-use thrushc_typesystem::Type;
+use thrushc_typesystem::{Type, traits::InfererTypeExtensions};
 
 use crate::{ParserContext, attributes, builder, expressions, typegen};
 
@@ -41,7 +41,7 @@ pub fn build_local<'parser>(
         String::from("Expected ':'."),
     )?;
 
-    let local_type: Type = typegen::build_type(ctx, false)?;
+    let mut local_type: Type = typegen::build_type(ctx, false)?;
 
     let attributes: ThrushAttributes =
         attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
@@ -68,9 +68,6 @@ pub fn build_local<'parser>(
         let metadata: LocalMetadata =
             LocalMetadata::new(false, is_mutable, is_volatile, atomic_ord);
 
-        ctx.get_mut_symbols()
-            .new_local(name, (local_type.clone(), metadata, span), span)?;
-
         ctx.consume(
             TokenType::Eq,
             CompilationIssueCode::E0001,
@@ -80,8 +77,14 @@ pub fn build_local<'parser>(
         ctx.get_mut_type_ctx().add_infered_type(local_type.clone());
 
         let value: Ast = expressions::build_expression(ctx)?;
+        let value_type: &Type = value.get_value_type()?;
 
         ctx.get_mut_type_ctx().pop_infered_type();
+
+        local_type.inferer_inner_type_from_type(value_type);
+
+        ctx.get_mut_symbols()
+            .new_local(name, (local_type.clone(), metadata, span), span)?;
 
         let local: Ast = Ast::Local {
             name,

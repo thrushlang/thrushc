@@ -54,6 +54,22 @@ pub fn lower_precedence<'parser>(
             let content: &str = tk.get_lexeme();
             let span: Span = tk.get_span();
 
+            let cstring_type: Type = Type::Const(
+                Type::Ptr(
+                    Some(
+                        Type::Array {
+                            base_type: Type::Char(span).into(),
+                            infered_type: None,
+                            span,
+                        }
+                        .into(),
+                    ),
+                    span,
+                )
+                .into(),
+                span,
+            );
+
             let source: &[u8] = content.as_bytes();
 
             let mut processed: Vec<u8> = Vec::with_capacity(source.len());
@@ -86,18 +102,7 @@ pub fn lower_precedence<'parser>(
                 }
             }
 
-            Ast::new_str(
-                processed,
-                Type::Const(
-                    Type::Ptr(
-                        Some(Type::Array(Type::Char(span).into(), span).into()),
-                        span,
-                    )
-                    .into(),
-                    span,
-                ),
-                span,
-            )
+            Ast::new_str(processed, cstring_type, span)
         }
 
         TokenType::Char => {

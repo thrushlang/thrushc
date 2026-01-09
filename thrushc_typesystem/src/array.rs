@@ -3,7 +3,10 @@ use crate::{Type, traits::TypeArrayEntensions};
 impl TypeArrayEntensions for Type {
     #[inline]
     fn get_array_base_type(&self) -> Type {
-        if let Type::Array(inner, ..) = self {
+        if let Type::Array {
+            base_type: inner, ..
+        } = self
+        {
             return *(*inner).clone();
         }
 
@@ -21,8 +24,6 @@ impl TypeArrayEntensions for Type {
     #[inline]
     fn get_array_type_herarchy(&self) -> u8 {
         match self {
-            Type::Void(..) => 0,
-
             Type::Bool(..) => 1,
             Type::Char(..) => 2,
 
@@ -51,11 +52,13 @@ impl TypeArrayEntensions for Type {
             Type::Ptr(Some(subtype), ..) => subtype.get_array_type_herarchy(),
             Type::Ptr(None, ..) => 21,
 
-            Type::FixedArray(..) => 22,
-            Type::Array(..) => 23,
-            Type::Struct(..) => 24,
+            Type::Fn(..) => 22,
 
-            Type::Fn(..) => 25,
+            Type::Array { .. } => 23,
+            Type::FixedArray(..) => 24,
+            Type::Struct(..) => 25,
+
+            Type::Void(..) => 26,
         }
     }
 }

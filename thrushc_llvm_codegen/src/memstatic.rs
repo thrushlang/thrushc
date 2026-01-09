@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use inkwell::AddressSpace;
 use inkwell::ThreadLocalMode;
 use inkwell::module::Linkage;

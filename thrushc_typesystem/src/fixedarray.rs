@@ -21,8 +21,6 @@ impl TypeFixedArrayEntensions for Type {
     #[inline]
     fn get_fixed_array_type_herarchy(&self) -> u8 {
         match self {
-            Type::Void(..) => 0,
-
             Type::Bool(..) => 1,
             Type::Char(..) => 2,
 
@@ -51,11 +49,13 @@ impl TypeFixedArrayEntensions for Type {
             Type::Ptr(Some(subtype), ..) => subtype.get_fixed_array_type_herarchy(),
             Type::Ptr(None, ..) => 21,
 
-            Type::FixedArray(..) => 22,
-            Type::Array(..) => 23,
+            Type::Array { .. } => 22,
+            Type::FixedArray(..) => 23,
             Type::Struct(..) => 24,
 
             Type::Fn(..) => 25,
+
+            Type::Void(..) => 25,
         }
     }
 }

@@ -5,6 +5,7 @@ mod fixedarray;
 mod fnref;
 mod general;
 mod index;
+mod inferer;
 mod location;
 pub mod modificators;
 mod pointer;
@@ -58,7 +59,11 @@ pub enum Type {
     FixedArray(std::boxed::Box<Type>, u32, Span),
 
     // Array Type
-    Array(std::boxed::Box<Type>, Span),
+    Array {
+        base_type: std::boxed::Box<Type>,
+        infered_type: Option<(std::boxed::Box<Type>, usize)>,
+        span: Span,
+    },
 
     // Memory Address
     Addr(Span),
