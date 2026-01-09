@@ -58,6 +58,18 @@ impl InfererTypeExtensions for Type {
         false
     }
 
+    fn is_inferer_inner_type_refcounter_not_more_used(&self) -> bool {
+        if let Type::Array {
+            infered_type: Some((_, 0..=1)),
+            ..
+        } = self
+        {
+            return true;
+        }
+
+        false
+    }
+
     fn get_inferer_inner_type(&self) -> Type {
         match self {
             Type::Array {

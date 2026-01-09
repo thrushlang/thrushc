@@ -88,5 +88,10 @@ pub trait InfererTypeExtensions {
     fn inferer_inner_type_from_type(&mut self, other: &Type);
     fn has_inferer_inner_type(&self) -> bool;
     fn is_inferer_inner_type_valid(&self) -> bool;
+    fn is_inferer_inner_type_refcounter_not_more_used(&self) -> bool;
     fn get_inferer_inner_type(&self) -> Type;
+}
+
+pub trait VoidTypeExtensions {
+    fn contains_void_type(&self) -> bool;
 }

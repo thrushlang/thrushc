@@ -17,7 +17,7 @@ use thrushc_typesystem::{
         FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
         LLVMFunctionReferenceTypeModificator,
     },
-    traits::{TypeCodeLocation, TypeIsExtensions},
+    traits::TypeIsExtensions,
 };
 
 use crate::{
@@ -143,15 +143,6 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Co
 
         let param_type: Type = self::build_type(ctx, false)?;
 
-        if param_type.is_void_type() {
-            ctx.add_error(CompilationIssue::Error(
-                CompilationIssueCode::E0019,
-                "Void type isn't a value.".into(),
-                None,
-                param_type.get_span(),
-            ));
-        }
-
         parameter_types.push(param_type);
 
         if ctx.check(TokenType::RBracket) {
@@ -196,15 +187,6 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Co
 fn build_const_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
     let inner_type: Type = self::build_type(ctx, false)?;
 
-    if inner_type.is_void_type() {
-        ctx.add_error(CompilationIssue::Error(
-            CompilationIssueCode::E0019,
-            "Void type isn't a value.".into(),
-            None,
-            inner_type.get_span(),
-        ));
-    }
-
     Ok(Type::Const(inner_type.into(), span))
 }
 
@@ -216,15 +198,6 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
     )?;
 
     let array_type: Type = self::build_type(ctx, false)?;
-
-    if array_type.is_void_type() {
-        ctx.add_error(CompilationIssue::Error(
-            CompilationIssueCode::E0019,
-            "Void type isn't a value.".into(),
-            None,
-            array_type.get_span(),
-        ));
-    }
 
     if ctx.check(TokenType::SemiColon) {
         ctx.consume(
@@ -311,26 +284,8 @@ fn build_recursive_type(
     if let Type::Ptr(..) = &mut before_type {
         let mut inner_type: Type = self::build_type(ctx, false)?;
 
-        if inner_type.is_void_type() {
-            ctx.add_error(CompilationIssue::Error(
-                CompilationIssueCode::E0019,
-                "Void type isn't a value.".into(),
-                None,
-                inner_type.get_span(),
-            ));
-        }
-
         while ctx.check(TokenType::LBracket) {
             inner_type = self::build_recursive_type(ctx, inner_type, span)?;
-
-            if inner_type.is_void_type() {
-                ctx.add_error(CompilationIssue::Error(
-                    CompilationIssueCode::E0019,
-                    "Void type isn't a value.".into(),
-                    None,
-                    inner_type.get_span(),
-                ));
-            }
         }
 
         ctx.consume(

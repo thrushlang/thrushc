@@ -5,7 +5,10 @@ use thrushc_ast::{
 };
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_typesystem::{Type, traits::TypeIsExtensions};
+use thrushc_typesystem::{
+    Type,
+    traits::{TypeCodeLocation, TypeIsExtensions, VoidTypeExtensions},
+};
 
 use crate::TypeChecker;
 
@@ -52,6 +55,33 @@ pub fn validate_memmove<'type_checker>(
 
     let size_type: &Type = size.get_value_type()?;
     let size_span: Span = size.get_span();
+
+    if source_type.contains_void_type() || source_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            source_type.get_span(),
+        ));
+    }
+
+    if destination_type.contains_void_type() || destination_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            destination_type.get_span(),
+        ));
+    }
+
+    if size_type.contains_void_type() || size_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            size_type.get_span(),
+        ));
+    }
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
@@ -108,6 +138,33 @@ pub fn validate_memcpy<'type_checker>(
     let size_type: &Type = size.get_value_type()?;
     let size_span: Span = size.get_span();
 
+    if source_type.contains_void_type() || source_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            source_type.get_span(),
+        ));
+    }
+
+    if destination_type.contains_void_type() || destination_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            destination_type.get_span(),
+        ));
+    }
+
+    if size_type.contains_void_type() || size_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            size_type.get_span(),
+        ));
+    }
+
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0019,
@@ -159,6 +216,33 @@ pub fn validate_memset<'type_checker>(
 
     let size_type: &Type = size.get_value_type()?;
     let size_span: Span = size.get_span();
+
+    if destination_type.contains_void_type() || destination_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            destination_type.get_span(),
+        ));
+    }
+
+    if new_size_type.contains_void_type() || new_size_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            new_size_type.get_span(),
+        ));
+    }
+
+    if size_type.contains_void_type() || size_type.is_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            size_type.get_span(),
+        ));
+    }
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
         typechecker.add_error(CompilationIssue::Error(

@@ -5,7 +5,10 @@ use thrushc_ast::{
 
 use thrushc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition};
 use thrushc_span::Span;
-use thrushc_typesystem::{Type, traits::TypeIsExtensions};
+use thrushc_typesystem::{
+    Type,
+    traits::{TypeCodeLocation, TypeIsExtensions, VoidTypeExtensions},
+};
 
 use crate::TypeChecker;
 
@@ -28,15 +31,24 @@ pub fn validate<'type_checker>(
                     .new_asm_function(name, (return_type, parameters_types, attributes));
             }
 
+            if return_type.contains_void_type() {
+                typechecker.add_error(CompilationIssue::Error(
+                    CompilationIssueCode::E0019,
+                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    None,
+                    return_type.get_span(),
+                ));
+            }
+
             {
                 for node in parameters.iter() {
                     let type_: &Type = node.get_any_type()?;
                     let span: Span = node.get_span();
 
-                    if type_.is_void_type() {
+                    if type_.contains_void_type() || type_.is_void_type() {
                         typechecker.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
-                            "Void type isn't a value.".into(),
+                            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                             None,
                             span,
                         ));
@@ -61,15 +73,24 @@ pub fn validate<'type_checker>(
                     .new_intrinsic(name, (return_type, parameters_types, attributes));
             }
 
+            if return_type.contains_void_type() {
+                typechecker.add_error(CompilationIssue::Error(
+                    CompilationIssueCode::E0019,
+                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    None,
+                    return_type.get_span(),
+                ));
+            }
+
             {
                 for node in parameters.iter() {
                     let type_: &Type = node.get_any_type()?;
                     let span: Span = node.get_span();
 
-                    if type_.is_void_type() {
+                    if type_.contains_void_type() || type_.is_void_type() {
                         typechecker.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
-                            "Void type isn't a value.".into(),
+                            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                             None,
                             span,
                         ));
@@ -105,15 +126,24 @@ pub fn validate<'type_checker>(
                     let type_: &Type = node.get_any_type()?;
                     let span: Span = node.get_span();
 
-                    if type_.is_void_type() {
+                    if type_.contains_void_type() || type_.is_void_type() {
                         typechecker.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
-                            "Void type isn't a value.".into(),
+                            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                             None,
                             span,
                         ));
                     }
                 }
+            }
+
+            if return_type.contains_void_type() {
+                typechecker.add_error(CompilationIssue::Error(
+                    CompilationIssueCode::E0019,
+                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    None,
+                    return_type.get_span(),
+                ));
             }
 
             if let Some(body) = body {

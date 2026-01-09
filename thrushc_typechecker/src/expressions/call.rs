@@ -6,7 +6,7 @@ use thrushc_attributes::traits::ThrushAttributesExtensions;
 use thrushc_entities::typechecker::TypeCheckerFunction;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_typesystem::Type;
+use thrushc_typesystem::{Type, traits::VoidTypeExtensions};
 
 use crate::{TypeChecker, checking, metadata::TypeCheckerExpressionMetadata};
 
@@ -16,12 +16,30 @@ pub fn validate<'type_checker>(
     args: &'type_checker [Ast],
     span: &Span,
 ) -> Result<(), CompilationIssue> {
-    let (_, parameter_types, attributes) = metadata;
+    let (return_type, parameter_types, attributes) = metadata;
 
     let required_count: usize = parameter_types.len();
     let provided_count: usize = args.len();
 
     let var_args: bool = attributes.has_ignore_attribute();
+
+    if return_type.contains_void_type() {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            *span,
+        ));
+    }
+
+    if parameter_types.iter().any(|ty| ty.contains_void_type()) {
+        typechecker.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0019,
+            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            None,
+            *span,
+        ));
+    }
 
     if required_count != provided_count && !var_args {
         typechecker.add_error(CompilationIssue::Error(

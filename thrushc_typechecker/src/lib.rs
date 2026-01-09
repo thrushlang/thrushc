@@ -1,6 +1,5 @@
 use thrushc_ast::{
     Ast,
-    metadata::LocalMetadata,
     traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
 };
 
@@ -10,7 +9,7 @@ use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
 use thrushc_typesystem::{
     Type,
-    traits::{TypeCodeLocation, TypeIsExtensions},
+    traits::{TypeCodeLocation, TypeIsExtensions, VoidTypeExtensions},
 };
 
 use crate::{
@@ -190,27 +189,25 @@ impl<'type_checker> TypeChecker<'type_checker> {
             | Ast::Struct { .. }
             | Ast::Continue { .. }
             | Ast::Break { .. } => Ok(()),
+
             Ast::Enum { fields, .. } => {
                 {
-                    for node in fields.iter() {
-                        let target_type: Type = node.1.clone();
-                        let from_type: &Type = node.2.get_value_type()?;
-
-                        let value: &Ast = &node.2;
+                    for (_, target_type, expr) in fields.iter() {
+                        let from_type: &Type = expr.get_value_type()?;
 
                         let metadata: TypeCheckerExpressionMetadata =
-                            TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                            TypeCheckerExpressionMetadata::new(expr.is_literal_value());
 
                         checking::check_types(
-                            &target_type,
+                            target_type,
                             from_type,
-                            Some(value),
+                            Some(expr),
                             None,
                             metadata,
-                            value.get_span(),
+                            expr.get_span(),
                         )?;
 
-                        self.analyze_expr(value)?;
+                        self.analyze_expr(expr)?;
                     }
                 }
 
@@ -221,23 +218,25 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 value,
                 ..
             } => {
-                if let Some(value) = value {
-                    let metadata: TypeCheckerExpressionMetadata =
-                        TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                let Some(value) = value else {
+                    return Ok(());
+                };
 
-                    let value_type: &Type = value.get_value_type()?;
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
 
-                    checking::check_types(
-                        static_type,
-                        value_type,
-                        Some(value),
-                        None,
-                        metadata,
-                        node.get_span(),
-                    )?;
+                let value_type: &Type = value.get_value_type()?;
 
-                    self.analyze_expr(value)?;
-                }
+                checking::check_types(
+                    static_type,
+                    value_type,
+                    Some(value),
+                    None,
+                    metadata,
+                    node.get_span(),
+                )?;
+
+                self.analyze_expr(value)?;
 
                 Ok(())
             }
@@ -269,68 +268,56 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 kind: local_type,
                 value,
                 span,
-                metadata,
                 ..
             } => {
                 self.get_mut_table().new_local(name, (local_type, *span));
 
-                if local_type.is_void_type() {
+                if local_type.contains_void_type() || local_type.is_void_type() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "Void type isn't a value.".into(),
+                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                         None,
                         *span,
                     ));
                 }
 
-                if let Some(local_value) = value {
-                    let metadata: &LocalMetadata = metadata;
+                let Some(local_value) = value else {
+                    return Ok(());
+                };
 
-                    let type_metadata: TypeCheckerExpressionMetadata =
-                        TypeCheckerExpressionMetadata::new(local_value.is_literal_value());
+                let type_metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(local_value.is_literal_value());
 
-                    if local_type.is_void_type() {
-                        self.add_error(CompilationIssue::Error(
-                            CompilationIssueCode::E0019,
-                            "Void type isn't a value.".into(),
-                            None,
-                            *span,
-                        ));
-                    }
+                let local_value_type: &Type = local_value.get_value_type()?;
+                let is_ref_ptr_like_type: bool =
+                    local_value.is_reference() && local_value_type.is_ptr_like_type();
 
-                    if !metadata.is_undefined() {
-                        let local_value_type: &Type = local_value.get_value_type()?;
-                        let is_ref_ptr_like_type: bool =
-                            local_value.is_reference() && local_value_type.is_ptr_like_type();
+                if is_ref_ptr_like_type {
+                    let local_value_type_fixed_ptr: Type = Type::Ptr(
+                        Some(local_value_type.clone().into()),
+                        local_value_type.get_span(),
+                    );
 
-                        if is_ref_ptr_like_type {
-                            let local_value_type_fixed_ptr: Type = Type::Ptr(
-                                Some(local_value_type.clone().into()),
-                                local_value_type.get_span(),
-                            );
-
-                            checking::check_types(
-                                local_type,
-                                &local_value_type_fixed_ptr,
-                                Some(local_value),
-                                None,
-                                type_metadata,
-                                node.get_span(),
-                            )?;
-                        } else {
-                            checking::check_types(
-                                local_type,
-                                local_value_type,
-                                Some(local_value),
-                                None,
-                                type_metadata,
-                                node.get_span(),
-                            )?;
-                        }
-                    }
-
-                    self.analyze_expr(local_value)?;
+                    checking::check_types(
+                        local_type,
+                        &local_value_type_fixed_ptr,
+                        Some(local_value),
+                        None,
+                        type_metadata,
+                        node.get_span(),
+                    )?;
+                } else {
+                    checking::check_types(
+                        local_type,
+                        local_value_type,
+                        Some(local_value),
+                        None,
+                        type_metadata,
+                        node.get_span(),
+                    )?;
                 }
+
+                self.analyze_expr(local_value)?;
 
                 Ok(())
             }
@@ -466,32 +453,34 @@ impl<'type_checker> TypeChecker<'type_checker> {
             }
 
             Ast::Return { expression, .. } => {
-                if let Some(expr) = expression {
-                    let metadata: TypeCheckerExpressionMetadata =
-                        TypeCheckerExpressionMetadata::new(expr.is_literal_value());
+                let Some(expr) = expression else {
+                    return Ok(());
+                };
 
-                    let Some((return_type, function_loc)) =
-                        self.get_context().get_current_function_type()
-                    else {
-                        return Err(CompilationIssue::Error(
-                            CompilationIssueCode::E0020,
-                            "Return statement outside of a function.".into(),
-                            None,
-                            expr.get_span(),
-                        ));
-                    };
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(expr.is_literal_value());
 
-                    checking::check_types(
-                        return_type,
-                        expr.get_value_type()?,
-                        Some(expr),
+                let Some((return_type, function_loc)) =
+                    self.get_context().get_current_function_type()
+                else {
+                    return Err(CompilationIssue::Error(
+                        CompilationIssueCode::E0020,
+                        "Return statement outside of a function.".into(),
                         None,
-                        metadata,
-                        function_loc,
-                    )?;
+                        expr.get_span(),
+                    ));
+                };
 
-                    self.analyze_expr(expr)?;
-                }
+                checking::check_types(
+                    return_type,
+                    expr.get_value_type()?,
+                    Some(expr),
+                    None,
+                    metadata,
+                    function_loc,
+                )?;
+
+                self.analyze_expr(expr)?;
 
                 Ok(())
             }
@@ -516,6 +505,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     )?;
                 }
 
+                self.analyze_expr(source)?;
                 self.analyze_expr(value)?;
 
                 Ok(())

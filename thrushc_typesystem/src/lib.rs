@@ -11,6 +11,7 @@ pub mod modificators;
 mod pointer;
 mod structure;
 pub mod traits;
+mod void;
 
 use thrushc_span::Span;
 

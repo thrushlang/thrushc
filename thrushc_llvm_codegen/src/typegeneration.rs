@@ -11,6 +11,7 @@ use inkwell::types::FunctionType;
 
 use thrushc_ast::Ast;
 use thrushc_typesystem::Type;
+use thrushc_typesystem::traits::InfererTypeExtensions;
 use thrushc_typesystem::traits::TypeCodeLocation;
 use thrushc_typesystem::traits::TypeIsExtensions;
 
@@ -125,9 +126,11 @@ pub fn compile_from<'ctx>(
         },
 
         Type::Array {
-            infered_type: Some((infered_type, 0 | 1)),
+            infered_type: Some((infered_type, _)),
             ..
-        } => self::compile_from(context, infered_type),
+        } if kind.is_inferer_inner_type_refcounter_not_more_used() => {
+            self::compile_from(context, infered_type)
+        }
 
         t if t.is_ptr_like_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
 
@@ -310,9 +313,11 @@ pub fn compile_gep_type<'ctx>(
     match kind {
         Type::Const(subtype, ..) => self::compile_gep_type(context, subtype),
         Type::Array {
-            infered_type: Some((infered_type, 0 | 1)),
+            infered_type: Some((infered_type, _)),
             ..
-        } => self::compile_from(context, infered_type),
+        } if kind.is_inferer_inner_type_refcounter_not_more_used() => {
+            self::compile_from(context, infered_type)
+        }
         Type::Array {
             base_type: subtype, ..
         } => self::compile_from(context, subtype),

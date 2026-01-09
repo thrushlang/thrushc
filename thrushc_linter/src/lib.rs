@@ -92,15 +92,15 @@ impl<'linter> Linter<'linter> {
                 self.analyze_expr(value);
             }
             Ast::Function {
-                parameters, body, ..
+                parameters,
+                body: Some(body),
+                ..
             } => {
-                if let Some(body) = body {
-                    self.symbols.declare_parameters(parameters);
-                    self.analyze_stmt(body);
-                    self.symbols.finish_parameters();
+                self.symbols.declare_parameters(parameters);
+                self.analyze_stmt(body);
+                self.symbols.finish_parameters();
 
-                    self.generate_scoped_function_warnings();
-                }
+                self.generate_scoped_function_warnings();
             }
 
             _ => (),
@@ -124,10 +124,9 @@ impl<'linter> Linter<'linter> {
                 }
             }
             Ast::Enum { fields, .. } => {
-                fields.iter().for_each(|field| {
-                    let expr: &Ast = &field.2;
+                for (_, _, expr) in fields.iter() {
                     self.analyze_expr(expr);
-                });
+                }
             }
             Ast::Static {
                 name,
@@ -265,11 +264,8 @@ impl Linter<'_> {
                     let mut converted_fields: HashMap<&str, (Span, bool)> =
                         HashMap::with_capacity(100);
 
-                    for field in fields.1.iter() {
-                        let field_name: &str = field.0;
-                        let span: Span = field.3;
-
-                        converted_fields.insert(field_name, (span, false));
+                    for (field_name, _, _, span) in fields.1.iter() {
+                        converted_fields.insert(field_name, (*span, false));
                     }
 
                     self.symbols.new_struct(
@@ -284,9 +280,8 @@ impl Linter<'_> {
                     let mut converted_fields: HashMap<&str, (Span, bool)> =
                         HashMap::with_capacity(100);
 
-                    for field in fields.iter() {
-                        let field_name: &str = field.0;
-                        let expr_span: Span = field.2.get_span();
+                    for (field_name, _, expr) in fields.iter() {
+                        let expr_span: Span = expr.get_span();
 
                         converted_fields.insert(field_name, (expr_span, false));
                     }
