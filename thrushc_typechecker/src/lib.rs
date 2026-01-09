@@ -300,18 +300,36 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                     if !metadata.is_undefined() {
                         let local_value_type: &Type = local_value.get_value_type()?;
+                        let is_ref_ptr_like_type: bool =
+                            local_value.is_reference() && local_value_type.is_ptr_like_type();
 
-                        checking::check_types(
-                            local_type,
-                            local_value_type,
-                            Some(local_value),
-                            None,
-                            type_metadata,
-                            node.get_span(),
-                        )?;
+                        if is_ref_ptr_like_type {
+                            let local_value_type_fixed_ptr: Type = Type::Ptr(
+                                Some(local_value_type.clone().into()),
+                                local_value_type.get_span(),
+                            );
 
-                        self.analyze_expr(local_value)?;
+                            checking::check_types(
+                                local_type,
+                                &local_value_type_fixed_ptr,
+                                Some(local_value),
+                                None,
+                                type_metadata,
+                                node.get_span(),
+                            )?;
+                        } else {
+                            checking::check_types(
+                                local_type,
+                                local_value_type,
+                                Some(local_value),
+                                None,
+                                type_metadata,
+                                node.get_span(),
+                            )?;
+                        }
                     }
+
+                    self.analyze_expr(local_value)?;
                 }
 
                 Ok(())
@@ -319,7 +337,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
             Ast::Block { nodes, .. } => {
                 self.begin_scope();
 
-                nodes.iter().try_for_each(|node| self.analyze_stmt(node))?;
+                for node in nodes.iter() {
+                    self.analyze_stmt(node)?;
+                }
 
                 self.end_scope();
 
