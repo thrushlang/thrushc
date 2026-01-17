@@ -1,13 +1,12 @@
 use thrushc_ast::Ast;
+use thrushc_entities::parser::{FoundSymbolId, Function, Intrinsic};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::tokentype::TokenType;
 use thrushc_typesystem::Type;
 
 use crate::{
-    ParserContext,
-    entities::{AssemblerFunction, FoundSymbolId, Function, Intrinsic},
-    expressions,
+    ParserContext, expressions,
     traits::{FoundSymbolEitherExtensions, FoundSymbolExtensions},
 };
 
@@ -25,9 +24,10 @@ pub fn build_call<'parser>(
         crate::traits::IntrinsicExtensions::get_type(&intrinsic)
     } else if object.is_function_asm() {
         let id: &str = object.expected_asm_function(span)?;
-        let asm_function: AssemblerFunction = ctx.get_symbols().get_asm_function_by_id(span, id)?;
+        let asm_function: thrushc_entities::parser::AssemblerFunction =
+            ctx.get_symbols().get_asm_function_by_id(span, id)?;
 
-        crate::traits::FunctionExtensions::get_type(&asm_function)
+        crate::traits::FunctionAssemblerExtensions::get_type(&asm_function)
     } else {
         let id: &str = object.expected_function(span)?;
         let function: Function = ctx.get_symbols().get_function_by_id(span, id)?;

@@ -4,7 +4,7 @@ use thrushc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition
 use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
 
-use crate::entities::{
+use thrushc_entities::parser::{
     AssemblerFunction, AssemblerFunctions, ConstantSymbol, CustomTypeSymbol, EnumSymbol,
     FoundSymbolId, Function, Functions, GlobalConstants, GlobalCustomTypes, GlobalEnums,
     GlobalStatics, GlobalStructs, Intrinsic, Intrinsics, LLISymbol, LLIs, LocalConstants,

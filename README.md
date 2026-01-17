@@ -92,6 +92,7 @@ JIT compiler flags:
 
 Others compiler flags:
 
+• --symbol-linkage-strategy [any|exact|large] Configure the symbol linkage merge strategy.
 • --sanitizer [address|hwaddress|memory|thread|memtag] Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.
 • --no-sanitize [bounds;coverage] Modifies certain code emissions for the selected sanitizer.
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.

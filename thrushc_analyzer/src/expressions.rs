@@ -86,14 +86,12 @@ pub fn validate<'analyzer>(
             Ok(())
         }
 
-        Ast::Constructor { args, .. } => {
-            args.iter().try_for_each(|arg| {
-                let node: &Ast = &arg.1;
-
-                analyzer.analyze_expr(node)?;
-
-                Ok(())
-            })?;
+        Ast::Constructor { data, .. } => {
+            {
+                for (_, node, ..) in data.iter() {
+                    analyzer.analyze_expr(node)?;
+                }
+            }
 
             Ok(())
         }

@@ -104,29 +104,26 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 globals::functions::validate(self, node)
             }
             Ast::CustomType { .. } | Ast::GlobalAssembler { .. } | Ast::Struct { .. } => Ok(()),
-            Ast::Enum { fields, .. } => {
-                fields.iter().try_for_each(|field| {
-                    let target_type: Type = field.1.clone();
-                    let from_type: &Type = field.2.get_value_type()?;
+            Ast::Enum { data, .. } => {
+                {
+                    for (_, target_type, expr) in data.iter() {
+                        let from_type: &Type = expr.get_value_type()?;
 
-                    let value: &Ast = &field.2;
+                        let metadata: TypeCheckerExpressionMetadata =
+                            TypeCheckerExpressionMetadata::new(expr.is_literal_value());
 
-                    let metadata: TypeCheckerExpressionMetadata =
-                        TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                        checking::check_types(
+                            &target_type,
+                            from_type,
+                            Some(expr),
+                            None,
+                            metadata,
+                            expr.get_span(),
+                        )?;
 
-                    checking::check_types(
-                        &target_type,
-                        from_type,
-                        Some(value),
-                        None,
-                        metadata,
-                        value.get_span(),
-                    )?;
-
-                    self.analyze_expr(value)?;
-
-                    Ok(())
-                })?;
+                        self.analyze_expr(expr)?;
+                    }
+                }
 
                 Ok(())
             }
@@ -135,23 +132,25 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 value,
                 ..
             } => {
-                if let Some(value) = value {
-                    let metadata: TypeCheckerExpressionMetadata =
-                        TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                let Some(value) = value else {
+                    return Ok(());
+                };
 
-                    let value_type: &Type = value.get_value_type()?;
+                let metadata: TypeCheckerExpressionMetadata =
+                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
 
-                    checking::check_types(
-                        static_type,
-                        value_type,
-                        Some(value),
-                        None,
-                        metadata,
-                        node.get_span(),
-                    )?;
+                let value_type: &Type = value.get_value_type()?;
 
-                    self.analyze_expr(value)?;
-                }
+                checking::check_types(
+                    static_type,
+                    value_type,
+                    Some(value),
+                    None,
+                    metadata,
+                    node.get_span(),
+                )?;
+
+                self.analyze_expr(value)?;
 
                 Ok(())
             }
@@ -190,9 +189,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
             | Ast::Continue { .. }
             | Ast::Break { .. } => Ok(()),
 
-            Ast::Enum { fields, .. } => {
+            Ast::Enum { data, .. } => {
                 {
-                    for (_, target_type, expr) in fields.iter() {
+                    for (_, target_type, expr) in data.iter() {
                         let from_type: &Type = expr.get_value_type()?;
 
                         let metadata: TypeCheckerExpressionMetadata =

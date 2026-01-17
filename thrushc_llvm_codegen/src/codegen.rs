@@ -824,8 +824,8 @@ pub fn compile<'ctx>(
 
         // Compiles a struct constructor
         Ast::Constructor {
-            args, kind, span, ..
-        } => expressions::structure::compile(context, args, kind, *span),
+            data, kind, span, ..
+        } => expressions::structure::compile(context, data, kind, *span),
 
         // Compiles a type cast_type operation
         Ast::As { from, cast, .. } => cast::compile(context, from, cast),
@@ -943,14 +943,14 @@ pub fn compile_constant<'ctx>(
         Ast::Str { bytes, span, .. } => cstring::compile(context, bytes, *span).into(),
 
         // Struct constructor handling
-        Ast::Constructor { args, kind, .. } => {
-            let fields: Vec<&Ast> = args.iter().map(|raw_arg| &raw_arg.1).collect();
+        Ast::Constructor { data, kind, .. } => {
+            let fields_expr: Vec<&Ast> = data.iter().map(|raw_arg| &raw_arg.1).collect();
 
             let llvm_context: &Context = context.get_llvm_context();
 
             let struct_fields_types: &[Type] = kind.get_struct_fields();
 
-            let fields: Vec<BasicValueEnum> = fields
+            let fields: Vec<BasicValueEnum> = fields_expr
                 .iter()
                 .zip(struct_fields_types)
                 .map(|(field, kind)| codegen::compile_constant(context, field, kind))

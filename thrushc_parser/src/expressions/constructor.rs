@@ -1,13 +1,12 @@
-use thrushc_ast::{Ast, types::Constructor};
+use thrushc_ast::{Ast, data::ConstructorData};
+use thrushc_entities::parser::{FoundSymbolId, Struct};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
-use thrushc_typesystem::modificators::StructureTypeModificator;
+use thrushc_typesystem::{Type, modificators::StructureTypeModificator};
 
 use crate::{
-    ParserContext,
-    entities::{FoundSymbolId, Struct},
-    expressions,
+    ParserContext, expressions,
     traits::{ConstructorExtensions, FoundSymbolEitherExtensions, StructSymbolExtensions},
 };
 
@@ -46,8 +45,8 @@ pub fn build_constructor<'parser>(
 
     let required: usize = structure.get_fields().1.len();
 
-    let mut args: Constructor = Vec::with_capacity(10);
-    let mut amount: usize = 0;
+    let mut data: ConstructorData = ConstructorData::with_capacity(u8::MAX as usize);
+    let mut count: usize = 0;
 
     loop {
         if ctx.check(TokenType::RBrace) {
@@ -76,10 +75,10 @@ pub fn build_constructor<'parser>(
                 continue;
             }
 
-            if amount >= required {
+            if count >= required {
                 ctx.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0026,
-                    format!("Expected '{}' fields, not '{}' fields.", required, amount),
+                    format!("Expected '{}' fields, not '{}' fields.", required, count),
                     None,
                     span,
                 ));
@@ -90,10 +89,10 @@ pub fn build_constructor<'parser>(
             let expression: Ast = expressions::build_expr(ctx)?;
 
             if let Some(target_type) = structure.get_field_type(field_name) {
-                args.push((field_name, expression, target_type, amount as u32));
+                data.push((field_name, expression, target_type, count as u32));
             }
 
-            amount += 1;
+            count += 1;
 
             if ctx.check(TokenType::RBrace) {
                 break;
@@ -117,20 +116,17 @@ pub fn build_constructor<'parser>(
                 )?;
             }
         } else {
-            let span: Span = ctx.advance()?.get_span();
-
-            ctx.add_error(CompilationIssue::Error(
+            ctx.consume(
+                TokenType::Identifier,
                 CompilationIssueCode::E0001,
-                "Expected field name.".into(),
-                None,
-                span,
-            ));
+                "Expected identifier.".into(),
+            )?;
 
             continue;
         }
     }
 
-    let provided: usize = args.len();
+    let provided: usize = data.len();
 
     if provided != required {
         return Err(CompilationIssue::Error(
@@ -150,10 +146,12 @@ pub fn build_constructor<'parser>(
         "Expected '}'.".into(),
     )?;
 
+    let constructor_type: Type = data.get_type(name, modificator, span);
+
     Ok(Ast::Constructor {
         name,
-        args: args.clone(),
-        kind: args.get_type(name, modificator, span),
+        data,
+        kind: constructor_type,
         span,
     })
 }

@@ -9,7 +9,7 @@ use crate::{ParserContext, attributes, typegen};
 
 pub fn build_custom_type<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
+    parse_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Type,
@@ -42,15 +42,15 @@ pub fn build_custom_type<'parser>(
         "Expected ';'.".into(),
     )?;
 
-    if declare_forward {
+    if parse_forward {
         ctx.get_mut_symbols()
             .new_global_custom_type(name, (custom_type, attributes), span)?;
 
-        return Ok(Ast::new_nullptr(span));
+        Ok(Ast::new_nullptr(span))
+    } else {
+        Ok(Ast::CustomType {
+            kind: custom_type,
+            span,
+        })
     }
-
-    Ok(Ast::CustomType {
-        kind: custom_type,
-        span,
-    })
 }

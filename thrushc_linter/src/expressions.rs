@@ -48,26 +48,24 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         }
 
         Ast::Constructor {
-            name, args, span, ..
+            name, data, span, ..
         } => {
-            args.iter().for_each(|arg| {
-                let stmt: &Ast = &arg.1;
-                linter.analyze_expr(stmt);
+            data.iter().for_each(|(_, expr, ..)| {
+                linter.analyze_expr(expr);
             });
 
             if let Some(structure) = linter.symbols.get_struct_info(name) {
                 structure.2 = true;
-                return;
+            } else {
+                linter.add_bug(CompilationIssue::FrontEndBug(
+                    String::from("Structure not caught"),
+                    format!("Could not get named struct with name '{}'.", name),
+                    *span,
+                    CompilationPosition::Linter,
+                    std::path::PathBuf::from(file!()),
+                    line!(),
+                ));
             }
-
-            linter.add_bug(CompilationIssue::FrontEndBug(
-                String::from("Structure not caught"),
-                format!("Could not get named struct with name '{}'.", name),
-                *span,
-                CompilationPosition::Linter,
-                std::path::PathBuf::from(file!()),
-                line!(),
-            ));
         }
 
         Ast::Indirect { function, args, .. } => {

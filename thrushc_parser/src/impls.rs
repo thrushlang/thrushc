@@ -1,23 +1,21 @@
 use thrushc_ast::{
+    data::{ConstructorData, EnumData, EnumDataField, StructureData},
     metadata::{FunctionParameterMetadata, LocalMetadata, StaticMetadata},
-    types::{Constructor, EnumField, EnumFields, StructFields},
+};
+use thrushc_entities::parser::{
+    AssemblerFunction, ConstantSymbol, EnumSymbol, FoundSymbolId, Function, Intrinsic, LLISymbol,
+    LocalSymbol, ParameterSymbol, StaticSymbol, Struct,
 };
 use thrushc_span::Span;
 use thrushc_typesystem::{
     Type, modificators::StructureTypeModificator, traits::TypeStructExtensions,
 };
 
-use crate::{
-    entities::{
-        ConstantSymbol, EnumSymbol, FoundSymbolId, Function, Intrinsic, LLISymbol, LocalSymbol,
-        ParameterSymbol, StaticSymbol, Struct,
-    },
-    traits::{
-        ConstantSymbolExtensions, ConstructorExtensions, EnumExtensions, EnumFieldsExtensions,
-        FoundSymbolExtensions, FunctionExtensions, FunctionParameterSymbolExtensions,
-        IntrinsicExtensions, LLISymbolExtensions, LocalSymbolExtensions, StaticSymbolExtensions,
-        StructFieldsExtensions, StructSymbolExtensions,
-    },
+use crate::traits::{
+    ConstantSymbolExtensions, ConstructorExtensions, EnumExtensions, EnumFieldsExtensions,
+    FoundSymbolExtensions, FunctionAssemblerExtensions, FunctionExtensions,
+    FunctionParameterSymbolExtensions, IntrinsicExtensions, LLISymbolExtensions,
+    LocalSymbolExtensions, StaticSymbolExtensions, StructFieldsExtensions, StructSymbolExtensions,
 };
 
 impl FoundSymbolExtensions for FoundSymbolId<'_> {
@@ -79,12 +77,12 @@ impl<'parser> StructSymbolExtensions<'parser> for Struct<'parser> {
         }
     }
 
-    fn get_fields(&self) -> StructFields<'parser> {
+    fn get_fields(&self) -> StructureData<'parser> {
         (self.0, self.1.clone(), self.3, self.4)
     }
 }
 
-impl StructFieldsExtensions for StructFields<'_> {
+impl StructFieldsExtensions for StructureData<'_> {
     #[inline]
     fn get_type(&self) -> Type {
         let types: Vec<Type> = self.1.iter().map(|field| field.1.clone()).collect();
@@ -137,6 +135,12 @@ impl FunctionParameterSymbolExtensions for ParameterSymbol<'_> {
     }
 }
 
+impl FunctionAssemblerExtensions for AssemblerFunction<'_> {
+    fn get_type(&self) -> Type {
+        self.0.clone()
+    }
+}
+
 impl IntrinsicExtensions for Intrinsic<'_> {
     fn get_type(&self) -> Type {
         self.0.clone()
@@ -156,17 +160,17 @@ impl LLISymbolExtensions for LLISymbol<'_> {
 }
 
 impl<'parser> EnumExtensions<'parser> for EnumSymbol<'parser> {
-    fn get_fields(&self) -> EnumFields<'parser> {
+    fn get_fields(&self) -> EnumData<'parser> {
         self.0.clone()
     }
 }
 
-impl<'parser> EnumFieldsExtensions<'parser> for EnumFields<'parser> {
+impl<'parser> EnumFieldsExtensions<'parser> for EnumData<'parser> {
     fn contain_field(&self, name: &'parser str) -> bool {
         self.iter().any(|enum_field| enum_field.0 == name)
     }
 
-    fn get_field(&self, name: &'parser str) -> EnumField<'parser> {
+    fn get_field(&self, name: &'parser str) -> EnumDataField<'parser> {
         self.iter()
             .find(|enum_field| enum_field.0 == name)
             .cloned()
@@ -174,11 +178,10 @@ impl<'parser> EnumFieldsExtensions<'parser> for EnumFields<'parser> {
     }
 }
 
-impl ConstructorExtensions for Constructor<'_> {
+impl ConstructorExtensions for ConstructorData<'_> {
     #[inline]
     fn get_type(&self, name: &str, modificator: StructureTypeModificator, span: Span) -> Type {
         let types: Vec<Type> = self.iter().map(|field| field.2.clone()).collect();
-
         Type::create_struct_type(name.to_string(), types.as_slice(), modificator, span)
     }
 }

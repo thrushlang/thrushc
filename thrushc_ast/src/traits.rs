@@ -1,6 +1,6 @@
 use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
-use thrushc_typesystem::Type;
+use thrushc_typesystem::{Type, modificators::StructureTypeModificator};
 
 pub trait AstGetType {
     fn get_any_type(&self) -> Result<&Type, CompilationIssue>;
@@ -58,4 +58,8 @@ pub trait AstMutabilityExtensions {
 
 pub trait AstScopeExtensions {
     fn is_compatible_with_main_scope(&self) -> bool;
+}
+
+pub trait AstStructureDataExtensions<'parser> {
+    fn new(name: &'parser str, modificator: StructureTypeModificator, span: Span) -> Self;
 }

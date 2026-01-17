@@ -114,25 +114,24 @@ impl<'analyzer> Analyzer<'analyzer> {
                 Ok(())
             }
             Ast::CustomType { .. } => Ok(()),
-            Ast::Enum { fields, .. } => {
-                fields.iter().try_for_each(|field| {
-                    let expr: &Ast = &field.2;
-                    let span: Span = expr.get_span();
+            Ast::Enum { data, .. } => {
+                {
+                    for (_, _, expr) in data.iter() {
+                        let span: Span = expr.get_span();
 
-                    if !expr.is_constant_value() {
-                        self.add_error(CompilationIssue::Error(
-                            CompilationIssueCode::E0006,
-                            "Expected a valid constant value or reference to a constant value."
-                                .into(),
-                            None,
-                            span,
-                        ));
+                        if !expr.is_constant_value() {
+                            self.add_error(CompilationIssue::Error(
+                                CompilationIssueCode::E0006,
+                                "Expected a valid constant value or reference to a constant value."
+                                    .into(),
+                                None,
+                                span,
+                            ));
+                        }
+
+                        self.analyze_expr(expr)?;
                     }
-
-                    self.analyze_expr(expr)?;
-
-                    Ok(())
-                })?;
+                }
 
                 Ok(())
             }
@@ -178,24 +177,24 @@ impl<'analyzer> Analyzer<'analyzer> {
 
     fn analyze_stmt(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
         match node {
-            Ast::Enum { fields, .. } => {
-                fields.iter().try_for_each(|field| {
-                    let expr: &Ast = &field.2;
+            Ast::Enum { data, .. } => {
+                {
+                    for (_, _, expr) in data.iter() {
+                        let span: Span = expr.get_span();
 
-                    if !expr.is_constant_value() {
-                        self.add_error(CompilationIssue::Error(
-                            CompilationIssueCode::E0006,
-                            "Expected a valid constant value or reference to a constant value."
-                                .into(),
-                            None,
-                            expr.get_span(),
-                        ));
+                        if !expr.is_constant_value() {
+                            self.add_error(CompilationIssue::Error(
+                                CompilationIssueCode::E0006,
+                                "Expected a valid constant value or reference to a constant value."
+                                    .into(),
+                                None,
+                                span,
+                            ));
+                        }
+
+                        self.analyze_expr(expr)?;
                     }
-
-                    self.analyze_expr(expr)?;
-
-                    Ok(())
-                })?;
+                }
 
                 Ok(())
             }

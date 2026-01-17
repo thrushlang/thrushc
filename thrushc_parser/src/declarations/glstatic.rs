@@ -11,7 +11,7 @@ use crate::{ParserContext, attributes, builder, expressions, typegen};
 
 pub fn build_global_static<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
+    parse_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Static,
@@ -63,26 +63,28 @@ pub fn build_global_static<'parser>(
             thread_mode,
         );
 
-        if declare_forward {
+        if parse_forward {
             ctx.get_mut_symbols().new_global_static(
                 name,
-                (static_type.clone(), metadata, attributes.clone()),
+                (static_type, metadata, attributes),
                 span,
             )?;
+
+            Ok(Ast::new_nullptr(span))
+        } else {
+            let static_: Ast = Ast::Static {
+                name,
+                ascii_name,
+                kind: static_type,
+                value: None,
+                attributes,
+                modificators,
+                metadata,
+                span,
+            };
+
+            Ok(static_)
         }
-
-        let static_: Ast = Ast::Static {
-            name,
-            ascii_name,
-            kind: static_type,
-            value: None,
-            attributes,
-            modificators,
-            metadata,
-            span,
-        };
-
-        Ok(static_)
     } else {
         ctx.consume(
             TokenType::Eq,
@@ -103,25 +105,27 @@ pub fn build_global_static<'parser>(
             thread_mode,
         );
 
-        if declare_forward {
+        if parse_forward {
             ctx.get_mut_symbols().new_global_static(
                 name,
-                (static_type.clone(), metadata, attributes.clone()),
+                (static_type, metadata, attributes),
                 span,
             )?;
+
+            Ok(Ast::new_nullptr(span))
+        } else {
+            let static_: Ast = Ast::Static {
+                name,
+                ascii_name,
+                kind: static_type,
+                value: Some(value.into()),
+                attributes,
+                modificators,
+                metadata,
+                span,
+            };
+
+            Ok(static_)
         }
-
-        let static_: Ast = Ast::Static {
-            name,
-            ascii_name,
-            kind: static_type,
-            value: Some(value.into()),
-            attributes,
-            modificators,
-            metadata,
-            span,
-        };
-
-        Ok(static_)
     }
 }

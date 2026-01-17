@@ -65,8 +65,8 @@ impl<'linter> Linter<'linter> {
 impl<'linter> Linter<'linter> {
     fn analyze_decl(&mut self, node: &'linter Ast) {
         match node {
-            Ast::Enum { fields, .. } => {
-                fields.iter().for_each(|field| {
+            Ast::Enum { data, .. } => {
+                data.iter().for_each(|field| {
                     let expr: &Ast = &field.2;
                     self.analyze_expr(expr);
                 });
@@ -123,8 +123,8 @@ impl<'linter> Linter<'linter> {
                     self.analyze_expr(value);
                 }
             }
-            Ast::Enum { fields, .. } => {
-                for (_, _, expr) in fields.iter() {
+            Ast::Enum { data, .. } => {
+                for (_, _, expr) in data.iter() {
                     self.analyze_expr(expr);
                 }
             }
@@ -256,7 +256,7 @@ impl Linter<'_> {
                 }
                 Ast::Struct {
                     name,
-                    fields,
+                    data,
                     span,
                     attributes,
                     ..
@@ -264,7 +264,7 @@ impl Linter<'_> {
                     let mut converted_fields: HashMap<&str, (Span, bool)> =
                         HashMap::with_capacity(100);
 
-                    for (field_name, _, _, span) in fields.1.iter() {
+                    for (field_name, _, _, span) in data.1.iter() {
                         converted_fields.insert(field_name, (*span, false));
                     }
 
@@ -275,12 +275,12 @@ impl Linter<'_> {
                 }
 
                 Ast::Enum {
-                    name, fields, span, ..
+                    name, data, span, ..
                 } => {
                     let mut converted_fields: HashMap<&str, (Span, bool)> =
                         HashMap::with_capacity(100);
 
-                    for (field_name, _, expr) in fields.iter() {
+                    for (field_name, _, expr) in data.iter() {
                         let expr_span: Span = expr.get_span();
 
                         converted_fields.insert(field_name, (expr_span, false));

@@ -1,9 +1,10 @@
 use std::path::PathBuf;
 
+use thrushc_entities::parser::FoundSymbolId;
 use thrushc_errors::{CompilationIssue, CompilationPosition};
 use thrushc_span::Span;
 
-use crate::{entities::FoundSymbolId, traits::FoundSymbolEitherExtensions};
+use crate::traits::FoundSymbolEitherExtensions;
 
 impl<'parser> FoundSymbolEitherExtensions<'parser> for FoundSymbolId<'parser> {
     fn expected_struct(&self, span: Span) -> Result<(&'parser str, usize), CompilationIssue> {

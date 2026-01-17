@@ -2,6 +2,7 @@ use either::Either;
 
 use thrushc_ast::Ast;
 use thrushc_diagnostician::Diagnostician;
+use thrushc_entities::parser::{AssemblerFunctions, Functions};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition};
 use thrushc_logging::LoggingType;
 use thrushc_options::{CompilationUnit, CompilerOptions};
@@ -10,18 +11,14 @@ use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
 
 use crate::{
     context::{ParserControlContext, ParserTypeContext},
-    entities::{AssemblerFunctions, Functions},
     table::SymbolsTable,
 };
-
-use ahash::AHashMap as HashMap;
 
 mod attributes;
 mod builder;
 mod builtins;
 mod context;
 mod declarations;
-mod entities;
 mod expected;
 mod expressions;
 mod impls;
@@ -102,8 +99,8 @@ impl<'parser> ParserContext<'parser> {
         file: &'parser CompilationUnit,
         options: &CompilerOptions,
     ) -> Self {
-        let functions: Functions = HashMap::with_capacity(1000);
-        let asm_functions: AssemblerFunctions = HashMap::with_capacity(1000);
+        let functions: Functions = Functions::with_capacity(u8::MAX as usize);
+        let asm_functions: AssemblerFunctions = AssemblerFunctions::with_capacity(u8::MAX as usize);
 
         Self {
             tokens,

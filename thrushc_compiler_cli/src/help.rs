@@ -280,6 +280,19 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {} {}\n",
             "•".bold(),
+            "--symbol-linkage-strategy"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "[any|exact|large]",
+            "Configure the symbol linkage merge strategy.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
             "--sanitizer".custom_color((141, 141, 142)).bold(),
             "[address|hwaddress|memory|thread|memtag]",
             "Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.",

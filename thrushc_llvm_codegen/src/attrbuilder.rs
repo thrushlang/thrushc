@@ -40,8 +40,9 @@ impl<'ctx> AttributeBuilder<'ctx> {
             let llvm_context: &Context = context.get_llvm_context();
 
             let is_public: bool = self.attributes.has_public_attribute();
+            let is_extern: bool = self.attributes.has_extern_attribute();
 
-            if !is_public {
+            if !is_public && !is_extern {
                 function.set_linkage(Linkage::LinkerPrivate);
             }
 

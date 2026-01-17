@@ -9,6 +9,7 @@ use thrushc_typesystem::Type;
 
 pub mod analyzer;
 pub mod linter;
+pub mod parser;
 pub mod typechecker;
 
 pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'ctx>, Span);

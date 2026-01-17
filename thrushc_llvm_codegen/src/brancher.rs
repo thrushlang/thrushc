@@ -10,8 +10,8 @@ impl<'ctx> LLVMLoopContext<'ctx> {
     #[inline]
     pub fn new() -> LLVMLoopContext<'ctx> {
         LLVMLoopContext {
-            break_branches: Vec::with_capacity(255),
-            continue_branches: Vec::with_capacity(255),
+            break_branches: Vec::with_capacity(u8::MAX as usize),
+            continue_branches: Vec::with_capacity(u8::MAX as usize),
         }
     }
 }

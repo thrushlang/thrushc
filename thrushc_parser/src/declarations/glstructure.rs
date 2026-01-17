@@ -1,15 +1,17 @@
-use thrushc_ast::{Ast, types::StructFields};
+use thrushc_ast::{Ast, data::StructureData};
 use thrushc_attributes::ThrushAttributes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
 use thrushc_typesystem::{Type, modificators::StructureTypeModificator};
 
+use thrushc_ast::traits::AstStructureDataExtensions;
+
 use crate::{ParserContext, attributes, builder, traits::StructFieldsExtensions, typegen};
 
 pub fn build_structure<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
+    parse_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Struct,
@@ -35,7 +37,7 @@ pub fn build_structure<'parser>(
     let name: &str = name_tk.get_lexeme();
     let span: Span = name_tk.get_span();
 
-    let mut fields_types: StructFields = (name, Vec::with_capacity(10), modificator, span);
+    let mut data: StructureData = StructureData::new(name, modificator, span);
     let mut field_position: u32 = 0;
 
     loop {
@@ -61,8 +63,7 @@ pub fn build_structure<'parser>(
 
             let field_type: Type = typegen::build_type(ctx, false)?;
 
-            fields_types
-                .1
+            data.1
                 .push((field_name, field_type, field_position, field_span));
 
             field_position += 1;
@@ -101,21 +102,23 @@ pub fn build_structure<'parser>(
         "Expected '}'.".into(),
     )?;
 
-    if declare_forward {
+    if parse_forward {
         ctx.get_mut_symbols().new_global_struct(
             name,
-            (name, fields_types.1, attributes, modificator, span),
+            (name, data.1, attributes, modificator, span),
             span,
         )?;
 
-        return Ok(Ast::new_nullptr(span));
-    }
+        Ok(Ast::new_nullptr(span))
+    } else {
+        let structure_type: Type = data.get_type();
 
-    Ok(Ast::Struct {
-        name,
-        fields: fields_types.clone(),
-        kind: fields_types.get_type(),
-        attributes,
-        span,
-    })
+        Ok(Ast::Struct {
+            name,
+            data,
+            kind: structure_type,
+            attributes,
+            span,
+        })
+    }
 }

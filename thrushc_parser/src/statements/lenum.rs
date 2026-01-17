@@ -1,5 +1,4 @@
-use thrushc_ast::Ast;
-use thrushc_ast::types::EnumFields;
+use thrushc_ast::{Ast, data::EnumData};
 use thrushc_attributes::ThrushAttributes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
@@ -35,7 +34,7 @@ pub fn build_enum<'parser>(
         "Expected '{'.".into(),
     )?;
 
-    let mut enum_fields: EnumFields = Vec::with_capacity(10);
+    let mut data: EnumData = Vec::with_capacity(10);
 
     loop {
         if ctx.check(TokenType::RBrace) {
@@ -68,7 +67,7 @@ pub fn build_enum<'parser>(
                 String::from("Expected ';'."),
             )?;
 
-            enum_fields.push((name, field_type, expr));
+            data.push((name, field_type, expr));
 
             continue;
         } else {
@@ -86,15 +85,12 @@ pub fn build_enum<'parser>(
         "Expected '}'.".into(),
     )?;
 
-    ctx.get_mut_symbols().new_enum(
-        enum_name,
-        (enum_fields.clone(), enum_attributes.clone()),
-        span,
-    )?;
+    ctx.get_mut_symbols()
+        .new_enum(enum_name, (data.clone(), enum_attributes.clone()), span)?;
 
     Ok(Ast::Enum {
         name: enum_name,
-        fields: enum_fields,
+        data,
         attributes: enum_attributes,
         kind: Type::Void(span),
         span,

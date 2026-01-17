@@ -1,7 +1,15 @@
+use std::borrow::Cow;
+use std::ffi::CStr;
+use std::ffi::CString;
+
 use inkwell::attributes::Attribute;
 use inkwell::attributes::AttributeLoc;
 use inkwell::basic_block::BasicBlock;
+use inkwell::comdat::Comdat;
+use inkwell::comdat::ComdatSelectionKind;
 use inkwell::context::Context;
+use inkwell::llvm_sys::comdat::LLVMGetOrInsertComdat;
+use inkwell::module::Linkage;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::TargetMachine;
@@ -9,13 +17,17 @@ use inkwell::values::AsValueRef;
 use inkwell::values::BasicValueEnum;
 use inkwell::values::CallSiteValue;
 use inkwell::values::FunctionValue;
+use inkwell::values::GlobalValue;
 use inkwell::values::InstructionOpcode;
 use inkwell::values::InstructionValue;
 
 use thrushc_options::CompilerOptions;
 use thrushc_options::ThrushOptimization;
 use thrushc_options::backends::llvm::Sanitizer;
+use thrushc_options::backends::llvm::SymbolLinkageMergeStrategy;
 use thrushc_options::backends::llvm::passes::LLVMModificatorPasses;
+
+use crate::utils;
 
 #[derive(Debug)]
 pub struct LLVMOptimizer<'a, 'ctx> {
@@ -59,6 +71,7 @@ impl LLVMOptimizer<'_, '_> {
         let context: &Context = self.get_context();
 
         LLVMSanitizer::new(module, context, config).run();
+        LLVMComdatApplier::new(module, context, config).run();
 
         if !self.get_flags().get_disable_default_opt()
             && !config.get_compiler_optimization().is_high_opt()
@@ -287,14 +300,20 @@ pub struct LLVMOptimizerFlags {
 pub struct LLVMOptimizationConfig {
     compiler_optimization: ThrushOptimization,
     sanitizer: Sanitizer,
+    symbol_linkage_strategy: SymbolLinkageMergeStrategy,
 }
 
 impl LLVMOptimizationConfig {
     #[inline]
-    pub fn new(compiler_optimization: ThrushOptimization, sanitizer: Sanitizer) -> Self {
+    pub fn new(
+        compiler_optimization: ThrushOptimization,
+        sanitizer: Sanitizer,
+        symbol_linkage_strategy: SymbolLinkageMergeStrategy,
+    ) -> Self {
         Self {
             compiler_optimization,
             sanitizer,
+            symbol_linkage_strategy,
         }
     }
 }
@@ -308,6 +327,11 @@ impl LLVMOptimizationConfig {
     #[inline]
     pub fn get_sanitizer(&self) -> Sanitizer {
         self.sanitizer
+    }
+
+    #[inline]
+    pub fn get_symbol_linkage_strategy(&self) -> SymbolLinkageMergeStrategy {
+        self.symbol_linkage_strategy
     }
 }
 
@@ -575,6 +599,110 @@ impl LLVMFunctionOptimizations {
     #[inline]
     pub fn has_sspstrong(&self) -> bool {
         self.sspstrong
+    }
+}
+
+#[derive(Debug)]
+pub struct LLVMComdatApplier<'a, 'ctx> {
+    module: &'a Module<'ctx>,
+    context: &'ctx Context,
+    config: LLVMOptimizationConfig,
+}
+
+impl<'a, 'ctx> LLVMComdatApplier<'a, 'ctx> {
+    #[inline]
+    pub fn new(
+        module: &'a Module<'ctx>,
+        context: &'ctx Context,
+        config: LLVMOptimizationConfig,
+    ) -> Self {
+        Self {
+            module,
+            context,
+            config,
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMComdatApplier<'a, 'ctx> {
+    pub fn run(&self) {
+        let same_name: Vec<(GlobalValue, FunctionValue)> = self
+            .module
+            .get_globals()
+            .filter_map(|global| {
+                let global_name: Cow<'_, str> = utils::clean_llvm_name(global.get_name());
+
+                let global_is_linkage_external: bool = matches!(
+                    global.get_linkage(),
+                    Linkage::External
+                        | Linkage::DLLExport
+                        | Linkage::WeakAny
+                        | Linkage::WeakODR
+                        | Linkage::Common
+                        | Linkage::ExternalWeak
+                );
+
+                self.module
+                    .get_functions()
+                    .find(|func| {
+                        let function_name: Cow<'_, str> = utils::clean_llvm_name(func.get_name());
+
+                        let function_is_linkage_external: bool = matches!(
+                            global.get_linkage(),
+                            Linkage::External
+                                | Linkage::DLLExport
+                                | Linkage::WeakAny
+                                | Linkage::WeakODR
+                                | Linkage::Common
+                                | Linkage::ExternalWeak
+                        );
+
+                        global_name == function_name
+                            && global_is_linkage_external
+                            && function_is_linkage_external
+                    })
+                    .map(|func| (global, func))
+            })
+            .collect();
+
+        {
+            let merge_strategy: ComdatSelectionKind =
+                match self.config.get_symbol_linkage_strategy() {
+                    SymbolLinkageMergeStrategy::Any => ComdatSelectionKind::Any,
+                    SymbolLinkageMergeStrategy::Exact => ComdatSelectionKind::ExactMatch,
+                    SymbolLinkageMergeStrategy::Large => ComdatSelectionKind::Largest,
+                };
+
+            for (gl, func) in same_name.iter().rev() {
+                let cleaned: Cow<'_, str> = utils::clean_llvm_name(gl.get_name());
+
+                let c_string_str: CString =
+                    CString::new(cleaned.as_ref()).unwrap_or_else(|error| {
+                        thrushc_logging::print_warn(
+                            thrushc_logging::LoggingType::Warning,
+                            &format!(
+                                "Failed to prepare the object-matching linkage configurator for the upcoming binding phase due '{}'.",
+                                error
+                            ),
+                        );
+
+                        CString::default()
+                    });
+                let c_str: &CStr = c_string_str.as_c_str();
+
+                let comdat: Comdat = unsafe {
+                    Comdat::new(LLVMGetOrInsertComdat(
+                        self.module.as_mut_ptr(),
+                        c_str.as_ptr(),
+                    ))
+                };
+
+                comdat.set_selection_kind(merge_strategy);
+
+                gl.set_comdat(comdat);
+                func.as_global_value().set_comdat(comdat);
+            }
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 use thrushc_ast::{
-    types::EnumFields,
+    data::EnumData,
     metadata::{FunctionParameterMetadata, LocalMetadata, StaticMetadata},
 };
 use thrushc_attributes::ThrushAttributes;
@@ -16,20 +16,16 @@ pub type Struct<'parser> = (
     Span,
 );
 
-pub type Function<'parser> = (Type, ParametersTypes, bool);
-pub type AssemblerFunction<'parser> = (Type, ParametersTypes, bool);
-pub type Intrinsic<'parser> = (Type, ParametersTypes, bool);
+pub type Function<'parser> = (Type, FunctionParametersTypes, bool);
+pub type AssemblerFunction<'parser> = (Type, AssemblerFunctionParametersTypes, bool);
+pub type Intrinsic<'parser> = (Type, IntrinsicParametersTypes, bool);
 
 #[derive(Debug, Clone)]
-pub struct ParametersTypes(pub Vec<Type>);
-
-/* ######################################################################
-
-
-    PARSER - SYMBOLS
-
-
-########################################################################*/
+pub struct FunctionParametersTypes(pub Vec<Type>);
+#[derive(Debug, Clone)]
+pub struct AssemblerFunctionParametersTypes(pub Vec<Type>);
+#[derive(Debug, Clone)]
+pub struct IntrinsicParametersTypes(pub Vec<Type>);
 
 pub type FoundSymbolId<'parser> = (
     Option<(&'parser str, usize)>,
@@ -46,7 +42,7 @@ pub type FoundSymbolId<'parser> = (
 );
 
 pub type CustomTypeSymbol<'ctx> = (Type, ThrushAttributes);
-pub type EnumSymbol<'ctx> = (EnumFields<'ctx>, ThrushAttributes);
+pub type EnumSymbol<'ctx> = (EnumData<'ctx>, ThrushAttributes);
 pub type StaticSymbol<'parser> = (Type, StaticMetadata, ThrushAttributes);
 pub type ConstantSymbol<'parser> = (Type, ThrushAttributes);
 

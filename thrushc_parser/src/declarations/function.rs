@@ -1,5 +1,6 @@
 use thrushc_ast::{Ast, metadata::FunctionParameterMetadata};
 use thrushc_attributes::{ThrushAttributes, traits::ThrushAttributesExtensions};
+use thrushc_entities::parser::FunctionParametersTypes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{
@@ -9,11 +10,11 @@ use thrushc_token::{
 };
 use thrushc_typesystem::Type;
 
-use crate::{ParserContext, attributes, entities::ParametersTypes, statements::block, typegen};
+use crate::{ParserContext, attributes, statements::block, typegen};
 
 pub fn build_function<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
+    parse_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Fn,
@@ -129,37 +130,37 @@ pub fn build_function<'parser>(
         span,
     };
 
-    if declare_forward {
+    if parse_forward {
         ctx.get_mut_symbols().new_function(
             name,
             (
                 return_type,
-                ParametersTypes(parameters_types),
+                FunctionParametersTypes(parameters_types),
                 function_has_ignore,
             ),
             span,
         )?;
 
         if ctx.match_token(TokenType::SemiColon)? {
+            Ok(proto)
+        } else {
+            Ok(Ast::new_nullptr(span))
+        }
+    } else {
+        if ctx.match_token(TokenType::SemiColon)? {
             return Ok(proto);
         }
 
-        return Ok(Ast::new_nullptr(span));
+        ctx.get_mut_symbols().declare_parameters(&parameters)?;
+
+        let function_body: Ast = block::build_block(ctx)?;
+
+        ctx.get_mut_symbols().finish_parameters();
+
+        if let Ast::Function { body, .. } = &mut proto {
+            *body = Some(function_body.into());
+        }
+
+        Ok(proto)
     }
-
-    if ctx.match_token(TokenType::SemiColon)? {
-        return Ok(proto);
-    }
-
-    ctx.get_mut_symbols().declare_parameters(&parameters)?;
-
-    let function_body: Ast = block::build_block(ctx)?;
-
-    ctx.get_mut_symbols().finish_parameters();
-
-    if let Ast::Function { body, .. } = &mut proto {
-        *body = Some(function_body.into());
-    }
-
-    Ok(proto)
 }

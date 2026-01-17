@@ -21,10 +21,8 @@ pub fn build_for_loop<'parser>(
     let span: Span = for_tk.get_span();
 
     let local: Ast = local::build_local(ctx)?;
-
     let condition: Ast = expressions::build_expression(ctx)?;
     let actions: Ast = expressions::build_expression(ctx)?;
-
     let body: Ast = block::build_block(ctx)?;
 
     Ok(Ast::For {

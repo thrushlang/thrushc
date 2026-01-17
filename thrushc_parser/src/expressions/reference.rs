@@ -4,6 +4,9 @@ use thrushc_ast::{
         FunctionParameterMetadata, LocalMetadata, ReferenceMetadata, ReferenceType, StaticMetadata,
     },
 };
+use thrushc_entities::parser::{
+    ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, ParameterSymbol, StaticSymbol,
+};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
@@ -18,10 +21,6 @@ use thrushc_typesystem::{
 
 use crate::{
     ParserContext,
-    entities::{
-        ConstantSymbol, FoundSymbolId, Function, LLISymbol, LocalSymbol, ParameterSymbol,
-        StaticSymbol,
-    },
     traits::{
         ConstantSymbolExtensions, FoundSymbolEitherExtensions, FoundSymbolExtensions,
         FunctionParameterSymbolExtensions, LLISymbolExtensions, LocalSymbolExtensions,

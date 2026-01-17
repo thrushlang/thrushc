@@ -3,6 +3,7 @@ use thrushc_ast::{
     traits::{AstCodeLocation, AstStandardExtensions},
 };
 use thrushc_attributes::{ThrushAttributes, traits::ThrushAttributesExtensions};
+use thrushc_entities::parser::AssemblerFunctionParametersTypes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{
@@ -12,11 +13,11 @@ use thrushc_token::{
 };
 use thrushc_typesystem::Type;
 
-use crate::{ParserContext, attributes, entities::ParametersTypes, expressions, typegen};
+use crate::{ParserContext, attributes, expressions, typegen};
 
 pub fn build_assembler_function<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
+    parse_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::AsmFn,
@@ -223,25 +224,28 @@ pub fn build_assembler_function<'parser>(
         "Expected '}'.".into(),
     )?;
 
-    if declare_forward {
+    if parse_forward {
+        let parameters_types_repr: AssemblerFunctionParametersTypes =
+            AssemblerFunctionParametersTypes(parameters_types);
+
         ctx.get_mut_symbols().new_asm_function(
             asm_function_name,
-            (return_type, ParametersTypes(parameters_types), is_public),
+            (return_type, parameters_types_repr, is_public),
             span,
         )?;
 
-        return Ok(Ast::new_nullptr(span));
+        Ok(Ast::new_nullptr(span))
+    } else {
+        Ok(Ast::AssemblerFunction {
+            name: asm_function_name,
+            ascii_name: asm_function_ascii_name,
+            parameters,
+            parameters_types,
+            assembler,
+            constraints,
+            return_type,
+            attributes,
+            span,
+        })
     }
-
-    Ok(Ast::AssemblerFunction {
-        name: asm_function_name,
-        ascii_name: asm_function_ascii_name,
-        parameters,
-        parameters_types,
-        assembler,
-        constraints,
-        return_type,
-        attributes,
-        span,
-    })
 }

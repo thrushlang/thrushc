@@ -4,9 +4,11 @@ use thrushc_typesystem::traits::TypeIsExtensions;
 use crate::{
     Ast,
     builitins::ThrushBuiltin,
+    data::StructureData,
     traits::{
         AstCodeBlockEntensions, AstConstantExtensions, AstGetType, AstMemoryExtensions,
         AstMutabilityExtensions, AstScopeExtensions, AstStandardExtensions, AstStatementExtentions,
+        AstStructureDataExtensions,
     },
 };
 
@@ -282,7 +284,7 @@ impl AstConstantExtensions for Ast<'_> {
             Ast::Reference { metadata, .. } => metadata.is_constant(),
             Ast::As { metadata, .. } => metadata.is_constant(),
             Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_constant_value()),
-            Ast::Constructor { args, .. } => args.iter().all(|arg| arg.1.is_constant_value()),
+            Ast::Constructor { data, .. } => data.iter().all(|arg| arg.1.is_constant_value()),
 
             _ => false,
         }
@@ -304,6 +306,21 @@ impl AstScopeExtensions for Ast<'_> {
                 | Ast::Const { .. }
                 | Ast::Static { .. }
                 | Ast::Import { .. }
+        )
+    }
+}
+
+impl<'parser> AstStructureDataExtensions<'parser> for StructureData<'parser> {
+    fn new(
+        name: &'parser str,
+        modificator: thrushc_typesystem::modificators::StructureTypeModificator,
+        span: thrushc_span::Span,
+    ) -> Self {
+        (
+            name,
+            Vec::with_capacity(u8::MAX as usize),
+            modificator,
+            span,
         )
     }
 }
@@ -543,9 +560,9 @@ impl std::fmt::Display for Ast<'_> {
                 write!(f, "{}::{}", name, value)
             }
 
-            Ast::Constructor { name, args, .. } => {
+            Ast::Constructor { name, data, .. } => {
                 write!(f, "{}{{ ", name)?;
-                for (i, (field_name, ..)) in args.iter().enumerate() {
+                for (i, (field_name, ..)) in data.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }

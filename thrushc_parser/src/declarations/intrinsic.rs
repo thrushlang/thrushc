@@ -1,15 +1,16 @@
 use thrushc_ast::Ast;
 use thrushc_attributes::{ThrushAttributes, traits::ThrushAttributesExtensions};
+use thrushc_entities::parser::IntrinsicParametersTypes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
 use thrushc_typesystem::Type;
 
-use crate::{ParserContext, attributes, entities::ParametersTypes, typegen};
+use crate::{ParserContext, attributes, typegen};
 
-pub fn build_intrinsic<'parser>(
+pub fn build_compiler_intrinsic<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
+    parse_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let intrinsic_tk: &Token = ctx.consume(
         TokenType::Intrinsic,
@@ -108,23 +109,26 @@ pub fn build_intrinsic<'parser>(
         "Expected ';'.".into(),
     )?;
 
-    if declare_forward {
+    if parse_forward {
+        let intrinsic_parameters_types_repr: IntrinsicParametersTypes =
+            IntrinsicParametersTypes(parameters_types);
+
         ctx.get_mut_symbols().new_intrinsic(
             name,
-            (return_type, ParametersTypes(parameters_types), has_ignore),
+            (return_type, intrinsic_parameters_types_repr, has_ignore),
             span,
         )?;
 
-        return Ok(Ast::new_nullptr(span));
+        Ok(Ast::new_nullptr(span))
+    } else {
+        Ok(Ast::Intrinsic {
+            name,
+            external_name,
+            parameters,
+            parameters_types,
+            return_type,
+            attributes,
+            span,
+        })
     }
-
-    Ok(Ast::Intrinsic {
-        name,
-        external_name,
-        parameters,
-        parameters_types,
-        return_type,
-        attributes,
-        span,
-    })
 }

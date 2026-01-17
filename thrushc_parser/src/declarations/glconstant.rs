@@ -59,21 +59,20 @@ pub fn build_global_const<'parser>(
         ConstantMetadata::new(true, thread_local, is_volatile, atomic_ord);
 
     if declare_forward {
-        ctx.get_mut_symbols().new_global_constant(
-            name,
-            (const_type.clone(), attributes.clone()),
-            span,
-        )?;
-    }
+        ctx.get_mut_symbols()
+            .new_global_constant(name, (const_type, attributes), span)?;
 
-    Ok(Ast::Const {
-        name,
-        ascii_name,
-        kind: const_type,
-        value: value.into(),
-        attributes,
-        modificators,
-        metadata,
-        span,
-    })
+        Ok(Ast::new_nullptr(span))
+    } else {
+        Ok(Ast::Const {
+            name,
+            ascii_name,
+            kind: const_type,
+            value: value.into(),
+            attributes,
+            modificators,
+            metadata,
+            span,
+        })
+    }
 }

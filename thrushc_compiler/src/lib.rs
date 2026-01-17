@@ -276,16 +276,27 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation(self, file_time, file);
         }
 
+        let llvm_optimizer_config: LLVMOptimizationConfig = LLVMOptimizationConfig::new(
+            compiler_optimization,
+            *llvm_backend.get_sanitizer(),
+            *llvm_backend.get_symbol_linkage_strategy(),
+        );
+
+        let llvm_optimizer_passes: LLVMOptimizerPasses<'_> = LLVMOptimizerPasses::new(
+            llvm_backend.get_opt_passes(),
+            llvm_backend.get_modificator_passes(),
+        );
+
+        let llvm_optimizer_flags: LLVMOptimizerFlags =
+            LLVMOptimizerFlags::new(self.options.omit_default_optimizations());
+
         thrushc_llvm_codegen::optimizer::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
             &target_machine,
-            LLVMOptimizationConfig::new(compiler_optimization, *llvm_backend.get_sanitizer()),
-            LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
-            LLVMOptimizerPasses::new(
-                llvm_backend.get_opt_passes(),
-                llvm_backend.get_modificator_passes(),
-            ),
+            llvm_optimizer_config,
+            llvm_optimizer_flags,
+            llvm_optimizer_passes,
         )
         .optimize();
 
@@ -538,16 +549,27 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
 
+        let llvm_optimizer_config: LLVMOptimizationConfig = LLVMOptimizationConfig::new(
+            compiler_optimization,
+            *llvm_backend.get_sanitizer(),
+            *llvm_backend.get_symbol_linkage_strategy(),
+        );
+
+        let llvm_optimizer_passes: LLVMOptimizerPasses<'_> = LLVMOptimizerPasses::new(
+            llvm_backend.get_opt_passes(),
+            llvm_backend.get_modificator_passes(),
+        );
+
+        let llvm_optimizer_flags: LLVMOptimizerFlags =
+            LLVMOptimizerFlags::new(self.options.omit_default_optimizations());
+
         thrushc_llvm_codegen::optimizer::LLVMOptimizer::new(
             &llvm_module,
             &llvm_context,
             &target_machine,
-            LLVMOptimizationConfig::new(compiler_optimization, *llvm_backend.get_sanitizer()),
-            LLVMOptimizerFlags::new(self.options.omit_default_optimizations()),
-            LLVMOptimizerPasses::new(
-                llvm_backend.get_opt_passes(),
-                llvm_backend.get_modificator_passes(),
-            ),
+            llvm_optimizer_config,
+            llvm_optimizer_flags,
+            llvm_optimizer_passes,
         )
         .optimize();
 

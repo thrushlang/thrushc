@@ -28,7 +28,7 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         TokenType::Enum => Ok(glenum::build_enum(ctx, false)?),
         TokenType::Fn => Ok(function::build_function(ctx, false)?),
         TokenType::AsmFn => Ok(asmfn::build_assembler_function(ctx, false)?),
-        TokenType::Intrinsic => Ok(intrinsic::build_intrinsic(ctx, false)?),
+        TokenType::Intrinsic => Ok(intrinsic::build_compiler_intrinsic(ctx, false)?),
         TokenType::GlobalAsm => Ok(glasm::build_global_assembler(ctx)?),
         TokenType::Import => Ok(import::build_import(ctx)?),
 
@@ -48,40 +48,31 @@ pub fn parse_forward(ctx: &mut ParserContext) {
             TokenType::Type if !entered_at_block => {
                 let _ = glcstype::build_custom_type(ctx, true);
             }
-
             TokenType::Struct if !entered_at_block => {
                 let _ = glstructure::build_structure(ctx, true);
             }
-
             TokenType::Static if !entered_at_block => {
                 let _ = glstatic::build_global_static(ctx, true);
             }
-
             TokenType::Const if !entered_at_block => {
                 let _ = glconstant::build_global_const(ctx, true);
             }
-
             TokenType::Enum if !entered_at_block => {
                 let _ = glenum::build_enum(ctx, true);
             }
-
             TokenType::Intrinsic if !entered_at_block => {
-                let _ = intrinsic::build_intrinsic(ctx, true);
+                let _ = intrinsic::build_compiler_intrinsic(ctx, true);
             }
-
             TokenType::Fn if !entered_at_block => {
                 let _ = function::build_function(ctx, true);
             }
-
             TokenType::AsmFn if !entered_at_block => {
                 let _ = asmfn::build_assembler_function(ctx, true);
             }
-
             TokenType::LBrace => {
                 entered_at_block = true;
                 let _ = ctx.only_advance();
             }
-
             TokenType::RBrace => {
                 entered_at_block = false;
                 let _ = ctx.only_advance();

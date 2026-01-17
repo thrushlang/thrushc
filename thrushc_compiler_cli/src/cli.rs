@@ -20,6 +20,7 @@ use ahash::AHashMap as HashMap;
 use thrushc_options::backends::llvm;
 use thrushc_options::backends::llvm::Sanitizer;
 use thrushc_options::backends::llvm::SanitizerConfiguration;
+use thrushc_options::backends::llvm::SymbolLinkageMergeStrategy;
 use thrushc_options::backends::llvm::debug::DwarfVersion;
 use thrushc_options::backends::llvm::passes::LLVMModificatorPasses;
 use thrushc_options::linkage::LinkingCompilersConfiguration;
@@ -455,6 +456,20 @@ impl CommandLine {
                 self.advance();
                 self.validate_llvm_required(arg);
                 self.validate_aot_is_enable(arg);
+            }
+
+            "--symbol-linkage-strategy" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let strategy: SymbolLinkageMergeStrategy =
+                    self.parse_symbol_linkage_strategy(self.peek());
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_symbol_linkage_strategy(strategy);
+
+                self.advance();
             }
 
             "--sanitizer" => {
@@ -934,6 +949,22 @@ impl CommandLine {
 
             any => {
                 self.report_error(&format!("Unknown sanitizer: '{}'.", any));
+            }
+        }
+    }
+
+    #[inline]
+    fn parse_symbol_linkage_strategy(&self, strategy: &str) -> SymbolLinkageMergeStrategy {
+        match strategy {
+            "any" => SymbolLinkageMergeStrategy::Any,
+            "exact" => SymbolLinkageMergeStrategy::Exact,
+            "large" => SymbolLinkageMergeStrategy::Large,
+
+            any => {
+                self.report_error(&format!(
+                    "Unknown symbol linkage merge strategy: '{}'.",
+                    any
+                ));
             }
         }
     }

@@ -1,9 +1,10 @@
 use thrushc_ast::{
     Ast,
-    types::{StructField, StructFields},
+    data::{StructDataField, StructureData},
     metadata::PropertyMetadata,
     traits::{AstGetType, AstMemoryExtensions},
 };
+use thrushc_entities::parser::{FoundSymbolId, Struct};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
@@ -11,7 +12,6 @@ use thrushc_typesystem::{Type, traits::TypeCodeLocation};
 
 use crate::{
     ParserContext,
-    entities::{FoundSymbolId, Struct},
     traits::{FoundSymbolEitherExtensions, StructSymbolExtensions},
 };
 
@@ -98,9 +98,9 @@ fn decompose<'parser>(
         let scope_idx: usize = structure_id.1;
 
         let structure: Struct = ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
-        let fields: StructFields = structure.get_fields();
+        let fields: StructureData = structure.get_fields();
 
-        let field: Option<StructField> = fields
+        let field: Option<StructDataField> = fields
             .1
             .iter()
             .enumerate()

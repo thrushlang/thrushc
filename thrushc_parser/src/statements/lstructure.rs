@@ -1,4 +1,5 @@
-use thrushc_ast::{Ast, types::StructFields};
+use thrushc_ast::traits::AstStructureDataExtensions;
+use thrushc_ast::{Ast, data::StructureData};
 use thrushc_attributes::ThrushAttributes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
@@ -34,7 +35,7 @@ pub fn build_structure<'parser>(
     let name: &str = name_tk.get_lexeme();
     let span: Span = name_tk.get_span();
 
-    let mut fields_types: StructFields = (name, Vec::with_capacity(10), modificator, span);
+    let mut data: StructureData = StructureData::new(name, modificator, span);
     let mut field_position: u32 = 0;
 
     loop {
@@ -60,8 +61,7 @@ pub fn build_structure<'parser>(
 
             let field_type: Type = typegen::build_type(ctx, false)?;
 
-            fields_types
-                .1
+            data.1
                 .push((field_name, field_type, field_position, field_span));
 
             field_position += 1;
@@ -100,23 +100,17 @@ pub fn build_structure<'parser>(
         "Expected '}'.".into(),
     )?;
 
-    let kind: Type = fields_types.get_type();
+    let kind: Type = data.get_type();
 
     ctx.get_mut_symbols().new_struct(
         name,
-        (
-            name,
-            fields_types.1.clone(),
-            attributes.clone(),
-            modificator,
-            span,
-        ),
+        (name, data.1.clone(), attributes.clone(), modificator, span),
         span,
     )?;
 
     Ok(Ast::Struct {
         name,
-        fields: fields_types,
+        data,
         kind,
         attributes,
         span,

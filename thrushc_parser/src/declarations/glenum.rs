@@ -1,4 +1,4 @@
-use thrushc_ast::{Ast, types::EnumFields};
+use thrushc_ast::{Ast, data::EnumData};
 use thrushc_attributes::ThrushAttributes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
@@ -9,7 +9,7 @@ use crate::{ParserContext, attributes, expressions, typegen};
 
 pub fn build_enum<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
+    parse_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Enum,
@@ -35,7 +35,7 @@ pub fn build_enum<'parser>(
         "Expected '{'.".into(),
     )?;
 
-    let mut enum_fields: EnumFields = Vec::with_capacity(10);
+    let mut data: EnumData = EnumData::with_capacity(u8::MAX as usize);
 
     loop {
         if ctx.check(TokenType::RBrace) {
@@ -68,17 +68,17 @@ pub fn build_enum<'parser>(
                 "Expected ';'.".into(),
             )?;
 
-            enum_fields.push((name, field_type, expr));
+            data.push((name, field_type, expr));
+        } else {
+            let span: Span = ctx.advance()?.get_span();
 
-            continue;
+            ctx.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                "Expected identifier in enum field.".into(),
+                None,
+                span,
+            ));
         }
-
-        return Err(CompilationIssue::Error(
-            CompilationIssueCode::E0001,
-            "Expected identifier in enum field.".into(),
-            None,
-            ctx.advance()?.get_span(),
-        ));
     }
 
     ctx.consume(
@@ -87,18 +87,18 @@ pub fn build_enum<'parser>(
         "Expected '}'.".into(),
     )?;
 
-    if declare_forward {
+    if parse_forward {
         ctx.get_mut_symbols()
-            .new_global_enum(enum_name, (enum_fields, enum_attributes), span)?;
+            .new_global_enum(enum_name, (data, enum_attributes), span)?;
 
-        return Ok(Ast::new_nullptr(span));
+        Ok(Ast::new_nullptr(span))
+    } else {
+        Ok(Ast::Enum {
+            name: enum_name,
+            data,
+            attributes: enum_attributes,
+            kind: Type::Void(span),
+            span,
+        })
     }
-
-    Ok(Ast::Enum {
-        name: enum_name,
-        fields: enum_fields,
-        attributes: enum_attributes,
-        kind: Type::Void(span),
-        span,
-    })
 }

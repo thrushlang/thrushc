@@ -23,6 +23,7 @@ pub struct LLVMBackend {
     optimization: ThrushOptimization,
     reloc_mode: RelocMode,
     code_model: CodeModel,
+    symbol_linkage_extrategy: SymbolLinkageMergeStrategy,
     sanitizer: Sanitizer,
     dbg_config: DebugConfiguration,
 
@@ -63,6 +64,7 @@ impl LLVMBackend {
             optimization: ThrushOptimization::None,
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
+            symbol_linkage_extrategy: SymbolLinkageMergeStrategy::Any,
             sanitizer: Sanitizer::None,
             dbg_config: DebugConfiguration::new(),
 
@@ -128,6 +130,11 @@ impl LLVMBackend {
     #[inline]
     pub fn get_sanitizer(&self) -> &Sanitizer {
         &self.sanitizer
+    }
+
+    #[inline]
+    pub fn get_symbol_linkage_strategy(&self) -> &SymbolLinkageMergeStrategy {
+        &self.symbol_linkage_extrategy
     }
 
     #[inline]
@@ -205,6 +212,11 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn set_symbol_linkage_strategy(&mut self, strategy: SymbolLinkageMergeStrategy) {
+        self.symbol_linkage_extrategy = strategy;
+    }
+
+    #[inline]
     pub fn set_omit_frame_pointer(&mut self) {
         self.omit_frame_pointer = true;
     }
@@ -277,6 +289,30 @@ impl SanitizerConfiguration {
     #[inline]
     pub fn set_nosanitize_coverage(&mut self, value: bool) {
         self.nosanitize_coverage = value;
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SymbolLinkageMergeStrategy {
+    Any,
+    Exact,
+    Large,
+}
+
+impl SymbolLinkageMergeStrategy {
+    #[inline]
+    pub fn is_any(&self) -> bool {
+        matches!(self, SymbolLinkageMergeStrategy::Any)
+    }
+
+    #[inline]
+    pub fn is_exact(&self) -> bool {
+        matches!(self, SymbolLinkageMergeStrategy::Exact)
+    }
+
+    #[inline]
+    pub fn is_large(&self) -> bool {
+        matches!(self, SymbolLinkageMergeStrategy::Large)
     }
 }
 

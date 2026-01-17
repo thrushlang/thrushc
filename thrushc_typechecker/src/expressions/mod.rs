@@ -274,8 +274,8 @@ pub fn validate<'type_checker>(
             Ok(())
         }
 
-        Ast::Constructor { args, .. } => {
-            for (_, expr, target_type, _) in args.iter() {
+        Ast::Constructor { data, .. } => {
+            for (_, expr, target_type, _) in data.iter() {
                 let span: Span = expr.get_span();
                 let from_type: &Type = expr.get_value_type()?;
 

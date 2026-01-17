@@ -1,6 +1,6 @@
 use thrushc_ast::{
+    data::{EnumData, EnumDataField, StructureData},
     metadata::{FunctionParameterMetadata, LocalMetadata, StaticMetadata},
-    types::{EnumField, EnumFields, StructFields},
 };
 use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
@@ -41,17 +41,17 @@ pub trait StructFieldsExtensions {
 pub trait StructSymbolExtensions<'parser> {
     fn contains_field(&self, name: &str) -> bool;
     fn get_field_type(&self, name: &str) -> Option<Type>;
-    fn get_fields(&self) -> StructFields<'parser>;
+    fn get_fields(&self) -> StructureData<'parser>;
     fn get_modificator(&self) -> StructureTypeModificator;
 }
 
 pub trait EnumExtensions<'parser> {
-    fn get_fields(&self) -> EnumFields<'parser>;
+    fn get_fields(&self) -> EnumData<'parser>;
 }
 
 pub trait EnumFieldsExtensions<'parser> {
     fn contain_field(&self, name: &'parser str) -> bool;
-    fn get_field(&self, name: &'parser str) -> EnumField<'parser>;
+    fn get_field(&self, name: &'parser str) -> EnumDataField<'parser>;
 }
 
 pub trait LocalSymbolExtensions {
@@ -78,6 +78,10 @@ pub trait LLISymbolExtensions {
 }
 
 pub trait FunctionExtensions {
+    fn get_type(&self) -> Type;
+}
+
+pub trait FunctionAssemblerExtensions {
     fn get_type(&self) -> Type;
 }
 

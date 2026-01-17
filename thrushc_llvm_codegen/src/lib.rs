@@ -34,6 +34,7 @@ mod targettriple;
 mod traits;
 mod typegeneration;
 mod types;
+mod utils;
 
 pub struct LLVMCompiler;
 

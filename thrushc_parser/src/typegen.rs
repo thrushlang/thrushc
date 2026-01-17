@@ -1,7 +1,7 @@
 use thrushc_ast::{
     Ast,
+    data::StructureData,
     traits::{AstGetType, AstStandardExtensions},
-    types::StructFields,
 };
 use thrushc_attributes::{ThrushAttributes, traits::ThrushAttributesExtensions};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
@@ -20,13 +20,13 @@ use thrushc_typesystem::{
     traits::TypeIsExtensions,
 };
 
+use thrushc_entities::parser::{
+    ConstantSymbol, CustomTypeSymbol, FoundSymbolId, LocalSymbol, ParameterSymbol, StaticSymbol,
+    Struct,
+};
+
 use crate::{
-    ParserContext, attributes,
-    entities::{
-        ConstantSymbol, CustomTypeSymbol, FoundSymbolId, LocalSymbol, ParameterSymbol,
-        StaticSymbol, Struct,
-    },
-    expressions,
+    ParserContext, attributes, expressions,
     traits::{
         FoundSymbolEitherExtensions, FoundSymbolExtensions, StructFieldsExtensions,
         StructSymbolExtensions,
@@ -65,7 +65,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                     let (id, scope_idx) = object.expected_struct(span)?;
                     let structure: Struct =
                         ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
-                    let fields: StructFields = structure.get_fields();
+                    let fields: StructureData = structure.get_fields();
 
                     Ok(fields.get_type())
                 }

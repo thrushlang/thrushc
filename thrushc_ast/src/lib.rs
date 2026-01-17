@@ -6,19 +6,19 @@ use thrushc_typesystem::Type;
 
 use crate::{
     builitins::ThrushBuiltin,
+    data::{ConstructorData, EnumData, StructureData},
     metadata::{
         CastingMetadata, ConstantMetadata, DereferenceMetadata, FunctionParameterMetadata,
         IndexMetadata, LocalMetadata, PropertyMetadata, ReferenceMetadata, StaticMetadata,
     },
-    types::{Constructor, EnumFields, StructFields},
 };
 
 pub mod builitins;
+pub mod data;
 mod getters;
 mod impls;
 pub mod metadata;
 pub mod traits;
-pub mod types;
 
 #[derive(Debug, Clone)]
 pub enum Ast<'ctx> {
@@ -90,7 +90,7 @@ pub enum Ast<'ctx> {
     // Structures
     Struct {
         name: &'ctx str,
-        fields: StructFields<'ctx>,
+        data: StructureData<'ctx>,
         kind: Type,
         span: Span,
         attributes: ThrushAttributes,
@@ -98,11 +98,10 @@ pub enum Ast<'ctx> {
 
     Constructor {
         name: &'ctx str,
-        args: Constructor<'ctx>,
+        data: ConstructorData<'ctx>,
         kind: Type,
         span: Span,
     },
-
     Property {
         source: std::boxed::Box<Ast<'ctx>>,
         indexes: std::vec::Vec<(Type, u32)>,
@@ -110,8 +109,6 @@ pub enum Ast<'ctx> {
         kind: Type,
         span: Span,
     },
-
-    // Conditionals
     If {
         condition: std::boxed::Box<Ast<'ctx>>,
         block: std::boxed::Box<Ast<'ctx>>,
@@ -179,7 +176,7 @@ pub enum Ast<'ctx> {
     // Enums
     Enum {
         name: &'ctx str,
-        fields: EnumFields<'ctx>,
+        data: EnumData<'ctx>,
         attributes: ThrushAttributes,
         kind: Type,
         span: Span,

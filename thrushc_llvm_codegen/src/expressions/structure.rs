@@ -1,7 +1,7 @@
 use inkwell::AddressSpace;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, PointerValue};
-use thrushc_ast::types::Constructor;
+use thrushc_ast::data::ConstructorData;
 use thrushc_span::Span;
 use thrushc_typesystem::Type;
 use thrushc_typesystem::traits::TypeStructExtensions;
@@ -13,21 +13,21 @@ use crate::{codegen, memory, typegeneration};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    args: &'ctx Constructor,
+    data: &'ctx ConstructorData,
     struct_type: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
     match context.get_pointer_anchor() {
         Some(anchor) if !anchor.is_triggered() => {
-            self::compile_with_anchor(context, args, struct_type, span, *anchor)
+            self::compile_with_anchor(context, data, struct_type, span, *anchor)
         }
-        _ => self::compile_without_anchor(context, args, struct_type, span),
+        _ => self::compile_without_anchor(context, data, struct_type, span),
     }
 }
 
 fn compile_with_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    args: &'ctx Constructor,
+    data: &'ctx ConstructorData,
     struct_type: &Type,
     span: Span,
     anchor: PointerAnchor<'ctx>,
@@ -39,7 +39,7 @@ fn compile_with_anchor<'ctx>(
 
     let fields_types: &[Type] = struct_type.get_struct_fields();
 
-    let fields: Vec<_> = args
+    let fields: Vec<_> = data
         .iter()
         .zip(fields_types)
         .map(|((_, field, _, _), kind)| codegen::compile(context, field, Some(kind)))
@@ -59,7 +59,7 @@ fn compile_with_anchor<'ctx>(
 
 fn compile_without_anchor<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    args: &'ctx Constructor,
+    data: &'ctx ConstructorData,
     struct_type: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
@@ -69,7 +69,7 @@ fn compile_without_anchor<'ctx>(
 
     let fields_types: &[Type] = struct_type.get_struct_fields();
 
-    let fields: Vec<_> = args
+    let fields: Vec<_> = data
         .iter()
         .zip(fields_types)
         .map(|((_, field, _, _), kind)| codegen::compile(context, field, Some(kind)))

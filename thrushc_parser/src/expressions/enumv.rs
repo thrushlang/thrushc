@@ -1,7 +1,8 @@
 use thrushc_ast::{
     Ast,
-    types::{EnumField, EnumFields},
+    data::{EnumData, EnumDataField},
 };
+use thrushc_entities::parser::FoundSymbolId;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
@@ -9,7 +10,6 @@ use thrushc_typesystem::Type;
 
 use crate::{
     ParserContext,
-    entities::FoundSymbolId,
     traits::{EnumExtensions, EnumFieldsExtensions, FoundSymbolEitherExtensions},
 };
 
@@ -24,7 +24,7 @@ pub fn build_enum_value<'parser>(
     let id: &str = enum_id.0;
     let scope_idx: usize = enum_id.1;
 
-    let union: EnumFields = ctx
+    let data: EnumData = ctx
         .get_symbols()
         .get_enum_by_id(id, scope_idx, span)?
         .get_fields();
@@ -37,7 +37,7 @@ pub fn build_enum_value<'parser>(
 
     let field_name: &str = field_tk.get_lexeme();
 
-    if !union.contain_field(field_name) {
+    if !data.contain_field(field_name) {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             format!("Not found '{}' field in '{}' enum.", name, field_name),
@@ -46,7 +46,7 @@ pub fn build_enum_value<'parser>(
         ));
     }
 
-    let field: EnumField = union.get_field(field_name);
+    let field: EnumDataField = data.get_field(field_name);
 
     let field_type: Type = field.1;
     let field_value: Ast = field.2;
