@@ -92,7 +92,7 @@ JIT compiler flags:
 
 Others compiler flags:
 
-• --symbol-linkage-strategy [any|exact|large] Configure the symbol linkage merge strategy.
+• --symbol-linkage-strategy [any|exact|large|samesize|noduplicates] Configure the symbol linkage merge strategy.
 • --sanitizer [address|hwaddress|memory|thread|memtag] Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.
 • --no-sanitize [bounds;coverage] Modifies certain code emissions for the selected sanitizer.
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
@@ -110,6 +110,7 @@ Omission compiler flags:
 • --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
 • --omit-direct-access-external-data It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT).
 • --omit-rtlib-got It omits the runtime library dependency on the Global Offset Table (GOT), essential when generating non-Position Independent Code (PIC) with ARM.
+• --omit-safe-trapping-math It allow trapping math operations that can cause exceptions. Useful for floating-point operations.
 • --omit-default-opt It omits default optimization that occurs even without specified optimization.
 
 Debug compiler flags:

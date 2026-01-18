@@ -357,7 +357,6 @@ impl LLVMOptimizerFlags {
 pub struct LLVMFunctionOptimizer<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
-
     function: Option<FunctionValue<'ctx>>,
     optimizations: Option<LLVMFunctionOptimizations>,
 }
@@ -368,7 +367,6 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
         Self {
             module,
             context,
-
             function: None,
             optimizations: None,
         }
@@ -377,9 +375,14 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
     pub fn run(&mut self) {
-        self.module.get_functions().for_each(|function| {
-            self.visit_function_once(function);
-        });
+        let ordered_functions: Vec<FunctionValue<'_>> =
+            utils::get_functions_by_ordered_calls(self.module.get_functions().collect());
+
+        {
+            for function in ordered_functions.iter() {
+                self.visit_function_once(*function);
+            }
+        }
     }
 }
 
@@ -425,6 +428,102 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
 
             if !applicable_norecurse {
                 optimizations.set_nocurse(true);
+            }
+
+            let is_valid_memorynone: bool = function
+                .get_basic_block_iter()
+                .flat_map(|basic_block| basic_block.get_instructions())
+                .all(|inst| match inst.get_opcode() {
+                    InstructionOpcode::Load
+                    | InstructionOpcode::Store
+                    | InstructionOpcode::AtomicCmpXchg
+                    | InstructionOpcode::AtomicRMW => false,
+
+                    InstructionOpcode::Call => {
+                        let call_site: CallSiteValue<'_> =
+                            unsafe { CallSiteValue::new(inst.as_value_ref()) };
+                        let called_func: FunctionValue<'_> = call_site.get_called_fn_value();
+
+                        for attribute in called_func.attributes(AttributeLoc::Function) {
+                            let memory_id: u32 = Attribute::get_named_enum_kind_id("memory");
+                            let memory_attr: Attribute =
+                                self.context.create_enum_attribute(memory_id, 0);
+
+                            if attribute == memory_attr {
+                                return true;
+                            }
+                        }
+
+                        false
+                    }
+
+                    _ => true,
+                });
+
+            let is_valid_memoryread: bool = function
+                .get_basic_block_iter()
+                .flat_map(|bb| bb.get_instructions())
+                .all(|inst| match inst.get_opcode() {
+                    InstructionOpcode::Store
+                    | InstructionOpcode::AtomicRMW
+                    | InstructionOpcode::AtomicCmpXchg => false,
+
+                    InstructionOpcode::Call => {
+                        let call_site: CallSiteValue<'_> =
+                            unsafe { CallSiteValue::new(inst.as_value_ref()) };
+                        let called_func: FunctionValue<'_> = call_site.get_called_fn_value();
+
+                        for attribute in called_func.attributes(AttributeLoc::Function) {
+                            let memory_id: u32 = Attribute::get_named_enum_kind_id("memory");
+                            let memory_attr: Attribute =
+                                self.context.create_enum_attribute(memory_id, 1);
+
+                            if attribute == memory_attr {
+                                return true;
+                            }
+                        }
+
+                        false
+                    }
+
+                    _ => true,
+                });
+
+            let is_valid_memorywrite: bool = function
+                .get_basic_block_iter()
+                .flat_map(|bb| bb.get_instructions())
+                .all(|inst| match inst.get_opcode() {
+                    InstructionOpcode::Load
+                    | InstructionOpcode::AtomicRMW
+                    | InstructionOpcode::AtomicCmpXchg => false,
+
+                    InstructionOpcode::Call => {
+                        let call_site: CallSiteValue<'_> =
+                            unsafe { CallSiteValue::new(inst.as_value_ref()) };
+                        let called_func: FunctionValue<'_> = call_site.get_called_fn_value();
+
+                        for attribute in called_func.attributes(AttributeLoc::Function) {
+                            let memory_id: u32 = Attribute::get_named_enum_kind_id("memory");
+                            let memory_attr: Attribute =
+                                self.context.create_enum_attribute(memory_id, 2);
+
+                            if attribute == memory_attr {
+                                return true;
+                            }
+                        }
+
+                        false
+                    }
+
+                    _ => true,
+                });
+
+            if is_valid_memorynone {
+                optimizations.set_memorynone(true);
+            } else if is_valid_memoryread {
+                optimizations.set_memoryread(true);
+            } else if is_valid_memorywrite {
+                optimizations.set_memorywrite(true);
             }
 
             self.set_optimizations(optimizations);
@@ -498,6 +597,33 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
                     function.add_attribute(AttributeLoc::Function, attribute);
                 }
             }
+
+            if optimizations.has_memorynone() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("memory");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+
+            if optimizations.has_memoryread() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("memory");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+
+            if optimizations.has_memorywrite() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("memory");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 2);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
         }
     }
 }
@@ -539,6 +665,9 @@ struct LLVMFunctionOptimizations {
     optsize: bool,
     uwtable: bool,
     sspstrong: bool,
+    memorynone: bool,
+    memoryread: bool,
+    memorywrite: bool,
 }
 
 impl LLVMFunctionOptimizations {
@@ -551,6 +680,9 @@ impl LLVMFunctionOptimizations {
             optsize: false,
             uwtable: true,
             sspstrong: true,
+            memorynone: false,
+            memoryread: false,
+            memorywrite: false,
         }
     }
 }
@@ -569,6 +701,21 @@ impl LLVMFunctionOptimizations {
     #[inline]
     pub fn set_optsize(&mut self, value: bool) {
         self.optsize = value;
+    }
+
+    #[inline]
+    pub fn set_memorynone(&mut self, value: bool) {
+        self.memorynone = value;
+    }
+
+    #[inline]
+    pub fn set_memoryread(&mut self, value: bool) {
+        self.memoryread = value;
+    }
+
+    #[inline]
+    pub fn set_memorywrite(&mut self, value: bool) {
+        self.memorywrite = value;
     }
 }
 
@@ -601,6 +748,21 @@ impl LLVMFunctionOptimizations {
     #[inline]
     pub fn has_sspstrong(&self) -> bool {
         self.sspstrong
+    }
+
+    #[inline]
+    pub fn has_memorynone(&self) -> bool {
+        self.memorynone
+    }
+
+    #[inline]
+    pub fn has_memoryread(&self) -> bool {
+        self.memoryread
+    }
+
+    #[inline]
+    pub fn has_memorywrite(&self) -> bool {
+        self.memorywrite
     }
 }
 

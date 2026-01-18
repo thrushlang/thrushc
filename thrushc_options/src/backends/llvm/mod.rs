@@ -33,6 +33,7 @@ pub struct LLVMBackend {
     omit_uwtable: bool,
     omit_direct_access_external_data: bool,
     omit_rtlibusegot: bool,
+    omit_trapping_math: bool,
 
     use_jit: bool,
     jit_config: JITConfiguration,
@@ -74,6 +75,7 @@ impl LLVMBackend {
             omit_uwtable: false,
             omit_direct_access_external_data: false,
             omit_rtlibusegot: false,
+            omit_trapping_math: false,
 
             use_jit: false,
             jit_config: JITConfiguration::new(),
@@ -158,6 +160,11 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn omit_trapping_math(&self) -> bool {
+        self.omit_trapping_math
+    }
+
+    #[inline]
     pub fn is_jit(&self) -> bool {
         self.use_jit
     }
@@ -234,6 +241,11 @@ impl LLVMBackend {
     #[inline]
     pub fn set_omit_rtlibusegot(&mut self) {
         self.omit_rtlibusegot = true;
+    }
+
+    #[inline]
+    pub fn set_omit_trapping_math(&mut self) {
+        self.omit_trapping_math = true;
     }
 
     #[inline]

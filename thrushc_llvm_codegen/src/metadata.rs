@@ -46,6 +46,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         let llvm_backend: &LLVMBackend = options.get_llvm_backend_options();
 
         {
+            let arch: &str = llvm_backend.get_target().get_arch();
             let features: &str = llvm_backend.get_target_cpu().get_cpu_features();
             let cpu: &str = llvm_backend.get_target_cpu().get_cpu_name();
 
@@ -57,19 +58,41 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             let target_cpu_attr: Attribute = self
                 .get_context()
                 .get_llvm_context()
-                .create_string_attribute("target-cpu", cpu);
+                .create_string_attribute("target-cpu", arch);
 
-            let no_trapping_math = self
+            let no_trapping_math_attr: Attribute = if llvm_backend.omit_trapping_math() {
+                self.get_context()
+                    .get_llvm_context()
+                    .create_string_attribute("no-trapping-math", "false")
+            } else {
+                self.get_context()
+                    .get_llvm_context()
+                    .create_string_attribute("no-trapping-math", "true")
+            };
+
+            let tune_cpu_attr: Attribute = self
                 .get_context()
                 .get_llvm_context()
-                .create_string_attribute("no-trapping-math", "true");
+                .create_string_attribute("tune-cpu", cpu);
+
+            let frame_pointer_attr: Attribute = if llvm_backend.omit_frame_pointer() {
+                self.get_context()
+                    .get_llvm_context()
+                    .create_string_attribute("frame-pointer", "none")
+            } else {
+                self.get_context()
+                    .get_llvm_context()
+                    .create_string_attribute("frame-pointer", "all")
+            };
 
             {
                 for function in self.get_context().get_llvm_module().get_functions() {
                     if function.get_first_basic_block().is_some() {
                         function.add_attribute(AttributeLoc::Function, target_cpu_attr);
+                        function.add_attribute(AttributeLoc::Function, tune_cpu_attr);
                         function.add_attribute(AttributeLoc::Function, features_attr);
-                        function.add_attribute(AttributeLoc::Function, no_trapping_math);
+                        function.add_attribute(AttributeLoc::Function, no_trapping_math_attr);
+                        function.add_attribute(AttributeLoc::Function, frame_pointer_attr);
                     }
                 }
             }

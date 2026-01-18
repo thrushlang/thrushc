@@ -172,7 +172,15 @@ impl CommandLine {
                     }
                     Some("reloc-model") => {
                         self.advance();
-                        help::show_reloc_model();
+                        help::show_reloc_model_help();
+                    }
+                    Some("sanitizer") => {
+                        self.advance();
+                        help::show_sanitizer_help();
+                    }
+                    Some("symbol-linkage-strategy") => {
+                        self.advance();
+                        help::show_symbol_linkage_strategy_help();
                     }
 
                     _ => help::show_help(),
@@ -613,8 +621,15 @@ impl CommandLine {
                 self.get_mut_options()
                     .get_mut_llvm_backend_options()
                     .set_omit_rtlibusegot();
+            }
 
+            "--omit-safe-trapping-math" => {
                 self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_omit_trapping_math();
             }
 
             "--omit-default-opt" => {

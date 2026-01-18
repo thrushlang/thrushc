@@ -451,6 +451,18 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
+            "--omit-safe-trapping-math"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "It allow trapping math operations that can cause exceptions. Useful for floating-point operations.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
             "--omit-default-opt".custom_color((141, 141, 142)).bold(),
             "It omits default optimization that occurs even without specified optimization.",
         ),
@@ -969,7 +981,7 @@ pub fn show_code_model_help() -> ! {
     std::process::exit(1)
 }
 
-pub fn show_reloc_model() -> ! {
+pub fn show_reloc_model_help() -> ! {
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
         &format!(
@@ -1010,6 +1022,140 @@ pub fn show_reloc_model() -> ! {
             "•".bold(),
             "dynamic".custom_color((141, 141, 142)).bold(),
             "Generates code that relies on a dynamic linker to resolve addresses at runtime.",
+        ),
+    );
+
+    std::process::exit(1)
+}
+
+pub fn show_symbol_linkage_strategy_help() -> ! {
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "--symbol-linkage-strategy value; --symbol-linkage-strategy=value; --symbol-linkage-strategy:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "any|exact|large|samesize|noduplicates",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "any".custom_color((141, 141, 142)).bold(),
+            "Allow any symbol to be selected during linkage merge operations.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "exact".custom_color((141, 141, 142)).bold(),
+            "Require exact match for symbol linkage merge operations.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "large".custom_color((141, 141, 142)).bold(),
+            "Select the largest symbol during linkage merge operations.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "samesize".custom_color((141, 141, 142)).bold(),
+            "Only merge symbols of the same size during linkage operations.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "noduplicates".custom_color((141, 141, 142)).bold(),
+            "Prevent duplicate symbols during linkage merge operations.",
+        ),
+    );
+
+    std::process::exit(1)
+}
+
+pub fn show_sanitizer_help() -> ! {
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "--sanitizer value; --sanitizer=value; --sanitizer:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "address|hwaddress|memory|thread|memtag",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "address".custom_color((141, 141, 142)).bold(),
+            "AddressSanitizer (ASan). Detects buffer overflows, use-after-free, and other memory errors.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "hwaddress".custom_color((141, 141, 142)).bold(),
+            "Hardware-assisted AddressSanitizer (HWASan). Similar to ASan but uses hardware features for better performance.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "memory".custom_color((141, 141, 142)).bold(),
+            "MemorySanitizer (MSan). Detects reads of uninitialized memory.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "thread".custom_color((141, 141, 142)).bold(),
+            "ThreadSanitizer (TSan). Detects data races and other threading bugs.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "memtag".custom_color((141, 141, 142)).bold(),
+            "Memory Tagging (MTE). Uses ARM Memory Tagging Extension for memory safety.",
         ),
     );
 
