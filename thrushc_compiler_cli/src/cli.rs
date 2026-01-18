@@ -959,6 +959,8 @@ impl CommandLine {
             "any" => SymbolLinkageMergeStrategy::Any,
             "exact" => SymbolLinkageMergeStrategy::Exact,
             "large" => SymbolLinkageMergeStrategy::Large,
+            "samesize" => SymbolLinkageMergeStrategy::SameSize,
+            "noduplicates" => SymbolLinkageMergeStrategy::NoDuplicates,
 
             any => {
                 self.report_error(&format!(

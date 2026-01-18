@@ -283,7 +283,7 @@ pub fn show_help() -> ! {
             "--symbol-linkage-strategy"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "[any|exact|large]",
+            "[any|exact|large|samesize|noduplicates]",
             "Configure the symbol linkage merge strategy.",
         ),
     );

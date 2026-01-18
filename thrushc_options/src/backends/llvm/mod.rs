@@ -297,23 +297,8 @@ pub enum SymbolLinkageMergeStrategy {
     Any,
     Exact,
     Large,
-}
-
-impl SymbolLinkageMergeStrategy {
-    #[inline]
-    pub fn is_any(&self) -> bool {
-        matches!(self, SymbolLinkageMergeStrategy::Any)
-    }
-
-    #[inline]
-    pub fn is_exact(&self) -> bool {
-        matches!(self, SymbolLinkageMergeStrategy::Exact)
-    }
-
-    #[inline]
-    pub fn is_large(&self) -> bool {
-        matches!(self, SymbolLinkageMergeStrategy::Large)
-    }
+    SameSize,
+    NoDuplicates,
 }
 
 #[derive(Debug, Clone, Copy)]

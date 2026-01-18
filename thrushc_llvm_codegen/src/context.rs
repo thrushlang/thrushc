@@ -22,6 +22,7 @@ use crate::brancher::LLVMLoopContext;
 use crate::debug::LLVMDebugContext;
 use crate::memory::SymbolAllocated;
 use crate::memory::SymbolToAllocate;
+use crate::optimizer::LLVMExpressionOptimization;
 use crate::table::LLVMSymbolsTable;
 use crate::types::LLVMCtors;
 use crate::types::LLVMDBGFunction;
@@ -45,6 +46,8 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
 
     ptr_anchor: Option<PointerAnchor<'ctx>>,
     llvm_function: Option<LLVMFunction<'ctx>>,
+
+    expression_optimizations: LLVMExpressionOptimization,
 
     diagnostician: Diagnostician,
     options: &'ctx CompilerOptions,
@@ -89,6 +92,8 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
 
             ptr_anchor: None,
             llvm_function: None,
+
+            expression_optimizations: LLVMExpressionOptimization::new(),
 
             diagnostician,
             options,
@@ -388,5 +393,17 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         }
 
         self.dbg_context = dbg_opt;
+    }
+}
+
+impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
+    #[inline]
+    pub fn get_expressions_optimizations(&self) -> &LLVMExpressionOptimization {
+        &self.expression_optimizations
+    }
+
+    #[inline]
+    pub fn get_mut_expressions_optimizations(&mut self) -> &mut LLVMExpressionOptimization {
+        &mut self.expression_optimizations
     }
 }

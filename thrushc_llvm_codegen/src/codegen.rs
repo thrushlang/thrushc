@@ -18,11 +18,11 @@ use crate::context::LLVMCodeGenContext;
 use crate::expressions::unaryop;
 use crate::globals::{asmfunction, function, intrinsic};
 use crate::memory::SymbolAllocated;
+use crate::metadata::LLVMMetadata;
 use crate::statements::{conditional, forloop, infloop, whileloop};
 use crate::traits::{AstLLVMGetType, LLVMFunctionExtensions};
 use crate::{
-    abort, block, builtins, cast, codegen, cstring, expressions, floatingpoint, integer, memory,
-    memstack, memstatic, typegeneration,
+    abort, block, builtins, cast, codegen, expressions, memory, memstack, memstatic, typegeneration,
 };
 
 use thrushc_ast::Ast;
@@ -59,6 +59,8 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
         if let Some(dbg_context) = self.get_context().get_debug_context() {
             dbg_context.finalize()
         }
+
+        LLVMMetadata::setup_platform_specific(self.get_context());
     }
 
     fn init_top_entities(&mut self) {
@@ -80,6 +82,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         thrushc_entities::function_from_ast(node),
                     ),
                     Ast::Const { .. } => {
+                        self.get_mut_context()
+                            .get_mut_expressions_optimizations()
+                            .setup_all_constant_optimizations();
+
                         let constant: GlobalConstant =
                             thrushc_entities::global_constant_from_ast(node);
 
@@ -123,8 +129,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         );
 
                         self.context.add_global_constant(name, symbol);
+
+                        self.context
+                            .get_mut_expressions_optimizations()
+                            .denegate_all_expression_optimizations();
                     }
                     Ast::Static { .. } => {
+                        self.context
+                            .get_mut_expressions_optimizations()
+                            .denegate_all_expression_optimizations();
+
                         let static_: GlobalStatic = thrushc_entities::global_static_from_ast(node);
 
                         let name: &str = static_.0;
@@ -304,6 +318,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     pub fn codegen_variables(&mut self, node: &'ctx Ast) {
         match node {
             Ast::Local { metadata, .. } => {
+                self.context
+                    .get_mut_expressions_optimizations()
+                    .denegate_all_expression_optimizations();
+
                 if metadata.is_undefined() {
                     let localvar: LocalVariable = thrushc_entities::local_variable_from_ast(node);
 
@@ -378,6 +396,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 }
             }
             Ast::Const { .. } => {
+                self.context
+                    .get_mut_expressions_optimizations()
+                    .setup_all_constant_optimizations();
+
                 let constant: LocalConstant = thrushc_entities::local_constant_from_ast(node);
 
                 let name: &str = constant.0;
@@ -413,8 +435,16 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 );
 
                 self.context.add_local_constant(name, symbol);
+
+                self.context
+                    .get_mut_expressions_optimizations()
+                    .denegate_all_expression_optimizations();
             }
             Ast::Static { .. } => {
+                self.context
+                    .get_mut_expressions_optimizations()
+                    .denegate_all_expression_optimizations();
+
                 let static_: LocalStatic = thrushc_entities::local_static_from_ast(node);
 
                 let name: &str = static_.0;
@@ -583,6 +613,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 span,
                 ..
             } => {
+                self.context
+                    .get_mut_expressions_optimizations()
+                    .denegate_all_expression_optimizations();
+
                 let value_type: &Type = value.llvm_get_type();
                 let source_type: &Type = source.llvm_get_type();
 
@@ -668,7 +702,7 @@ pub fn compile<'ctx>(
             ..
         } => {
             let float: BasicValueEnum =
-                floatingpoint::compile(context, kind, *value, *signed, *span).into();
+                expressions::floatingpoint::compile(context, kind, *value, *signed, *span).into();
 
             cast::try_cast(context, cast_type, kind, float, *span)
         }
@@ -681,7 +715,7 @@ pub fn compile<'ctx>(
             ..
         } => {
             let integer: BasicValueEnum =
-                integer::compile(context, kind, *value, *signed, *span).into();
+                expressions::integer::compile(context, kind, *value, *signed, *span).into();
 
             cast::try_cast(context, cast_type, kind, integer, *span)
         }
@@ -692,7 +726,7 @@ pub fn compile<'ctx>(
             .const_null()
             .into(),
 
-        Ast::Str { bytes, span, .. } => cstring::compile(context, bytes, *span).into(),
+        Ast::Str { bytes, span, .. } => expressions::cstring::compile(context, bytes, *span).into(),
 
         Ast::Char { byte, .. } => context
             .get_llvm_context()
@@ -909,7 +943,7 @@ pub fn compile_constant<'ctx>(
             ..
         } => {
             let float: BasicValueEnum =
-                floatingpoint::compile(context, kind, *value, *signed, *span).into();
+                expressions::floatingpoint::compile(context, kind, *value, *signed, *span).into();
 
             cast::const_numeric_cast(context, float, cast_type, *signed)
         }
@@ -922,7 +956,7 @@ pub fn compile_constant<'ctx>(
             ..
         } => {
             let integer: BasicValueEnum =
-                integer::compile(context, kind, *value, *signed, *span).into();
+                expressions::integer::compile(context, kind, *value, *signed, *span).into();
 
             cast::const_numeric_cast(context, integer, cast_type, *signed)
         }
@@ -940,7 +974,7 @@ pub fn compile_constant<'ctx>(
         }
 
         // String literal compilation
-        Ast::Str { bytes, span, .. } => cstring::compile(context, bytes, *span).into(),
+        Ast::Str { bytes, span, .. } => expressions::cstring::compile(context, bytes, *span).into(),
 
         // Struct constructor handling
         Ast::Constructor { data, kind, .. } => {

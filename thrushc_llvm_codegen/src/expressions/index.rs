@@ -6,7 +6,7 @@ use thrushc_typesystem::{
     traits::{InfererTypeExtensions, TypeIsExtensions, TypePointerExtensions},
 };
 
-use crate::{codegen, context::LLVMCodeGenContext, integer, memory, traits::AstLLVMGetType};
+use crate::{codegen, context::LLVMCodeGenContext, expressions, memory, traits::AstLLVMGetType};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -32,8 +32,13 @@ pub fn compile<'ctx>(
         let is_ptr_like_type: bool = ptr_type.is_ptr_like_type();
 
         let indexes: Vec<IntValue> = if is_ptr_aggv_type {
-            let base: IntValue =
-                integer::compile(context, &Type::U32(span), 0, false, index.get_span());
+            let base: IntValue = expressions::integer::compile(
+                context,
+                &Type::U32(span),
+                0,
+                false,
+                index.get_span(),
+            );
             let depth: IntValue =
                 codegen::compile(context, index, Some(&Type::U32(span))).into_int_value();
 
@@ -44,8 +49,13 @@ pub fn compile<'ctx>(
 
             vec![base]
         } else {
-            let base: IntValue =
-                integer::compile(context, &Type::U32(span), 0, false, index.get_span());
+            let base: IntValue = expressions::integer::compile(
+                context,
+                &Type::U32(span),
+                0,
+                false,
+                index.get_span(),
+            );
             let depth: IntValue =
                 codegen::compile(context, index, Some(&Type::U32(span))).into_int_value();
 

@@ -12,13 +12,10 @@ mod builtins;
 mod cast;
 mod codegen;
 pub mod context;
-mod cstring;
 mod debug;
 mod expressions;
-mod floatingpoint;
 mod globals;
 mod impls;
-mod integer;
 pub mod jit;
 mod memheap;
 mod memory;
@@ -41,7 +38,7 @@ pub struct LLVMCompiler;
 impl<'a, 'ctx> LLVMCompiler {
     #[inline]
     pub fn compile(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
-        LLVMMetadata::setup(context);
+        LLVMMetadata::setup_platform_independent(context);
         LLVMCodegen::generate(context, ast);
     }
 }

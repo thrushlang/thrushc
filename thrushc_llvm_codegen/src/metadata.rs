@@ -1,3 +1,5 @@
+use inkwell::attributes::Attribute;
+use inkwell::attributes::AttributeLoc;
 use inkwell::targets::CodeModel;
 use inkwell::targets::RelocMode;
 use thrushc_constants::COMPILER_ID;
@@ -19,10 +21,16 @@ pub struct LLVMMetadata<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
     #[inline]
-    pub fn setup(context: &'a LLVMCodeGenContext<'a, 'ctx>) {
+    pub fn setup_platform_independent(context: &'a LLVMCodeGenContext<'a, 'ctx>) {
         let inner: LLVMMetadata<'a, 'ctx> = Self { context };
 
         inner.setup_metadata();
+    }
+
+    pub fn setup_platform_specific(context: &'a LLVMCodeGenContext<'a, 'ctx>) {
+        let inner: LLVMMetadata<'a, 'ctx> = Self { context };
+
+        inner.setup_target_specific_metadata();
     }
 }
 
@@ -31,6 +39,41 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         self.setup_llvm_module_flags();
         self.setup_compiler_info();
         self.setup_build_id();
+    }
+
+    fn setup_target_specific_metadata(&self) {
+        let options: &CompilerOptions = self.get_context().get_compiler_options();
+        let llvm_backend: &LLVMBackend = options.get_llvm_backend_options();
+
+        {
+            let features: &str = llvm_backend.get_target_cpu().get_cpu_features();
+            let cpu: &str = llvm_backend.get_target_cpu().get_cpu_name();
+
+            let features_attr: Attribute = self
+                .get_context()
+                .get_llvm_context()
+                .create_string_attribute("target-features", features);
+
+            let target_cpu_attr: Attribute = self
+                .get_context()
+                .get_llvm_context()
+                .create_string_attribute("target-cpu", cpu);
+
+            let no_trapping_math = self
+                .get_context()
+                .get_llvm_context()
+                .create_string_attribute("no-trapping-math", "true");
+
+            {
+                for function in self.get_context().get_llvm_module().get_functions() {
+                    if function.get_first_basic_block().is_some() {
+                        function.add_attribute(AttributeLoc::Function, target_cpu_attr);
+                        function.add_attribute(AttributeLoc::Function, features_attr);
+                        function.add_attribute(AttributeLoc::Function, no_trapping_math);
+                    }
+                }
+            }
+        }
     }
 
     fn setup_llvm_module_flags(&self) {

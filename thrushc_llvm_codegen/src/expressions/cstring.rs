@@ -58,5 +58,9 @@ pub fn compile<'ctx>(
     cstr.set_initializer(&llvm_context.const_string(bytes, true));
     cstr.set_constant(true);
 
+    if context.get_expressions_optimizations().has_unnamed_addr() {
+        cstr.set_unnamed_addr(true);
+    }
+
     cstr.as_pointer_value()
 }

@@ -12,6 +12,7 @@ use inkwell::llvm_sys::comdat::LLVMGetOrInsertComdat;
 use inkwell::module::Linkage;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
+use inkwell::targets::TargetData;
 use inkwell::targets::TargetMachine;
 use inkwell::values::AsValueRef;
 use inkwell::values::BasicValueEnum;
@@ -64,6 +65,7 @@ impl LLVMOptimizer<'_, '_> {
     pub fn optimize(&self) {
         let custom_passes: &str = self.get_passes().get_llvm_custom_passes();
         let machine: &TargetMachine = self.get_machine();
+        let target_data: TargetData = machine.get_target_data();
         let options: PassBuilderOptions = self.create_passes_builder();
         let config: LLVMOptimizationConfig = self.get_config();
 
@@ -76,7 +78,7 @@ impl LLVMOptimizer<'_, '_> {
         if !self.get_flags().get_disable_default_opt()
             && !config.get_compiler_optimization().is_high_opt()
         {
-            LLVMParameterOptimizer::new(module, context).run();
+            LLVMParameterOptimizer::new(module, context, target_data).run();
             LLVMFunctionOptimizer::new(module, context).run();
         }
 
@@ -671,6 +673,8 @@ impl<'a, 'ctx> LLVMComdatApplier<'a, 'ctx> {
                     SymbolLinkageMergeStrategy::Any => ComdatSelectionKind::Any,
                     SymbolLinkageMergeStrategy::Exact => ComdatSelectionKind::ExactMatch,
                     SymbolLinkageMergeStrategy::Large => ComdatSelectionKind::Largest,
+                    SymbolLinkageMergeStrategy::SameSize => ComdatSelectionKind::SameSize,
+                    SymbolLinkageMergeStrategy::NoDuplicates => ComdatSelectionKind::NoDuplicates,
                 };
 
             for (gl, func) in same_name.iter().rev() {
@@ -987,24 +991,30 @@ impl LLVMSanitizerOptimization {
 pub struct LLVMParameterOptimizer<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
+    target_data: TargetData,
 
     function: Option<FunctionValue<'ctx>>,
     target: Option<BasicValueEnum<'ctx>>,
     target_position: Option<u32>,
     optimizations: Option<LLVMParameterOptimizations>,
+
+    has_returned: bool,
 }
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     #[inline]
-    pub fn new(module: &'a Module<'ctx>, context: &'ctx Context) -> Self {
+    pub fn new(module: &'a Module<'ctx>, context: &'ctx Context, target_data: TargetData) -> Self {
         Self {
             module,
             context,
+            target_data,
 
             function: None,
             target: None,
             target_position: None,
             optimizations: None,
+
+            has_returned: false,
         }
     }
 }
@@ -1053,6 +1063,50 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
                     }
                 }
             }
+
+            if optimizations.has_returned() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("returned");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_readonly() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("readonly");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_writeonly() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("writeonly");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_readnone() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("readnone");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
         }
     }
 }
@@ -1065,23 +1119,100 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 
         self.set_function(function);
 
-        function
-            .get_param_iter()
-            .enumerate()
-            .for_each(|(idx, parameter)| {
+        {
+            for (idx, parameter) in function.get_param_iter().enumerate() {
                 self.set_target(parameter, idx as u32);
                 self.set_optimizations(function);
 
-                function.get_basic_block_iter().for_each(|basic_block| {
-                    self.visit_basic_block_once(basic_block);
-                });
+                {
+                    for basic_block in function.get_basic_blocks() {
+                        self.visit_basic_block_once(basic_block);
+                    }
+
+                    let write_only_valid: bool = function
+                        .get_basic_blocks()
+                        .iter()
+                        .flat_map(|basic_block| basic_block.get_instructions())
+                        .filter(|instruction| instruction.get_opcode() == InstructionOpcode::Store)
+                        .any(|store_instr| {
+                            if let Some(operand_result) = store_instr.get_operand(1) {
+                                if let Some(operand_value) = operand_result.left() {
+                                    return operand_value == parameter;
+                                }
+                            }
+
+                            false
+                        });
+
+                    let read_only_valid: bool = function
+                        .get_basic_blocks()
+                        .iter()
+                        .flat_map(|basic_block| basic_block.get_instructions())
+                        .filter(|instruction| instruction.get_opcode() == InstructionOpcode::Load)
+                        .any(|load_instr| {
+                            if let Some(operand_result) = load_instr.get_operand(0) {
+                                if let Some(operand_value) = operand_result.left() {
+                                    return operand_value == parameter;
+                                }
+                            }
+
+                            false
+                        });
+
+                    let is_readnone_valid: bool = function
+                        .get_basic_blocks()
+                        .iter()
+                        .flat_map(|basic_block| basic_block.get_instructions())
+                        .filter(|instruction| {
+                            instruction.get_opcode() == InstructionOpcode::GetElementPtr
+                        })
+                        .any(|gep_instr| {
+                            if let Some(operand_result) = gep_instr.get_operand(0) {
+                                if let Some(operand_value) = operand_result.left() {
+                                    return operand_value == parameter;
+                                }
+                            }
+
+                            false
+                        });
+
+                    if !write_only_valid
+                        && read_only_valid
+                        && parameter.get_type().is_pointer_type()
+                    {
+                        if let Some(optimizations) = self.get_mut_optimizations() {
+                            optimizations.set_readonly_param(true);
+                        }
+                    }
+
+                    if !read_only_valid
+                        && write_only_valid
+                        && parameter.get_type().is_pointer_type()
+                    {
+                        if let Some(optimizations) = self.get_mut_optimizations() {
+                            optimizations.set_writeonly_param(true);
+                        }
+                    }
+
+                    if !read_only_valid
+                        && !write_only_valid
+                        && is_readnone_valid
+                        && parameter.get_type().is_pointer_type()
+                    {
+                        if let Some(optimizations) = self.get_mut_optimizations() {
+                            optimizations.set_readnone(true);
+                        }
+                    }
+                }
 
                 self.optimize();
 
                 self.reset_optimizations();
                 self.reset_target();
-            });
+            }
+        }
 
+        self.reset_returned();
         self.reset_function();
     }
 
@@ -1100,6 +1231,34 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
                 callsite.set_tail_call(true);
             }
         }
+
+        if instruction.get_opcode() == InstructionOpcode::Return
+            && !self.has_returned_attr_in_this_function()
+        {
+            if let Some(operand_result) = instruction.get_operand(1) {
+                if let Some(value) = operand_result.left() {
+                    let is_param_eq: bool = if let Some(target) = self.target {
+                        target == value
+                    } else {
+                        false
+                    };
+
+                    let is_bitcast_valid: bool = if let Some(target) = self.target {
+                        self.target_data.get_bit_size(&value.get_type())
+                            == self.target_data.get_bit_size(&target.get_type())
+                    } else {
+                        false
+                    };
+
+                    if is_param_eq && is_bitcast_valid {
+                        if let Some(optimizations) = self.get_mut_optimizations() {
+                            optimizations.set_returned_param(true);
+                            self.set_has_returned();
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1110,6 +1269,10 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
                 deferenceable: target.is_pointer_value(),
                 noundef: !function.get_type().is_var_arg(),
                 align: target.is_pointer_value() && !function.get_type().is_var_arg(),
+                returned: false,
+                readonly: false,
+                writeonly: false,
+                readnone: false,
             });
         }
     }
@@ -1144,8 +1307,30 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     #[inline]
+    pub fn set_has_returned(&mut self) {
+        self.has_returned = true;
+    }
+
+    #[inline]
+    pub fn reset_returned(&mut self) {
+        self.has_returned = false;
+    }
+
+    #[inline]
+    pub fn has_returned_attr_in_this_function(&self) -> bool {
+        self.has_returned
+    }
+}
+
+impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
+    #[inline]
     pub fn get_optimizations(&self) -> Option<&LLVMParameterOptimizations> {
         self.optimizations.as_ref()
+    }
+
+    #[inline]
+    pub fn get_mut_optimizations(&mut self) -> Option<&mut LLVMParameterOptimizations> {
+        self.optimizations.as_mut()
     }
 }
 
@@ -1154,6 +1339,32 @@ pub struct LLVMParameterOptimizations {
     deferenceable: bool,
     noundef: bool,
     align: bool,
+    returned: bool,
+    readonly: bool,
+    writeonly: bool,
+    readnone: bool,
+}
+
+impl LLVMParameterOptimizations {
+    #[inline]
+    pub fn set_returned_param(&mut self, value: bool) {
+        self.returned = value;
+    }
+
+    #[inline]
+    pub fn set_readonly_param(&mut self, value: bool) {
+        self.readonly = value;
+    }
+
+    #[inline]
+    pub fn set_writeonly_param(&mut self, value: bool) {
+        self.writeonly = value;
+    }
+
+    #[inline]
+    pub fn set_readnone(&mut self, value: bool) {
+        self.readnone = value;
+    }
 }
 
 impl LLVMParameterOptimizations {
@@ -1170,5 +1381,60 @@ impl LLVMParameterOptimizations {
     #[inline]
     pub fn has_align(&self) -> bool {
         self.align
+    }
+
+    #[inline]
+    pub fn has_returned(&self) -> bool {
+        self.returned
+    }
+
+    #[inline]
+    pub fn has_readonly(&self) -> bool {
+        self.readonly
+    }
+
+    #[inline]
+    pub fn has_writeonly(&self) -> bool {
+        self.writeonly
+    }
+
+    #[inline]
+    pub fn has_readnone(&self) -> bool {
+        self.readnone
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LLVMExpressionOptimization {
+    unnamed_addr: bool,
+}
+
+impl LLVMExpressionOptimization {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            unnamed_addr: false,
+        }
+    }
+}
+
+impl LLVMExpressionOptimization {
+    #[inline]
+    pub fn setup_all_constant_optimizations(&mut self) {
+        self.unnamed_addr = true;
+    }
+}
+
+impl LLVMExpressionOptimization {
+    #[inline]
+    pub fn has_unnamed_addr(&self) -> bool {
+        self.unnamed_addr
+    }
+}
+
+impl LLVMExpressionOptimization {
+    #[inline]
+    pub fn denegate_all_expression_optimizations(&mut self) {
+        self.unnamed_addr = false;
     }
 }

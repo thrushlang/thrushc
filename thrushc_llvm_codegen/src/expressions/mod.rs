@@ -1,10 +1,13 @@
 pub mod array;
 pub mod binaryop;
 pub mod call;
+pub mod cstring;
 pub mod farray;
+pub mod floatingpoint;
 pub mod index;
 pub mod indirect;
 pub mod inlineasm;
+pub mod integer;
 pub mod property;
 pub mod structure;
 pub mod unaryop;
