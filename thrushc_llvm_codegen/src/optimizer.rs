@@ -1183,91 +1183,12 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     pub fn run(&mut self) {
-        self.module.get_functions().for_each(|function_value| {
-            self.visit_function_once(function_value);
-        });
-    }
-}
+        let ordered_functions: Vec<FunctionValue<'_>> =
+            utils::get_functions_by_ordered_calls(self.module.get_functions().collect());
 
-impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
-    fn optimize(&mut self) {
-        if let Some(optimizations) = self.get_optimizations() {
-            if optimizations.has_deferenceable() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("dereferenceable");
-
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
-
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
-                }
-            }
-
-            if optimizations.has_noundef() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("noundef");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
-
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
-                }
-            }
-
-            if optimizations.has_align() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("align");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
-
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
-                }
-            }
-
-            if optimizations.has_returned() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("returned");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
-
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
-                }
-            }
-
-            if optimizations.has_readonly() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("readonly");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
-
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
-                }
-            }
-
-            if optimizations.has_writeonly() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("writeonly");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
-
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
-                }
-            }
-
-            if optimizations.has_readnone() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("readnone");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
-
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
-                }
+        {
+            for function in ordered_functions.iter() {
+                self.visit_function_once(*function);
             }
         }
     }
@@ -1291,76 +1212,118 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
                         self.visit_basic_block_once(basic_block);
                     }
 
-                    let write_only_valid: bool = function
-                        .get_basic_blocks()
-                        .iter()
-                        .flat_map(|basic_block| basic_block.get_instructions())
-                        .filter(|instruction| instruction.get_opcode() == InstructionOpcode::Store)
-                        .any(|store_instr| {
-                            if let Some(operand_result) = store_instr.get_operand(1) {
-                                if let Some(operand_value) = operand_result.left() {
-                                    return operand_value == parameter;
+                    let write_only_valid: bool = function.get_basic_blocks().iter().all(|bb| {
+                        bb.get_instructions().all(|inst| match inst.get_opcode() {
+                            InstructionOpcode::Load => {
+                                let source_ptr: Option<BasicValueEnum<'_>> =
+                                    inst.get_operand(0).and_then(|res| res.left());
+                                source_ptr != Some(parameter)
+                            }
+                            InstructionOpcode::Store => {
+                                let value_to_store: Option<BasicValueEnum<'_>> =
+                                    inst.get_operand(0).and_then(|res| res.left());
+
+                                if value_to_store == Some(parameter) {
+                                    return false;
                                 }
+
+                                true
+                            }
+                            InstructionOpcode::Call => {
+                                let num_operands: u32 = inst.get_num_operands();
+
+                                {
+                                    for i in 0..num_operands.saturating_sub(1) {
+                                        if inst.get_operand(i).and_then(|res| res.left())
+                                            == Some(parameter)
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                }
+
+                                true
                             }
 
-                            false
-                        });
+                            _ => true,
+                        })
+                    });
 
                     let read_only_valid: bool = function
                         .get_basic_blocks()
                         .iter()
-                        .flat_map(|basic_block| basic_block.get_instructions())
-                        .filter(|instruction| instruction.get_opcode() == InstructionOpcode::Load)
-                        .any(|load_instr| {
-                            if let Some(operand_result) = load_instr.get_operand(0) {
-                                if let Some(operand_value) = operand_result.left() {
-                                    return operand_value == parameter;
+                        .flat_map(|bb| bb.get_instructions())
+                        .all(|inst| match inst.get_opcode() {
+                            InstructionOpcode::Store => {
+                                if let Some(dest_ptr) =
+                                    inst.get_operand(1).and_then(|res| res.left())
+                                {
+                                    return dest_ptr != parameter;
                                 }
+                                true
+                            }
+                            InstructionOpcode::Call => {
+                                let num_operands: u32 = inst.get_num_operands();
+
+                                {
+                                    for i in 0..num_operands.saturating_sub(1) {
+                                        if inst.get_operand(i).and_then(|res| res.left())
+                                            == Some(parameter)
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                }
+
+                                true
                             }
 
-                            false
+                            _ => true,
                         });
 
-                    let is_readnone_valid: bool = function
+                    let readnone_valid: bool = function
                         .get_basic_blocks()
                         .iter()
-                        .flat_map(|basic_block| basic_block.get_instructions())
-                        .filter(|instruction| {
-                            instruction.get_opcode() == InstructionOpcode::GetElementPtr
-                        })
-                        .any(|gep_instr| {
-                            if let Some(operand_result) = gep_instr.get_operand(0) {
-                                if let Some(operand_value) = operand_result.left() {
-                                    return operand_value == parameter;
+                        .flat_map(|bb| bb.get_instructions())
+                        .all(|inst| {
+                            let num_operands: u32 = inst.get_num_operands();
+
+                            {
+                                for i in 0..num_operands.saturating_sub(1) {
+                                    if let Some(operand) =
+                                        inst.get_operand(i).and_then(|res| res.left())
+                                    {
+                                        if operand == parameter {
+                                            match inst.get_opcode() {
+                                                InstructionOpcode::Load
+                                                | InstructionOpcode::Store
+                                                | InstructionOpcode::AtomicRMW
+                                                | InstructionOpcode::AtomicCmpXchg => return false,
+
+                                                InstructionOpcode::GetElementPtr
+                                                | InstructionOpcode::BitCast
+                                                | InstructionOpcode::PtrToInt
+                                                | InstructionOpcode::Call => return false,
+
+                                                _ => (),
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
-                            false
+                            true
                         });
 
-                    if !write_only_valid
-                        && read_only_valid
-                        && parameter.get_type().is_pointer_type()
-                    {
+                    if read_only_valid && parameter.get_type().is_pointer_type() {
                         if let Some(optimizations) = self.get_mut_optimizations() {
                             optimizations.set_readonly_param(true);
                         }
-                    }
-
-                    if !read_only_valid
-                        && write_only_valid
-                        && parameter.get_type().is_pointer_type()
-                    {
+                    } else if write_only_valid && parameter.get_type().is_pointer_type() {
                         if let Some(optimizations) = self.get_mut_optimizations() {
                             optimizations.set_writeonly_param(true);
                         }
-                    }
-
-                    if !read_only_valid
-                        && !write_only_valid
-                        && is_readnone_valid
-                        && parameter.get_type().is_pointer_type()
-                    {
+                    } else if readnone_valid && parameter.get_type().is_pointer_type() {
                         if let Some(optimizations) = self.get_mut_optimizations() {
                             optimizations.set_readnone(true);
                         }
@@ -1493,6 +1456,90 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     #[inline]
     pub fn get_mut_optimizations(&mut self) -> Option<&mut LLVMParameterOptimizations> {
         self.optimizations.as_mut()
+    }
+}
+
+impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
+    fn optimize(&mut self) {
+        if let Some(optimizations) = self.get_optimizations() {
+            if optimizations.has_deferenceable() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("dereferenceable");
+
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_noundef() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("noundef");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_align() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("align");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_returned() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("returned");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_readonly() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("readonly");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_writeonly() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("writeonly");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+
+            if optimizations.has_readnone() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("readnone");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    if let Some(target_pos) = self.target_position {
+                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                    }
+                }
+            }
+        }
     }
 }
 
