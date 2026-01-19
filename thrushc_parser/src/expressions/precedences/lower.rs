@@ -55,17 +55,11 @@ pub fn lower_precedence<'parser>(
             let span: Span = tk.get_span();
 
             let cstring_type: Type = Type::Const(
-                Type::Ptr(
-                    Some(
-                        Type::Array {
-                            base_type: Type::Char(span).into(),
-                            infered_type: None,
-                            span,
-                        }
-                        .into(),
-                    ),
+                Type::Array {
+                    base_type: Type::Char(span).into(),
+                    infered_type: None,
                     span,
-                )
+                }
                 .into(),
                 span,
             );

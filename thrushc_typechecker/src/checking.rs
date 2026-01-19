@@ -626,6 +626,7 @@ pub fn check_type_cast(
         ) => Ok(()),
 
         (Type::Ptr(..) | Type::Addr(..), Type::Ptr(..) | Type::Addr(..)) => Ok(()),
+        (Type::Ptr(..), Type::Array { .. }) if is_allocated => Ok(()),
 
         (
             Type::S8(..)

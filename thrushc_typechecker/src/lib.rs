@@ -113,7 +113,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                             TypeCheckerExpressionMetadata::new(expr.is_literal_value());
 
                         checking::check_types(
-                            &target_type,
+                            target_type,
                             from_type,
                             Some(expr),
                             None,

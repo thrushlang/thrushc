@@ -9,7 +9,7 @@ use thrushc_span::Span;
 use thrushc_token::{
     Token,
     tokentype::TokenType,
-    traits::{TokenExtensions, TokenTypeExtensions, TokenTypeTypeTransform},
+    traits::{TokenExtensions, TokenTypeExtensions},
 };
 use thrushc_typesystem::{
     Type,
@@ -43,11 +43,44 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                 _ if tk_kind.is_array() => self::build_array_type(ctx, span),
                 _ if tk_kind.is_const() => self::build_const_type(ctx, span),
                 _ if tk_kind.is_fn_ref() => self::build_fn_ref_type(ctx, span),
-                _ => match tk_kind.as_type(span)? {
-                    ty if ty.is_ptr_type() && ctx.check(TokenType::LBracket) => {
+                _ => match tk_kind {
+                    ty if ty.is_ptr() && ctx.check(TokenType::LBracket) => {
                         self::build_recursive_type(ctx, Type::Ptr(None, span), span)
                     }
-                    ty => Ok(ty),
+                    TokenType::Char => Ok(Type::Char(span)),
+
+                    TokenType::S8 => Ok(Type::S8(span)),
+                    TokenType::S16 => Ok(Type::S16(span)),
+                    TokenType::S32 => Ok(Type::S32(span)),
+                    TokenType::S64 => Ok(Type::S64(span)),
+                    TokenType::Ssize => Ok(Type::SSize(span)),
+
+                    TokenType::U8 => Ok(Type::U8(span)),
+                    TokenType::U16 => Ok(Type::U16(span)),
+                    TokenType::U32 => Ok(Type::U32(span)),
+                    TokenType::U64 => Ok(Type::U64(span)),
+                    TokenType::U128 => Ok(Type::U128(span)),
+                    TokenType::Usize => Ok(Type::USize(span)),
+
+                    TokenType::Bool => Ok(Type::Bool(span)),
+
+                    TokenType::F32 => Ok(Type::F32(span)),
+                    TokenType::F64 => Ok(Type::F64(span)),
+                    TokenType::F128 => Ok(Type::F128(span)),
+
+                    TokenType::FX8680 => Ok(Type::FX8680(span)),
+                    TokenType::FPPC128 => Ok(Type::FPPC128(span)),
+
+                    TokenType::Ptr => Ok(Type::Ptr(None, span)),
+                    TokenType::Addr => Ok(Type::Addr(span)),
+                    TokenType::Void => Ok(Type::Void(span)),
+
+                    any => Err(CompilationIssue::Error(
+                        CompilationIssueCode::E0001,
+                        format!("{} isn't a valid type.", any),
+                        None,
+                        span,
+                    )),
                 },
             }
         }

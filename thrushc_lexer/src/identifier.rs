@@ -11,20 +11,20 @@ lazy_static! {
         let mut atomic: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
 
         atomic.insert(b"volatile", TokenType::Volatile);
-        atomic.insert(b"lazythread", TokenType::LazyThread);
+        atomic.insert(b"lazyThread", TokenType::LazyThread);
 
-        atomic.insert(b"atomnone", TokenType::AtomNone);
-        atomic.insert(b"atomfree", TokenType::AtomFree);
-        atomic.insert(b"atomrelax", TokenType::AtomRelax);
-        atomic.insert(b"atomgrab", TokenType::AtomGrab);
-        atomic.insert(b"atomdrop", TokenType::AtomDrop);
-        atomic.insert(b"atomsync", TokenType::AtomSync);
-        atomic.insert(b"atomstrict", TokenType::AtomStrict);
+        atomic.insert(b"atomicNone", TokenType::AtomNone);
+        atomic.insert(b"atomicFree", TokenType::AtomFree);
+        atomic.insert(b"atomicRelax", TokenType::AtomRelax);
+        atomic.insert(b"atomicGrab", TokenType::AtomGrab);
+        atomic.insert(b"atomicDrop", TokenType::AtomDrop);
+        atomic.insert(b"atomicSync", TokenType::AtomSync);
+        atomic.insert(b"atomicStrict", TokenType::AtomStrict);
 
-        atomic.insert(b"threadinit", TokenType::ThreadInit);
-        atomic.insert(b"threaddyn", TokenType::ThreadDynamic);
-        atomic.insert(b"threadexec", TokenType::ThreadExec);
-        atomic.insert(b"threadldyn", TokenType::ThreadLDynamic);
+        atomic.insert(b"threadInit", TokenType::ThreadInit);
+        atomic.insert(b"threadDyn", TokenType::ThreadDynamic);
+        atomic.insert(b"threadExec", TokenType::ThreadExec);
+        atomic.insert(b"threadLDyn", TokenType::ThreadLDynamic);
 
         atomic
     };
@@ -34,29 +34,29 @@ lazy_static! {
     pub static ref ATTRIBUTES: HashMap<&'static [u8], TokenType> = {
         let mut attributes: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
 
-        attributes.insert(b"@asmalignstack", TokenType::AsmAlignStack);
-        attributes.insert(b"@asmsyntax", TokenType::AsmSyntax);
-        attributes.insert(b"@asmthrow", TokenType::AsmThrow);
-        attributes.insert(b"@asmeffects", TokenType::AsmSideEffects);
+        attributes.insert(b"@asmAlignStack", TokenType::AsmAlignStack);
+        attributes.insert(b"@asmSyntax", TokenType::AsmSyntax);
+        attributes.insert(b"@asmThrowErrors", TokenType::AsmThrow);
+        attributes.insert(b"@asmSideEffects", TokenType::AsmSideEffects);
 
-        attributes.insert(b"@optfuzzing", TokenType::OptFuzzing);
-        attributes.insert(b"@nounwind", TokenType::NoUnwind);
+        attributes.insert(b"@optFuzzing", TokenType::OptFuzzing);
+        attributes.insert(b"@noUnwind", TokenType::NoUnwind);
         attributes.insert(b"@packed", TokenType::Packed);
         attributes.insert(b"@heap", TokenType::Heap);
         attributes.insert(b"@stack", TokenType::Stack);
         attributes.insert(b"@public", TokenType::Public);
         attributes.insert(b"@linkage", TokenType::Linkage);
         attributes.insert(b"@extern", TokenType::Extern);
-        attributes.insert(b"@ignore", TokenType::Ignore);
+        attributes.insert(b"@vaArgs", TokenType::Ignore);
         attributes.insert(b"@hot", TokenType::Hot);
         attributes.insert(b"@minsize", TokenType::MinSize);
-        attributes.insert(b"@alwaysinline", TokenType::AlwaysInline);
-        attributes.insert(b"@noinline", TokenType::NoInline);
+        attributes.insert(b"@alwaysInline", TokenType::AlwaysInline);
+        attributes.insert(b"@noInline", TokenType::NoInline);
         attributes.insert(b"@inline", TokenType::InlineHint);
-        attributes.insert(b"@safestack", TokenType::SafeStack);
-        attributes.insert(b"@weakstack", TokenType::WeakStack);
-        attributes.insert(b"@strongstack", TokenType::StrongStack);
-        attributes.insert(b"@precisefp", TokenType::PreciseFloats);
+        attributes.insert(b"@safeStack", TokenType::SafeStack);
+        attributes.insert(b"@weakStack", TokenType::WeakStack);
+        attributes.insert(b"@strongStack", TokenType::StrongStack);
+        attributes.insert(b"@preciseFloatingPoint", TokenType::PreciseFloats);
         attributes.insert(b"@convention", TokenType::Convention);
         attributes.insert(b"@pure", TokenType::Pure);
         attributes.insert(b"@constructor", TokenType::Constructor);
@@ -71,14 +71,14 @@ lazy_static! {
         let mut builtins: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
 
         builtins.insert(b"halloc", TokenType::Halloc);
-        builtins.insert(b"size_of", TokenType::SizeOf);
+        builtins.insert(b"sizeOf", TokenType::SizeOf);
         builtins.insert(b"memset", TokenType::MemSet);
         builtins.insert(b"memmove", TokenType::MemMove);
         builtins.insert(b"memcpy", TokenType::MemCpy);
-        builtins.insert(b"align_of", TokenType::AlignOf);
-        builtins.insert(b"abi_size_of", TokenType::AbiSizeOf);
-        builtins.insert(b"bit_size_of", TokenType::BitSizeOf);
-        builtins.insert(b"abi_align_of", TokenType::AbiAlignOf);
+        builtins.insert(b"alignOf", TokenType::AlignOf);
+        builtins.insert(b"abiSizeOf", TokenType::AbiSizeOf);
+        builtins.insert(b"bitSizeOf", TokenType::BitSizeOf);
+        builtins.insert(b"abiAlignOf", TokenType::AbiAlignOf);
 
         builtins
     };

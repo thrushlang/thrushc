@@ -1,6 +1,4 @@
-use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
-use thrushc_typesystem::Type;
 
 use crate::tokentype::TokenType;
 
@@ -37,8 +35,4 @@ pub trait TokenTypeExtensions {
 
 pub trait TokenTypeAttributesExtensions {
     fn is_attribute(&self) -> bool;
-}
-
-pub trait TokenTypeTypeTransform {
-    fn as_type(&self, span: Span) -> Result<Type, CompilationIssue>;
 }

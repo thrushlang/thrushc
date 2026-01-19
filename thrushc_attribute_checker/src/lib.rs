@@ -721,7 +721,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Ignore) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0013,
-                    "The @ignore attribute requires the symbol to be annotated with @extern(\"something\").".into(),
+                    "The @vaArgs attribute requires the symbol to be annotated with @extern(\"something\").".into(),
                     None,
                     span,
                 ));
@@ -732,7 +732,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::InlineHint) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.".into(),
+                    "The attribute is not valid. Use either '@alwaysInline' or '@inline' attribute.".into(),
                     None,
                     span,
                 ));
@@ -743,7 +743,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::NoInline) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "The attribute is not valid. Use either '@noinline' or '@inline' attribute."
+                    "The attribute is not valid. Use either '@noInline' or '@inline' attribute."
                         .into(),
                     None,
                     span,
@@ -755,7 +755,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::NoInline) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "The attribute is not valid. Use either '@alwaysinline' or '@inline' attribute.".into(),
+                    "The attribute is not valid. Use either '@alwaysInline' or '@inline' attribute.".into(),
                     None,
                     span,
                 ));

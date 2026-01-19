@@ -1,56 +1,8 @@
-use thrushc_errors::{CompilationIssue, CompilationIssueCode};
-use thrushc_span::Span;
-use thrushc_typesystem::Type;
-
 use crate::{
     Token,
     tokentype::TokenType,
-    traits::{
-        TokenTypeAttributesExtensions, TokenTypeBuiltinExtensions, TokenTypeExtensions,
-        TokenTypeTypeTransform,
-    },
+    traits::{TokenTypeAttributesExtensions, TokenTypeBuiltinExtensions, TokenTypeExtensions},
 };
-
-impl TokenTypeTypeTransform for TokenType {
-    fn as_type(&self, span: Span) -> Result<Type, CompilationIssue> {
-        match self {
-            TokenType::Char => Ok(Type::Char(span)),
-
-            TokenType::S8 => Ok(Type::S8(span)),
-            TokenType::S16 => Ok(Type::S16(span)),
-            TokenType::S32 => Ok(Type::S32(span)),
-            TokenType::S64 => Ok(Type::S64(span)),
-            TokenType::Ssize => Ok(Type::SSize(span)),
-
-            TokenType::U8 => Ok(Type::U8(span)),
-            TokenType::U16 => Ok(Type::U16(span)),
-            TokenType::U32 => Ok(Type::U32(span)),
-            TokenType::U64 => Ok(Type::U64(span)),
-            TokenType::U128 => Ok(Type::U128(span)),
-            TokenType::Usize => Ok(Type::USize(span)),
-
-            TokenType::Bool => Ok(Type::Bool(span)),
-
-            TokenType::F32 => Ok(Type::F32(span)),
-            TokenType::F64 => Ok(Type::F64(span)),
-            TokenType::F128 => Ok(Type::F128(span)),
-
-            TokenType::FX8680 => Ok(Type::FX8680(span)),
-            TokenType::FPPC128 => Ok(Type::FPPC128(span)),
-
-            TokenType::Ptr => Ok(Type::Ptr(None, span)),
-            TokenType::Addr => Ok(Type::Addr(span)),
-            TokenType::Void => Ok(Type::Void(span)),
-
-            any => Err(CompilationIssue::Error(
-                CompilationIssueCode::E0001,
-                format!("{} isn't a valid type.", any),
-                None,
-                span,
-            )),
-        }
-    }
-}
 
 impl TokenTypeExtensions for TokenType {
     #[inline]
@@ -278,7 +230,7 @@ impl std::fmt::Display for TokenType {
             TokenType::S32 => write!(f, "s32"),
             TokenType::S64 => write!(f, "s64"),
             TokenType::Ssize => write!(f, "ssize"),
-            TokenType::Str => write!(f, "const ptr[array[char]]"),
+            TokenType::Str => write!(f, "const array[char]"),
             TokenType::U8 => write!(f, "u8"),
             TokenType::U16 => write!(f, "u16"),
             TokenType::U32 => write!(f, "u32"),
@@ -295,46 +247,46 @@ impl std::fmt::Display for TokenType {
             TokenType::LazyThread => write!(f, "lazythread"),
             TokenType::Volatile => write!(f, "volatile"),
 
-            TokenType::AtomNone => write!(f, "atomnone"),
-            TokenType::AtomFree => write!(f, "atomfree"),
-            TokenType::AtomRelax => write!(f, "atomrelax"),
-            TokenType::AtomGrab => write!(f, "atomgrab"),
-            TokenType::AtomDrop => write!(f, "atomdrop"),
-            TokenType::AtomSync => write!(f, "atomsync"),
-            TokenType::AtomStrict => write!(f, "atomstrict"),
+            TokenType::AtomNone => write!(f, "atomicNone"),
+            TokenType::AtomFree => write!(f, "atomicFree"),
+            TokenType::AtomRelax => write!(f, "atomicRelax"),
+            TokenType::AtomGrab => write!(f, "atomicGrab"),
+            TokenType::AtomDrop => write!(f, "atomicDrop"),
+            TokenType::AtomSync => write!(f, "atomicSync"),
+            TokenType::AtomStrict => write!(f, "atomicStrict"),
 
-            TokenType::ThreadDynamic => write!(f, "threaddyn"),
-            TokenType::ThreadExec => write!(f, "threadexec"),
-            TokenType::ThreadInit => write!(f, "threadinit"),
-            TokenType::ThreadLDynamic => write!(f, "threadldyn"),
+            TokenType::ThreadDynamic => write!(f, "threadDyn"),
+            TokenType::ThreadExec => write!(f, "threadExec"),
+            TokenType::ThreadInit => write!(f, "threadInit"),
+            TokenType::ThreadLDynamic => write!(f, "threadLDyn"),
 
             // Attributes
             TokenType::Linkage => write!(f, "@linkage"),
-            TokenType::OptFuzzing => write!(f, "@optfuzzing"),
-            TokenType::NoUnwind => write!(f, "@nounwind"),
+            TokenType::OptFuzzing => write!(f, "@optFuzzing"),
+            TokenType::NoUnwind => write!(f, "@noUnwind"),
             TokenType::Packed => write!(f, "@packed"),
             TokenType::Stack => write!(f, "@stack"),
             TokenType::Static => write!(f, "@static"),
             TokenType::Heap => write!(f, "@heap"),
-            TokenType::AlwaysInline => write!(f, "@alwaysinline"),
-            TokenType::AsmAlignStack => write!(f, "@asmalignstack"),
-            TokenType::AsmSyntax => write!(f, "@asmsyntax"),
-            TokenType::AsmSideEffects => write!(f, "@asmeffects"),
-            TokenType::AsmThrow => write!(f, "@asmthrow"),
+            TokenType::AlwaysInline => write!(f, "@alwaysInline"),
+            TokenType::AsmAlignStack => write!(f, "@asmAlignStack"),
+            TokenType::AsmSyntax => write!(f, "@asmSyntax"),
+            TokenType::AsmSideEffects => write!(f, "@asmSideEffects"),
+            TokenType::AsmThrow => write!(f, "@asmThrowErrors"),
             TokenType::Convention => write!(f, "@convention"),
             TokenType::Extern => write!(f, "@extern"),
             TokenType::Hot => write!(f, "@hot"),
-            TokenType::Ignore => write!(f, "@ignore"),
+            TokenType::Ignore => write!(f, "@vaArgs"),
             TokenType::Import => write!(f, "import"),
             TokenType::ImportC => write!(f, "importC"),
-            TokenType::InlineHint => write!(f, "@inlinehint"),
-            TokenType::MinSize => write!(f, "@minsize"),
-            TokenType::NoInline => write!(f, "@noinline"),
-            TokenType::PreciseFloats => write!(f, "@precisefloats"),
+            TokenType::InlineHint => write!(f, "@inline"),
+            TokenType::MinSize => write!(f, "@minSize"),
+            TokenType::NoInline => write!(f, "@noInline"),
+            TokenType::PreciseFloats => write!(f, "@preciseFloatingPoint"),
             TokenType::Public => write!(f, "@public"),
-            TokenType::SafeStack => write!(f, "@safestack"),
-            TokenType::StrongStack => write!(f, "@strongstack"),
-            TokenType::WeakStack => write!(f, "@weakstack"),
+            TokenType::SafeStack => write!(f, "@safeStack"),
+            TokenType::StrongStack => write!(f, "@strongStack"),
+            TokenType::WeakStack => write!(f, "@weakStack"),
             TokenType::Pure => write!(f, "@pure"),
             TokenType::Destructor => write!(f, "@destructor"),
             TokenType::Constructor => write!(f, "@constructor"),
@@ -395,14 +347,14 @@ impl std::fmt::Display for TokenType {
 
             // Builtins
             TokenType::Halloc => write!(f, "halloc"),
-            TokenType::AlignOf => write!(f, "align_of"),
+            TokenType::AlignOf => write!(f, "alignOf"),
             TokenType::MemSet => write!(f, "memset"),
             TokenType::MemMove => write!(f, "memmove"),
             TokenType::MemCpy => write!(f, "memcpy"),
-            TokenType::SizeOf => write!(f, "size_of"),
-            TokenType::AbiSizeOf => write!(f, "abi_size_of"),
-            TokenType::BitSizeOf => write!(f, "bit_size_of"),
-            TokenType::AbiAlignOf => write!(f, "abi_align_of"),
+            TokenType::SizeOf => write!(f, "sizeOf"),
+            TokenType::AbiSizeOf => write!(f, "abiSizeOf"),
+            TokenType::BitSizeOf => write!(f, "bitSizeOf"),
+            TokenType::AbiAlignOf => write!(f, "abiAlignOf"),
         }
     }
 }

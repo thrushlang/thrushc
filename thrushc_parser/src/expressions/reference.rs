@@ -114,8 +114,7 @@ pub fn build_reference<'parser>(
         let is_mutable: bool = metadata.is_mutable();
 
         let parameter_type: Type = parameter.get_type();
-
-        let is_allocated: bool = parameter_type.is_ptr_type() || parameter_type.is_address_type();
+        let is_allocated: bool = parameter_type.is_ptr_like_type();
 
         return Ok(Ast::Reference {
             name,
