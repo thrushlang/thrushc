@@ -187,7 +187,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
             Ast::CustomType { .. }
             | Ast::Struct { .. }
             | Ast::Continue { .. }
-            | Ast::Break { .. } => Ok(()),
+            | Ast::ContinueAll { .. }
+            | Ast::Break { .. }
+            | Ast::BreakAll { .. } => Ok(()),
 
             Ast::Enum { data, .. } => {
                 {

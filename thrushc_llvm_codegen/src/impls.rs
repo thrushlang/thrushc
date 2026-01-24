@@ -83,7 +83,9 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::Loop { kind, .. } => kind,
             Ast::While { kind, .. } => kind,
             Ast::Break { kind, .. } => kind,
+            Ast::BreakAll { kind, .. } => kind,
             Ast::Continue { kind, .. } => kind,
+            Ast::ContinueAll { kind, .. } => kind,
             Ast::Block { kind, .. } => kind,
 
             // Functions

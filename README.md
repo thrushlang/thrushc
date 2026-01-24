@@ -55,7 +55,7 @@ Usage: thrushc [-flags|--flags] [files..]
 
 General Commands:
 
-• -h, --help optional[opt|emit|print|code-model|reloc-model] Show help message.
+• -h, --help optional[opt|emit|print|code-model|reloc-model|sanitizer|symbol-linkage-strategy|denormal-floating-point-behavior] Show help message.
 • -v, --version Show the version.
 
 General flags:
@@ -92,6 +92,7 @@ JIT compiler flags:
 
 Others compiler flags:
 
+• --denormal-floating-point-behavior ["IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic,IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic"] Configure how denormal floating-point values are handled during calculations.
 • --symbol-linkage-strategy [any|exact|large|samesize|noduplicates] Configure the symbol linkage merge strategy.
 • --sanitizer [address|hwaddress|memory|thread|memtag] Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.
 • --no-sanitize [bounds;coverage] Modifies certain code emissions for the selected sanitizer.

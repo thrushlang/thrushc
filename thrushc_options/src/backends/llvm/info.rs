@@ -1,3 +1,5 @@
+use inkwell::targets::TargetMachine;
+
 #[inline]
 pub fn print_all_targets() {
     thrushc_logging::write(
@@ -1124,4 +1126,16 @@ Loop analyses:
   pass-instrumentation
 ");
     std::process::exit(0);
+}
+
+pub fn print_host_target_triple() -> ! {
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stdout,
+        TargetMachine::get_default_triple()
+            .as_str()
+            .to_string_lossy()
+            .trim(),
+    );
+
+    std::process::exit(1)
 }

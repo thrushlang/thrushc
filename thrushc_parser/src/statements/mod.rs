@@ -39,7 +39,9 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         TokenType::Loop => Ok(loops::build_loop(ctx)?),
 
         TokenType::Continue => Ok(controlflow::build_continue(ctx)?),
+        TokenType::ContinueAll => Ok(controlflow::build_continueall(ctx)?),
         TokenType::Break => Ok(controlflow::build_break(ctx)?),
+        TokenType::BreakAll => Ok(controlflow::build_breakall(ctx)?),
 
         _ => Ok(expressions::build_expression(ctx)?),
     };

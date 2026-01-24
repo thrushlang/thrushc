@@ -195,12 +195,15 @@ impl<'scoper> Scoper<'scoper> {
                 self.get_mut_context().leave_loop();
             }
 
-            Ast::Continue { .. } | Ast::Break { .. } => {
+            Ast::Continue { .. }
+            | Ast::ContinueAll { .. }
+            | Ast::Break { .. }
+            | Ast::BreakAll { .. } => {
                 if !self.get_context().is_inside_loop() {
                     self.add_error(
                         CompilationIssue::Error(
                             CompilationIssueCode::E0017,
-                            "Only loop control flow terminators can be inside a loop. The instruction inside a loop was expected. Reposition it inside a loop.".into(),
+                            "Only loop controlers can be inside a loop. The instruction inside a loop was expected. Reposition it inside a loop.".into(),
                             None,
                             node.get_span(),
                         )

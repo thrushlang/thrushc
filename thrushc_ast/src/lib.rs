@@ -159,6 +159,14 @@ pub enum Ast<'ctx> {
         kind: Type,
         span: Span,
     },
+    ContinueAll {
+        kind: Type,
+        span: Span,
+    },
+    BreakAll {
+        kind: Type,
+        span: Span,
+    },
 
     // Code block
     Block {

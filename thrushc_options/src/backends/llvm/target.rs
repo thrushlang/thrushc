@@ -67,13 +67,13 @@ impl LLVMTarget {
     }
 
     #[inline]
-    pub fn set_target_triple(&mut self, triple: TargetTriple) {
-        self.target_triple = triple;
+    pub fn set_target_triple(&mut self, raw_target_triple: String) {
+        self.target_triple = TargetTriple::create(&raw_target_triple);
     }
 
     #[inline]
-    pub fn set_target_triple_darwin_variant(&mut self, triple: TargetTriple) {
-        self.target_triple_darwin_variant = Some(triple);
+    pub fn set_target_triple_darwin_variant(&mut self, raw_target_triple: String) {
+        self.target_triple_darwin_variant = Some(TargetTriple::create(&raw_target_triple));
     }
 
     #[inline]

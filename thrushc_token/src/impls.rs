@@ -185,8 +185,10 @@ impl std::fmt::Display for TokenType {
         match self {
             // Keywords
             TokenType::Break => write!(f, "break"),
+            TokenType::BreakAll => write!(f, "breakall"),
             TokenType::Const => write!(f, "const"),
             TokenType::Continue => write!(f, "continue"),
+            TokenType::ContinueAll => write!(f, "continueall"),
             TokenType::Elif => write!(f, "elif"),
             TokenType::Else => write!(f, "else"),
             TokenType::Enum => write!(f, "enum"),

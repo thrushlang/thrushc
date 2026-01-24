@@ -28,7 +28,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-h".custom_color((141, 141, 142)).bold(),
             "--help".custom_color((141, 141, 142)).bold(),
-            "optional[opt|emit|print|code-model|reloc-model]"
+            "optional[opt|emit|print|code-model|reloc-model|sanitizer|symbol-linkage-strategy|denormal-floating-point-behavior]"
                 .custom_color((141, 141, 142))
                 .bold(),
             "Show help message.",
@@ -273,6 +273,19 @@ pub fn show_help() -> ! {
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
         "\nOthers compiler flags:\n\n",
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
+            "--denormal-floating-point-behavior"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "[\"IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic,IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic\"]",
+            "Configure how denormal floating-point values are handled during calculations.",
+        ),
     );
 
     thrushc_logging::write(
@@ -1156,6 +1169,67 @@ pub fn show_sanitizer_help() -> ! {
             "•".bold(),
             "memtag".custom_color((141, 141, 142)).bold(),
             "Memory Tagging (MTE). Uses ARM Memory Tagging Extension for memory safety.",
+        ),
+    );
+
+    std::process::exit(1)
+}
+
+pub fn show_denormal_floating_point_behavior_help() -> ! {
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "--denormal-floating-point-behavior value; --denormal-floating-point-behavior=value; --denormal-floating-point-behavior:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "IEEE".custom_color((141, 141, 142)).bold(),
+            "Standard IEEE 754 behavior for denormal floating-point values.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "preserve-sign-signature"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Preserve the sign of denormal values while treating them as zero.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "transform-to-positive-zero"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Transform all denormal values to positive zero.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "dynamic".custom_color((141, 141, 142)).bold(),
+            "Use dynamic behavior based on runtime conditions.",
         ),
     );
 

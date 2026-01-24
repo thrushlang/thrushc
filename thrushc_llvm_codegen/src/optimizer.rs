@@ -24,6 +24,7 @@ use inkwell::values::InstructionValue;
 
 use thrushc_options::CompilerOptions;
 use thrushc_options::ThrushOptimization;
+use thrushc_options::backends::llvm::DenormalFloatingPointBehavior;
 use thrushc_options::backends::llvm::Sanitizer;
 use thrushc_options::backends::llvm::SymbolLinkageMergeStrategy;
 use thrushc_options::backends::llvm::passes::LLVMModificatorPasses;
@@ -81,6 +82,8 @@ impl LLVMOptimizer<'_, '_> {
             LLVMParameterOptimizer::new(module, context, target_data).run();
             LLVMFunctionOptimizer::new(module, context).run();
         }
+
+        LLVMMachineSpecificFunctionOptimizer::new(module, context, config).run();
 
         if !custom_passes.is_empty() {
             if let Err(error) = self
@@ -303,6 +306,7 @@ pub struct LLVMOptimizationConfig {
     compiler_optimization: ThrushOptimization,
     sanitizer: Sanitizer,
     symbol_linkage_strategy: SymbolLinkageMergeStrategy,
+    denormal_fp_behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior),
 }
 
 impl LLVMOptimizationConfig {
@@ -311,11 +315,13 @@ impl LLVMOptimizationConfig {
         compiler_optimization: ThrushOptimization,
         sanitizer: Sanitizer,
         symbol_linkage_strategy: SymbolLinkageMergeStrategy,
+        denormal_fp_behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior),
     ) -> Self {
         Self {
             compiler_optimization,
             sanitizer,
             symbol_linkage_strategy,
+            denormal_fp_behavior,
         }
     }
 }
@@ -334,6 +340,13 @@ impl LLVMOptimizationConfig {
     #[inline]
     pub fn get_symbol_linkage_strategy(&self) -> SymbolLinkageMergeStrategy {
         self.symbol_linkage_strategy
+    }
+
+    #[inline]
+    pub fn get_denormal_fp_behavior(
+        &self,
+    ) -> (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior) {
+        self.denormal_fp_behavior
     }
 }
 
@@ -392,7 +405,6 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
 
         if function.get_first_basic_block().is_none() {
             self.reset_function();
-            return;
         } else {
             let mut optimizations: LLVMFunctionOptimizations = LLVMFunctionOptimizations::new();
 
@@ -528,10 +540,10 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
 
             self.set_optimizations(optimizations);
             self.optimize_function();
-            self.reset_optimizations_state();
-        }
 
-        self.reset_function();
+            self.reset_optimizations_state();
+            self.reset_function();
+        }
     }
 }
 
@@ -763,6 +775,149 @@ impl LLVMFunctionOptimizations {
     #[inline]
     pub fn has_memorywrite(&self) -> bool {
         self.memorywrite
+    }
+}
+
+#[derive(Debug)]
+pub struct LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
+    module: &'a Module<'ctx>,
+    context: &'ctx Context,
+    function: Option<FunctionValue<'ctx>>,
+    optimizations: Option<LLVMMachineSpecificFunctionOptimizations>,
+    config: LLVMOptimizationConfig,
+}
+
+impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
+    #[inline]
+    pub fn new(
+        module: &'a Module<'ctx>,
+        context: &'ctx Context,
+        config: LLVMOptimizationConfig,
+    ) -> Self {
+        Self {
+            module,
+            context,
+            function: None,
+            optimizations: None,
+            config,
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
+    pub fn run(&mut self) {
+        let ordered_functions: Vec<FunctionValue<'_>> =
+            utils::get_functions_by_ordered_calls(self.module.get_functions().collect());
+
+        {
+            for function in ordered_functions.iter() {
+                self.visit_function_once(*function);
+            }
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
+    fn visit_function_once(&mut self, function: FunctionValue<'ctx>) {
+        self.set_function(function);
+
+        if function.get_first_basic_block().is_none() {
+            self.reset_function();
+        } else {
+            let mut optimizations: LLVMMachineSpecificFunctionOptimizations =
+                LLVMMachineSpecificFunctionOptimizations::new();
+
+            if !DenormalFloatingPointBehavior::is_default(self.config.get_denormal_fp_behavior()) {
+                optimizations.set_denormal_fp_behavior(true);
+            }
+
+            self.set_optimizations(optimizations);
+            self.optimize_function();
+
+            self.reset_optimizations_state();
+            self.reset_function();
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
+    fn optimize_function(&mut self) {
+        if let Some(optimizations) = self.get_optimizations() {
+            if optimizations.has_denormal_fp_behavior() {
+                let behavior_tuple: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior) =
+                    self.config.get_denormal_fp_behavior();
+
+                let denormal_fp_math: String = match behavior_tuple {
+                    (out, in_) if out == in_ => in_.as_llvm_repr().to_string(),
+                    (out, in_) => format!("{},{}", out.as_llvm_repr(), in_.as_llvm_repr()),
+                };
+
+                let attribute: Attribute = self
+                    .context
+                    .create_string_attribute("denormal-fp-math", &denormal_fp_math);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+        }
+    }
+}
+
+impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
+    #[inline]
+    fn set_function(&mut self, function: FunctionValue<'ctx>) {
+        self.function = Some(function);
+    }
+
+    #[inline]
+    fn reset_function(&mut self) {
+        self.function = None;
+    }
+
+    #[inline]
+    fn set_optimizations(&mut self, optimizations: LLVMMachineSpecificFunctionOptimizations) {
+        self.optimizations = Some(optimizations);
+    }
+
+    #[inline]
+    fn reset_optimizations_state(&mut self) {
+        self.optimizations = None;
+    }
+}
+
+impl LLVMMachineSpecificFunctionOptimizer<'_, '_> {
+    #[inline]
+    fn get_optimizations(&self) -> Option<LLVMMachineSpecificFunctionOptimizations> {
+        self.optimizations
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LLVMMachineSpecificFunctionOptimizations {
+    denormal_fp_behavior: bool,
+}
+
+impl LLVMMachineSpecificFunctionOptimizations {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            denormal_fp_behavior: false,
+        }
+    }
+}
+
+impl LLVMMachineSpecificFunctionOptimizations {
+    #[inline]
+    pub fn set_denormal_fp_behavior(&mut self, value: bool) {
+        self.denormal_fp_behavior = value;
+    }
+}
+
+impl LLVMMachineSpecificFunctionOptimizations {
+    #[inline]
+    pub fn has_denormal_fp_behavior(&self) -> bool {
+        self.denormal_fp_behavior
     }
 }
 

@@ -291,6 +291,24 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         )
                     });
             }
+            Ast::BreakAll { span, .. } => {
+                self.get_mut_context().mark_dbg_location(*span);
+
+                let llvm_builder: &Builder = self.context.get_llvm_builder();
+                let breakall_block: BasicBlock = self.context.get_loop_ctx().get_breakall_branch();
+
+                llvm_builder
+                    .build_unconditional_branch(breakall_block)
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            self.context,
+                            "Failed to compile 'breakall' loop control flow!",
+                            *span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        )
+                    });
+            }
             Ast::Continue { span, .. } => {
                 self.get_mut_context().mark_dbg_location(*span);
 
@@ -304,6 +322,25 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         abort::abort_codegen(
                             self.context,
                             "Failed to compile 'continue' loop control flow!",
+                            *span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        )
+                    });
+            }
+            Ast::ContinueAll { span, .. } => {
+                self.get_mut_context().mark_dbg_location(*span);
+
+                let llvm_builder: &Builder = self.context.get_llvm_builder();
+                let continueall_block: BasicBlock =
+                    self.context.get_loop_ctx().get_continueall_branch();
+
+                llvm_builder
+                    .build_unconditional_branch(continueall_block)
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            self.context,
+                            "Failed to compile 'continueall' loop control flow!",
                             *span,
                             std::path::PathBuf::from(file!()),
                             line!(),

@@ -51,3 +51,49 @@ pub fn build_break<'parser>(
         kind: Type::Void(span),
     })
 }
+
+pub fn build_continueall<'parser>(
+    ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, CompilationIssue> {
+    let continueall_tk: &Token = ctx.consume(
+        TokenType::ContinueAll,
+        CompilationIssueCode::E0001,
+        "Expected 'continueall' keyword.".into(),
+    )?;
+
+    let span: Span = continueall_tk.span;
+
+    ctx.consume(
+        TokenType::SemiColon,
+        CompilationIssueCode::E0001,
+        "Expected ';'.".into(),
+    )?;
+
+    Ok(Ast::ContinueAll {
+        span,
+        kind: Type::Void(span),
+    })
+}
+
+pub fn build_breakall<'parser>(
+    ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, CompilationIssue> {
+    let breakall_tk: &Token = ctx.consume(
+        TokenType::BreakAll,
+        CompilationIssueCode::E0001,
+        "Expected 'breakall' keyword.".into(),
+    )?;
+
+    let span: Span = breakall_tk.get_span();
+
+    ctx.consume(
+        TokenType::SemiColon,
+        CompilationIssueCode::E0001,
+        "Expected ';'.".into(),
+    )?;
+
+    Ok(Ast::BreakAll {
+        span,
+        kind: Type::Void(span),
+    })
+}

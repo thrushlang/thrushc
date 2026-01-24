@@ -30,7 +30,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
     pub fn setup_platform_specific(context: &'a LLVMCodeGenContext<'a, 'ctx>) {
         let inner: LLVMMetadata<'a, 'ctx> = Self { context };
 
-        inner.setup_target_specific_metadata();
+        inner.setup_target_specific_metadata_or_attributes();
     }
 }
 
@@ -41,7 +41,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         self.setup_build_id();
     }
 
-    fn setup_target_specific_metadata(&self) {
+    fn setup_target_specific_metadata_or_attributes(&self) {
         let options: &CompilerOptions = self.get_context().get_compiler_options();
         let llvm_backend: &LLVMBackend = options.get_llvm_backend_options();
 

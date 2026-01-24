@@ -87,7 +87,9 @@ impl AstGetType for Ast<'_> {
             Ast::For { kind, .. } => Ok(kind),
             Ast::Loop { kind, .. } => Ok(kind),
             Ast::Break { kind, .. } => Ok(kind),
+            Ast::BreakAll { kind, .. } => Ok(kind),
             Ast::Continue { kind, .. } => Ok(kind),
+            Ast::ContinueAll { kind, .. } => Ok(kind),
             Ast::Block { kind, .. } => Ok(kind),
 
             // Module imports
@@ -242,7 +244,9 @@ impl AstCodeLocation for Ast<'_> {
             Ast::For { span, .. } => *span,
             Ast::Loop { span, .. } => *span,
             Ast::Break { span, .. } => *span,
+            Ast::BreakAll { span, .. } => *span,
             Ast::Continue { span, .. } => *span,
+            Ast::ContinueAll { span, .. } => *span,
             Ast::Block { span, .. } => *span,
 
             // Functions

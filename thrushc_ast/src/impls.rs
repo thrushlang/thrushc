@@ -109,8 +109,18 @@ impl AstStandardExtensions for Ast<'_> {
     }
 
     #[inline]
+    fn is_breakall(&self) -> bool {
+        matches!(self, Ast::BreakAll { .. })
+    }
+
+    #[inline]
     fn is_continue(&self) -> bool {
         matches!(self, Ast::Continue { .. })
+    }
+
+    #[inline]
+    fn is_continueall(&self) -> bool {
+        matches!(self, Ast::ContinueAll { .. })
     }
 
     #[inline]
@@ -147,7 +157,9 @@ impl AstStatementExtentions for Ast<'_> {
                 | Ast::Loop { .. }
                 | Ast::Return { .. }
                 | Ast::Break { .. }
+                | Ast::BreakAll { .. }
                 | Ast::Continue { .. }
+                | Ast::ContinueAll { .. }
                 | Ast::Local { .. }
                 | Ast::Struct { .. }
                 | Ast::Const { .. }
@@ -414,8 +426,14 @@ impl std::fmt::Display for Ast<'_> {
             Ast::Break { .. } => {
                 write!(f, "break")
             }
+            Ast::BreakAll { .. } => {
+                write!(f, "breakall")
+            }
             Ast::Continue { .. } => {
                 write!(f, "continue")
+            }
+            Ast::ContinueAll { .. } => {
+                write!(f, "continueall")
             }
             Ast::For {
                 local,

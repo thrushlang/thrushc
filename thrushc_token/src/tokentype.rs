@@ -124,6 +124,8 @@ pub enum TokenType {
     For,
     Continue,
     Break,
+    ContinueAll,
+    BreakAll,
     If,
     Elif,
     Or,

@@ -280,6 +280,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             compiler_optimization,
             *llvm_backend.get_sanitizer(),
             *llvm_backend.get_symbol_linkage_strategy(),
+            *llvm_backend.get_denormal_fp_behavior(),
         );
 
         let llvm_optimizer_passes: LLVMOptimizerPasses<'_> = LLVMOptimizerPasses::new(
@@ -553,6 +554,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             compiler_optimization,
             *llvm_backend.get_sanitizer(),
             *llvm_backend.get_symbol_linkage_strategy(),
+            *llvm_backend.get_denormal_fp_behavior(),
         );
 
         let llvm_optimizer_passes: LLVMOptimizerPasses<'_> = LLVMOptimizerPasses::new(

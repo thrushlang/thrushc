@@ -34,7 +34,9 @@ pub trait AstStandardExtensions {
     fn is_terminator(&self) -> bool;
     fn is_custom_type(&self) -> bool;
     fn is_break(&self) -> bool;
+    fn is_breakall(&self) -> bool;
     fn is_continue(&self) -> bool;
+    fn is_continueall(&self) -> bool;
     fn is_conditional(&self) -> bool;
 }
 

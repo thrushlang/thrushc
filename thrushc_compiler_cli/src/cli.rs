@@ -3,21 +3,19 @@
 use std::path::Path;
 use std::path::PathBuf;
 
-use inkwell::targets::CodeModel;
-use inkwell::targets::RelocMode;
-use inkwell::targets::TargetMachine;
-use inkwell::targets::TargetTriple;
-
 use thrushc_logging::LoggingType;
 use thrushc_logging::OutputIn;
 use thrushc_options::CompilerOptions;
 use thrushc_options::EmitableUnit;
 use thrushc_options::PrintableUnit;
+use thrushc_options::ThrushCodeModel;
 use thrushc_options::ThrushOptimization;
 
 use ahash::AHashMap as HashMap;
 
+use thrushc_options::ThrushRelocMode;
 use thrushc_options::backends::llvm;
+use thrushc_options::backends::llvm::DenormalFloatingPointBehavior;
 use thrushc_options::backends::llvm::Sanitizer;
 use thrushc_options::backends::llvm::SanitizerConfiguration;
 use thrushc_options::backends::llvm::SymbolLinkageMergeStrategy;
@@ -182,6 +180,10 @@ impl CommandLine {
                         self.advance();
                         help::show_symbol_linkage_strategy_help();
                     }
+                    Some("denormal-floating-point-behavior") => {
+                        self.advance();
+                        help::show_denormal_floating_point_behavior_help();
+                    }
 
                     _ => help::show_help(),
                 }
@@ -341,9 +343,7 @@ impl CommandLine {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let raw_target_triple: &str = self.peek();
-
-                let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
+                let target_triple: String = self.peek().to_string();
 
                 self.get_mut_options()
                     .get_mut_llvm_backend_options()
@@ -480,6 +480,19 @@ impl CommandLine {
                 self.advance();
             }
 
+            "--denormal-floating-point-behavior" => {
+                self.advance();
+
+                let behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior) =
+                    self.parse_denormal_floating_point_behavior(self.peek());
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_denormal_fp_behavior(behavior);
+
+                self.advance();
+            }
+
             "--sanitizer" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -575,9 +588,7 @@ impl CommandLine {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let raw_target_triple: &str = self.peek();
-
-                let target_triple: TargetTriple = TargetTriple::create(raw_target_triple);
+                let target_triple: String = self.peek().to_string();
 
                 self.get_mut_options()
                     .get_mut_llvm_backend_options()
@@ -643,7 +654,7 @@ impl CommandLine {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                let reloc_mode: RelocMode = self.parse_reloc_mode(self.peek());
+                let reloc_mode: ThrushRelocMode = self.parse_reloc_mode(self.peek());
 
                 self.get_mut_options()
                     .get_mut_llvm_backend_options()
@@ -655,7 +666,7 @@ impl CommandLine {
             "--code-model" => {
                 self.advance();
 
-                let code_model: CodeModel = self.parse_code_model(self.peek());
+                let code_model: ThrushCodeModel = self.parse_code_model(self.peek());
 
                 self.get_mut_options()
                     .get_mut_llvm_backend_options()
@@ -793,21 +804,11 @@ impl CommandLine {
 
             "--print-host-target-triple" => {
                 self.advance();
-
-                thrushc_logging::write(
-                    OutputIn::Stdout,
-                    TargetMachine::get_default_triple()
-                        .as_str()
-                        .to_string_lossy()
-                        .trim(),
-                );
-
-                std::process::exit(0);
+                llvm::info::print_host_target_triple();
             }
 
             "--print-supported-cpus" => {
                 self.advance();
-
                 llvm::info::print_specific_cpu_support(
                     self.get_options()
                         .get_llvm_backend_options()
@@ -940,7 +941,7 @@ impl CommandLine {
                 "coverage" => (false, true),
 
                 any => {
-                    self.report_error(&format!("Unknown sanitizer modificator: '{}'.", any));
+                    self.report_error(&format!("Invalid sanitizer modificator: '{}'.", any));
                 }
             };
 
@@ -963,11 +964,50 @@ impl CommandLine {
             "memtag" => Sanitizer::Memtag(config),
 
             any => {
-                self.report_error(&format!("Unknown sanitizer: '{}'.", any));
+                self.report_error(&format!("Invalid sanitizer: '{}'.", any));
             }
         }
     }
 
+    #[inline]
+    fn parse_denormal_floating_point_behavior(
+        &self,
+        approach: &str,
+    ) -> (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior) {
+        let parts: Vec<&str> = approach.split(',').map(|s| s.trim()).collect();
+
+        match parts.as_slice() {
+            [out_str, in_str] => (
+                self.map_single_strategy(out_str),
+                self.map_single_strategy(in_str),
+            ),
+            [single_str] => {
+                let mode = self.map_single_strategy(single_str);
+                (mode, mode)
+            }
+            _ => {
+                self.report_error(&format!(
+                    "Invalid denormal floating-point calculation approach: '{}'.",
+                    approach
+                ));
+            }
+        }
+    }
+
+    fn map_single_strategy(&self, strategy: &str) -> DenormalFloatingPointBehavior {
+        match strategy {
+            "IEEE" => DenormalFloatingPointBehavior::IEEE,
+            "preserve-sign-signature" => DenormalFloatingPointBehavior::PreserveSignSignature,
+            "transform-to-positive-zero" => DenormalFloatingPointBehavior::AsPositiveZero,
+            "dynamic" => DenormalFloatingPointBehavior::Dynamic,
+            any => {
+                self.report_error(&format!(
+                    "Unknown denormal floating-point calculation approach: '{}'.",
+                    any
+                ));
+            }
+        }
+    }
     #[inline]
     fn parse_symbol_linkage_strategy(&self, strategy: &str) -> SymbolLinkageMergeStrategy {
         match strategy {
@@ -993,7 +1033,7 @@ impl CommandLine {
             "v5" => DwarfVersion::V5,
 
             any => {
-                self.report_error(&format!("Unknown dwarf version: '{}'.", any));
+                self.report_error(&format!("Unknown Dwarf version: '{}'.", any));
             }
         }
     }
@@ -1049,11 +1089,11 @@ impl CommandLine {
     }
 
     #[inline]
-    fn parse_reloc_mode(&self, reloc: &str) -> RelocMode {
+    fn parse_reloc_mode(&self, reloc: &str) -> ThrushRelocMode {
         match reloc {
-            "dynamic-no-pic" => RelocMode::DynamicNoPic,
-            "pic" => RelocMode::PIC,
-            "static" => RelocMode::Static,
+            "dynamic-no-pic" => ThrushRelocMode::DynamicNoPic,
+            "pic" => ThrushRelocMode::PIC,
+            "static" => ThrushRelocMode::Static,
 
             any => {
                 self.report_error(&format!("Unknown reloc mode: '{}'.", any));
@@ -1062,12 +1102,12 @@ impl CommandLine {
     }
 
     #[inline]
-    fn parse_code_model(&self, model: &str) -> CodeModel {
+    fn parse_code_model(&self, model: &str) -> ThrushCodeModel {
         match model {
-            "small" => CodeModel::Small,
-            "medium" => CodeModel::Medium,
-            "large" => CodeModel::Large,
-            "kernel" => CodeModel::Kernel,
+            "small" => ThrushCodeModel::Small,
+            "medium" => ThrushCodeModel::Medium,
+            "large" => ThrushCodeModel::Large,
+            "kernel" => ThrushCodeModel::Kernel,
 
             any => {
                 self.report_error(&format!("Unknown code model: '{}'.", any));

@@ -66,6 +66,23 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
         }
     }
 
+    let breakall_positions: Vec<(usize, &Ast)> = nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, stmt)| stmt.is_breakall())
+        .collect();
+
+    if breakall_positions.len() > 1 {
+        for (_, node) in &breakall_positions[1..] {
+            scoper.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0015,
+                "Only one breaker all loop control terminator is allowed per loop block. Additional break loop control terminators are redundant and disallowed. Remove it.".into(),
+                None,
+                node.get_span(),
+            ));
+        }
+    }
+
     let continue_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
@@ -77,6 +94,23 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0015,
                 "Only one continue loop control terminator is allowed per loop block. Additional continue loop control terminators are redundant and disallowed. Remove it.".into(),
+                None,
+                node.get_span()
+            ));
+        }
+    }
+
+    let continueall_positions: Vec<(usize, &Ast)> = nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, stmt)| stmt.is_continueall())
+        .collect();
+
+    if continueall_positions.len() > 1 {
+        for (_, node) in &continueall_positions[1..] {
+            scoper.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0015,
+                "Only one continue all loop control terminator is allowed per loop block. Additional continue loop control terminators are redundant and disallowed. Remove it.".into(),
                 None,
                 node.get_span()
             ));
@@ -132,7 +166,9 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                             stmt.is_terminator()
                                 || stmt.is_unreacheable()
                                 || stmt.is_break()
+                                || stmt.is_breakall()
                                 || stmt.is_continue()
+                                || stmt.is_continueall()
                         });
                     }
                 }
@@ -145,7 +181,9 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                                     stmt.is_terminator()
                                         || stmt.is_unreacheable()
                                         || stmt.is_break()
+                                        || stmt.is_breakall()
                                         || stmt.is_continue()
+                                        || stmt.is_continueall()
                                 });
                             }
                         }
@@ -160,7 +198,9 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                                     stmt.is_terminator()
                                         || stmt.is_unreacheable()
                                         || stmt.is_break()
+                                        || stmt.is_breakall()
                                         || stmt.is_continue()
+                                        || stmt.is_continueall()
                                 });
                             }
                         }

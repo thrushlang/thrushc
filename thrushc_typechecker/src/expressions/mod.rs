@@ -336,8 +336,11 @@ pub fn validate<'type_checker>(
 
             if !value_type.is_ptr_type() {
                 typechecker.add_error(CompilationIssue::Error(
-                    CompilationIssueCode::E0019,
-                    format!("Expected raw typed pointer 'ptr[T]' type, raw pointer 'ptr' type for defererence, got '{}'.", value_type),
+                    CompilationIssueCode::E0008,
+                    format!(
+                        "An value with memory address was expected, got '{}'. Try to allocate it.",
+                        value
+                    ),
                     None,
                     value.get_span(),
                 ));

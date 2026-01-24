@@ -11,7 +11,7 @@ use crate::{
     backends::llvm::target::LLVMTarget,
 };
 
-use crate::ThrushOptimization;
+use crate::{ThrushCodeModel, ThrushOptimization, ThrushRelocMode};
 
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
 
@@ -23,7 +23,10 @@ pub struct LLVMBackend {
     optimization: ThrushOptimization,
     reloc_mode: RelocMode,
     code_model: CodeModel,
+
     symbol_linkage_extrategy: SymbolLinkageMergeStrategy,
+    denormal_fp_behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior),
+
     sanitizer: Sanitizer,
     dbg_config: DebugConfiguration,
 
@@ -65,7 +68,13 @@ impl LLVMBackend {
             optimization: ThrushOptimization::None,
             reloc_mode: RelocMode::Default,
             code_model: CodeModel::Default,
+
             symbol_linkage_extrategy: SymbolLinkageMergeStrategy::Any,
+            denormal_fp_behavior: (
+                DenormalFloatingPointBehavior::IEEE,
+                DenormalFloatingPointBehavior::IEEE,
+            ),
+
             sanitizer: Sanitizer::None,
             dbg_config: DebugConfiguration::new(),
 
@@ -140,6 +149,13 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn get_denormal_fp_behavior(
+        &self,
+    ) -> &(DenormalFloatingPointBehavior, DenormalFloatingPointBehavior) {
+        &self.denormal_fp_behavior
+    }
+
+    #[inline]
     pub fn omit_frame_pointer(&self) -> bool {
         self.omit_frame_pointer
     }
@@ -204,13 +220,13 @@ impl LLVMBackend {
     }
 
     #[inline]
-    pub fn set_reloc_mode(&mut self, reloc_mode: RelocMode) {
-        self.reloc_mode = reloc_mode;
+    pub fn set_reloc_mode(&mut self, reloc_mode: ThrushRelocMode) {
+        self.reloc_mode = reloc_mode.to_llvm();
     }
 
     #[inline]
-    pub fn set_code_model(&mut self, code_model: CodeModel) {
-        self.code_model = code_model;
+    pub fn set_code_model(&mut self, code_model: ThrushCodeModel) {
+        self.code_model = code_model.to_llvm();
     }
 
     #[inline]
@@ -221,6 +237,14 @@ impl LLVMBackend {
     #[inline]
     pub fn set_symbol_linkage_strategy(&mut self, strategy: SymbolLinkageMergeStrategy) {
         self.symbol_linkage_extrategy = strategy;
+    }
+
+    #[inline]
+    pub fn set_denormal_fp_behavior(
+        &mut self,
+        behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior),
+    ) {
+        self.denormal_fp_behavior = behavior;
     }
 
     #[inline]
@@ -311,6 +335,37 @@ pub enum SymbolLinkageMergeStrategy {
     Large,
     SameSize,
     NoDuplicates,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DenormalFloatingPointBehavior {
+    IEEE,
+    PreserveSignSignature,
+    AsPositiveZero,
+    Dynamic,
+}
+
+impl DenormalFloatingPointBehavior {
+    pub fn as_llvm_repr(&self) -> &'static str {
+        match self {
+            Self::IEEE => "ieee",
+            Self::PreserveSignSignature => "preserve-sign",
+            Self::AsPositiveZero => "positive-zero",
+            Self::Dynamic => "dynamic",
+        }
+    }
+
+    pub fn is_default(
+        behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior),
+    ) -> bool {
+        matches!(
+            behavior,
+            (
+                DenormalFloatingPointBehavior::IEEE,
+                DenormalFloatingPointBehavior::IEEE
+            )
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

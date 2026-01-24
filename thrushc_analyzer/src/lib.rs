@@ -91,7 +91,36 @@ impl<'analyzer> Analyzer<'analyzer> {
 impl<'analyzer> Analyzer<'analyzer> {
     fn analyze_decl(&mut self, node: &'analyzer Ast) -> Result<(), CompilationIssue> {
         match node {
-            Ast::Function { body, .. } => {
+            Ast::AssemblerFunction {
+                parameters, span, ..
+            } => {
+                if parameters.len() > 12 {
+                    self.add_error(CompilationIssue::Error(
+                        CompilationIssueCode::E0036,
+                        "Too many parameters for the assembler function. Package them in structures or use them through pointers.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
+                Ok(())
+            }
+
+            Ast::Function {
+                parameters,
+                body,
+                span,
+                ..
+            } => {
+                if parameters.len() > 12 {
+                    self.add_error(CompilationIssue::Error(
+                        CompilationIssueCode::E0036,
+                        "Too many parameters for the function. Package them in structures or use them through pointers.".into(),
+                        None,
+                        *span,
+                    ));
+                }
+
                 if let Some(body) = body {
                     self.analyze_stmt(body)?;
                 }
@@ -306,7 +335,10 @@ impl<'analyzer> Analyzer<'analyzer> {
 
                 Ok(())
             }
-            Ast::Continue { .. } | Ast::Break { .. } => Ok(()),
+            Ast::Continue { .. }
+            | Ast::ContinueAll { .. }
+            | Ast::Break { .. }
+            | Ast::BreakAll { .. } => Ok(()),
             Ast::Mut { source, value, .. } => {
                 let source_type: &Type = source.get_value_type()?;
 

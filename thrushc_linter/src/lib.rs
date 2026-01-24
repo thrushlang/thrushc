@@ -183,7 +183,10 @@ impl<'linter> Linter<'linter> {
                 self.analyze_stmt(block);
             }
 
-            Ast::Continue { .. } | Ast::Break { .. } => (),
+            Ast::Continue { .. }
+            | Ast::ContinueAll { .. }
+            | Ast::Break { .. }
+            | Ast::BreakAll { .. } => (),
 
             Ast::If {
                 condition,

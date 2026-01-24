@@ -136,6 +136,8 @@ lazy_static! {
         keywords.insert(b"return", TokenType::Return);
         keywords.insert(b"break", TokenType::Break);
         keywords.insert(b"continue", TokenType::Continue);
+        keywords.insert(b"breakall", TokenType::BreakAll);
+        keywords.insert(b"continueall", TokenType::ContinueAll);
         keywords.insert(b"pass", TokenType::Pass);
         keywords.insert(b"instr", TokenType::Instr);
         keywords.insert(b"mut", TokenType::Mut);

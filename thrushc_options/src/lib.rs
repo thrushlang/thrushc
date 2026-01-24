@@ -4,6 +4,8 @@ pub mod linkage;
 use crate::backends::llvm::LLVMBackend;
 use crate::linkage::LinkingCompilersConfiguration;
 
+use inkwell::targets::CodeModel;
+use inkwell::targets::RelocMode;
 use thrushc_ast::Ast;
 use thrushc_logging::{self, LoggingType};
 use thrushc_token::Token;
@@ -119,6 +121,52 @@ impl ThrushOptimization {
     #[inline]
     pub fn is_none_opt(&self) -> bool {
         matches!(self, ThrushOptimization::None)
+    }
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub enum ThrushRelocMode {
+    #[default]
+    Default,
+    Static,
+    PIC,
+    DynamicNoPic,
+}
+
+impl ThrushRelocMode {
+    #[inline]
+    pub fn to_llvm(self) -> RelocMode {
+        match self {
+            ThrushRelocMode::Default => RelocMode::Default,
+            ThrushRelocMode::Static => RelocMode::Static,
+            ThrushRelocMode::PIC => RelocMode::PIC,
+            ThrushRelocMode::DynamicNoPic => RelocMode::DynamicNoPic,
+        }
+    }
+}
+
+#[derive(Default, Debug, Copy, Clone)]
+pub enum ThrushCodeModel {
+    #[default]
+    Default,
+    JITDefault,
+    Small,
+    Kernel,
+    Medium,
+    Large,
+}
+
+impl ThrushCodeModel {
+    #[inline]
+    pub fn to_llvm(self) -> CodeModel {
+        match self {
+            ThrushCodeModel::Default => CodeModel::Default,
+            ThrushCodeModel::JITDefault => CodeModel::JITDefault,
+            ThrushCodeModel::Small => CodeModel::Small,
+            ThrushCodeModel::Kernel => CodeModel::Kernel,
+            ThrushCodeModel::Medium => CodeModel::Medium,
+            ThrushCodeModel::Large => CodeModel::Large,
+        }
     }
 }
 
