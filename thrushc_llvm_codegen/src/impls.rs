@@ -87,6 +87,7 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::Continue { kind, .. } => kind,
             Ast::ContinueAll { kind, .. } => kind,
             Ast::Block { kind, .. } => kind,
+            Ast::Defer { kind, .. } => kind,
 
             // Functions
             Ast::Function { return_type, .. } => return_type,

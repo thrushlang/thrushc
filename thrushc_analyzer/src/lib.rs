@@ -370,8 +370,21 @@ impl<'analyzer> Analyzer<'analyzer> {
 
                 Ok(())
             }
-            Ast::Block { nodes, .. } => {
-                nodes.iter().try_for_each(|node| self.analyze_stmt(node))?;
+            Ast::Block { nodes, post, .. } => {
+                {
+                    for node in nodes.iter() {
+                        self.analyze_stmt(node)?;
+                    }
+
+                    for postnode in post.iter() {
+                        self.analyze_stmt(postnode)?;
+                    }
+                }
+
+                Ok(())
+            }
+            Ast::Defer { node, .. } => {
+                self.analyze_stmt(node)?;
 
                 Ok(())
             }

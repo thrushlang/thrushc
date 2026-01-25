@@ -22,7 +22,6 @@ pub struct Lexer {
     tokens: Vec<Token>,
     errors: Vec<CompilationIssue>,
     code: Vec<char>,
-    bytes: Vec<u8>,
 
     start: usize,
     current: usize,
@@ -35,13 +34,11 @@ pub struct Lexer {
 impl Lexer {
     pub fn lex(file: &CompilationUnit, options: &CompilerOptions) -> Vec<Token> {
         let code: Vec<char> = file.get_unit_content().chars().collect();
-        let bytes: Vec<u8> = file.get_unit_content().as_bytes().to_vec();
 
         Self {
             tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
             errors: Vec::with_capacity(100),
             code,
-            bytes,
             start: 0,
             current: 0,
             line: 1,
@@ -56,13 +53,11 @@ impl Lexer {
         options: &CompilerOptions,
     ) -> Result<Vec<Token>, ()> {
         let code: Vec<char> = file.get_unit_content().chars().collect();
-        let bytes: Vec<u8> = file.get_unit_content().as_bytes().to_vec();
 
         Self {
             tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
             errors: Vec::with_capacity(100),
             code,
-            bytes,
             start: 0,
             current: 0,
             line: 1,
@@ -94,7 +89,6 @@ impl Lexer {
         } else {
             self.tokens.push(Token {
                 lexeme: String::default(),
-                bytes: Vec::default(),
                 ascii: String::default(),
                 kind: TokenType::Eof,
                 span: Span::new(self.line, self.span),
@@ -119,7 +113,6 @@ impl Lexer {
         } else {
             self.tokens.push(Token {
                 lexeme: String::default(),
-                bytes: Vec::default(),
                 ascii: String::default(),
                 kind: TokenType::Eof,
                 span: Span::new(self.line, self.span),
@@ -137,7 +130,6 @@ impl Lexer {
         let span: Span = Span::new(self.line, self.span);
 
         let lexeme: String = self.lexeme();
-        let bytes: Vec<u8> = self.lexeme_bytes();
 
         let ascii: String = if kind.is_identifier() {
             string::convert_to_ascii(self, &lexeme)
@@ -148,7 +140,6 @@ impl Lexer {
         self.tokens.push(Token {
             lexeme,
             ascii,
-            bytes,
             kind,
             span,
         });
@@ -236,34 +227,6 @@ impl Lexer {
         );
 
         String::default()
-    }
-
-    #[inline]
-    pub fn shrink_lexeme_bytes(&self) -> Vec<u8> {
-        if let Some(bytes) = self.bytes.get(self.start + 1..self.current - 1) {
-            return bytes.to_vec();
-        }
-
-        thrushc_logging::print_warn(
-            LoggingType::Warning,
-            "Couldn't shrink some lexeme bytes at lexical analysis phase.",
-        );
-
-        Vec::default()
-    }
-
-    #[inline]
-    pub fn lexeme_bytes(&self) -> Vec<u8> {
-        if let Some(bytes) = self.bytes.get(self.start..self.current) {
-            return bytes.to_vec();
-        }
-
-        thrushc_logging::print_warn(
-            LoggingType::Warning,
-            "Couldn't get lexeme bytes at lexical analysis phase.",
-        );
-
-        Vec::default()
     }
 }
 

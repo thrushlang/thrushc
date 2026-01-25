@@ -236,14 +236,28 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     pub fn codegen_block(&mut self, node: &'ctx Ast) {
         match node {
-            Ast::Block { nodes, span, .. } => {
+            Ast::Block {
+                nodes, post, span, ..
+            } => {
                 self.get_mut_context().add_dbg_block_data(*span);
 
                 self.context.begin_scope();
 
-                nodes.iter().for_each(|node| {
-                    self.codegen_block(node);
-                });
+                {
+                    let nodes_size: usize = nodes.len();
+
+                    for (idx, node) in nodes.iter().enumerate() {
+                        let is_final_node: bool = idx == nodes_size.saturating_sub(1);
+
+                        if is_final_node {
+                            for postnode in post.iter() {
+                                self.codegen_post_executation(postnode);
+                            }
+                        }
+
+                        self.codegen_block(node);
+                    }
+                }
 
                 self.context.end_scope();
 
@@ -255,7 +269,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     }
 
     fn stmt(&mut self, node: &'ctx Ast) {
-        self.codegen_conditionals(node);
+        self.codegen_post_executation(node);
+    }
+
+    fn codegen_post_executation(&mut self, node: &'ctx Ast) {
+        match node {
+            Ast::Defer { node, .. } => {
+                self.codegen_block(node);
+            }
+
+            node => self.codegen_conditionals(node),
+        }
     }
 
     fn codegen_conditionals(&mut self, node: &'ctx Ast) {

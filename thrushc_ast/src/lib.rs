@@ -171,6 +171,14 @@ pub enum Ast<'ctx> {
     // Code block
     Block {
         nodes: std::vec::Vec<Ast<'ctx>>,
+        post: std::vec::Vec<Ast<'ctx>>,
+        kind: Type,
+        span: Span,
+    },
+
+    // Scope Post Execution
+    Defer {
+        node: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
         span: Span,
     },

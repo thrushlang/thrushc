@@ -142,6 +142,11 @@ impl AstStandardExtensions for Ast<'_> {
     fn is_conditional(&self) -> bool {
         matches!(self, Ast::If { .. } | Ast::Elif { .. } | Ast::Else { .. })
     }
+
+    #[inline]
+    fn is_post_execution_at_scope(&self) -> bool {
+        matches!(self, Ast::Defer { .. })
+    }
 }
 
 impl AstStatementExtentions for Ast<'_> {
@@ -164,6 +169,7 @@ impl AstStatementExtentions for Ast<'_> {
                 | Ast::Struct { .. }
                 | Ast::Const { .. }
                 | Ast::Static { .. }
+                | Ast::Defer { .. }
         )
     }
 }
@@ -402,6 +408,9 @@ impl std::fmt::Display for Ast<'_> {
                 let _ = write!(f, " }}");
 
                 Ok(())
+            }
+            Ast::Defer { node, .. } => {
+                write!(f, "defer {}", node)
             }
             Ast::BinaryOp {
                 left,

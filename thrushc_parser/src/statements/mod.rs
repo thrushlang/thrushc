@@ -1,6 +1,7 @@
 pub mod block;
 pub mod conditional;
 pub mod controlflow;
+pub mod defer;
 pub mod lconstant;
 pub mod lctype;
 pub mod lenum;
@@ -42,6 +43,8 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         TokenType::ContinueAll => Ok(controlflow::build_continueall(ctx)?),
         TokenType::Break => Ok(controlflow::build_break(ctx)?),
         TokenType::BreakAll => Ok(controlflow::build_breakall(ctx)?),
+
+        TokenType::Defer => Ok(defer::build_defer_executation(ctx)?),
 
         _ => Ok(expressions::build_expression(ctx)?),
     };

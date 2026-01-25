@@ -322,14 +322,25 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 Ok(())
             }
-            Ast::Block { nodes, .. } => {
+            Ast::Block { nodes, post, .. } => {
                 self.begin_scope();
 
-                for node in nodes.iter() {
-                    self.analyze_stmt(node)?;
+                {
+                    for node in nodes.iter() {
+                        self.analyze_stmt(node)?;
+                    }
+
+                    for postnode in post.iter() {
+                        self.analyze_stmt(postnode)?;
+                    }
                 }
 
                 self.end_scope();
+
+                Ok(())
+            }
+            Ast::Defer { node, .. } => {
+                self.analyze_stmt(node)?;
 
                 Ok(())
             }

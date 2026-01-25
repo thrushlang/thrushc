@@ -34,7 +34,6 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     lexer.tokens.push(Token {
         lexeme: char.to_string(),
         ascii: String::default(),
-        bytes: Vec::default(),
         kind: TokenType::Char,
         span,
     });

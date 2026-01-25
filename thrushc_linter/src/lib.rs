@@ -149,16 +149,25 @@ impl<'linter> Linter<'linter> {
                 self.analyze_expr(value);
             }
             Ast::CustomType { .. } | Ast::Struct { .. } => (),
-            Ast::Block { nodes, .. } => {
+            Ast::Block { nodes, post, .. } => {
                 self.begin_scope();
 
-                nodes.iter().for_each(|node| {
-                    self.analyze_stmt(node);
-                });
+                {
+                    for node in nodes.iter() {
+                        self.analyze_stmt(node);
+                    }
+
+                    for postnode in post.iter() {
+                        self.analyze_stmt(postnode);
+                    }
+                }
 
                 self.generate_scoped_warnings();
 
                 self.end_scope();
+            }
+            Ast::Defer { node, .. } => {
+                self.analyze_stmt(node);
             }
 
             Ast::For {

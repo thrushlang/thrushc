@@ -7,7 +7,6 @@ pub trait TokenExtensions {
     fn get_span(&self) -> Span;
     fn get_type(&self) -> TokenType;
     fn get_ascii_lexeme(&self) -> &str;
-    fn get_bytes_lexeme(&self) -> &[u8];
     fn get_lexeme_first_byte(&self) -> u64;
 }
 

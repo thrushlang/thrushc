@@ -54,20 +54,20 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
     fn check(&mut self) -> bool {
-        if !self.errors.is_empty() {
-            self.errors.iter().for_each(|error| {
-                self.diagnostician
-                    .dispatch_diagnostic(error, thrushc_logging::LoggingType::Error);
-            });
-
-            return true;
-        }
-
         if !self.warnings.is_empty() {
-            self.warnings.iter().for_each(|warning| {
+            for warning in self.warnings.iter() {
                 self.diagnostician
                     .dispatch_diagnostic(warning, thrushc_logging::LoggingType::Warning);
-            });
+            }
+        }
+
+        if !self.errors.is_empty() {
+            for error in self.errors.iter() {
+                self.diagnostician
+                    .dispatch_diagnostic(error, thrushc_logging::LoggingType::Error);
+            }
+
+            return true;
         }
 
         false
@@ -75,8 +75,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 }
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
-    fn analyze_ast(&mut self, ast: &'attr_checker Ast) {
-        match ast {
+    fn analyze_ast(&mut self, node: &'attr_checker Ast) {
+        match node {
             Ast::Function {
                 attributes,
                 body,
@@ -193,10 +193,17 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             } => {
                 self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Local, *span);
             }
-            Ast::Block { nodes, .. } => {
-                nodes.iter().for_each(|node| {
+            Ast::Block { nodes, post, .. } => {
+                for node in nodes.iter() {
                     self.analyze_ast(node);
-                });
+                }
+
+                for postnode in post.iter() {
+                    self.analyze_ast(postnode);
+                }
+            }
+            Ast::Defer { node, .. } => {
+                self.analyze_ast(node);
             }
 
             _ => (),
@@ -721,7 +728,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrushAttributeComparator::Ignore) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0013,
-                    "The @vaArgs attribute requires the symbol to be annotated with @extern(\"something\").".into(),
+                    "The @arbitraryArgs attribute requires the symbol to be annotated with @extern(\"something\").".into(),
                     None,
                     span,
                 ));

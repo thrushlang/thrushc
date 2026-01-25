@@ -7,162 +7,163 @@ use ahash::AHashMap as HashMap;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    pub static ref ATOMIC: HashMap<&'static [u8], TokenType> = {
-        let mut atomic: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
+    pub static ref ATOMIC: HashMap<&'static str, TokenType> = {
+        let mut atomic: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
 
-        atomic.insert(b"volatile", TokenType::Volatile);
-        atomic.insert(b"lazyThread", TokenType::LazyThread);
+        atomic.insert("volatile", TokenType::Volatile);
+        atomic.insert("lazyThread", TokenType::LazyThread);
 
-        atomic.insert(b"atomicNone", TokenType::AtomNone);
-        atomic.insert(b"atomicFree", TokenType::AtomFree);
-        atomic.insert(b"atomicRelax", TokenType::AtomRelax);
-        atomic.insert(b"atomicGrab", TokenType::AtomGrab);
-        atomic.insert(b"atomicDrop", TokenType::AtomDrop);
-        atomic.insert(b"atomicSync", TokenType::AtomSync);
-        atomic.insert(b"atomicStrict", TokenType::AtomStrict);
+        atomic.insert("atomicNone", TokenType::AtomNone);
+        atomic.insert("atomicFree", TokenType::AtomFree);
+        atomic.insert("atomicRelax", TokenType::AtomRelax);
+        atomic.insert("atomicGrab", TokenType::AtomGrab);
+        atomic.insert("atomicDrop", TokenType::AtomDrop);
+        atomic.insert("atomicSync", TokenType::AtomSync);
+        atomic.insert("atomicStrict", TokenType::AtomStrict);
 
-        atomic.insert(b"threadInit", TokenType::ThreadInit);
-        atomic.insert(b"threadDyn", TokenType::ThreadDynamic);
-        atomic.insert(b"threadExec", TokenType::ThreadExec);
-        atomic.insert(b"threadLDyn", TokenType::ThreadLDynamic);
+        atomic.insert("threadInit", TokenType::ThreadInit);
+        atomic.insert("threadDyn", TokenType::ThreadDynamic);
+        atomic.insert("threadExec", TokenType::ThreadExec);
+        atomic.insert("threadLDyn", TokenType::ThreadLDynamic);
 
         atomic
     };
 }
 
 lazy_static! {
-    pub static ref ATTRIBUTES: HashMap<&'static [u8], TokenType> = {
-        let mut attributes: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
+    pub static ref ATTRIBUTES: HashMap<&'static str, TokenType> = {
+        let mut attributes: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
 
-        attributes.insert(b"@asmAlignStack", TokenType::AsmAlignStack);
-        attributes.insert(b"@asmSyntax", TokenType::AsmSyntax);
-        attributes.insert(b"@asmThrowErrors", TokenType::AsmThrow);
-        attributes.insert(b"@asmSideEffects", TokenType::AsmSideEffects);
+        attributes.insert("@asmAlignStack", TokenType::AsmAlignStack);
+        attributes.insert("@asmSyntax", TokenType::AsmSyntax);
+        attributes.insert("@asmThrowErrors", TokenType::AsmThrow);
+        attributes.insert("@asmSideEffects", TokenType::AsmSideEffects);
 
-        attributes.insert(b"@optFuzzing", TokenType::OptFuzzing);
-        attributes.insert(b"@noUnwind", TokenType::NoUnwind);
-        attributes.insert(b"@packed", TokenType::Packed);
-        attributes.insert(b"@heap", TokenType::Heap);
-        attributes.insert(b"@stack", TokenType::Stack);
-        attributes.insert(b"@public", TokenType::Public);
-        attributes.insert(b"@linkage", TokenType::Linkage);
-        attributes.insert(b"@extern", TokenType::Extern);
-        attributes.insert(b"@vaArgs", TokenType::Ignore);
-        attributes.insert(b"@hot", TokenType::Hot);
-        attributes.insert(b"@minsize", TokenType::MinSize);
-        attributes.insert(b"@alwaysInline", TokenType::AlwaysInline);
-        attributes.insert(b"@noInline", TokenType::NoInline);
-        attributes.insert(b"@inline", TokenType::InlineHint);
-        attributes.insert(b"@safeStack", TokenType::SafeStack);
-        attributes.insert(b"@weakStack", TokenType::WeakStack);
-        attributes.insert(b"@strongStack", TokenType::StrongStack);
-        attributes.insert(b"@preciseFloatingPoint", TokenType::PreciseFloats);
-        attributes.insert(b"@convention", TokenType::Convention);
-        attributes.insert(b"@pure", TokenType::Pure);
-        attributes.insert(b"@constructor", TokenType::Constructor);
-        attributes.insert(b"@destructor", TokenType::Destructor);
+        attributes.insert("@optFuzzing", TokenType::OptFuzzing);
+        attributes.insert("@noUnwind", TokenType::NoUnwind);
+        attributes.insert("@packed", TokenType::Packed);
+        attributes.insert("@heap", TokenType::Heap);
+        attributes.insert("@stack", TokenType::Stack);
+        attributes.insert("@public", TokenType::Public);
+        attributes.insert("@linkage", TokenType::Linkage);
+        attributes.insert("@extern", TokenType::Extern);
+        attributes.insert("@arbitraryArgs", TokenType::Ignore);
+        attributes.insert("@hot", TokenType::Hot);
+        attributes.insert("@minsize", TokenType::MinSize);
+        attributes.insert("@alwaysInline", TokenType::AlwaysInline);
+        attributes.insert("@noInline", TokenType::NoInline);
+        attributes.insert("@inline", TokenType::InlineHint);
+        attributes.insert("@safeStack", TokenType::SafeStack);
+        attributes.insert("@weakStack", TokenType::WeakStack);
+        attributes.insert("@strongStack", TokenType::StrongStack);
+        attributes.insert("@preciseFloatingPoint", TokenType::PreciseFloats);
+        attributes.insert("@convention", TokenType::Convention);
+        attributes.insert("@pure", TokenType::Pure);
+        attributes.insert("@constructor", TokenType::Constructor);
+        attributes.insert("@destructor", TokenType::Destructor);
 
         attributes
     };
 }
 
 lazy_static! {
-    pub static ref BUILTINS: HashMap<&'static [u8], TokenType> = {
-        let mut builtins: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
+    pub static ref BUILTINS: HashMap<&'static str, TokenType> = {
+        let mut builtins: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
 
-        builtins.insert(b"halloc", TokenType::Halloc);
-        builtins.insert(b"sizeOf", TokenType::SizeOf);
-        builtins.insert(b"memset", TokenType::MemSet);
-        builtins.insert(b"memmove", TokenType::MemMove);
-        builtins.insert(b"memcpy", TokenType::MemCpy);
-        builtins.insert(b"alignOf", TokenType::AlignOf);
-        builtins.insert(b"abiSizeOf", TokenType::AbiSizeOf);
-        builtins.insert(b"bitSizeOf", TokenType::BitSizeOf);
-        builtins.insert(b"abiAlignOf", TokenType::AbiAlignOf);
+        builtins.insert("halloc", TokenType::Halloc);
+        builtins.insert("sizeOf", TokenType::SizeOf);
+        builtins.insert("memset", TokenType::MemSet);
+        builtins.insert("memmove", TokenType::MemMove);
+        builtins.insert("memcpy", TokenType::MemCpy);
+        builtins.insert("alignOf", TokenType::AlignOf);
+        builtins.insert("abiSizeOf", TokenType::AbiSizeOf);
+        builtins.insert("bitSizeOf", TokenType::BitSizeOf);
+        builtins.insert("abiAlignOf", TokenType::AbiAlignOf);
 
         builtins
     };
 }
 
 lazy_static! {
-    pub static ref TYPES: HashMap<&'static [u8], TokenType> = {
-        let mut types: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
+    pub static ref TYPES: HashMap<&'static str, TokenType> = {
+        let mut types: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
 
-        types.insert(b"s8", TokenType::S8);
-        types.insert(b"s16", TokenType::S16);
-        types.insert(b"s32", TokenType::S32);
-        types.insert(b"s64", TokenType::S64);
-        types.insert(b"ssize", TokenType::Ssize);
-        types.insert(b"u8", TokenType::U8);
-        types.insert(b"u16", TokenType::U16);
-        types.insert(b"u32", TokenType::U32);
-        types.insert(b"u64", TokenType::U64);
-        types.insert(b"u128", TokenType::U128);
-        types.insert(b"usize", TokenType::Usize);
-        types.insert(b"f32", TokenType::F32);
-        types.insert(b"f64", TokenType::F64);
-        types.insert(b"f128", TokenType::F128);
-        types.insert(b"fx86_80", TokenType::FX8680);
-        types.insert(b"fppc_128", TokenType::FPPC128);
-        types.insert(b"bool", TokenType::Bool);
-        types.insert(b"char", TokenType::Char);
-        types.insert(b"ptr", TokenType::Ptr);
-        types.insert(b"array", TokenType::Array);
-        types.insert(b"void", TokenType::Void);
-        types.insert(b"Fn", TokenType::FnRef);
+        types.insert("s8", TokenType::S8);
+        types.insert("s16", TokenType::S16);
+        types.insert("s32", TokenType::S32);
+        types.insert("s64", TokenType::S64);
+        types.insert("ssize", TokenType::Ssize);
+        types.insert("u8", TokenType::U8);
+        types.insert("u16", TokenType::U16);
+        types.insert("u32", TokenType::U32);
+        types.insert("u64", TokenType::U64);
+        types.insert("u128", TokenType::U128);
+        types.insert("usize", TokenType::Usize);
+        types.insert("f32", TokenType::F32);
+        types.insert("f64", TokenType::F64);
+        types.insert("f128", TokenType::F128);
+        types.insert("fx86_80", TokenType::FX8680);
+        types.insert("fppc_128", TokenType::FPPC128);
+        types.insert("bool", TokenType::Bool);
+        types.insert("char", TokenType::Char);
+        types.insert("ptr", TokenType::Ptr);
+        types.insert("array", TokenType::Array);
+        types.insert("void", TokenType::Void);
+        types.insert("Fn", TokenType::FnRef);
 
         types
     };
 }
 
 lazy_static! {
-    pub static ref KEYWORDS: HashMap<&'static [u8], TokenType> = {
-        let mut keywords: HashMap<&'static [u8], TokenType> = HashMap::with_capacity(100);
+    pub static ref KEYWORDS: HashMap<&'static str, TokenType> = {
+        let mut keywords: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
 
-        keywords.insert(b"local", TokenType::Local);
-        keywords.insert(b"fn", TokenType::Fn);
-        keywords.insert(b"if", TokenType::If);
-        keywords.insert(b"elif", TokenType::Elif);
-        keywords.insert(b"else", TokenType::Else);
-        keywords.insert(b"for", TokenType::For);
-        keywords.insert(b"while", TokenType::While);
-        keywords.insert(b"loop", TokenType::Loop);
-        keywords.insert(b"true", TokenType::True);
-        keywords.insert(b"false", TokenType::False);
-        keywords.insert(b"or", TokenType::Or);
-        keywords.insert(b"and", TokenType::And);
-        keywords.insert(b"const", TokenType::Const);
-        keywords.insert(b"struct", TokenType::Struct);
-        keywords.insert(b"return", TokenType::Return);
-        keywords.insert(b"break", TokenType::Break);
-        keywords.insert(b"continue", TokenType::Continue);
-        keywords.insert(b"breakall", TokenType::BreakAll);
-        keywords.insert(b"continueall", TokenType::ContinueAll);
-        keywords.insert(b"pass", TokenType::Pass);
-        keywords.insert(b"instr", TokenType::Instr);
-        keywords.insert(b"mut", TokenType::Mut);
-        keywords.insert(b"nullptr", TokenType::NullPtr);
-        keywords.insert(b"as", TokenType::As);
-        keywords.insert(b"asmfn", TokenType::AsmFn);
-        keywords.insert(b"asm", TokenType::Asm);
-        keywords.insert(b"global_asm", TokenType::GlobalAsm);
-        keywords.insert(b"deref", TokenType::Deref);
-        keywords.insert(b"type", TokenType::Type);
-        keywords.insert(b"enum", TokenType::Enum);
-        keywords.insert(b"alloc", TokenType::Alloc);
-        keywords.insert(b"address", TokenType::Address);
-        keywords.insert(b"addr", TokenType::Addr);
-        keywords.insert(b"load", TokenType::Load);
-        keywords.insert(b"write", TokenType::Write);
-        keywords.insert(b"fixed", TokenType::Fixed);
-        keywords.insert(b"ref", TokenType::DirectRef);
-        keywords.insert(b"static", TokenType::Static);
-        keywords.insert(b"indirect", TokenType::Indirect);
-        keywords.insert(b"unreachable", TokenType::Unreachable);
-        keywords.insert(b"intrinsic", TokenType::Intrinsic);
-        keywords.insert(b"import", TokenType::Import);
-        keywords.insert(b"importC", TokenType::ImportC);
-        keywords.insert(b"new", TokenType::New);
+        keywords.insert("local", TokenType::Local);
+        keywords.insert("fn", TokenType::Fn);
+        keywords.insert("if", TokenType::If);
+        keywords.insert("elif", TokenType::Elif);
+        keywords.insert("else", TokenType::Else);
+        keywords.insert("for", TokenType::For);
+        keywords.insert("while", TokenType::While);
+        keywords.insert("loop", TokenType::Loop);
+        keywords.insert("true", TokenType::True);
+        keywords.insert("false", TokenType::False);
+        keywords.insert("or", TokenType::Or);
+        keywords.insert("and", TokenType::And);
+        keywords.insert("const", TokenType::Const);
+        keywords.insert("struct", TokenType::Struct);
+        keywords.insert("return", TokenType::Return);
+        keywords.insert("break", TokenType::Break);
+        keywords.insert("continue", TokenType::Continue);
+        keywords.insert("breakall", TokenType::BreakAll);
+        keywords.insert("continueall", TokenType::ContinueAll);
+        keywords.insert("defer", TokenType::Defer);
+        keywords.insert("pass", TokenType::Pass);
+        keywords.insert("instr", TokenType::Instr);
+        keywords.insert("mut", TokenType::Mut);
+        keywords.insert("nullptr", TokenType::NullPtr);
+        keywords.insert("as", TokenType::As);
+        keywords.insert("asmfn", TokenType::AsmFn);
+        keywords.insert("asm", TokenType::Asm);
+        keywords.insert("global_asm", TokenType::GlobalAsm);
+        keywords.insert("deref", TokenType::Deref);
+        keywords.insert("type", TokenType::Type);
+        keywords.insert("enum", TokenType::Enum);
+        keywords.insert("alloc", TokenType::Alloc);
+        keywords.insert("address", TokenType::Address);
+        keywords.insert("addr", TokenType::Addr);
+        keywords.insert("load", TokenType::Load);
+        keywords.insert("write", TokenType::Write);
+        keywords.insert("fixed", TokenType::Fixed);
+        keywords.insert("ref", TokenType::DirectRef);
+        keywords.insert("static", TokenType::Static);
+        keywords.insert("indirect", TokenType::Indirect);
+        keywords.insert("unreachable", TokenType::Unreachable);
+        keywords.insert("intrinsic", TokenType::Intrinsic);
+        keywords.insert("import", TokenType::Import);
+        keywords.insert("importC", TokenType::ImportC);
+        keywords.insert("new", TokenType::New);
 
         keywords
     };
@@ -173,17 +174,17 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         lexer.advance_only();
     }
 
-    let bytes: Vec<u8> = lexer.lexeme_bytes();
+    let lexem: String = lexer.lexeme();
 
-    if let Some(keyword) = KEYWORDS.get(bytes.as_slice()) {
+    if let Some(keyword) = KEYWORDS.get(lexem.as_str()) {
         lexer.make(*keyword);
-    } else if let Some(atomic_stuff) = ATOMIC.get(bytes.as_slice()) {
+    } else if let Some(atomic_stuff) = ATOMIC.get(lexem.as_str()) {
         lexer.make(*atomic_stuff);
-    } else if let Some(attribute) = ATTRIBUTES.get(bytes.as_slice()) {
+    } else if let Some(attribute) = ATTRIBUTES.get(lexem.as_str()) {
         lexer.make(*attribute);
-    } else if let Some(builtin) = BUILTINS.get(bytes.as_slice()) {
+    } else if let Some(builtin) = BUILTINS.get(lexem.as_str()) {
         lexer.make(*builtin);
-    } else if let Some(r#type) = TYPES.get(bytes.as_slice()) {
+    } else if let Some(r#type) = TYPES.get(lexem.as_str()) {
         lexer.make(*r#type);
     } else {
         lexer.make(TokenType::Identifier);

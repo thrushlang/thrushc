@@ -38,6 +38,7 @@ pub trait AstStandardExtensions {
     fn is_continue(&self) -> bool;
     fn is_continueall(&self) -> bool;
     fn is_conditional(&self) -> bool;
+    fn is_post_execution_at_scope(&self) -> bool;
 }
 
 pub trait AstCodeBlockEntensions {

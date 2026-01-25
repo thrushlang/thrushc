@@ -189,7 +189,7 @@ pub fn lower_precedence<'parser>(
             ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 format!(
-                    "Expression or statement '{}' don't allowed in this point.",
+                    "It is not recognized '{}' as an expression at this point.",
                     previous.get_lexeme()
                 ),
                 None,

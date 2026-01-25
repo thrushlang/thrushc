@@ -25,10 +25,9 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     let span: Span = Span::new(lexer.line, lexer.span);
 
     let lexeme: String = lexer.shrink_lexeme();
-    let bytes: Vec<u8> = lexer.shrink_lexeme_bytes();
     let ascii: String = self::convert_to_ascii(lexer, &lexeme);
 
-    self::validate_and_finalize_string(lexer, found_end_quote, span, lexeme, ascii, bytes)?;
+    self::validate_and_finalize_string(lexer, found_end_quote, span, lexeme, ascii)?;
 
     Ok(())
 }
@@ -91,7 +90,6 @@ fn validate_and_finalize_string(
     span: Span,
     lexeme: String,
     ascii: String,
-    bytes: Vec<u8>,
 ) -> Result<(), CompilationIssue> {
     if !found_end_quote {
         return Err(CompilationIssue::Error(
@@ -105,7 +103,6 @@ fn validate_and_finalize_string(
     lexer.tokens.push(Token {
         lexeme,
         ascii,
-        bytes,
         kind: TokenType::Str,
         span,
     });

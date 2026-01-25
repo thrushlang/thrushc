@@ -91,6 +91,7 @@ impl AstGetType for Ast<'_> {
             Ast::Continue { kind, .. } => Ok(kind),
             Ast::ContinueAll { kind, .. } => Ok(kind),
             Ast::Block { kind, .. } => Ok(kind),
+            Ast::Defer { kind, .. } => Ok(kind),
 
             // Module imports
             Ast::Import { kind, .. } => Ok(kind),
@@ -248,6 +249,7 @@ impl AstCodeLocation for Ast<'_> {
             Ast::Continue { span, .. } => *span,
             Ast::ContinueAll { span, .. } => *span,
             Ast::Block { span, .. } => *span,
+            Ast::Defer { span, .. } => *span,
 
             // Functions
             Ast::Function { span, .. } => *span,

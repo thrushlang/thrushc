@@ -223,7 +223,6 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         lexer.tokens.push(Token {
             lexeme,
             ascii: String::default(),
-            bytes: Vec::default(),
             kind: TokenType::Float,
             span,
         });
@@ -235,7 +234,6 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         lexer.tokens.push(Token {
             lexeme,
             ascii: String::default(),
-            bytes: Vec::default(),
             kind: TokenType::Integer,
             span,
         });

@@ -146,12 +146,16 @@ impl<'scoper> Scoper<'scoper> {
             ));
         }
 
-        if let Ast::Block { nodes, .. } = node {
+        if let Ast::Block { nodes, post, .. } = node {
             checks::check_for_multiple_terminators(self, node);
             checks::check_for_unreachable_code_instructions(self, node);
 
             for node in nodes.iter() {
                 self.analyze_local_node(node);
+            }
+
+            for postnode in post.iter() {
+                self.analyze_local_node(postnode);
             }
         }
 
@@ -219,6 +223,10 @@ impl<'scoper> Scoper<'scoper> {
                         *span,
                     ));
                 }
+            }
+
+            Ast::Defer { node, .. } => {
+                self.analyze_local_node(node);
             }
 
             _ => (),
