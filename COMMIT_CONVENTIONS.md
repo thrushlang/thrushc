@@ -2,7 +2,7 @@
 
 # The Thrush Compiler 
 
-There's a simple guide of standard conventions to follow in order to delivery a good Github commit for the Thrush Compiler (**thrushc**).
+There is a simple guide of standard conventions to follow in order to delivery a good Github commit for the Thrush Compiler (**thrushc**).
 
 ### Title
 
@@ -22,7 +22,7 @@ Valid locations:
 - `gcc_backend` Any location that usually involucrates the GNU Compiler Collection (GCC) backend.
 - `frontend` Any locations that usually involucrates the Abstract Syntax Tree (AST), Lexer, Parser, TypeChecker and we could continue...
 - `project-visual` Any location that usually involucrates the visual representation or human guide for the compiler available on Github (Example: README.md).
-- `project` Any location that usually involucrates Cargo, Rust Compiler configuration changes or the conception of a new part of the compiler (Cargo Workspaces).
+- `project` Any location that usually involucrates Cargo, Rust Compiler and Github repository changes or the conception of a new part of the compiler (Cargo Workspaces).
 
 Example:
 
