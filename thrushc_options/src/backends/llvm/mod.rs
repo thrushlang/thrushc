@@ -26,19 +26,26 @@ pub struct LLVMBackend {
 
     symbol_linkage_extrategy: SymbolLinkageMergeStrategy,
     denormal_fp_behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior),
+    denormal_fp_32_bits_behavior: (
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+    ),
 
     sanitizer: Sanitizer,
     dbg_config: DebugConfiguration,
 
     modificator_passes: Vec<LLVMModificatorPasses>,
     opt_passes: String,
+
     omit_frame_pointer: bool,
     omit_uwtable: bool,
     omit_direct_access_external_data: bool,
     omit_rtlibusegot: bool,
     omit_trapping_math: bool,
 
-    use_jit: bool,
+    disable_all_sanitizers: bool,
+
+    needs_jit: bool,
     jit_config: JITConfiguration,
 }
 
@@ -74,19 +81,26 @@ impl LLVMBackend {
                 DenormalFloatingPointBehavior::IEEE,
                 DenormalFloatingPointBehavior::IEEE,
             ),
+            denormal_fp_32_bits_behavior: (
+                DenormalFloatingPointBehavior32BitFloatingPoint::IEEE,
+                DenormalFloatingPointBehavior32BitFloatingPoint::IEEE,
+            ),
 
             sanitizer: Sanitizer::None,
             dbg_config: DebugConfiguration::new(),
 
             modificator_passes: Vec::with_capacity(10),
             opt_passes: String::with_capacity(100),
+
             omit_frame_pointer: false,
             omit_uwtable: false,
             omit_direct_access_external_data: false,
             omit_rtlibusegot: false,
             omit_trapping_math: false,
 
-            use_jit: false,
+            disable_all_sanitizers: false,
+
+            needs_jit: false,
             jit_config: JITConfiguration::new(),
         }
     }
@@ -156,6 +170,21 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn get_denormal_fp_32_bits_behavior(
+        &self,
+    ) -> &(
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+    ) {
+        &self.denormal_fp_32_bits_behavior
+    }
+
+    #[inline]
+    pub fn get_disable_all_sanitizers(&self) -> bool {
+        self.disable_all_sanitizers
+    }
+
+    #[inline]
     pub fn omit_frame_pointer(&self) -> bool {
         self.omit_frame_pointer
     }
@@ -181,8 +210,8 @@ impl LLVMBackend {
     }
 
     #[inline]
-    pub fn is_jit(&self) -> bool {
-        self.use_jit
+    pub fn is_full_jit(&self) -> bool {
+        self.needs_jit
     }
 }
 
@@ -248,6 +277,17 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn set_denormal_fp_32_bits_behavior(
+        &mut self,
+        behavior: (
+            DenormalFloatingPointBehavior32BitFloatingPoint,
+            DenormalFloatingPointBehavior32BitFloatingPoint,
+        ),
+    ) {
+        self.denormal_fp_32_bits_behavior = behavior;
+    }
+
+    #[inline]
     pub fn set_omit_frame_pointer(&mut self) {
         self.omit_frame_pointer = true;
     }
@@ -283,8 +323,13 @@ impl LLVMBackend {
     }
 
     #[inline]
-    pub fn set_jit(&mut self, use_jit: bool) {
-        self.use_jit = use_jit;
+    pub fn set_disable_all_sanitizers(&mut self) {
+        self.disable_all_sanitizers = true;
+    }
+
+    #[inline]
+    pub fn set_jit(&mut self, value: bool) {
+        self.needs_jit = value;
     }
 }
 
@@ -363,6 +408,40 @@ impl DenormalFloatingPointBehavior {
             (
                 DenormalFloatingPointBehavior::IEEE,
                 DenormalFloatingPointBehavior::IEEE
+            )
+        )
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DenormalFloatingPointBehavior32BitFloatingPoint {
+    IEEE,
+    PreserveSignSignature,
+    AsPositiveZero,
+    Dynamic,
+}
+
+impl DenormalFloatingPointBehavior32BitFloatingPoint {
+    pub fn as_llvm_repr(&self) -> &'static str {
+        match self {
+            Self::IEEE => "ieee",
+            Self::PreserveSignSignature => "preserve-sign",
+            Self::AsPositiveZero => "positive-zero",
+            Self::Dynamic => "dynamic",
+        }
+    }
+
+    pub fn is_default(
+        behavior: (
+            DenormalFloatingPointBehavior32BitFloatingPoint,
+            DenormalFloatingPointBehavior32BitFloatingPoint,
+        ),
+    ) -> bool {
+        matches!(
+            behavior,
+            (
+                DenormalFloatingPointBehavior32BitFloatingPoint::IEEE,
+                DenormalFloatingPointBehavior32BitFloatingPoint::IEEE
             )
         )
     }

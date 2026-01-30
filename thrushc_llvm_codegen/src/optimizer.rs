@@ -25,6 +25,7 @@ use inkwell::values::InstructionValue;
 use thrushc_options::CompilerOptions;
 use thrushc_options::ThrushOptimization;
 use thrushc_options::backends::llvm::DenormalFloatingPointBehavior;
+use thrushc_options::backends::llvm::DenormalFloatingPointBehavior32BitFloatingPoint;
 use thrushc_options::backends::llvm::Sanitizer;
 use thrushc_options::backends::llvm::SymbolLinkageMergeStrategy;
 use thrushc_options::backends::llvm::passes::LLVMModificatorPasses;
@@ -69,11 +70,12 @@ impl LLVMOptimizer<'_, '_> {
         let target_data: TargetData = machine.get_target_data();
         let options: PassBuilderOptions = self.create_passes_builder();
         let config: LLVMOptimizationConfig = self.get_config();
+        let flags: &LLVMOptimizerFlags = self.get_flags();
 
         let module: &Module = self.get_module();
         let context: &Context = self.get_context();
 
-        LLVMSanitizer::new(module, context, config).run();
+        LLVMSanitizer::new(module, context, config, *flags).run();
         LLVMComdatApplier::new(module, context, config).run();
 
         if !self.get_flags().get_disable_default_opt()
@@ -299,6 +301,7 @@ impl<'ctx> LLVMOptimizerPasses<'ctx> {
 #[derive(Debug, Clone, Copy)]
 pub struct LLVMOptimizerFlags {
     disable_default_opt: bool,
+    disable_all_sanitizers: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -307,6 +310,10 @@ pub struct LLVMOptimizationConfig {
     sanitizer: Sanitizer,
     symbol_linkage_strategy: SymbolLinkageMergeStrategy,
     denormal_fp_behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior),
+    denormal_fp_32_bits_behavior: (
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+    ),
 }
 
 impl LLVMOptimizationConfig {
@@ -316,12 +323,17 @@ impl LLVMOptimizationConfig {
         sanitizer: Sanitizer,
         symbol_linkage_strategy: SymbolLinkageMergeStrategy,
         denormal_fp_behavior: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior),
+        denormal_fp_32_bits_behavior: (
+            DenormalFloatingPointBehavior32BitFloatingPoint,
+            DenormalFloatingPointBehavior32BitFloatingPoint,
+        ),
     ) -> Self {
         Self {
             compiler_optimization,
             sanitizer,
             symbol_linkage_strategy,
             denormal_fp_behavior,
+            denormal_fp_32_bits_behavior,
         }
     }
 }
@@ -348,13 +360,24 @@ impl LLVMOptimizationConfig {
     ) -> (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior) {
         self.denormal_fp_behavior
     }
+
+    #[inline]
+    pub fn get_denormal_fp_32_bits_behavior(
+        &self,
+    ) -> (
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+    ) {
+        self.denormal_fp_32_bits_behavior
+    }
 }
 
 impl LLVMOptimizerFlags {
     #[inline]
-    pub fn new(disable_default_opt: bool) -> Self {
+    pub fn new(disable_default_opt: bool, disable_all_sanitizers: bool) -> Self {
         Self {
             disable_default_opt,
+            disable_all_sanitizers,
         }
     }
 }
@@ -363,6 +386,11 @@ impl LLVMOptimizerFlags {
     #[inline]
     pub fn get_disable_default_opt(&self) -> bool {
         self.disable_default_opt
+    }
+
+    #[inline]
+    pub fn get_disable_all_sanitizers(&self) -> bool {
+        self.disable_all_sanitizers
     }
 }
 
@@ -404,6 +432,36 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
         self.set_function(function);
 
         if function.get_first_basic_block().is_none() {
+            let mut optimizations: LLVMFunctionOptimizations = LLVMFunctionOptimizations::new();
+
+            optimizations.set_uwtable(false);
+            optimizations.set_nounwind(false);
+
+            const CONDISERABLE_USAGE_FOR_AGGRESIVE_OPT: u16 = 156;
+
+            let usage: usize = self
+                .module
+                .get_functions()
+                .filter(|other_function| *other_function != function)
+                .flat_map(|function| function.get_basic_block_iter())
+                .flat_map(|basic_block| basic_block.get_instructions())
+                .filter(|instr| instr.get_opcode() == InstructionOpcode::Call)
+                .filter(|instr| {
+                    let callsite: CallSiteValue<'_> =
+                        unsafe { CallSiteValue::new(instr.as_value_ref()) };
+
+                    callsite.get_called_fn_value() == function
+                })
+                .count();
+
+            if usage > CONDISERABLE_USAGE_FOR_AGGRESIVE_OPT as usize {
+                optimizations.set_nolazybind(true);
+            }
+
+            self.set_optimizations(optimizations);
+            self.optimize_function();
+
+            self.reset_optimizations_state();
             self.reset_function();
         } else {
             let mut optimizations: LLVMFunctionOptimizations = LLVMFunctionOptimizations::new();
@@ -550,6 +608,15 @@ impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
 impl<'a, 'ctx> LLVMFunctionOptimizer<'a, 'ctx> {
     fn optimize_function(&mut self) {
         if let Some(optimizations) = self.get_optimizations() {
+            if optimizations.has_nolazybind() {
+                let kind_id: u32 = Attribute::get_named_enum_kind_id("nonlazybind");
+                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, attribute);
+                }
+            }
+
             if optimizations.has_inlinehint() {
                 let kind_id: u32 = Attribute::get_named_enum_kind_id("inlinehint");
 
@@ -680,6 +747,7 @@ struct LLVMFunctionOptimizations {
     memorynone: bool,
     memoryread: bool,
     memorywrite: bool,
+    nolazybind: bool,
 }
 
 impl LLVMFunctionOptimizations {
@@ -695,6 +763,7 @@ impl LLVMFunctionOptimizations {
             memorynone: false,
             memoryread: false,
             memorywrite: false,
+            nolazybind: false,
         }
     }
 }
@@ -728,6 +797,21 @@ impl LLVMFunctionOptimizations {
     #[inline]
     pub fn set_memorywrite(&mut self, value: bool) {
         self.memorywrite = value;
+    }
+
+    #[inline]
+    pub fn set_nounwind(&mut self, value: bool) {
+        self.nounwind = value;
+    }
+
+    #[inline]
+    pub fn set_uwtable(&mut self, value: bool) {
+        self.uwtable = value;
+    }
+
+    #[inline]
+    pub fn set_nolazybind(&mut self, value: bool) {
+        self.nolazybind = value;
     }
 }
 
@@ -775,6 +859,11 @@ impl LLVMFunctionOptimizations {
     #[inline]
     pub fn has_memorywrite(&self) -> bool {
         self.memorywrite
+    }
+
+    #[inline]
+    pub fn has_nolazybind(&self) -> bool {
+        self.nolazybind
     }
 }
 
@@ -826,39 +915,224 @@ impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
         } else {
             let mut optimizations: LLVMMachineSpecificFunctionOptimizations =
                 LLVMMachineSpecificFunctionOptimizations::new();
+            let mut state_data: LLVMMachineSpecificFunctionStateData =
+                LLVMMachineSpecificFunctionStateData::new();
 
-            if !DenormalFloatingPointBehavior::is_default(self.config.get_denormal_fp_behavior()) {
-                optimizations.set_denormal_fp_behavior(true);
+            {
+                self.previsit_function(function, &mut state_data);
+
+                for basic_block in function.get_basic_block_iter() {
+                    self.visit_block(basic_block, &mut state_data);
+                }
             }
 
-            self.set_optimizations(optimizations);
-            self.optimize_function();
+            self.optimize_function(&mut optimizations, &state_data);
 
-            self.reset_optimizations_state();
             self.reset_function();
+        }
+    }
+
+    fn previsit_function(
+        &self,
+        function: FunctionValue,
+        state_data: &mut LLVMMachineSpecificFunctionStateData,
+    ) {
+        for parameter in function.get_param_iter() {
+            if parameter.get_type().is_float_type() {
+                state_data.set_has_floating_point(true);
+            }
+        }
+
+        if let Some(return_type) = function.get_type().get_return_type() {
+            if return_type.is_float_type() {
+                state_data.set_has_floating_point(true);
+            }
+        }
+    }
+
+    fn visit_block(
+        &mut self,
+        basic_block: BasicBlock,
+        state_data: &mut LLVMMachineSpecificFunctionStateData,
+    ) {
+        {
+            for instruction in basic_block.get_instructions() {
+                self.visit_instruction(instruction, state_data);
+            }
+        }
+    }
+
+    fn visit_instruction(
+        &mut self,
+        instruction: InstructionValue,
+        state_data: &mut LLVMMachineSpecificFunctionStateData,
+    ) {
+        fn is_float_involved(instruction: &InstructionValue) -> bool {
+            if instruction.get_type().is_float_type() {
+                return true;
+            }
+
+            for i in 0..instruction.get_num_operands() {
+                if let Some(op) = instruction.get_operand(i) {
+                    if let Some(value) = op.left() {
+                        let ty = value.get_type();
+                        if ty.is_float_type() {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            false
+        }
+
+        match instruction.get_opcode() {
+            InstructionOpcode::FAdd => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FSub => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FMul => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FDiv => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FRem => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FNeg => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FCmp => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::SIToFP => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::UIToFP => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FPToSI => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FPToUI => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FPTrunc => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::FPExt => {
+                state_data.set_has_floating_point(true);
+            }
+            InstructionOpcode::Phi => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+            InstructionOpcode::Select => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+            InstructionOpcode::Load => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+            InstructionOpcode::Store => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+            InstructionOpcode::ExtractElement => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+            InstructionOpcode::InsertElement => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+            InstructionOpcode::ShuffleVector => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+            InstructionOpcode::ExtractValue => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+            InstructionOpcode::InsertValue => {
+                if is_float_involved(&instruction) {
+                    state_data.set_has_floating_point(true);
+                }
+            }
+
+            _ => (),
         }
     }
 }
 
 impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
-    fn optimize_function(&mut self) {
-        if let Some(optimizations) = self.get_optimizations() {
-            if optimizations.has_denormal_fp_behavior() {
-                let behavior_tuple: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior) =
-                    self.config.get_denormal_fp_behavior();
+    fn optimize_function(
+        &mut self,
+        optimizations: &mut LLVMMachineSpecificFunctionOptimizations,
+        state_data: &LLVMMachineSpecificFunctionStateData,
+    ) {
+        let has_floating_point: bool = state_data.has_floating_point();
 
-                let denormal_fp_math: String = match behavior_tuple {
-                    (out, in_) if out == in_ => in_.as_llvm_repr().to_string(),
-                    (out, in_) => format!("{},{}", out.as_llvm_repr(), in_.as_llvm_repr()),
-                };
+        if !DenormalFloatingPointBehavior::is_default(self.config.get_denormal_fp_behavior())
+            && has_floating_point
+        {
+            optimizations.set_denormal_fp_behavior(true);
+        }
 
-                let attribute: Attribute = self
-                    .context
-                    .create_string_attribute("denormal-fp-math", &denormal_fp_math);
+        if !DenormalFloatingPointBehavior32BitFloatingPoint::is_default(
+            self.config.get_denormal_fp_32_bits_behavior(),
+        ) && has_floating_point
+        {
+            optimizations.set_denormal_fp_32_bits_behavior(true);
+        }
 
-                if let Some(function) = self.function {
-                    function.add_attribute(AttributeLoc::Function, attribute);
-                }
+        if optimizations.has_denormal_fp_32_bits_behavior() {
+            let behavior_tuple: (
+                DenormalFloatingPointBehavior32BitFloatingPoint,
+                DenormalFloatingPointBehavior32BitFloatingPoint,
+            ) = self.config.get_denormal_fp_32_bits_behavior();
+
+            let denormal_fp_math: String = match behavior_tuple {
+                (out, in_) if out == in_ => in_.as_llvm_repr().to_string(),
+                (out, in_) => format!("{},{}", out.as_llvm_repr(), in_.as_llvm_repr()),
+            };
+
+            let attribute: Attribute = self
+                .context
+                .create_string_attribute("denormal-fp-math-f32", &denormal_fp_math);
+
+            if let Some(function) = self.function {
+                function.add_attribute(AttributeLoc::Function, attribute);
+            }
+        }
+
+        if optimizations.has_denormal_fp_behavior() {
+            let behavior_tuple: (DenormalFloatingPointBehavior, DenormalFloatingPointBehavior) =
+                self.config.get_denormal_fp_behavior();
+
+            let denormal_fp_math: String = match behavior_tuple {
+                (out, in_) if out == in_ => in_.as_llvm_repr().to_string(),
+                (out, in_) => format!("{},{}", out.as_llvm_repr(), in_.as_llvm_repr()),
+            };
+
+            let attribute: Attribute = self
+                .context
+                .create_string_attribute("denormal-fp-math", &denormal_fp_math);
+
+            if let Some(function) = self.function {
+                function.add_attribute(AttributeLoc::Function, attribute);
             }
         }
     }
@@ -874,16 +1148,6 @@ impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
     fn reset_function(&mut self) {
         self.function = None;
     }
-
-    #[inline]
-    fn set_optimizations(&mut self, optimizations: LLVMMachineSpecificFunctionOptimizations) {
-        self.optimizations = Some(optimizations);
-    }
-
-    #[inline]
-    fn reset_optimizations_state(&mut self) {
-        self.optimizations = None;
-    }
 }
 
 impl LLVMMachineSpecificFunctionOptimizer<'_, '_> {
@@ -896,6 +1160,7 @@ impl LLVMMachineSpecificFunctionOptimizer<'_, '_> {
 #[derive(Debug, Clone, Copy)]
 struct LLVMMachineSpecificFunctionOptimizations {
     denormal_fp_behavior: bool,
+    denormal_fp_32_bits_behavior: bool,
 }
 
 impl LLVMMachineSpecificFunctionOptimizations {
@@ -903,6 +1168,7 @@ impl LLVMMachineSpecificFunctionOptimizations {
     pub fn new() -> Self {
         Self {
             denormal_fp_behavior: false,
+            denormal_fp_32_bits_behavior: false,
         }
     }
 }
@@ -912,12 +1178,48 @@ impl LLVMMachineSpecificFunctionOptimizations {
     pub fn set_denormal_fp_behavior(&mut self, value: bool) {
         self.denormal_fp_behavior = value;
     }
+
+    #[inline]
+    pub fn set_denormal_fp_32_bits_behavior(&mut self, value: bool) {
+        self.denormal_fp_32_bits_behavior = value;
+    }
 }
 
 impl LLVMMachineSpecificFunctionOptimizations {
     #[inline]
     pub fn has_denormal_fp_behavior(&self) -> bool {
         self.denormal_fp_behavior
+    }
+
+    #[inline]
+    pub fn has_denormal_fp_32_bits_behavior(&self) -> bool {
+        self.denormal_fp_32_bits_behavior
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LLVMMachineSpecificFunctionStateData {
+    has_floating_point_anywhere: bool,
+}
+
+impl LLVMMachineSpecificFunctionStateData {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            has_floating_point_anywhere: false,
+        }
+    }
+}
+
+impl LLVMMachineSpecificFunctionStateData {
+    #[inline]
+    pub fn set_has_floating_point(&mut self, value: bool) {
+        self.has_floating_point_anywhere = value
+    }
+
+    #[inline]
+    pub fn has_floating_point(&self) -> bool {
+        self.has_floating_point_anywhere
     }
 }
 
@@ -1035,6 +1337,7 @@ pub struct LLVMSanitizer<'a, 'ctx> {
     function: Option<FunctionValue<'ctx>>,
     optimization: Option<LLVMSanitizerOptimization>,
     config: LLVMOptimizationConfig,
+    flags: LLVMOptimizerFlags,
 }
 
 impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
@@ -1043,6 +1346,7 @@ impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
         module: &'a Module<'ctx>,
         context: &'ctx Context,
         config: LLVMOptimizationConfig,
+        flags: LLVMOptimizerFlags,
     ) -> Self {
         Self {
             module,
@@ -1051,6 +1355,7 @@ impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
             function: None,
             optimization: None,
             config,
+            flags,
         }
     }
 }
@@ -1058,15 +1363,20 @@ impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
 impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
     pub fn run(&mut self) {
         let config: LLVMOptimizationConfig = self.get_config();
-        let optimization: LLVMSanitizerOptimization = LLVMSanitizerOptimization::new(config);
+        let flags: LLVMOptimizerFlags = self.get_flags();
 
-        if optimization.is_neither() {
+        let test_optimization_instance: LLVMSanitizerOptimization =
+            LLVMSanitizerOptimization::new(config, flags);
+
+        if test_optimization_instance.is_neither() {
             return;
         }
 
-        self.module.get_functions().for_each(|function| {
-            self.visit_function_once(function);
-        });
+        {
+            for function in self.module.get_functions() {
+                self.visit_function_once(function);
+            }
+        }
     }
 }
 
@@ -1075,7 +1385,9 @@ impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
         self.set_function(function);
 
         let config: LLVMOptimizationConfig = self.get_config();
-        let optimization: LLVMSanitizerOptimization = LLVMSanitizerOptimization::new(config);
+        let flags: LLVMOptimizerFlags = self.get_flags();
+
+        let optimization: LLVMSanitizerOptimization = LLVMSanitizerOptimization::new(config, flags);
 
         self.set_optimizations(optimization);
         self.apply();
@@ -1088,6 +1400,19 @@ impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
 impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
     fn apply(&mut self) {
         if let Some(optimizations) = self.get_optimizations() {
+            if optimizations.has_disable_all_sanitizers() {
+                let disable_all_sanitizers_id: u32 =
+                    Attribute::get_named_enum_kind_id("disable_sanitizer_instrumentation");
+
+                let disable_all_sanitizers: Attribute = self
+                    .context
+                    .create_enum_attribute(disable_all_sanitizers_id, 0);
+
+                if let Some(function) = self.function {
+                    function.add_attribute(AttributeLoc::Function, disable_all_sanitizers);
+                }
+            }
+
             if optimizations.has_sanitize_address() {
                 let sanitize_address_id: u32 =
                     Attribute::get_named_enum_kind_id("sanitize_address");
@@ -1200,6 +1525,11 @@ impl LLVMSanitizer<'_, '_> {
     fn get_config(&self) -> LLVMOptimizationConfig {
         self.config
     }
+
+    #[inline]
+    fn get_flags(&self) -> LLVMOptimizerFlags {
+        self.flags
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -1209,18 +1539,20 @@ struct LLVMSanitizerOptimization {
     sanitize_thread: bool,
     sanitize_hwaddress: bool,
     sanitize_memtag: bool,
+    disable_sanitizers: bool,
     nosanitize_bounds: bool,
     nosanitize_coverage: bool,
 }
 
 impl LLVMSanitizerOptimization {
     #[inline]
-    fn new(config: LLVMOptimizationConfig) -> Self {
+    fn new(config: LLVMOptimizationConfig, flags: LLVMOptimizerFlags) -> Self {
         let is_sanitize_address_enabled: bool = config.get_sanitizer().is_address();
         let is_sanitize_memory_enabled: bool = config.get_sanitizer().is_memory();
         let is_sanitize_thread_enabled: bool = config.get_sanitizer().is_thread();
         let is_sanitize_hwaddres_enabled: bool = config.get_sanitizer().is_hwaddress();
         let is_sanitize_memtag_enabled: bool = config.get_sanitizer().is_memtag();
+        let is_disable_all_sanitizers: bool = flags.get_disable_all_sanitizers();
 
         let (nosanitize_bounds, nosanitize_coverage) = match config.get_sanitizer() {
             Sanitizer::Address(config) => (
@@ -1252,6 +1584,7 @@ impl LLVMSanitizerOptimization {
             sanitize_thread: is_sanitize_thread_enabled,
             sanitize_hwaddress: is_sanitize_hwaddres_enabled,
             sanitize_memtag: is_sanitize_memtag_enabled,
+            disable_sanitizers: is_disable_all_sanitizers,
             nosanitize_bounds,
             nosanitize_coverage,
         }
@@ -1295,12 +1628,18 @@ impl LLVMSanitizerOptimization {
     }
 
     #[inline]
+    pub fn has_disable_all_sanitizers(&self) -> bool {
+        self.disable_sanitizers
+    }
+
+    #[inline]
     pub fn is_neither(&self) -> bool {
         !(self.sanitize_address
             || self.sanitize_memory
             || self.sanitize_thread
             || self.sanitize_hwaddress
-            || self.sanitize_memtag)
+            || self.sanitize_memtag
+            || self.disable_sanitizers)
     }
 }
 
@@ -1360,134 +1699,20 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
         {
             for (idx, parameter) in function.get_param_iter().enumerate() {
                 self.set_target(parameter, idx as u32);
-                self.set_optimizations(function);
+
+                let mut optimizations: LLVMParameterOptimizations =
+                    LLVMParameterOptimizations::new(function, parameter);
 
                 {
                     for basic_block in function.get_basic_blocks() {
-                        self.visit_basic_block_once(basic_block);
-                    }
-
-                    let write_only_valid: bool = function.get_basic_blocks().iter().all(|bb| {
-                        bb.get_instructions().all(|inst| match inst.get_opcode() {
-                            InstructionOpcode::Load => {
-                                let source_ptr: Option<BasicValueEnum<'_>> =
-                                    inst.get_operand(0).and_then(|res| res.left());
-                                source_ptr != Some(parameter)
-                            }
-                            InstructionOpcode::Store => {
-                                let value_to_store: Option<BasicValueEnum<'_>> =
-                                    inst.get_operand(0).and_then(|res| res.left());
-
-                                if value_to_store == Some(parameter) {
-                                    return false;
-                                }
-
-                                true
-                            }
-                            InstructionOpcode::Call => {
-                                let num_operands: u32 = inst.get_num_operands();
-
-                                {
-                                    for i in 0..num_operands.saturating_sub(1) {
-                                        if inst.get_operand(i).and_then(|res| res.left())
-                                            == Some(parameter)
-                                        {
-                                            return false;
-                                        }
-                                    }
-                                }
-
-                                true
-                            }
-
-                            _ => true,
-                        })
-                    });
-
-                    let read_only_valid: bool = function
-                        .get_basic_blocks()
-                        .iter()
-                        .flat_map(|bb| bb.get_instructions())
-                        .all(|inst| match inst.get_opcode() {
-                            InstructionOpcode::Store => {
-                                if let Some(dest_ptr) =
-                                    inst.get_operand(1).and_then(|res| res.left())
-                                {
-                                    return dest_ptr != parameter;
-                                }
-                                true
-                            }
-                            InstructionOpcode::Call => {
-                                let num_operands: u32 = inst.get_num_operands();
-
-                                {
-                                    for i in 0..num_operands.saturating_sub(1) {
-                                        if inst.get_operand(i).and_then(|res| res.left())
-                                            == Some(parameter)
-                                        {
-                                            return false;
-                                        }
-                                    }
-                                }
-
-                                true
-                            }
-
-                            _ => true,
-                        });
-
-                    let readnone_valid: bool = function
-                        .get_basic_blocks()
-                        .iter()
-                        .flat_map(|bb| bb.get_instructions())
-                        .all(|inst| {
-                            let num_operands: u32 = inst.get_num_operands();
-
-                            {
-                                for i in 0..num_operands.saturating_sub(1) {
-                                    if let Some(operand) =
-                                        inst.get_operand(i).and_then(|res| res.left())
-                                    {
-                                        if operand == parameter {
-                                            match inst.get_opcode() {
-                                                InstructionOpcode::Load
-                                                | InstructionOpcode::Store
-                                                | InstructionOpcode::AtomicRMW
-                                                | InstructionOpcode::AtomicCmpXchg => return false,
-
-                                                InstructionOpcode::GetElementPtr
-                                                | InstructionOpcode::BitCast
-                                                | InstructionOpcode::PtrToInt
-                                                | InstructionOpcode::Call => return false,
-
-                                                _ => (),
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            true
-                        });
-
-                    if read_only_valid && parameter.get_type().is_pointer_type() {
-                        if let Some(optimizations) = self.get_mut_optimizations() {
-                            optimizations.set_readonly_param(true);
-                        }
-                    } else if write_only_valid && parameter.get_type().is_pointer_type() {
-                        if let Some(optimizations) = self.get_mut_optimizations() {
-                            optimizations.set_writeonly_param(true);
-                        }
-                    } else if readnone_valid && parameter.get_type().is_pointer_type() {
-                        if let Some(optimizations) = self.get_mut_optimizations() {
-                            optimizations.set_readnone(true);
-                        }
+                        self.visit_basic_block_once(basic_block, &mut optimizations);
                     }
                 }
 
-                self.optimize();
+                self.forward_optimizations(&mut optimizations, function, parameter);
 
-                self.reset_optimizations();
+                self.optimize(&optimizations);
+
                 self.reset_target();
             }
         }
@@ -1496,13 +1721,128 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
         self.reset_function();
     }
 
-    fn visit_basic_block_once(&mut self, basic_block: BasicBlock<'ctx>) {
-        basic_block.get_instructions().for_each(|instruction| {
-            self.visit_instruction_once(instruction);
+    fn forward_optimizations(
+        &mut self,
+        optimizations: &mut LLVMParameterOptimizations,
+        function: FunctionValue<'ctx>,
+        parameter: BasicValueEnum<'ctx>,
+    ) {
+        let write_only_valid: bool = function.get_basic_blocks().iter().all(|bb| {
+            bb.get_instructions().all(|inst| match inst.get_opcode() {
+                InstructionOpcode::Load => {
+                    let source_ptr: Option<BasicValueEnum<'_>> =
+                        inst.get_operand(0).and_then(|res| res.left());
+
+                    source_ptr != Some(parameter)
+                }
+                InstructionOpcode::Store => {
+                    let value_to_store: Option<BasicValueEnum<'_>> =
+                        inst.get_operand(0).and_then(|res| res.left());
+
+                    if value_to_store == Some(parameter) {
+                        return false;
+                    }
+
+                    true
+                }
+                InstructionOpcode::Call => {
+                    {
+                        for operand in inst.get_operands() {
+                            if operand.and_then(|res| res.left()) == Some(parameter) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    true
+                }
+
+                _ => true,
+            })
         });
+
+        let read_only_valid: bool = function
+            .get_basic_blocks()
+            .iter()
+            .flat_map(|bb| bb.get_instructions())
+            .all(|inst| match inst.get_opcode() {
+                InstructionOpcode::Store => {
+                    if let Some(dest_ptr) = inst.get_operand(1).and_then(|res| res.left()) {
+                        return dest_ptr != parameter;
+                    }
+
+                    true
+                }
+                InstructionOpcode::Call => {
+                    {
+                        for operand in inst.get_operands() {
+                            if operand.and_then(|res| res.left()) == Some(parameter) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    true
+                }
+
+                _ => true,
+            });
+
+        let readnone_valid: bool = function
+            .get_basic_blocks()
+            .iter()
+            .flat_map(|bb| bb.get_instructions())
+            .all(|inst| {
+                {
+                    for operand in inst.get_operands() {
+                        if let Some(operand) = operand.and_then(|res| res.left()) {
+                            if operand == parameter {
+                                match inst.get_opcode() {
+                                    InstructionOpcode::Load
+                                    | InstructionOpcode::Store
+                                    | InstructionOpcode::AtomicRMW
+                                    | InstructionOpcode::AtomicCmpXchg => return false,
+
+                                    InstructionOpcode::GetElementPtr
+                                    | InstructionOpcode::BitCast
+                                    | InstructionOpcode::PtrToInt
+                                    | InstructionOpcode::Call => return false,
+
+                                    _ => (),
+                                }
+                            }
+                        }
+                    }
+                }
+
+                true
+            });
+
+        if read_only_valid && parameter.get_type().is_pointer_type() {
+            optimizations.set_readonly_param_opt(true);
+        } else if write_only_valid && parameter.get_type().is_pointer_type() {
+            optimizations.set_writeonly_param_opt(true);
+        } else if readnone_valid && parameter.get_type().is_pointer_type() {
+            optimizations.set_readnone_opt(true);
+        }
+    }
+    fn visit_basic_block_once(
+        &mut self,
+        basic_block: BasicBlock<'ctx>,
+        optimizations: &mut LLVMParameterOptimizations,
+    ) {
+        {
+            for instruction in basic_block.get_instructions() {
+                self.visit_instruction_once(instruction, optimizations);
+            }
+        }
     }
 
-    fn visit_instruction_once(&mut self, instruction: InstructionValue<'ctx>) {
+    fn visit_instruction_once(
+        &mut self,
+        instruction: InstructionValue<'ctx>,
+        optimizations: &mut LLVMParameterOptimizations,
+    ) {
         if instruction.get_opcode() == InstructionOpcode::Call {
             let callsite: CallSiteValue = unsafe { CallSiteValue::new(instruction.as_value_ref()) };
             let called: FunctionValue = callsite.get_called_fn_value();
@@ -1531,10 +1871,8 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
                     };
 
                     if is_param_eq && is_bitcast_valid {
-                        if let Some(optimizations) = self.get_mut_optimizations() {
-                            optimizations.set_returned_param(true);
-                            self.set_has_returned();
-                        }
+                        optimizations.set_returned_param_opt(true);
+                        self.set_has_returned();
                     }
                 }
             }
@@ -1543,25 +1881,6 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
-    pub fn set_optimizations(&mut self, function: FunctionValue<'ctx>) {
-        if let Some(target) = self.target {
-            self.optimizations = Some(LLVMParameterOptimizations {
-                deferenceable: target.is_pointer_value(),
-                noundef: !function.get_type().is_var_arg(),
-                align: target.is_pointer_value() && !function.get_type().is_var_arg(),
-                returned: false,
-                readonly: false,
-                writeonly: false,
-                readnone: false,
-            });
-        }
-    }
-
-    #[inline]
-    pub fn reset_optimizations(&mut self) {
-        self.optimizations = None;
-    }
-
     #[inline]
     pub fn set_target(&mut self, target: BasicValueEnum<'ctx>, position: u32) {
         self.target = Some(target);
@@ -1603,95 +1922,92 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
-    #[inline]
-    pub fn get_optimizations(&self) -> Option<&LLVMParameterOptimizations> {
-        self.optimizations.as_ref()
-    }
+    fn optimize(&mut self, optimizations: &LLVMParameterOptimizations) {
+        if optimizations.has_deferenceable() {
+            let kind_id: u32 = Attribute::get_named_enum_kind_id("dereferenceable");
 
-    #[inline]
-    pub fn get_mut_optimizations(&mut self) -> Option<&mut LLVMParameterOptimizations> {
-        self.optimizations.as_mut()
-    }
-}
+            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
 
-impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
-    fn optimize(&mut self) {
-        if let Some(optimizations) = self.get_optimizations() {
-            if optimizations.has_deferenceable() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("dereferenceable");
-
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
-
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
+            if let Some(function) = self.function {
+                if let Some(target_pos) = self.target_position {
+                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
                 }
             }
+        }
 
-            if optimizations.has_noundef() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("noundef");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+        if optimizations.has_noundef() {
+            let kind_id: u32 = Attribute::get_named_enum_kind_id("noundef");
+            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
 
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
+            if let Some(function) = self.function {
+                if let Some(target_pos) = self.target_position {
+                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
                 }
             }
+        }
 
-            if optimizations.has_align() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("align");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
+        if optimizations.has_align() {
+            let kind_id: u32 = Attribute::get_named_enum_kind_id("align");
+            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 1);
 
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
+            if let Some(function) = self.function {
+                if let Some(target_pos) = self.target_position {
+                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
                 }
             }
+        }
 
-            if optimizations.has_returned() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("returned");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+        if optimizations.has_returned() {
+            let kind_id: u32 = Attribute::get_named_enum_kind_id("returned");
+            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
 
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
+            if let Some(function) = self.function {
+                if let Some(target_pos) = self.target_position {
+                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
                 }
             }
+        }
 
-            if optimizations.has_readonly() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("readonly");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+        if optimizations.has_readonly() {
+            let kind_id: u32 = Attribute::get_named_enum_kind_id("readonly");
+            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
 
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
+            if let Some(function) = self.function {
+                if let Some(target_pos) = self.target_position {
+                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
                 }
             }
+        }
 
-            if optimizations.has_writeonly() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("writeonly");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+        if optimizations.has_writeonly() {
+            let kind_id: u32 = Attribute::get_named_enum_kind_id("writeonly");
+            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
 
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
+            if let Some(function) = self.function {
+                if let Some(target_pos) = self.target_position {
+                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
                 }
             }
+        }
 
-            if optimizations.has_readnone() {
-                let kind_id: u32 = Attribute::get_named_enum_kind_id("readnone");
-                let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+        if optimizations.has_readnone() {
+            let kind_id: u32 = Attribute::get_named_enum_kind_id("readnone");
+            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
 
-                if let Some(function) = self.function {
-                    if let Some(target_pos) = self.target_position {
-                        function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                    }
+            if let Some(function) = self.function {
+                if let Some(target_pos) = self.target_position {
+                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
+                }
+            }
+        }
+
+        if optimizations.has_immarg() {
+            let kind_id: u32 = Attribute::get_named_enum_kind_id("immarg");
+            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
+
+            if let Some(function) = self.function {
+                if let Some(target_pos) = self.target_position {
+                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
                 }
             }
         }
@@ -1707,27 +2023,48 @@ pub struct LLVMParameterOptimizations {
     readonly: bool,
     writeonly: bool,
     readnone: bool,
+    immarg: bool,
+}
+
+impl LLVMParameterOptimizations {
+    pub fn new(function: FunctionValue, parameter: BasicValueEnum) -> Self {
+        Self {
+            deferenceable: parameter.is_pointer_value(),
+            noundef: !function.get_type().is_var_arg(),
+            align: parameter.is_pointer_value() && !function.get_type().is_var_arg(),
+            returned: false,
+            readonly: false,
+            writeonly: false,
+            readnone: false,
+            immarg: false,
+        }
+    }
 }
 
 impl LLVMParameterOptimizations {
     #[inline]
-    pub fn set_returned_param(&mut self, value: bool) {
+    pub fn set_returned_param_opt(&mut self, value: bool) {
         self.returned = value;
     }
 
     #[inline]
-    pub fn set_readonly_param(&mut self, value: bool) {
+    pub fn set_readonly_param_opt(&mut self, value: bool) {
         self.readonly = value;
     }
 
     #[inline]
-    pub fn set_writeonly_param(&mut self, value: bool) {
+    pub fn set_writeonly_param_opt(&mut self, value: bool) {
         self.writeonly = value;
     }
 
     #[inline]
-    pub fn set_readnone(&mut self, value: bool) {
+    pub fn set_readnone_opt(&mut self, value: bool) {
         self.readnone = value;
+    }
+
+    #[inline]
+    pub fn set_immarg_opt(&mut self, value: bool) {
+        self.immarg = value;
     }
 }
 
@@ -1765,6 +2102,11 @@ impl LLVMParameterOptimizations {
     #[inline]
     pub fn has_readnone(&self) -> bool {
         self.readnone
+    }
+
+    #[inline]
+    pub fn has_immarg(&self) -> bool {
+        self.immarg
     }
 }
 

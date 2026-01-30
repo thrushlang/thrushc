@@ -16,6 +16,7 @@ use ahash::AHashMap as HashMap;
 use thrushc_options::ThrushRelocMode;
 use thrushc_options::backends::llvm;
 use thrushc_options::backends::llvm::DenormalFloatingPointBehavior;
+use thrushc_options::backends::llvm::DenormalFloatingPointBehavior32BitFloatingPoint;
 use thrushc_options::backends::llvm::Sanitizer;
 use thrushc_options::backends::llvm::SanitizerConfiguration;
 use thrushc_options::backends::llvm::SymbolLinkageMergeStrategy;
@@ -135,7 +136,7 @@ impl CommandLine {
 
 impl CommandLine {
     fn validate(&mut self) {
-        if !self.get_options().get_llvm_backend_options().is_jit() {
+        if !self.get_options().get_llvm_backend_options().is_full_jit() {
             self.get_mut_options()
                 .get_mut_linking_compilers_configuration()
                 .comprobate_status();
@@ -183,6 +184,10 @@ impl CommandLine {
                     Some("denormal-floating-point-behavior") => {
                         self.advance();
                         help::show_denormal_floating_point_behavior_help();
+                    }
+                    Some("denormal-floating-point-32-bits-behavior") => {
+                        self.advance();
+                        help::show_denormal_floating_point_32_bits_behavior_help();
                     }
 
                     _ => help::show_help(),
@@ -493,6 +498,21 @@ impl CommandLine {
                 self.advance();
             }
 
+            "--denormal-floating-point-32-bits-behavior" => {
+                self.advance();
+
+                let behavior: (
+                    DenormalFloatingPointBehavior32BitFloatingPoint,
+                    DenormalFloatingPointBehavior32BitFloatingPoint,
+                ) = self.parse_denormal_floating_point_behavior_32_bit_floating_point(self.peek());
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_denormal_fp_32_bits_behavior(behavior);
+
+                self.advance();
+            }
+
             "--sanitizer" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -546,6 +566,15 @@ impl CommandLine {
                 }
 
                 self.advance();
+            }
+
+            "--disable-all-sanitizers" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_disable_all_sanitizers();
             }
 
             "--macos-version" => {
@@ -905,7 +934,7 @@ impl CommandLine {
 
     fn handle_unknown_argument(&mut self, arg: &str) {
         if self.position.at_external() {
-            if self.options.get_llvm_backend_options().is_jit() {
+            if self.options.get_llvm_backend_options().is_full_jit() {
                 self.options
                     .get_mut_llvm_backend_options()
                     .get_mut_jit_config()
@@ -978,11 +1007,12 @@ impl CommandLine {
 
         match parts.as_slice() {
             [out_str, in_str] => (
-                self.map_single_strategy(out_str),
-                self.map_single_strategy(in_str),
+                self.map_single_strategy_denormal_floating_point_behavior(out_str),
+                self.map_single_strategy_denormal_floating_point_behavior(in_str),
             ),
             [single_str] => {
-                let mode = self.map_single_strategy(single_str);
+                let mode: DenormalFloatingPointBehavior =
+                    self.map_single_strategy_denormal_floating_point_behavior(single_str);
                 (mode, mode)
             }
             _ => {
@@ -994,20 +1024,41 @@ impl CommandLine {
         }
     }
 
-    fn map_single_strategy(&self, strategy: &str) -> DenormalFloatingPointBehavior {
-        match strategy {
-            "IEEE" => DenormalFloatingPointBehavior::IEEE,
-            "preserve-sign-signature" => DenormalFloatingPointBehavior::PreserveSignSignature,
-            "transform-to-positive-zero" => DenormalFloatingPointBehavior::AsPositiveZero,
-            "dynamic" => DenormalFloatingPointBehavior::Dynamic,
-            any => {
+    #[inline]
+    fn parse_denormal_floating_point_behavior_32_bit_floating_point(
+        &self,
+        approach: &str,
+    ) -> (
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+        DenormalFloatingPointBehavior32BitFloatingPoint,
+    ) {
+        let parts: Vec<&str> = approach.split(',').map(|s| s.trim()).collect();
+
+        match parts.as_slice() {
+            [out_str, in_str] => (
+                self.map_single_strategy_denormal_floating_point_32_bit_floating_point_behavior(
+                    out_str,
+                ),
+                self.map_single_strategy_denormal_floating_point_32_bit_floating_point_behavior(
+                    in_str,
+                ),
+            ),
+            [single_str] => {
+                let mode: DenormalFloatingPointBehavior32BitFloatingPoint = self
+                    .map_single_strategy_denormal_floating_point_32_bit_floating_point_behavior(
+                        single_str,
+                    );
+                (mode, mode)
+            }
+            _ => {
                 self.report_error(&format!(
-                    "Unknown denormal floating-point calculation approach: '{}'.",
-                    any
+                    "Invalid denormal floating-point calculation approach: '{}'.",
+                    approach
                 ));
             }
         }
     }
+
     #[inline]
     fn parse_symbol_linkage_strategy(&self, strategy: &str) -> SymbolLinkageMergeStrategy {
         match strategy {
@@ -1117,6 +1168,48 @@ impl CommandLine {
 }
 
 impl CommandLine {
+    fn map_single_strategy_denormal_floating_point_behavior(
+        &self,
+        strategy: &str,
+    ) -> DenormalFloatingPointBehavior {
+        match strategy {
+            "IEEE" => DenormalFloatingPointBehavior::IEEE,
+            "preserve-sign-signature" => DenormalFloatingPointBehavior::PreserveSignSignature,
+            "transform-to-positive-zero" => DenormalFloatingPointBehavior::AsPositiveZero,
+            "dynamic" => DenormalFloatingPointBehavior::Dynamic,
+            any => {
+                self.report_error(&format!(
+                    "Unknown denormal floating-point calculation approach: '{}'.",
+                    any
+                ));
+            }
+        }
+    }
+
+    fn map_single_strategy_denormal_floating_point_32_bit_floating_point_behavior(
+        &self,
+        strategy: &str,
+    ) -> DenormalFloatingPointBehavior32BitFloatingPoint {
+        match strategy {
+            "IEEE" => DenormalFloatingPointBehavior32BitFloatingPoint::IEEE,
+            "preserve-sign-signature" => {
+                DenormalFloatingPointBehavior32BitFloatingPoint::PreserveSignSignature
+            }
+            "transform-to-positive-zero" => {
+                DenormalFloatingPointBehavior32BitFloatingPoint::AsPositiveZero
+            }
+            "dynamic" => DenormalFloatingPointBehavior32BitFloatingPoint::Dynamic,
+            any => {
+                self.report_error(&format!(
+                    "Unknown denormal floating-point calculation approach: '{}'.",
+                    any
+                ));
+            }
+        }
+    }
+}
+
+impl CommandLine {
     fn validate_llvm_required(&self, arg: &str) {
         if !self.options.uses_llvm() {
             self.report_error(&format!(
@@ -1127,7 +1220,7 @@ impl CommandLine {
     }
 
     fn validate_jit_required(&self, arg: &str) {
-        if !self.options.get_llvm_backend_options().is_jit() {
+        if !self.options.get_llvm_backend_options().is_full_jit() {
             self.report_error(&format!(
                 "Can't use '{}' without '-jit' flag previously.",
                 arg
@@ -1136,7 +1229,7 @@ impl CommandLine {
     }
 
     fn validate_aot_is_enable(&self, arg: &str) {
-        if self.options.get_llvm_backend_options().is_jit() {
+        if self.options.get_llvm_backend_options().is_full_jit() {
             self.report_error(&format!(
                 "Can't use '{}' if the '-jit' flag was enabled previously.",
                 arg

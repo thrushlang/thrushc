@@ -413,7 +413,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             );
 
             if is_no_pic
-                || llvm_backend.is_jit() && !llvm_backend.omit_direct_access_external_data()
+                || llvm_backend.is_full_jit() && !llvm_backend.omit_direct_access_external_data()
             {
                 let direct_access_external_data: MetadataValue =
                     self.get_context().get_llvm_context().metadata_node(&[

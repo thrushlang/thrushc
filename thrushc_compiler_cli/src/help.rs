@@ -28,7 +28,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-h".custom_color((141, 141, 142)).bold(),
             "--help".custom_color((141, 141, 142)).bold(),
-            "optional[opt|emit|print|code-model|reloc-model|sanitizer|symbol-linkage-strategy|denormal-floating-point-behavior]"
+            "optional[opt|emit|print|code-model|reloc-model|sanitizer|symbol-linkage-strategy|denormal-floating-point-behavior|denormal-floating-point-32-bits-behavior]"
                 .custom_color((141, 141, 142))
                 .bold(),
             "Show help message.",
@@ -293,6 +293,19 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {} {}\n",
             "•".bold(),
+            "--denormal-floating-point-32-bits-behavior"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "[\"IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic,IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic\"]",
+            "Configure how denormal 32-bit floating-point values are handled during calculations.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} {}\n",
+            "•".bold(),
             "--symbol-linkage-strategy"
                 .custom_color((141, 141, 142))
                 .bold(),
@@ -309,6 +322,18 @@ pub fn show_help() -> ! {
             "--sanitizer".custom_color((141, 141, 142)).bold(),
             "[address|hwaddress|memory|thread|memtag]",
             "Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--disable-all-sanitizers"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Disable all sanitizers that may be enabled.",
         ),
     );
 
@@ -1230,6 +1255,67 @@ pub fn show_denormal_floating_point_behavior_help() -> ! {
             "•".bold(),
             "dynamic".custom_color((141, 141, 142)).bold(),
             "Use dynamic behavior based on runtime conditions.",
+        ),
+    );
+
+    std::process::exit(1)
+}
+
+pub fn show_denormal_floating_point_32_bits_behavior_help() -> ! {
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {} [{}]\n\n",
+            "Usage:".bold(),
+            "thrushc".custom_color((141, 141, 142)).bold(),
+            "--denormal-floating-point-32-bits-behavior value; --denormal-floating-point-32-bits-behavior=value; --denormal-floating-point-32-bits-behavior:value;"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "IEEE".custom_color((141, 141, 142)).bold(),
+            "Standard IEEE 754 behavior for denormal 32-bit floating-point values.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "preserve-sign-signature"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Preserve the sign of denormal 32-bit values while treating them as zero.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "transform-to-positive-zero"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Transform all denormal 32-bit values to positive zero.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "dynamic".custom_color((141, 141, 142)).bold(),
+            "Use dynamic behavior based on runtime conditions for 32-bit values.",
         ),
     );
 

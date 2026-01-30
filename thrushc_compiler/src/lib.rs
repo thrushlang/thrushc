@@ -76,7 +76,7 @@ impl ThrushCompiler<'_> {
         if self.get_options().uses_llvm() {
             Target::initialize_all(&InitializationConfig::default());
 
-            if self.get_options().get_llvm_backend_options().is_jit() {
+            if self.get_options().get_llvm_backend_options().is_full_jit() {
                 return self.compile_jit_llvm();
             } else {
                 return self.compile_aot_llvm();
@@ -281,6 +281,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             *llvm_backend.get_sanitizer(),
             *llvm_backend.get_symbol_linkage_strategy(),
             *llvm_backend.get_denormal_fp_behavior(),
+            *llvm_backend.get_denormal_fp_32_bits_behavior(),
         );
 
         let llvm_optimizer_passes: LLVMOptimizerPasses<'_> = LLVMOptimizerPasses::new(
@@ -288,8 +289,10 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             llvm_backend.get_modificator_passes(),
         );
 
-        let llvm_optimizer_flags: LLVMOptimizerFlags =
-            LLVMOptimizerFlags::new(self.options.omit_default_optimizations());
+        let llvm_optimizer_flags: LLVMOptimizerFlags = LLVMOptimizerFlags::new(
+            self.options.omit_default_optimizations(),
+            llvm_backend.get_disable_all_sanitizers(),
+        );
 
         thrushc_llvm_codegen::optimizer::LLVMOptimizer::new(
             &llvm_module,
@@ -555,6 +558,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             *llvm_backend.get_sanitizer(),
             *llvm_backend.get_symbol_linkage_strategy(),
             *llvm_backend.get_denormal_fp_behavior(),
+            *llvm_backend.get_denormal_fp_32_bits_behavior(),
         );
 
         let llvm_optimizer_passes: LLVMOptimizerPasses<'_> = LLVMOptimizerPasses::new(
@@ -562,8 +566,10 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             llvm_backend.get_modificator_passes(),
         );
 
-        let llvm_optimizer_flags: LLVMOptimizerFlags =
-            LLVMOptimizerFlags::new(self.options.omit_default_optimizations());
+        let llvm_optimizer_flags: LLVMOptimizerFlags = LLVMOptimizerFlags::new(
+            self.options.omit_default_optimizations(),
+            llvm_backend.get_disable_all_sanitizers(),
+        );
 
         thrushc_llvm_codegen::optimizer::LLVMOptimizer::new(
             &llvm_module,
