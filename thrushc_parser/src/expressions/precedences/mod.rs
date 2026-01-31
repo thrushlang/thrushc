@@ -4,6 +4,7 @@ pub mod cmp;
 pub mod equality;
 pub mod factor;
 pub mod index;
+pub mod indirect;
 pub mod lower;
 pub mod mutation;
 pub mod or;

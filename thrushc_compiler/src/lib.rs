@@ -44,7 +44,6 @@ use thrushc_parser::Parser;
 use thrushc_parser::ParserContext;
 use thrushc_preprocessor::Preprocessor;
 use thrushc_semantic::SemantiAnalysis;
-use thrushc_token::Token;
 
 #[derive(Debug)]
 pub struct ThrushCompiler<'thrushc> {
@@ -127,7 +126,9 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = Lexer::lex(file, self.options);
+        let Ok(tokens) = Lexer::lex(file, self.options) else {
+            return interrupt::archive_compilation_unit(self, file, file_time);
+        };
 
         if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation(self, file_time, file);
@@ -412,7 +413,9 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
         let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
-        let tokens: Vec<Token> = Lexer::lex(file, self.options);
+        let Ok(tokens) = Lexer::lex(file, self.options) else {
+            return interrupt::archive_compilation_unit_jit(self, file, file_time);
+        };
 
         if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);

@@ -64,7 +64,7 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::AsmValue { kind, .. } => kind,
 
             // Indirect Call
-            Ast::Indirect { kind, .. } => kind,
+            Ast::IndirectCall { kind, .. } => kind,
 
             // Intrinsic
             Ast::Intrinsic {

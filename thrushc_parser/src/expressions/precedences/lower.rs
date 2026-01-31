@@ -10,7 +10,7 @@ use thrushc_typesystem::{Type, traits::TypeExtensions};
 
 use crate::{
     ParserContext, builtins,
-    expressions::{self, array, asm, call, constructor, deref, enumv, farray, indirect, reference},
+    expressions::{self, array, asm, call, constructor, deref, enumv, farray, reference},
     reinterpret,
 };
 
@@ -27,10 +27,15 @@ pub fn lower_precedence<'parser>(
         tk_type if tk_type.is_builtin() => builtins::build_builtin(ctx, *tk_type)?,
 
         TokenType::Asm => asm::build_asm_code_block(ctx)?,
-        TokenType::Indirect => indirect::build_indirect(ctx)?,
 
         TokenType::LParen => {
-            let span: Span = ctx.advance()?.get_span();
+            let lparen_tk: &Token = ctx.consume(
+                TokenType::LParen,
+                CompilationIssueCode::E0001,
+                "Expected '('.".into(),
+            )?;
+
+            let span: Span = lparen_tk.get_span();
 
             let expr: Ast = expressions::build_expr(ctx)?;
             let expr_type: &Type = expr.get_value_type()?;

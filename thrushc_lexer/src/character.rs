@@ -22,6 +22,8 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
     lexer.advance_only();
 
+    println!("{}", lexer.current);
+
     if lexer.previous() != '\'' {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,

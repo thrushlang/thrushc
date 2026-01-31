@@ -14,3 +14,4 @@ style     = "allow"
 complexity = "allow"
 pedantic  = "allow"
 new_without_default = "allow"
+

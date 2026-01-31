@@ -17,7 +17,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = precedences::lower::lower_precedence(ctx)?;
+        let expression: Ast = precedences::indirect::indirect_precedence(ctx)?;
 
         return Ok(Ast::UnaryOp {
             operator,
@@ -33,7 +33,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = precedences::lower::lower_precedence(ctx)?;
+        let expression: Ast = precedences::indirect::indirect_precedence(ctx)?;
 
         let expression_type: &Type = expression.get_value_type()?;
         let kind: Type = expression_type.narrowing();
@@ -52,7 +52,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = precedences::lower::lower_precedence(ctx)?;
+        let expression: Ast = precedences::indirect::indirect_precedence(ctx)?;
         let expression_type: &Type = expression.get_value_type()?;
 
         return Ok(Ast::UnaryOp {
@@ -103,7 +103,7 @@ pub fn unary_precedence<'parser>(
         return Ok(unaryop);
     }
 
-    let instr: Ast = precedences::lower::lower_precedence(ctx)?;
+    let instr: Ast = precedences::indirect::indirect_precedence(ctx)?;
 
     Ok(instr)
 }

@@ -5,7 +5,7 @@ pub mod cstring;
 pub mod farray;
 pub mod floatingpoint;
 pub mod index;
-pub mod indirect;
+pub mod indirectcall;
 pub mod inlineasm;
 pub mod integer;
 pub mod property;

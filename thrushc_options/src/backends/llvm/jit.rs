@@ -1,3 +1,5 @@
+#![allow(clippy::result_unit_err)]
+
 use thrushc_logging::{self, LoggingType};
 
 use inkwell::targets::Target;

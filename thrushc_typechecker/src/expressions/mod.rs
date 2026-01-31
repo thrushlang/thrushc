@@ -313,9 +313,13 @@ pub fn validate<'type_checker>(
         } => {
             if let Some(metadata) = typechecker.get_table().get_function(name) {
                 return call::validate(typechecker, *metadata, args, span);
-            } else if let Some(metadata) = typechecker.get_table().get_intrinsic(name) {
+            }
+
+            if let Some(metadata) = typechecker.get_table().get_intrinsic(name) {
                 return call::validate(typechecker, *metadata, args, span);
-            } else if let Some(metadata) = typechecker.get_table().get_asm_function(name) {
+            }
+
+            if let Some(metadata) = typechecker.get_table().get_asm_function(name) {
                 return call::validate(typechecker, *metadata, args, span);
             }
 
@@ -327,6 +331,30 @@ pub fn validate<'type_checker>(
                 std::path::PathBuf::from(file!()),
                 line!(),
             ));
+
+            Ok(())
+        }
+
+        Ast::IndirectCall {
+            function,
+            function_type,
+            args,
+            ..
+        } => {
+            if !function_type.is_function_reference_type() {
+                typechecker.add_error(CompilationIssue::Error(
+                    CompilationIssueCode::E0019,
+                    "Expected  valid function reference for call anonymously.".into(),
+                    None,
+                    function.get_span(),
+                ));
+            }
+
+            {
+                for argument in args.iter() {
+                    typechecker.analyze_expr(argument)?;
+                }
+            }
 
             Ok(())
         }

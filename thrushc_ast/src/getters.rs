@@ -78,7 +78,7 @@ impl AstGetType for Ast<'_> {
             Ast::IntrinsicParameter { kind, .. } => Ok(kind),
 
             // Indirect Call
-            Ast::Indirect { kind, .. } => Ok(kind),
+            Ast::IndirectCall { kind, .. } => Ok(kind),
 
             // Control flow
             Ast::If { kind, .. } => Ok(kind),
@@ -272,7 +272,7 @@ impl AstCodeLocation for Ast<'_> {
             Ast::ImportC { span, .. } => *span,
 
             // Indirect Call
-            Ast::Indirect { span, .. } => *span,
+            Ast::IndirectCall { span, .. } => *span,
 
             // Unreachable marker
             Ast::Unreachable { span, .. } => *span,

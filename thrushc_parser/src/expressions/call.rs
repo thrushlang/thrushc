@@ -1,9 +1,12 @@
-use thrushc_ast::Ast;
+use thrushc_ast::{
+    Ast,
+    traits::{AstCodeLocation, AstGetType},
+};
 use thrushc_entities::parser::{FoundSymbolId, Function, Intrinsic};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::tokentype::TokenType;
-use thrushc_typesystem::Type;
+use thrushc_typesystem::{Type, traits::FunctionReferenceExtensions};
 
 use crate::{
     ParserContext, expressions,
@@ -42,7 +45,9 @@ pub fn build_call<'parser>(
             break;
         }
 
-        args.push(expressions::build_expr(ctx)?);
+        let expr: Ast<'_> = expressions::build_expr(ctx)?;
+
+        args.push(expr);
 
         if ctx.check(TokenType::RParen) {
             break;
@@ -65,6 +70,58 @@ pub fn build_call<'parser>(
         name,
         args,
         kind: function_type,
+        span,
+    })
+}
+
+pub fn build_anonymous_call<'parser>(
+    ctx: &mut ParserContext<'parser>,
+    expr: Ast<'parser>,
+) -> Result<Ast<'parser>, CompilationIssue> {
+    ctx.consume(
+        TokenType::LParen,
+        CompilationIssueCode::E0001,
+        "Expected '('.".into(),
+    )?;
+
+    let span: Span = expr.get_span();
+
+    let mut args: Vec<Ast> = Vec::with_capacity(10);
+
+    loop {
+        if ctx.check(TokenType::RParen) {
+            break;
+        }
+
+        let expr: Ast<'_> = expressions::build_expr(ctx)?;
+
+        args.push(expr);
+
+        if ctx.check(TokenType::RParen) {
+            break;
+        } else {
+            ctx.consume(
+                TokenType::Comma,
+                CompilationIssueCode::E0001,
+                "Expected ','.".into(),
+            )?;
+        }
+    }
+
+    ctx.consume(
+        TokenType::RParen,
+        CompilationIssueCode::E0001,
+        "Expected ')'.".into(),
+    )?;
+
+    let expr_type: &Type = expr.get_value_type()?;
+    let return_type: Type = expr_type.get_function_reference_return_type();
+
+    Ok(Ast::IndirectCall {
+        function: expr.clone().into(),
+        function_type: expr_type.clone(),
+        args,
+        kind: return_type,
         span,
     })
 }

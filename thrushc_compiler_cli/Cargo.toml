@@ -6,6 +6,8 @@ license.workspace = true
 version.workspace = true
 rust-version.workspace = true
 
+default-run = "thrushc_compiler_cli"
+
 [dependencies]
 ahash = "0.8.11"
 colored = "3.0.0"
@@ -22,4 +24,5 @@ thrushc_span = { path = "../thrushc_span" }
 thrushc_errors = { path = "../thrushc_errors" }
 thrushc_reader = { path = "../thrushc_reader" }
 thrushc_constants = { path = "../thrushc_constants" }
+
 

@@ -361,7 +361,7 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
-    Indirect {
+    IndirectCall {
         function: std::boxed::Box<Ast<'ctx>>,
         function_type: Type,
         args: std::vec::Vec<Ast<'ctx>>,

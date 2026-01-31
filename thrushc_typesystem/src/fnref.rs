@@ -2,11 +2,11 @@ use crate::Type;
 use crate::traits::FunctionReferenceExtensions;
 
 impl FunctionReferenceExtensions for Type {
-    fn get_fn_ref_type(&self) -> &Type {
+    fn get_function_reference_return_type(&self) -> Type {
         if let Type::Fn(_, kind, ..) = self {
-            return kind;
+            return (**kind).clone();
         }
 
-        self
+        self.clone()
     }
 }

@@ -15,7 +15,7 @@ pub trait TypeIsExtensions {
     fn is_ptr_like_type(&self) -> bool;
     fn is_address_type(&self) -> bool;
     fn is_const_type(&self) -> bool;
-    fn is_fnref_type(&self) -> bool;
+    fn is_function_reference_type(&self) -> bool;
     fn is_numeric_type(&self) -> bool;
     fn is_unsigned_integer_type(&self) -> bool;
     fn is_signed_integer_type(&self) -> bool;
@@ -24,7 +24,7 @@ pub trait TypeIsExtensions {
 }
 
 pub trait FunctionReferenceExtensions {
-    fn get_fn_ref_type(&self) -> &Type;
+    fn get_function_reference_return_type(&self) -> Type;
 }
 
 pub trait IndexExtensions {

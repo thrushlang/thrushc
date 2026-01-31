@@ -32,7 +32,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn lex(file: &CompilationUnit, options: &CompilerOptions) -> Vec<Token> {
+    pub fn lex(file: &CompilationUnit, options: &CompilerOptions) -> Result<Vec<Token>, ()> {
         let code: Vec<char> = file.get_unit_content().chars().collect();
 
         Self {
@@ -69,7 +69,7 @@ impl Lexer {
 }
 
 impl Lexer {
-    fn start(&mut self) -> Vec<Token> {
+    fn start(&mut self) -> Result<Vec<Token>, ()> {
         while !self.is_eof() {
             self.start = self.current;
             self.start_span();
@@ -85,17 +85,17 @@ impl Lexer {
                     .dispatch_diagnostic(error, LoggingType::Error);
             });
 
-            std::process::exit(1);
-        } else {
-            self.tokens.push(Token {
-                lexeme: String::default(),
-                ascii: String::default(),
-                kind: TokenType::Eof,
-                span: Span::new(self.line, self.span),
-            });
-
-            std::mem::take(&mut self.tokens)
+            return Err(());
         }
+
+        self.tokens.push(Token {
+            lexeme: String::default(),
+            ascii: String::default(),
+            kind: TokenType::Eof,
+            span: Span::new(self.line, self.span),
+        });
+
+        Ok(std::mem::take(&mut self.tokens))
     }
 
     fn start_for_preprocessor(&mut self) -> Result<Vec<Token>, ()> {
@@ -159,10 +159,15 @@ impl Lexer {
 
     #[must_use]
     pub fn advance(&mut self) -> char {
-        let byte: char = self.code[self.current];
-        self.current += 1;
+        if self.current >= self.code.len() {
+            '\0'
+        } else {
+            let ch: char = self.code[self.current];
 
-        byte
+            self.current += 1;
+
+            ch
+        }
     }
 
     #[inline]
@@ -181,7 +186,11 @@ impl Lexer {
 
     #[must_use]
     pub fn previous(&self) -> char {
-        self.code[self.current - 1]
+        if self.current == 0 || self.current > self.code.len() {
+            '\0'
+        } else {
+            self.code[self.current - 1]
+        }
     }
 
     #[must_use]

@@ -701,7 +701,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 self::compile(self.context, node, None);
             }
 
-            Ast::Indirect { .. } => {
+            Ast::IndirectCall { .. } => {
                 self::compile(self.context, node, None);
             }
 
@@ -809,15 +809,20 @@ pub fn compile<'ctx>(
 
         // Function
         // Compiles a indirect function call
-        Ast::Indirect {
+        Ast::IndirectCall {
             function,
             function_type,
             args,
             span,
             ..
-        } => {
-            expressions::indirect::compile(context, function, args, function_type, *span, cast_type)
-        }
+        } => expressions::indirectcall::compile(
+            context,
+            function,
+            args,
+            function_type,
+            *span,
+            cast_type,
+        ),
 
         // Expressions
         // Compiles a grouped expression (e.g., parenthesized)

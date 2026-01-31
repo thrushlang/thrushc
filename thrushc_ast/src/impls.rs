@@ -665,14 +665,16 @@ impl std::fmt::Display for Ast<'_> {
                 write!(f, "]")
             }
 
-            Ast::Indirect { function, args, .. } => {
+            Ast::IndirectCall { function, args, .. } => {
                 write!(f, "{}(", function)?;
+
                 for (i, arg) in args.iter().enumerate() {
                     if i > 0 {
                         write!(f, ", ")?;
                     }
                     write!(f, "{}", arg)?;
                 }
+
                 write!(f, ")")
             }
 

@@ -1,0 +1,30 @@
+[package]
+name = "thrushc_compiler_fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+arbitrary = { version = "1.4.2", features = ["derive"] }
+
+thrushc_lexer = { path = "../thrushc_lexer" }
+thrushc_options = { path = "../thrushc_options" }
+
+[[bin]]
+name = "lexer-fuzz"
+path = "fuzz_targets/lexer.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parser"
+path = "fuzz_targets/parser.rs"
+test = false
+doc = false
+bench = false

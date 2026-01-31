@@ -98,9 +98,16 @@ pub fn validate<'analyzer>(
 
         Ast::Call { args, .. } => args.iter().try_for_each(|arg| analyzer.analyze_expr(arg)),
 
-        Ast::Indirect { function, args, .. } => {
+        Ast::IndirectCall { function, args, .. } => {
             analyzer.analyze_expr(function)?;
-            args.iter().try_for_each(|arg| analyzer.analyze_expr(arg))
+
+            {
+                for argument in args.iter() {
+                    analyzer.analyze_expr(argument)?;
+                }
+            }
+
+            Ok(())
         }
 
         Ast::DirectRef { expr, span, .. } => {

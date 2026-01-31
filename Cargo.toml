@@ -30,8 +30,14 @@ members = [
     "thrushc_llvm_builtins", 
     "thrushc_attribute_checker", 
     "thrushc_llvm_intrinsic_checker", 
-    "thrushc_llvm_callconventions_checker", "thrushc_modificators",
+    "thrushc_llvm_callconventions_checker", 
+    "thrushc_modificators", 
 ]
+
+exclude = [
+    "fuzz"  
+]
+
 resolver = "2"
 
 [workspace.package]
@@ -69,7 +75,6 @@ opt-level = 2
 incremental = true
 opt-level = 'z'
 codegen-units = 1
-lto = true
+lto = false
 panic = "abort"
 debug = false
-strip = true

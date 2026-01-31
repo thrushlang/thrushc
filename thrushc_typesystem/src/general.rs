@@ -74,7 +74,7 @@ impl TypeIsExtensions for Type {
     }
 
     #[inline(always)]
-    fn is_fnref_type(&self) -> bool {
+    fn is_function_reference_type(&self) -> bool {
         matches!(self, Type::Fn(..))
     }
 

@@ -68,12 +68,14 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             }
         }
 
-        Ast::Indirect { function, args, .. } => {
+        Ast::IndirectCall { function, args, .. } => {
             linter.analyze_expr(function);
 
-            args.iter().for_each(|expr| {
-                linter.analyze_expr(expr);
-            });
+            {
+                for argument in args.iter() {
+                    linter.analyze_expr(argument);
+                }
+            }
         }
 
         Ast::Call {
@@ -82,9 +84,11 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             if let Some(function) = linter.get_mut_symbols().get_function_info(name) {
                 function.1 = true;
 
-                args.iter().for_each(|arg| {
-                    linter.analyze_expr(arg);
-                });
+                {
+                    for argument in args.iter() {
+                        linter.analyze_expr(argument);
+                    }
+                }
 
                 return;
             }
@@ -92,9 +96,11 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             if let Some(asm_function) = linter.get_mut_symbols().get_asm_function_info(name) {
                 asm_function.1 = true;
 
-                args.iter().for_each(|arg| {
-                    linter.analyze_expr(arg);
-                });
+                {
+                    for argument in args.iter() {
+                        linter.analyze_expr(argument);
+                    }
+                }
 
                 return;
             }
@@ -102,9 +108,11 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             if let Some(intrinsic) = linter.get_mut_symbols().get_intrinsic_info(name) {
                 intrinsic.1 = true;
 
-                args.iter().for_each(|arg| {
-                    linter.analyze_expr(arg);
-                });
+                {
+                    for argument in args.iter() {
+                        linter.analyze_expr(argument);
+                    }
+                }
 
                 return;
             }
