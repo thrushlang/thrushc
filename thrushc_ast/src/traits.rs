@@ -1,5 +1,6 @@
 use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, modificators::StructureTypeModificator};
 
 pub trait AstGetType {
@@ -19,7 +20,6 @@ pub trait AstStandardExtensions {
     fn is_literal_value(&self) -> bool;
     fn is_reference(&self) -> bool;
     fn is_unreacheable(&self) -> bool;
-    fn is_before_unary(&self) -> bool;
     fn is_import(&self) -> bool;
     fn is_function(&self) -> bool;
     fn is_intrinsic(&self) -> bool;
@@ -65,4 +65,11 @@ pub trait AstScopeExtensions {
 
 pub trait AstStructureDataExtensions<'parser> {
     fn new(name: &'parser str, modificator: StructureTypeModificator, span: Span) -> Self;
+}
+
+pub trait AstExpressionOperationExtensions {
+    fn is_binary_operation(&self) -> bool;
+    fn get_binary_operator(&self) -> Option<TokenType>;
+    fn is_unary_operation(&self) -> bool;
+    fn is_unary_preeval_operation(&self) -> bool;
 }

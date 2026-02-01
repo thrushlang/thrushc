@@ -3,10 +3,7 @@ use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
 use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
-use thrushc_typesystem::{
-    Type,
-    traits::{PrecedenceTypeExtensions, TypeIsExtensions},
-};
+use thrushc_typesystem::{Type, traits::PrecedenceTypeExtensions};
 
 use crate::{ParserContext, expressions::precedences};
 

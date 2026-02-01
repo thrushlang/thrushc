@@ -1,4 +1,5 @@
 use thrushc_errors::CompilationIssue;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::traits::TypeIsExtensions;
 
 use crate::{
@@ -6,9 +7,9 @@ use crate::{
     builitins::ThrushBuiltin,
     data::StructureData,
     traits::{
-        AstCodeBlockEntensions, AstConstantExtensions, AstGetType, AstMemoryExtensions,
-        AstMutabilityExtensions, AstScopeExtensions, AstStandardExtensions, AstStatementExtentions,
-        AstStructureDataExtensions,
+        AstCodeBlockEntensions, AstConstantExtensions, AstExpressionOperationExtensions,
+        AstGetType, AstMemoryExtensions, AstMutabilityExtensions, AstScopeExtensions,
+        AstStandardExtensions, AstStatementExtentions, AstStructureDataExtensions,
     },
 };
 
@@ -41,11 +42,6 @@ impl AstStandardExtensions for Ast<'_> {
     #[inline]
     fn is_reference(&self) -> bool {
         matches!(self, Ast::Reference { .. })
-    }
-
-    #[inline]
-    fn is_before_unary(&self) -> bool {
-        matches!(self, Ast::UnaryOp { is_pre: true, .. })
     }
 
     #[inline]
@@ -325,6 +321,32 @@ impl AstScopeExtensions for Ast<'_> {
                 | Ast::Static { .. }
                 | Ast::Import { .. }
         )
+    }
+}
+
+impl AstExpressionOperationExtensions for Ast<'_> {
+    #[inline]
+    fn is_binary_operation(&self) -> bool {
+        matches!(self, Ast::BinaryOp { .. })
+    }
+
+    #[inline]
+    fn get_binary_operator(&self) -> Option<TokenType> {
+        if let Ast::BinaryOp { operator, .. } = self {
+            return Some(*operator);
+        }
+
+        None
+    }
+
+    #[inline]
+    fn is_unary_operation(&self) -> bool {
+        matches!(self, Ast::UnaryOp { .. })
+    }
+
+    #[inline]
+    fn is_unary_preeval_operation(&self) -> bool {
+        matches!(self, Ast::UnaryOp { is_pre: true, .. })
     }
 }
 

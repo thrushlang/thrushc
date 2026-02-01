@@ -20,6 +20,16 @@ pub fn move_terminator_to_end(context: &mut LLVMCodeGenContext, span: Span) {
 }
 
 #[inline]
+pub fn move_specific_after_the_last(
+    context: &mut LLVMCodeGenContext,
+    block: BasicBlock,
+    span: Span,
+) {
+    let last: BasicBlock = context.get_last_builder_block(span);
+    let _ = block.move_after(last);
+}
+
+#[inline]
 pub fn append_block<'ctx>(
     context: &LLVMCodeGenContext<'_, 'ctx>,
     function: FunctionValue<'ctx>,

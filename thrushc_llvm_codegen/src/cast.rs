@@ -17,7 +17,6 @@ use crate::context::LLVMCodeGenContext;
 use crate::traits::AstLLVMGetType;
 use crate::typegeneration;
 
-use thrushc_typesystem::traits::TypeCodeLocation;
 use thrushc_typesystem::traits::TypeIsExtensions;
 
 use thrushc_span::Span;
@@ -342,30 +341,16 @@ pub fn try_cast<'ctx>(
     from: BasicValueEnum<'ctx>,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let is_int_signed: bool = from_type.is_signed_integer_type();
-    let is_int_unsigned: bool = from_type.is_unsigned_integer_type();
-
-    let comptime_int_signed_type: Type = Type::SSize(from_type.get_span());
-    let comptime_int_unsigned_type: Type = Type::USize(from_type.get_span());
-
     if from.is_float_value()
         && let Some(target_type) = target_type
         && target_type.is_float_type()
     {
         return self::float(context, target_type, from_type, from, span).unwrap_or(from);
-    }
-
-    if from.is_int_value()
+    } else if from.is_int_value()
         && let Some(target_type) = target_type
         && target_type.is_integer_type()
     {
         return self::integer(context, target_type, from_type, from, span).unwrap_or(from);
-    } else if from.is_int_value() && target_type.is_none() && is_int_signed {
-        return self::integer(context, &comptime_int_signed_type, from_type, from, span)
-            .unwrap_or(from);
-    } else if from.is_int_value() && target_type.is_none() && is_int_unsigned {
-        return self::integer(context, &comptime_int_unsigned_type, from_type, from, span)
-            .unwrap_or(from);
     }
 
     from

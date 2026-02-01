@@ -1,8 +1,8 @@
 use thrushc_ast::Ast;
 use thrushc_ast::traits::AstCodeLocation;
-use thrushc_ast::traits::AstStandardExtensions;
+use thrushc_ast::traits::AstExpressionOperationExtensions;
 use thrushc_span::Span;
-use thrushc_typesystem::Type;
+use thrushc_token_type::TokenType;
 
 use crate::abort;
 use crate::block;
@@ -40,6 +40,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
 
     let start: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
     let cond: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+    let steps: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
     let body: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
     let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
@@ -68,6 +69,24 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
         .unwrap_or_else(|_| {
             abort::abort_codegen(
                 codegen.get_mut_context(),
+                "Failed to compile for loop start to condition!",
+                block.get_span(),
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+    llvm_builder.position_at_end(steps);
+
+    if !actions.is_unary_preeval_operation() {
+        let _ = codegen::compile(codegen.get_mut_context(), actions, None);
+    }
+
+    llvm_builder
+        .build_unconditional_branch(cond)
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                codegen.get_mut_context(),
                 "Failed to compile for loop start terminator to condition!",
                 block.get_span(),
                 std::path::PathBuf::from(file!()),
@@ -77,23 +96,9 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
 
     llvm_builder.position_at_end(cond);
 
-    let condition_type: &Type = condition.llvm_get_type();
+    self::short_circuit_comparison(codegen, condition, body, exit, llvm_function);
 
-    let comparison: IntValue =
-        codegen::compile(codegen.get_mut_context(), condition, Some(condition_type))
-            .into_int_value();
-
-    llvm_builder
-        .build_conditional_branch(comparison, body, exit)
-        .unwrap_or_else(|_| {
-            abort::abort_codegen(
-                codegen.get_mut_context(),
-                "Failed to compile for loop comparison to body!",
-                condition.get_span(),
-                std::path::PathBuf::from(file!()),
-                line!(),
-            )
-        });
+    block::move_specific_after_the_last(codegen.get_mut_context(), body, *span);
 
     llvm_builder.position_at_end(body);
 
@@ -106,26 +111,24 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
         codegen
             .get_mut_context()
             .get_mut_loop_ctx()
-            .set_continueall_branch(cond);
+            .set_continueall_branch(steps);
     }
 
     codegen
         .get_mut_context()
         .get_mut_loop_ctx()
-        .add_continue_branch(cond);
+        .add_continue_branch(steps);
 
     codegen
         .get_mut_context()
         .get_mut_loop_ctx()
         .add_break_branch(exit);
 
-    if actions.is_before_unary() {
-        let _ = codegen::compile(codegen.get_mut_context(), actions, None);
-        codegen.codegen_block(block);
-    } else {
-        codegen.codegen_block(block);
+    if actions.is_unary_preeval_operation() {
         let _ = codegen::compile(codegen.get_mut_context(), actions, None);
     }
+
+    codegen.codegen_block(block);
 
     if codegen
         .get_mut_context()
@@ -134,17 +137,19 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
         .is_none()
     {
         llvm_builder
-            .build_unconditional_branch(cond)
+            .build_unconditional_branch(steps)
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     codegen.get_mut_context(),
-                    "Failed to compile for loop body terminator to comparison!",
+                    "Failed to compile for loop body terminator to actions!",
                     condition.get_span(),
                     std::path::PathBuf::from(file!()),
                     line!(),
                 )
             });
     }
+
+    block::move_specific_after_the_last(codegen.get_mut_context(), steps, *span);
 
     codegen.get_mut_context().get_mut_loop_ctx().pop();
 
@@ -156,4 +161,89 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
     }
 
     llvm_builder.position_at_end(exit);
+}
+
+fn short_circuit_comparison<'ctx>(
+    codegen: &mut LLVMCodegen<'_, 'ctx>,
+    condition: &'ctx Ast<'ctx>,
+    target_body: BasicBlock<'ctx>,
+    target_exit: BasicBlock<'ctx>,
+    llvm_function: FunctionValue<'ctx>,
+) {
+    let llvm_builder: &Builder<'_> = codegen.get_context().get_llvm_builder();
+
+    if let Ast::BinaryOp {
+        left,
+        right,
+        operator,
+        ..
+    } = condition
+    {
+        if *operator == TokenType::And {
+            let next_cond_block: BasicBlock<'_> =
+                block::append_block(codegen.get_context(), llvm_function);
+
+            self::short_circuit_comparison(
+                codegen,
+                left,
+                next_cond_block,
+                target_exit,
+                llvm_function,
+            );
+
+            llvm_builder.position_at_end(next_cond_block);
+
+            self::short_circuit_comparison(codegen, right, target_body, target_exit, llvm_function);
+
+            return;
+        }
+
+        if *operator == TokenType::Or {
+            let next_cond_block: BasicBlock<'_> =
+                block::append_block(codegen.get_context(), llvm_function);
+
+            self::short_circuit_comparison(
+                codegen,
+                left,
+                target_body,
+                next_cond_block,
+                llvm_function,
+            );
+
+            llvm_builder.position_at_end(next_cond_block);
+
+            self::short_circuit_comparison(codegen, right, target_body, target_exit, llvm_function);
+
+            return;
+        }
+    }
+
+    if let Ast::Group { expression, .. } = condition {
+        self::short_circuit_comparison(
+            codegen,
+            expression,
+            target_body,
+            target_exit,
+            llvm_function,
+        );
+    }
+
+    let comparison: IntValue<'_> = codegen::compile(
+        codegen.get_mut_context(),
+        condition,
+        Some(condition.llvm_get_type()),
+    )
+    .into_int_value();
+
+    llvm_builder
+        .build_conditional_branch(comparison, target_body, target_exit)
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                codegen.get_mut_context(),
+                "Failed to compile for loop comparison to body!",
+                condition.get_span(),
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
 }
