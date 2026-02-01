@@ -1,6 +1,9 @@
 use inkwell::module::Linkage;
 use std::fmt::Display;
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
 pub const LINKAGES_AVAILABLE: &[&str] = &[
     "standard",
     "common",
@@ -13,6 +16,7 @@ pub const LINKAGES_AVAILABLE: &[&str] = &[
     "linkerprivateweak",
 ];
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub enum ThrushLinkage {
     Standard,

@@ -2,7 +2,7 @@ use thrushc_ast::Ast;
 use thrushc_ast::traits::AstCodeLocation;
 use thrushc_entities::UnaryOperation;
 use thrushc_span::Span;
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 use thrushc_typesystem::traits::TypeIsExtensions;
 

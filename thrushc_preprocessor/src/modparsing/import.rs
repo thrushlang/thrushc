@@ -2,7 +2,8 @@ use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_lexer::Lexer;
 use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::TokenType;
 
 use crate::{module::Module, parser::ModuleParser};
 

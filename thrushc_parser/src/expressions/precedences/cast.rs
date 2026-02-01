@@ -5,7 +5,8 @@ use thrushc_ast::{
 };
 use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
-use thrushc_token::{tokentype::TokenType, traits::TokenExtensions};
+use thrushc_token::traits::TokenExtensions;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, traits::TypeIsExtensions};
 
 use crate::{ParserContext, expressions::precedences, typegen};
@@ -13,6 +14,8 @@ use crate::{ParserContext, expressions::precedences, typegen};
 pub fn cast_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
+    ctx.enter_expression()?;
+
     let mut expression: Ast = precedences::index::index_precedence(ctx)?;
 
     if ctx.match_token(TokenType::As)? {
@@ -31,6 +34,8 @@ pub fn cast_precedence<'parser>(
             span,
         };
     }
+
+    ctx.leave_expression();
 
     Ok(expression)
 }

@@ -1,5 +1,9 @@
 use thrushc_mir::{atomicord::ThrushAtomicOrdering, threadmode::ThrushThreadMode};
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct CastingMetadata {
     is_constant: bool,
@@ -28,6 +32,7 @@ impl CastingMetadata {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct FunctionParameterMetadata {
     is_mutable: bool,
@@ -47,6 +52,7 @@ impl FunctionParameterMetadata {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct IndexMetadata {
     is_mutable: bool,
@@ -66,6 +72,7 @@ impl IndexMetadata {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct PropertyMetadata {
     is_allocated: bool,
@@ -85,6 +92,7 @@ impl PropertyMetadata {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct ReferenceMetadata {
     is_allocated: bool,
@@ -92,6 +100,7 @@ pub struct ReferenceMetadata {
     reference_type: ReferenceType,
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, Default)]
 pub enum ReferenceType {
     Constant,
@@ -129,6 +138,7 @@ impl ReferenceMetadata {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct ConstantMetadata {
     is_global: bool,
@@ -136,6 +146,7 @@ pub struct ConstantMetadata {
     llvm_metadata: LLVMConstantMetadata,
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct LLVMConstantMetadata {
     pub thread_local: bool,
@@ -175,11 +186,13 @@ impl ConstantMetadata {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DereferenceMetadata {
     llvm_metadata: LLVMDereferenceMetadata,
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct LLVMDereferenceMetadata {
     pub volatile: bool,
@@ -205,6 +218,7 @@ impl DereferenceMetadata {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct LocalMetadata {
     is_undefined: bool,
@@ -213,6 +227,7 @@ pub struct LocalMetadata {
     llvm_metadata: LLVMLocalMetadata,
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct LLVMLocalMetadata {
     pub volatile: bool,
@@ -256,6 +271,7 @@ impl LocalMetadata {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct StaticMetadata {
     is_global: bool,
@@ -265,6 +281,7 @@ pub struct StaticMetadata {
     llvm_metadata: LLVMStaticMetadata,
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct LLVMStaticMetadata {
     pub unnamed_addr: bool,

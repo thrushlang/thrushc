@@ -14,3 +14,9 @@ thrushc_modificators = { path = "../thrushc_modificators" }
 thrushc_mir = { path = "../thrushc_mir" }
 thrushc_token = { path = "../thrushc_token" }
 thrushc_errors = { path = "../thrushc_errors" }
+thrushc_token_type = { path = "../thrushc_token_type" }
+
+arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
+
+[features]
+fuzz = ["dep:arbitrary"]

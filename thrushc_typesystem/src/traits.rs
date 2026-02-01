@@ -1,4 +1,5 @@
 use thrushc_span::Span;
+use thrushc_token_type::TokenType;
 
 use crate::Type;
 use crate::modificators::StructureTypeModificator;
@@ -94,4 +95,8 @@ pub trait InfererTypeExtensions {
 
 pub trait VoidTypeExtensions {
     fn contains_void_type(&self) -> bool;
+}
+
+pub trait PrecedenceTypeExtensions {
+    fn get_term_precedence_type(&self, other: &Type, operator: TokenType) -> Type;
 }

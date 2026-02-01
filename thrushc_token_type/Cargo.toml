@@ -1,17 +1,15 @@
 [package]
-name = "thrushc_token"
+name = "thrushc_token_type"
 description.workspace = true
 edition.workspace = true
 license.workspace = true
 version.workspace = true
 rust-version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
-thrushc_span = { path = "../thrushc_span" }
-thrushc_typesystem = { path = "../thrushc_typesystem" }
-thrushc_errors = { path = "../thrushc_errors" }
-thrushc_token_type = { path = "../thrushc_token_type" }
-
 arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
 
 [features]

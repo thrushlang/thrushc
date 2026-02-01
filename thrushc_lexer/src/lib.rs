@@ -5,7 +5,8 @@ use thrushc_errors::CompilationIssue;
 use thrushc_logging::LoggingType;
 use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType, traits::TokenTypeExtensions};
+use thrushc_token::Token;
+use thrushc_token_type::{TokenType, traits::TokenTypeExtensions};
 use unicode_categories::UnicodeCategories;
 
 const PREALLOCATED_TOKENS_CAPACITY: usize = 10_000;

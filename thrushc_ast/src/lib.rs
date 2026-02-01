@@ -1,7 +1,7 @@
 use thrushc_attributes::ThrushAttributes;
 use thrushc_modificators::Modificators;
 use thrushc_span::Span;
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 
 use crate::{
@@ -13,6 +13,9 @@ use crate::{
     },
 };
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
 pub mod builitins;
 pub mod data;
 mod getters;
@@ -20,6 +23,7 @@ mod impls;
 pub mod metadata;
 pub mod traits;
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
 pub enum Ast<'ctx> {
     Str {

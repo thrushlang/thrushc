@@ -1,7 +1,8 @@
 #![allow(clippy::result_unit_err)]
 
 use thrushc_options::{CompilationUnit, CompilerOptions};
-use thrushc_token::{Token, tokentype::TokenType};
+use thrushc_token::Token;
+use thrushc_token_type::TokenType;
 
 use crate::{context::PreprocessorContext, module::Module};
 

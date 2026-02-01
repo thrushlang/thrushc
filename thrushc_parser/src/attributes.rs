@@ -1,11 +1,9 @@
 use thrushc_attributes::{ThrushAttribute, ThrushAttributes, linkage::ThrushLinkage};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_token::{
-    Token,
-    tokentype::TokenType,
-    traits::{TokenExtensions, TokenTypeAttributesExtensions},
-};
+
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
 
 use crate::ParserContext;
 

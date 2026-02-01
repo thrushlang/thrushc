@@ -25,4 +25,5 @@ thrushc_attributes = { path = "../thrushc_attributes" }
 thrushc_typesystem = { path = "../thrushc_typesystem" }
 thrushc_ast = { path = "../thrushc_ast" }
 thrushc_token = { path = "../thrushc_token" }
+thrushc_token_type = { path = "../thrushc_token_type" }
 thrushc_lexer = { path = "../thrushc_lexer" }

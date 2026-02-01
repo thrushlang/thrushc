@@ -1,3 +1,10 @@
+pub mod impls;
+pub mod traits;
+
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum TokenType {
     // --- Operators ---

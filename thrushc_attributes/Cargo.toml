@@ -15,6 +15,9 @@ thrushc_logging = { path = "../thrushc_logging" }
 thrushc_errors = { path = "../thrushc_errors" }
 thrushc_span = { path = "../thrushc_span" }
 thrushc_token = { path = "../thrushc_token" }
+thrushc_token_type = { path = "../thrushc_token_type" }
+
+arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
 
 [features]
 default = ["llvm_backend_static", "cbindgen_static"]
@@ -24,3 +27,5 @@ llvm_backend_static  = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-for
 
 cbindgen_static      = ["dep:clang", "clang/static"]
 cbindgen_dynamic     = ["dep:clang"]
+
+fuzz                 = ["dep:arbitrary"]

@@ -1,7 +1,8 @@
 use thrushc_ast::Ast;
 use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType};
+use thrushc_token::Token;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 
 use crate::{ParserContext, expressions::precedences};
@@ -9,6 +10,8 @@ use crate::{ParserContext, expressions::precedences};
 pub fn and_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
+    ctx.enter_expression()?;
+
     let mut expression: Ast = precedences::equality::equality_precedence(ctx)?;
 
     while ctx.match_token(TokenType::And)? {
@@ -27,6 +30,8 @@ pub fn and_precedence<'parser>(
             span,
         }
     }
+
+    ctx.leave_expression();
 
     Ok(expression)
 }

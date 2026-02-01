@@ -11,3 +11,8 @@ repository.workspace = true
 
 [dependencies]
 thrushc_mir = { path = "../thrushc_mir" }
+
+arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
+
+[features]
+fuzz = ["dep:arbitrary"]

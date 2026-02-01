@@ -1,8 +1,9 @@
 use thrushc_ast::Ast;
 use thrushc_errors::CompilationIssue;
-use thrushc_token::{tokentype::TokenType, traits::TokenExtensions};
+use thrushc_token::traits::TokenExtensions;
+use thrushc_token_type::TokenType;
 
-use crate::{ParserContext, context::ParserSyncPosition, statements};
+use crate::{ParserContext, control::ParserSyncPosition, statements};
 
 pub mod asmfn;
 pub mod function;

@@ -1,10 +1,13 @@
 use thrushc_span::Span;
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 
 use crate::{
     linkage::ThrushLinkage,
     traits::{ThrushAttributeComparatorExtensions, ThrushAttributesExtensions},
 };
+
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
 
 pub mod assembler;
 pub mod callconventions;
@@ -13,6 +16,7 @@ pub mod traits;
 
 pub type ThrushAttributes = Vec<ThrushAttribute>;
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
 pub enum ThrushAttribute {
     Extern(String, Span),

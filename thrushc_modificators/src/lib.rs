@@ -3,8 +3,12 @@ pub mod traits;
 
 use thrushc_mir::{atomicord::ThrushAtomicOrdering, threadmode::ThrushThreadMode};
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
 pub type Modificators = Vec<Modificator>;
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub enum Modificator {
     ThreadMode(ThrushThreadMode),

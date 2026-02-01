@@ -1,11 +1,16 @@
 mod impls;
-pub mod tokentype;
 pub mod traits;
 
 use thrushc_span::Span;
 
-use crate::{tokentype::TokenType, traits::TokenExtensions};
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
 
+use thrushc_token_type::TokenType;
+
+use crate::traits::TokenExtensions;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug)]
 pub struct Token {
     pub lexeme: String,

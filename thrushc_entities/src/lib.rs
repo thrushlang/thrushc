@@ -4,7 +4,7 @@ use thrushc_ast::{
 };
 use thrushc_attributes::ThrushAttributes;
 use thrushc_span::Span;
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 
 pub mod analyzer;

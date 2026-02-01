@@ -2,7 +2,8 @@ use thrushc_ast::{Ast, data::StructureData};
 use thrushc_attributes::ThrushAttributes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, modificators::StructureTypeModificator};
 
 use thrushc_ast::traits::AstStructureDataExtensions;

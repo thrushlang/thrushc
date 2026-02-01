@@ -2,6 +2,10 @@
 
 use std::fmt::Display;
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct FunctionReferenceTypeModificator {
     llvm: LLVMFunctionReferenceTypeModificator,
@@ -30,6 +34,7 @@ impl FunctionReferenceTypeModificator {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LLVMFunctionReferenceTypeModificator {
     ignore_args: bool,
@@ -47,6 +52,7 @@ impl LLVMFunctionReferenceTypeModificator {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct GCCFunctionReferenceTypeModificator {}
 
@@ -57,6 +63,7 @@ impl GCCFunctionReferenceTypeModificator {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct StructureTypeModificator {
     llvm: LLVMStructureTypeModificator,
@@ -80,6 +87,7 @@ impl StructureTypeModificator {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct GCCStructureTypeModificator {}
 
@@ -90,6 +98,7 @@ impl GCCStructureTypeModificator {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LLVMStructureTypeModificator {
     packed: bool,

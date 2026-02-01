@@ -1,7 +1,7 @@
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, traits::TypeIsExtensions};
 
 #[inline]

@@ -5,7 +5,8 @@ use thrushc_ast::{
 use thrushc_entities::parser::FoundSymbolId;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 
 use crate::{

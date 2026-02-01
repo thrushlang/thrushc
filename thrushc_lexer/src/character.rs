@@ -1,6 +1,7 @@
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType};
+use thrushc_token::Token;
+use thrushc_token_type::TokenType;
 
 use crate::Lexer;
 

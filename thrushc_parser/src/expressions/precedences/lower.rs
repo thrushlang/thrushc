@@ -1,11 +1,8 @@
 use thrushc_ast::{Ast, traits::AstGetType};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_token::{
-    Token,
-    tokentype::TokenType,
-    traits::{TokenExtensions, TokenTypeBuiltinExtensions},
-};
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::{TokenType, traits::TokenTypeBuiltinExtensions};
 use thrushc_typesystem::{Type, traits::TypeExtensions};
 
 use crate::{
@@ -17,6 +14,8 @@ use crate::{
 pub fn lower_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
+    ctx.enter_expression()?;
+
     let primary: Ast = match &ctx.peek().kind {
         TokenType::New => constructor::build_constructor(ctx)?,
 
@@ -46,11 +45,11 @@ pub fn lower_precedence<'parser>(
                 "Expected ')'.".into(),
             )?;
 
-            return Ok(Ast::Group {
+            Ast::Group {
                 expression: expr.clone().into(),
                 kind: expr_type.clone(),
                 span,
-            });
+            }
         }
 
         TokenType::Str => {
@@ -77,7 +76,7 @@ pub fn lower_precedence<'parser>(
             while idx < source.len() {
                 if let Some(byte) = source.get(idx) {
                     if *byte == b'\\' {
-                        idx += 1;
+                        idx = idx.saturating_add(1);
 
                         match source.get(idx) {
                             Some(b'n') => processed.push(b'\n'),
@@ -91,13 +90,16 @@ pub fn lower_precedence<'parser>(
                             _ => (),
                         }
 
-                        idx += 1;
+                        idx = idx.saturating_add(1);
+
                         continue;
                     }
 
-                    processed.push(source[idx]);
+                    if let Some(byte) = source.get(idx) {
+                        processed.push(*byte);
+                    }
 
-                    idx += 1;
+                    idx = idx.saturating_add(1);
                 }
             }
 
@@ -148,14 +150,12 @@ pub fn lower_precedence<'parser>(
             let span: Span = tk.get_span();
 
             if ctx.match_token(TokenType::Arrow)? {
-                return enumv::build_enum_value(ctx, name, span);
+                enumv::build_enum_value(ctx, name, span)?
+            } else if ctx.match_token(TokenType::LParen)? {
+                call::build_call(ctx, name, span)?
+            } else {
+                reference::build_reference(ctx, name, span)?
             }
-
-            if ctx.match_token(TokenType::LParen)? {
-                return call::build_call(ctx, name, span);
-            }
-
-            reference::build_reference(ctx, name, span)?
         }
 
         TokenType::DirectRef => {
@@ -181,6 +181,7 @@ pub fn lower_precedence<'parser>(
         }
         TokenType::Unreachable => {
             let span: Span = ctx.advance()?.get_span();
+
             Ast::Unreachable {
                 span,
                 kind: Type::Void(span),
@@ -201,9 +202,11 @@ pub fn lower_precedence<'parser>(
                 span,
             ));
 
-            return Ok(Ast::invalid_ast(span));
+            Ast::invalid_ast(span)
         }
     };
+
+    ctx.leave_expression();
 
     Ok(primary)
 }

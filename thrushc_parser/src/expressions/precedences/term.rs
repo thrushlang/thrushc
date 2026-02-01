@@ -1,14 +1,20 @@
 use thrushc_ast::{Ast, traits::AstGetType};
 use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
-use thrushc_typesystem::{Type, traits::TypeIsExtensions};
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::TokenType;
+use thrushc_typesystem::{
+    Type,
+    traits::{PrecedenceTypeExtensions, TypeIsExtensions},
+};
 
 use crate::{ParserContext, expressions::precedences};
 
 pub fn term_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
+    ctx.enter_expression()?;
+
     let mut expression: Ast = precedences::factor::factor(ctx)?;
 
     while ctx.match_token(TokenType::Plus)?
@@ -29,11 +35,7 @@ pub fn term_precedence<'parser>(
         let left_type: &Type = expression.get_value_type()?;
         let right_type: &Type = right.get_value_type()?;
 
-        let kind: Type = if left_type.is_ptr_type() && right_type.is_ptr_type() {
-            Type::SSize(span)
-        } else {
-            left_type.clone()
-        };
+        let kind: Type = left_type.get_term_precedence_type(right_type, operator);
 
         expression = Ast::BinaryOp {
             left: expression.clone().into(),
@@ -43,6 +45,8 @@ pub fn term_precedence<'parser>(
             span,
         };
     }
+
+    ctx.leave_expression();
 
     Ok(expression)
 }

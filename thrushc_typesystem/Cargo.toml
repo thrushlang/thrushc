@@ -8,3 +8,9 @@ rust-version.workspace = true
 
 [dependencies]
 thrushc_span = { path = "../thrushc_span" }
+thrushc_token_type = { path = "../thrushc_token_type" }
+
+arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
+
+[features]
+fuzz = ["dep:arbitrary"]

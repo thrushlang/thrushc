@@ -1,5 +1,5 @@
 use thrushc_errors::CompilationIssue;
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 
 use crate::Lexer;
 

@@ -19,3 +19,4 @@ thrushc_logging = { path = "../thrushc_logging" }
 thrushc_attributes = { path = "../thrushc_attributes" }
 thrushc_span = { path = "../thrushc_span" }
 thrushc_typesystem = { path = "../thrushc_typesystem" }
+thrushc_token_type = { path = "../thrushc_token_type" }

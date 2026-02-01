@@ -3,11 +3,8 @@ use thrushc_attributes::{ThrushAttributes, traits::ThrushAttributesExtensions};
 use thrushc_entities::parser::FunctionParametersTypes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_token::{
-    Token,
-    tokentype::TokenType,
-    traits::{TokenExtensions, TokenTypeAttributesExtensions},
-};
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
 use thrushc_typesystem::Type;
 
 use crate::{ParserContext, attributes, statements::block, typegen};

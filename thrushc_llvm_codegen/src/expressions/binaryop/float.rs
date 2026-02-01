@@ -6,8 +6,8 @@ use crate::predicates;
 
 use thrushc_entities::BinaryOperation;
 use thrushc_span::Span;
-use thrushc_token::tokentype::TokenType;
-use thrushc_token::traits::TokenTypeExtensions;
+use thrushc_token_type::TokenType;
+use thrushc_token_type::traits::TokenTypeExtensions;
 use thrushc_typesystem::Type;
 
 use inkwell::builder::Builder;

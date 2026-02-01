@@ -1,5 +1,9 @@
 use std::fmt::{self, Display};
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
     pub line: usize,

@@ -7,7 +7,8 @@ use thrushc_typesystem::modificators::{
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_mir::{atomicord::ThrushAtomicOrdering, threadmode::ThrushThreadMode};
 use thrushc_modificators::{Modificator, Modificators};
-use thrushc_token::{tokentype::TokenType, traits::TokenExtensions};
+use thrushc_token::traits::TokenExtensions;
+use thrushc_token_type::TokenType;
 
 use crate::ParserContext;
 

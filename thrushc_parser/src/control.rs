@@ -13,6 +13,7 @@ pub enum ParserSyncPosition {
 #[derive(Debug)]
 pub struct ParserControlContext {
     sync_position: Vec<ParserSyncPosition>,
+    expression_depth: u32,
 }
 
 impl ParserControlContext {
@@ -20,6 +21,7 @@ impl ParserControlContext {
     pub fn new() -> Self {
         Self {
             sync_position: Vec::with_capacity(100),
+            expression_depth: 0,
         }
     }
 }
@@ -39,12 +41,27 @@ impl ParserControlContext {
     pub fn reset_sync_position(&mut self) {
         self.sync_position.clear();
     }
+
+    #[inline]
+    pub fn increase_expression_depth(&mut self) {
+        self.expression_depth = self.expression_depth.saturating_add(1);
+    }
+
+    #[inline]
+    pub fn decrease_expression_depth(&mut self) {
+        self.expression_depth = self.expression_depth.saturating_sub(1);
+    }
 }
 
 impl ParserControlContext {
     #[inline]
     pub fn get_sync_position(&self) -> Option<&ParserSyncPosition> {
         self.sync_position.last()
+    }
+
+    #[inline]
+    pub fn get_expression_depth(&self) -> u32 {
+        self.expression_depth
     }
 }
 

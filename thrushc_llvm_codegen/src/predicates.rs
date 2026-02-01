@@ -2,7 +2,7 @@ use inkwell::FloatPredicate;
 use inkwell::IntPredicate;
 
 use thrushc_span::Span;
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 
 use crate::abort;
 use crate::context::LLVMCodeGenContext;

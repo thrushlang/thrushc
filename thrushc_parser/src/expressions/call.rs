@@ -5,7 +5,7 @@ use thrushc_ast::{
 use thrushc_entities::parser::{FoundSymbolId, Function, Intrinsic};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, traits::FunctionReferenceExtensions};
 
 use crate::{

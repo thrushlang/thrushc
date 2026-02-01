@@ -1,7 +1,8 @@
 use thrushc_ast::{Ast, traits::AstGetType};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 
 use crate::{ParserContext, expressions};

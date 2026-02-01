@@ -130,6 +130,7 @@ pub enum CompilationIssueCode {
     E0034, // Invalid Intrinsic compiler syntax
     E0035, // Import Error
     E0036, // Too many parameters
+    E0037, // Too many depth
 
     W0001, // Irrelevant Attribute
     W0002, // Unknown Call Convention
@@ -247,6 +248,9 @@ impl CompilationIssueCode {
             }
             CompilationIssueCode::E0036 => {
                 format!("TOO MANY PARAMETERS - {}", "E0036".bright_red())
+            }
+            CompilationIssueCode::E0037 => {
+                format!("TOO DEEP - {}", "E0037".bright_red())
             }
             CompilationIssueCode::W0001 => {
                 format!("IRRELEVANT ATTRIBUTE - {}", "W0001".bright_yellow())

@@ -18,4 +18,5 @@ thrushc_diagnostician = { path = "../thrushc_diagnostician" }
 thrushc_errors = { path = "../thrushc_errors" }
 thrushc_span = { path = "../thrushc_span" }
 thrushc_token = { path = "../thrushc_token" }
+thrushc_token_type = { path = "../thrushc_token_type" }
 thrushc_logging = { path = "../thrushc_logging" }

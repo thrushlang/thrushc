@@ -7,17 +7,19 @@ use thrushc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition
 use thrushc_logging::LoggingType;
 use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
+
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::TokenType;
 
 use crate::{
-    context::{ParserControlContext, ParserTypeContext},
+    control::{ParserControlContext, ParserTypeContext},
     table::SymbolsTable,
 };
 
 mod attributes;
 mod builder;
 mod builtins;
-mod context;
+mod control;
 mod declarations;
 mod expected;
 mod expressions;
@@ -209,11 +211,36 @@ impl<'parser> ParserContext<'parser> {
             return false;
         }
 
-        if self.current + modifier >= self.tokens.len() {
+        let next_index: usize = self.current.saturating_add(modifier);
+
+        if next_index >= self.tokens.len() {
             return false;
         }
 
-        self.tokens[self.current + modifier].kind == kind
+        self.tokens[next_index].kind == kind
+    }
+
+    #[must_use]
+    pub fn check_ahead(&mut self, target: TokenType, breakers: &[TokenType]) -> bool {
+        let mut last_position: usize = self.current;
+
+        let has_ahead: bool = loop {
+            if last_position >= self.tokens.len() {
+                break false;
+            }
+
+            if breakers.contains(&self.tokens[last_position].kind) {
+                break false;
+            }
+
+            if self.tokens[last_position].kind == target {
+                break true;
+            }
+
+            last_position = last_position.saturating_add(1);
+        };
+
+        has_ahead
     }
 }
 
@@ -275,6 +302,33 @@ impl<'parser> ParserContext<'parser> {
                 self.peek().get_span(),
             ))
         }
+    }
+}
+
+impl<'parser> ParserContext<'parser> {
+    pub fn enter_expression(&mut self) -> Result<(), CompilationIssue> {
+        let control: &mut ParserControlContext = self.get_mut_control_ctx();
+
+        control.increase_expression_depth();
+
+        const MAX_EXPRESSION_DEPTH: u32 = 516;
+
+        if control.get_expression_depth() > MAX_EXPRESSION_DEPTH {
+            let span: Span = self.peek().get_span();
+
+            return Err(CompilationIssue::Error(
+                CompilationIssueCode::E0037,
+                "Too many depth for a expression. Try to remove some levels of nesting.".into(),
+                None,
+                span,
+            ));
+        }
+
+        Ok(())
+    }
+
+    pub fn leave_expression(&mut self) {
+        self.get_mut_control_ctx().decrease_expression_depth();
     }
 }
 
@@ -360,6 +414,11 @@ impl ParserContext<'_> {
     #[must_use]
     pub fn is_main_scope(&self) -> bool {
         self.scope == 0
+    }
+
+    #[inline]
+    pub fn get_scope(&self) -> usize {
+        self.scope
     }
 
     #[must_use]

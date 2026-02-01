@@ -1,7 +1,7 @@
 use thrushc_ast::{Ast, builitins::ThrushBuiltin, traits::AstCodeLocation};
 use thrushc_errors::{CompilationIssue, CompilationPosition};
 use thrushc_span::Span;
-use thrushc_token::traits::TokenTypeExtensions;
+use thrushc_token_type::traits::TokenTypeExtensions;
 
 use crate::Linter;
 

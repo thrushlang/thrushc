@@ -9,6 +9,7 @@ mod inferer;
 mod location;
 pub mod modificators;
 mod pointer;
+mod precendece;
 mod structure;
 pub mod traits;
 mod void;
@@ -18,6 +19,10 @@ use thrushc_span::Span;
 use crate::modificators::FunctionReferenceTypeModificator;
 use crate::modificators::StructureTypeModificator;
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
 pub enum Type {
     S8(Span),

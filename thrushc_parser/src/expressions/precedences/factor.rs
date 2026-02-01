@@ -1,12 +1,15 @@
 use thrushc_ast::{Ast, traits::AstGetType};
 use thrushc_errors::CompilationIssue;
 use thrushc_span::Span;
-use thrushc_token::{Token, tokentype::TokenType, traits::TokenExtensions};
+use thrushc_token::{Token, traits::TokenExtensions};
+use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 
 use crate::{ParserContext, expressions::precedences};
 
 pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
+    ctx.enter_expression()?;
+
     let mut expression: Ast = precedences::mutation::equal_precedence(ctx)?;
 
     while ctx.match_token(TokenType::Slash)? || ctx.match_token(TokenType::Star)? {
@@ -26,6 +29,8 @@ pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>,
             span,
         };
     }
+
+    ctx.leave_expression();
 
     Ok(expression)
 }

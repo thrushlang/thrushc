@@ -13,9 +13,9 @@ pub mod terminator;
 
 use thrushc_ast::Ast;
 use thrushc_errors::CompilationIssue;
-use thrushc_token::tokentype::TokenType;
+use thrushc_token_type::TokenType;
 
-use crate::{ParserContext, context::ParserSyncPosition, expressions};
+use crate::{ParserContext, control::ParserSyncPosition, expressions};
 
 pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_ctx()
