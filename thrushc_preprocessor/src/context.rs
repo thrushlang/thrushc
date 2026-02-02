@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use thrushc_diagnostician::Diagnostician;
 use thrushc_errors::{CompilationIssue, CompilationPosition};
 use thrushc_options::{CompilationUnit, CompilerOptions};
@@ -5,10 +7,13 @@ use thrushc_span::Span;
 use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
 
+use ahash::AHashSet as HashSet;
+
 #[derive(Debug)]
 pub struct PreprocessorContext<'preprocessor> {
     tokens: &'preprocessor [Token],
     options: &'preprocessor CompilerOptions,
+    visited: HashSet<PathBuf>,
     diagnostician: Diagnostician,
     errors: Vec<CompilationIssue>,
     current: usize,
@@ -19,10 +24,12 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
         tokens: &'preprocessor [Token],
         options: &'preprocessor CompilerOptions,
         file: &CompilationUnit,
+        visited: HashSet<PathBuf>,
     ) -> Self {
         Self {
             tokens,
             options,
+            visited,
             diagnostician: Diagnostician::new(file, options),
             errors: Vec::with_capacity(100),
             current: 0,
@@ -122,11 +129,13 @@ impl PreprocessorContext<'_> {
             return false;
         }
 
-        if self.current + modifier >= self.tokens.len() {
+        let position: usize = self.current.saturating_add(modifier);
+
+        if position >= self.tokens.len() {
             return false;
         }
 
-        self.tokens[self.current + modifier].kind == kind
+        self.tokens[position].kind == kind
     }
 }
 
@@ -216,11 +225,33 @@ impl PreprocessorContext<'_> {
     pub fn merge_errors(&mut self, other: Vec<CompilationIssue>) {
         self.errors.extend(other);
     }
+
+    #[inline]
+    pub fn add_error(&mut self, error: CompilationIssue) {
+        self.errors.push(error);
+    }
+}
+
+impl PreprocessorContext<'_> {
+    #[inline]
+    pub fn has_visited(&self, path: &PathBuf) -> bool {
+        self.visited.contains(path)
+    }
+
+    #[inline]
+    pub fn mark_visited(&mut self, path: PathBuf) {
+        self.visited.insert(path);
+    }
 }
 
 impl<'module_parser> PreprocessorContext<'module_parser> {
     #[inline]
     pub fn get_options(&self) -> &'module_parser CompilerOptions {
         self.options
+    }
+
+    #[inline]
+    pub fn get_global_visited_modules(&self) -> HashSet<PathBuf> {
+        self.visited.clone()
     }
 }

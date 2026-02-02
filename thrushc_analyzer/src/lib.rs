@@ -322,8 +322,15 @@ impl<'analyzer> Analyzer<'analyzer> {
             }
 
             Ast::While {
-                condition, block, ..
+                variable,
+                condition,
+                block,
+                ..
             } => {
+                if let Some(node) = variable {
+                    self.analyze_stmt(node)?;
+                }
+
                 self.analyze_expr(condition)?;
                 self.analyze_stmt(block)?;
 

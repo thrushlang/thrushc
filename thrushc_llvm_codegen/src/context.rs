@@ -348,7 +348,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
-    pub fn get_mut_loop_ctx(&mut self) -> &mut LLVMLoopContext<'ctx> {
+    pub fn get_mut_loop_context(&mut self) -> &mut LLVMLoopContext<'ctx> {
         &mut self.loop_ctx
     }
 

@@ -57,8 +57,10 @@ fn sync_with_declaration(ctx: &mut ParserContext) {
         if SYNC_DECLARATIONS.contains(&peeked.kind) && ctx.is_main_scope() {
             break;
         } else {
-            ctx.get_mut_symbols().end_scope();
-            ctx.end_scope();
+            if ctx.get_scope() != 0 {
+                ctx.get_mut_symbols().end_scope();
+                ctx.end_scope();
+            }
         }
 
         let _ = ctx.only_advance();
@@ -80,8 +82,10 @@ fn sync_with_statement<'parser>(ctx: &mut ParserContext<'parser>) -> Either<Ast<
             if ctx.check(TokenType::RBrace) {
                 let _ = ctx.only_advance();
 
-                ctx.get_mut_symbols().end_scope();
-                ctx.end_scope();
+                if ctx.get_scope() != 0 {
+                    ctx.get_mut_symbols().end_scope();
+                    ctx.end_scope();
+                }
 
                 if ctx.is_main_scope() {
                     ctx.get_mut_symbols().finish_parameters();
@@ -133,7 +137,6 @@ fn sync_with_statement<'parser>(ctx: &mut ParserContext<'parser>) -> Either<Ast<
             if SYNC_DECLARATIONS.contains(&peeked.kind) && ctx.is_main_scope() {
                 ctx.get_mut_symbols().finish_parameters();
                 ctx.get_mut_symbols().finish_scopes();
-
                 ctx.reset_scope();
 
                 break;
@@ -156,8 +159,10 @@ fn sync_with_expression<'parser>(ctx: &mut ParserContext<'parser>) -> Either<Ast
             if ctx.check(TokenType::RBrace) {
                 let _ = ctx.only_advance();
 
-                ctx.get_mut_symbols().end_scope();
-                ctx.end_scope();
+                if ctx.get_scope() != 0 {
+                    ctx.get_mut_symbols().end_scope();
+                    ctx.end_scope();
+                }
 
                 if ctx.is_main_scope() {
                     ctx.get_mut_symbols().finish_parameters();

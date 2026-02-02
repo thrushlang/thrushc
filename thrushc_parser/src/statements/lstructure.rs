@@ -103,17 +103,21 @@ pub fn build_structure<'parser>(
 
     let kind: Type = data.get_type();
 
-    ctx.get_mut_symbols().new_struct(
-        name,
-        (name, data.1.clone(), attributes.clone(), modificator, span),
-        span,
-    )?;
+    if !ctx.is_main_scope() {
+        ctx.get_mut_symbols().new_struct(
+            name,
+            (name, data.1.clone(), attributes.clone(), modificator, span),
+            span,
+        )?;
 
-    Ok(Ast::Struct {
-        name,
-        data,
-        kind,
-        attributes,
-        span,
-    })
+        Ok(Ast::Struct {
+            name,
+            data,
+            kind,
+            attributes,
+            span,
+        })
+    } else {
+        Ok(Ast::invalid_ast(span))
+    }
 }

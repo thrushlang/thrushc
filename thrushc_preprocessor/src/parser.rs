@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use thrushc_diagnostician::Diagnostician;
 use thrushc_errors::{CompilationIssue, CompilationPosition};
 use thrushc_options::{CompilationUnit, CompilerOptions};
@@ -7,12 +9,16 @@ use thrushc_token_type::TokenType;
 
 use crate::{modparsing, module::Module};
 
+use ahash::AHashSet as HashSet;
+
 #[derive(Debug)]
 pub struct ModuleParser<'module_parser> {
     module: Module<'module_parser>,
     tokens: Vec<Token>,
     diagnostician: Diagnostician,
     errors: Vec<CompilationIssue>,
+    warnings: Vec<CompilationIssue>,
+    visited: HashSet<PathBuf>,
     options: &'module_parser CompilerOptions,
     current: usize,
 }
@@ -23,12 +29,15 @@ impl<'module_parser> ModuleParser<'module_parser> {
         tokens: Vec<Token>,
         options: &'module_parser CompilerOptions,
         file: &CompilationUnit,
+        visited: HashSet<PathBuf>,
     ) -> Self {
         Self {
             module: Module::new(name),
             tokens,
             diagnostician: Diagnostician::new(file, options),
-            errors: Vec::with_capacity(255),
+            errors: Vec::with_capacity(u8::MAX as usize),
+            warnings: Vec::with_capacity(u8::MAX as usize),
+            visited,
             options,
             current: 0,
         }
@@ -36,15 +45,29 @@ impl<'module_parser> ModuleParser<'module_parser> {
 }
 
 impl<'module_parser> ModuleParser<'module_parser> {
-    pub fn parse(mut self) -> Result<Module<'module_parser>, Vec<CompilationIssue>> {
+    pub fn parse(mut self) -> Result<Module<'module_parser>, ()> {
         while !self.is_eof() {
             if self.start().is_err() {}
 
             let _ = self.only_advance();
         }
 
+        {
+            for warning in self.warnings.iter() {
+                self.diagnostician
+                    .dispatch_diagnostic(warning, thrushc_logging::LoggingType::Warning);
+            }
+        }
+
         if !self.errors.is_empty() {
-            return Err(self.errors);
+            {
+                for error in self.errors.iter() {
+                    self.diagnostician
+                        .dispatch_diagnostic(error, thrushc_logging::LoggingType::Error);
+                }
+            }
+
+            return Err(());
         }
 
         Ok(self.module)
@@ -65,6 +88,11 @@ impl ModuleParser<'_> {
     #[inline]
     pub fn add_error(&mut self, error: CompilationIssue) {
         self.errors.push(error);
+    }
+
+    #[inline]
+    pub fn add_warning(&mut self, warning: CompilationIssue) {
+        self.warnings.push(warning);
     }
 }
 
@@ -246,10 +274,15 @@ impl<'module_parser> ModuleParser<'module_parser> {
     }
 }
 
-impl<'module_parser> ModuleParser<'module_parser> {
+impl ModuleParser<'_> {
     #[inline]
-    pub fn merge_errors(&mut self, other: Vec<CompilationIssue>) {
-        self.errors.extend(other);
+    pub fn has_visited(&self, path: &PathBuf) -> bool {
+        self.visited.contains(path)
+    }
+
+    #[inline]
+    pub fn mark_visited(&mut self, path: PathBuf) {
+        self.visited.insert(path);
     }
 }
 
@@ -257,5 +290,10 @@ impl<'module_parser> ModuleParser<'module_parser> {
     #[inline]
     pub fn get_options(&self) -> &'module_parser CompilerOptions {
         self.options
+    }
+
+    #[inline]
+    pub fn get_global_visited_modules(&self) -> HashSet<PathBuf> {
+        self.visited.clone()
     }
 }

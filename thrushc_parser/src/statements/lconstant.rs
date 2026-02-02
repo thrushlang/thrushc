@@ -58,17 +58,21 @@ pub fn build_const<'parser>(
     let metadata: ConstantMetadata =
         ConstantMetadata::new(false, thread_local, is_volatile, atomic_ord);
 
-    ctx.get_mut_symbols()
-        .new_constant(name, (const_type.clone(), attributes.clone()), span)?;
+    if !ctx.is_main_scope() {
+        ctx.get_mut_symbols()
+            .new_constant(name, (const_type.clone(), attributes.clone()), span)?;
 
-    Ok(Ast::Const {
-        name,
-        ascii_name,
-        kind: const_type,
-        value: value.into(),
-        attributes,
-        modificators,
-        metadata,
-        span,
-    })
+        Ok(Ast::Const {
+            name,
+            ascii_name,
+            kind: const_type,
+            value: value.into(),
+            attributes,
+            modificators,
+            metadata,
+            span,
+        })
+    } else {
+        Ok(Ast::invalid_ast(span))
+    }
 }

@@ -143,6 +143,7 @@ pub enum Ast<'ctx> {
         span: Span,
     },
     While {
+        variable: Option<std::boxed::Box<Ast<'ctx>>>,
         condition: std::boxed::Box<Ast<'ctx>>,
         block: std::boxed::Box<Ast<'ctx>>,
         kind: Type,

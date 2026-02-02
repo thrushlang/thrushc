@@ -105,23 +105,23 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
     if codegen.get_context().get_loop_ctx().get_all_branch_depth() == 0 {
         codegen
             .get_mut_context()
-            .get_mut_loop_ctx()
+            .get_mut_loop_context()
             .set_breakall_branch(exit);
 
         codegen
             .get_mut_context()
-            .get_mut_loop_ctx()
+            .get_mut_loop_context()
             .set_continueall_branch(steps);
     }
 
     codegen
         .get_mut_context()
-        .get_mut_loop_ctx()
+        .get_mut_loop_context()
         .add_continue_branch(steps);
 
     codegen
         .get_mut_context()
-        .get_mut_loop_ctx()
+        .get_mut_loop_context()
         .add_break_branch(exit);
 
     if actions.is_unary_preeval_operation() {
@@ -151,12 +151,12 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
 
     block::move_specific_after_the_last(codegen.get_mut_context(), steps, *span);
 
-    codegen.get_mut_context().get_mut_loop_ctx().pop();
+    codegen.get_mut_context().get_mut_loop_context().pop();
 
     if codegen.get_context().get_loop_ctx().get_branch_depth() == 0 {
         codegen
             .get_mut_context()
-            .get_mut_loop_ctx()
+            .get_mut_loop_context()
             .pop_superior_branchers();
     }
 

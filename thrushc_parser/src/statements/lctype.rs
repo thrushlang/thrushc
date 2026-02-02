@@ -42,11 +42,15 @@ pub fn build_custom_type<'parser>(
         "Expected ';'.".into(),
     )?;
 
-    ctx.get_mut_symbols()
-        .new_custom_type(name, (custom_type.clone(), attributes), span)?;
+    if !ctx.is_main_scope() {
+        ctx.get_mut_symbols()
+            .new_custom_type(name, (custom_type.clone(), attributes), span)?;
 
-    Ok(Ast::CustomType {
-        kind: custom_type,
-        span,
-    })
+        Ok(Ast::CustomType {
+            kind: custom_type,
+            span,
+        })
+    } else {
+        Ok(Ast::invalid_ast(span))
+    }
 }

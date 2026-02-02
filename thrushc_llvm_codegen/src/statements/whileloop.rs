@@ -24,7 +24,10 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
         .get_value();
 
     let Ast::While {
-        condition, block, ..
+        variable,
+        condition,
+        block,
+        ..
     } = node
     else {
         return;
@@ -35,6 +38,10 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
     let cond: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
     let body: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
     let exit: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
+
+    if let Some(node) = variable {
+        codegen.codegen_variables(node);
+    }
 
     llvm_builder
         .build_unconditional_branch(cond)
@@ -57,23 +64,23 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
     if codegen.get_context().get_loop_ctx().get_all_branch_depth() == 0 {
         codegen
             .get_mut_context()
-            .get_mut_loop_ctx()
+            .get_mut_loop_context()
             .set_breakall_branch(exit);
 
         codegen
             .get_mut_context()
-            .get_mut_loop_ctx()
+            .get_mut_loop_context()
             .set_continueall_branch(cond);
     }
 
     codegen
         .get_mut_context()
-        .get_mut_loop_ctx()
+        .get_mut_loop_context()
         .add_continue_branch(cond);
 
     codegen
         .get_mut_context()
-        .get_mut_loop_ctx()
+        .get_mut_loop_context()
         .add_break_branch(exit);
 
     codegen.codegen_block(block);
@@ -102,11 +109,11 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
     if codegen.get_context().get_loop_ctx().get_branch_depth() == 0 {
         codegen
             .get_mut_context()
-            .get_mut_loop_ctx()
+            .get_mut_loop_context()
             .pop_superior_branchers();
     }
 
-    codegen.get_mut_context().get_mut_loop_ctx().pop();
+    codegen.get_mut_context().get_mut_loop_context().pop();
 }
 
 fn short_circuit_comparison<'ctx>(

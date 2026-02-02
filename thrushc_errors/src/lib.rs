@@ -7,6 +7,7 @@ use thrushc_span::Span;
 pub enum CompilationIssue {
     Error(CompilationIssueCode, String, Option<String>, Span),
     Warning(CompilationIssueCode, String, Span),
+
     FrontEndBug(
         String,
         String,
@@ -15,6 +16,7 @@ pub enum CompilationIssue {
         std::path::PathBuf,
         u32,
     ),
+
     BackenEndBug(
         String,
         String,
@@ -148,6 +150,7 @@ pub enum CompilationIssueCode {
     W0015, // Strucuture not Used,
     W0016, // Structure Field not Used,
     W0017, // Function not used
+    W0018, // Circular Import
 }
 
 impl CompilationIssueCode {
@@ -289,6 +292,9 @@ impl CompilationIssueCode {
             }
             CompilationIssueCode::W0017 => {
                 format!("UNUSED FUNCTION - {}", "W0017".bright_yellow())
+            }
+            CompilationIssueCode::W0018 => {
+                format!("CIRCULAR IMPORT - {}", "W0018".bright_yellow())
             }
         }
     }

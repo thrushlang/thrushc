@@ -206,6 +206,16 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.analyze_ast(node);
             }
 
+            Ast::For { local: node, .. } => {
+                self.analyze_ast(node);
+            }
+            Ast::While {
+                variable: Some(node),
+                ..
+            } => {
+                self.analyze_ast(node);
+            }
+
             _ => (),
         }
     }

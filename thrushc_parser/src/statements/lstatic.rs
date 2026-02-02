@@ -63,18 +63,28 @@ pub fn build_static<'parser>(
             thread_mode,
         );
 
-        let static_: Ast = Ast::Static {
-            name,
-            ascii_name,
-            kind: static_type,
-            value: None,
-            attributes,
-            modificators,
-            metadata,
-            span,
-        };
+        if !ctx.is_main_scope() {
+            ctx.get_mut_symbols().new_static(
+                name,
+                (static_type.clone(), metadata, attributes.clone()),
+                span,
+            )?;
 
-        Ok(static_)
+            let static_: Ast = Ast::Static {
+                name,
+                ascii_name,
+                kind: static_type,
+                value: None,
+                attributes,
+                modificators,
+                metadata,
+                span,
+            };
+
+            Ok(static_)
+        } else {
+            Ok(Ast::invalid_ast(span))
+        }
     } else {
         ctx.consume(
             TokenType::Eq,
@@ -95,23 +105,27 @@ pub fn build_static<'parser>(
             thread_mode,
         );
 
-        ctx.get_mut_symbols().new_static(
-            name,
-            (static_type.clone(), metadata, attributes.clone()),
-            span,
-        )?;
+        if !ctx.is_main_scope() {
+            ctx.get_mut_symbols().new_static(
+                name,
+                (static_type.clone(), metadata, attributes.clone()),
+                span,
+            )?;
 
-        let static_: Ast = Ast::Static {
-            name,
-            ascii_name,
-            kind: static_type,
-            value: Some(value.into()),
-            attributes,
-            modificators,
-            metadata,
-            span,
-        };
+            let static_: Ast = Ast::Static {
+                name,
+                ascii_name,
+                kind: static_type,
+                value: Some(value.into()),
+                attributes,
+                modificators,
+                metadata,
+                span,
+            };
 
-        Ok(static_)
+            Ok(static_)
+        } else {
+            Ok(Ast::invalid_ast(span))
+        }
     }
 }

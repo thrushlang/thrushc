@@ -86,14 +86,18 @@ pub fn build_enum<'parser>(
         "Expected '}'.".into(),
     )?;
 
-    ctx.get_mut_symbols()
-        .new_enum(enum_name, (data.clone(), enum_attributes.clone()), span)?;
+    if !ctx.is_main_scope() {
+        ctx.get_mut_symbols()
+            .new_enum(enum_name, (data.clone(), enum_attributes.clone()), span)?;
 
-    Ok(Ast::Enum {
-        name: enum_name,
-        data,
-        attributes: enum_attributes,
-        kind: Type::Void(span),
-        span,
-    })
+        Ok(Ast::Enum {
+            name: enum_name,
+            data,
+            attributes: enum_attributes,
+            kind: Type::Void(span),
+            span,
+        })
+    } else {
+        Ok(Ast::invalid_ast(span))
+    }
 }

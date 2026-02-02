@@ -889,7 +889,7 @@ impl CommandLine {
             self.report_error("Expected value after flag or command.");
         }
 
-        self.current += 1;
+        self.current = self.current.saturating_add(1);
     }
 
     #[inline]

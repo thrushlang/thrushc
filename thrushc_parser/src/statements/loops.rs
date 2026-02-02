@@ -21,19 +21,47 @@ pub fn build_for_loop<'parser>(
 
     let span: Span = for_tk.get_span();
 
-    let local: Ast = local::build_local(ctx)?;
-    let condition: Ast = expressions::build_expression(ctx)?;
-    let actions: Ast = expressions::build_expression(ctx)?;
-    let body: Ast = block::build_block(ctx)?;
+    if ctx.check(TokenType::LBrace) {
+        let body: Ast<'_> = block::build_block(ctx)?;
 
-    Ok(Ast::For {
-        local: local.into(),
-        condition: condition.into(),
-        actions: actions.into(),
-        block: body.into(),
-        kind: Type::Void(span),
-        span,
-    })
+        Ok(Ast::Loop {
+            block: body.into(),
+            kind: Type::Void(span),
+            span,
+        })
+    } else if ctx.match_token(TokenType::SemiColon)? {
+        while ctx.match_token(TokenType::SemiColon)? {}
+
+        ctx.consume(
+            TokenType::LBrace,
+            CompilationIssueCode::E0001,
+            "Expected '{'.".into(),
+        )?;
+
+        ctx.go_back();
+
+        let body: Ast<'_> = block::build_block(ctx)?;
+
+        Ok(Ast::Loop {
+            block: body.into(),
+            kind: Type::Void(span),
+            span,
+        })
+    } else {
+        let local: Ast = local::build_local(ctx)?;
+        let condition: Ast = expressions::build_expression(ctx)?;
+        let actions: Ast = expressions::build_expression(ctx)?;
+        let body: Ast = block::build_block(ctx)?;
+
+        Ok(Ast::For {
+            local: local.into(),
+            condition: condition.into(),
+            actions: actions.into(),
+            block: body.into(),
+            kind: Type::Void(span),
+            span,
+        })
+    }
 }
 
 pub fn build_loop<'parser>(
@@ -67,13 +95,91 @@ pub fn build_while_loop<'parser>(
 
     let span: Span = while_tk.get_span();
 
-    let condition: Ast = expressions::build_expr(ctx)?;
-    let block: Ast = block::build_block(ctx)?;
+    if ctx.check(TokenType::Local) {
+        let local: Ast<'_> = local::build_local(ctx)?;
 
-    Ok(Ast::While {
-        condition: condition.into(),
-        block: block.into(),
-        kind: Type::Void(span),
-        span,
-    })
+        ctx.consume(
+            TokenType::Colon,
+            CompilationIssueCode::E0001,
+            "Expected ':'.".into(),
+        )?;
+
+        let condition: Ast = expressions::build_expr(ctx)?;
+        let block: Ast = block::build_block(ctx)?;
+
+        Ok(Ast::While {
+            variable: Some(local.into()),
+            condition: condition.into(),
+            block: block.into(),
+            kind: Type::Void(span),
+            span,
+        })
+    } else if ctx.check(TokenType::LParen) {
+        let mut found_rparen: usize = 0;
+
+        while ctx.match_token(TokenType::LParen)? {
+            found_rparen += 1;
+        }
+
+        if ctx.check(TokenType::Local) {
+            let local: Ast<'_> = local::build_local(ctx)?;
+
+            ctx.consume(
+                TokenType::Colon,
+                CompilationIssueCode::E0001,
+                "Expected ':'.".into(),
+            )?;
+
+            let condition: Ast = expressions::build_expr(ctx)?;
+
+            for _ in 0..=found_rparen {
+                ctx.consume(
+                    TokenType::RParen,
+                    CompilationIssueCode::E0001,
+                    "Expected ')'.".into(),
+                )?;
+            }
+
+            let block: Ast = block::build_block(ctx)?;
+
+            Ok(Ast::While {
+                variable: Some(local.into()),
+                condition: condition.into(),
+                block: block.into(),
+                kind: Type::Void(span),
+                span,
+            })
+        } else {
+            let condition: Ast = expressions::build_expr(ctx)?;
+
+            for _ in 0..=found_rparen {
+                ctx.consume(
+                    TokenType::RParen,
+                    CompilationIssueCode::E0001,
+                    "Expected ')'.".into(),
+                )?;
+            }
+
+            let block: Ast = block::build_block(ctx)?;
+
+            Ok(Ast::While {
+                variable: None,
+                condition: condition.into(),
+                block: block.into(),
+                kind: Type::Void(span),
+                span,
+            })
+        }
+    } else {
+        let condition: Ast = expressions::build_expr(ctx)?;
+        let block: Ast = block::build_block(ctx)?;
+
+        Ok(Ast::While {
+            variable: None,
+            condition: condition.into(),
+            block: block.into(),
+            kind: Type::Void(span),
+            span,
+        })
+    }
 }

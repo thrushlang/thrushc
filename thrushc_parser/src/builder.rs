@@ -26,7 +26,7 @@ pub fn build_stmt_modificator(
     ctx: &mut ParserContext,
     limits: &[TokenType],
 ) -> Result<Modificators, CompilationIssue> {
-    let mut modificators: Modificators = Vec::with_capacity(255);
+    let mut modificators: Modificators = Vec::with_capacity(u8::MAX as usize);
 
     const VALID_MODIFICATORS: &[TokenType] = &[
         TokenType::ThreadInit,

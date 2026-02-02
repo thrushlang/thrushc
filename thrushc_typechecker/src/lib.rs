@@ -437,7 +437,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 Ok(())
             }
             Ast::While {
-                condition, block, ..
+                variable,
+                condition,
+                block,
+                ..
             } => {
                 let metadata: TypeCheckerExpressionMetadata =
                     TypeCheckerExpressionMetadata::new(condition.is_literal_value());
@@ -452,6 +455,10 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     metadata,
                     span,
                 )?;
+
+                if let Some(variable) = variable {
+                    self.analyze_stmt(variable)?;
+                }
 
                 self.analyze_expr(condition)?;
                 self.analyze_stmt(block)?;

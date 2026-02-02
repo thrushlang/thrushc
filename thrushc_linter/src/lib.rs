@@ -44,8 +44,10 @@ impl<'linter> Linter<'linter> {
     pub fn check(&mut self) {
         self.declare_forward();
 
-        for node in self.ast.iter() {
-            self.analyze_decl(node);
+        {
+            for node in self.ast.iter() {
+                self.analyze_decl(node);
+            }
         }
 
         self.generate_warnings();
@@ -183,8 +185,15 @@ impl<'linter> Linter<'linter> {
                 self.analyze_stmt(block);
             }
             Ast::While {
-                condition, block, ..
+                variable,
+                condition,
+                block,
+                ..
             } => {
+                if let Some(node) = variable {
+                    self.analyze_stmt(node);
+                }
+
                 self.analyze_expr(condition);
                 self.analyze_stmt(block);
             }

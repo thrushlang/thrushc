@@ -50,21 +50,25 @@ pub fn build_local<'parser>(
     if ctx.match_token(TokenType::SemiColon)? {
         let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable, is_volatile, atomic_ord);
 
-        ctx.get_mut_symbols()
-            .new_local(name, (local_type.clone(), metadata, span), span)?;
+        if !ctx.is_main_scope() {
+            ctx.get_mut_symbols()
+                .new_local(name, (local_type.clone(), metadata, span), span)?;
 
-        let local: Ast = Ast::Local {
-            name,
-            ascii_name,
-            kind: local_type,
-            value: None,
-            attributes,
-            modificators,
-            metadata,
-            span,
-        };
+            let local: Ast = Ast::Local {
+                name,
+                ascii_name,
+                kind: local_type,
+                value: None,
+                attributes,
+                modificators,
+                metadata,
+                span,
+            };
 
-        Ok(local)
+            Ok(local)
+        } else {
+            Ok(Ast::invalid_ast(span))
+        }
     } else {
         let metadata: LocalMetadata =
             LocalMetadata::new(false, is_mutable, is_volatile, atomic_ord);
@@ -84,20 +88,24 @@ pub fn build_local<'parser>(
 
         local_type.inferer_inner_type_from_type(value_type);
 
-        ctx.get_mut_symbols()
-            .new_local(name, (local_type.clone(), metadata, span), span)?;
+        if !ctx.is_main_scope() {
+            ctx.get_mut_symbols()
+                .new_local(name, (local_type.clone(), metadata, span), span)?;
 
-        let local: Ast = Ast::Local {
-            name,
-            ascii_name,
-            kind: local_type,
-            value: Some(value.into()),
-            attributes,
-            modificators,
-            metadata,
-            span,
-        };
+            let local: Ast = Ast::Local {
+                name,
+                ascii_name,
+                kind: local_type,
+                value: Some(value.into()),
+                attributes,
+                modificators,
+                metadata,
+                span,
+            };
 
-        Ok(local)
+            Ok(local)
+        } else {
+            Ok(Ast::invalid_ast(span))
+        }
     }
 }

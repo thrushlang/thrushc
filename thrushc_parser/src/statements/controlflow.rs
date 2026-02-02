@@ -16,7 +16,7 @@ pub fn build_continue<'parser>(
         "Expected 'continue' keyword.".into(),
     )?;
 
-    let span: Span = continue_tk.span;
+    let span: Span = continue_tk.get_span();
 
     ctx.consume(
         TokenType::SemiColon,
@@ -62,7 +62,7 @@ pub fn build_continueall<'parser>(
         "Expected 'continueall' keyword.".into(),
     )?;
 
-    let span: Span = continueall_tk.span;
+    let span: Span = continueall_tk.get_span();
 
     ctx.consume(
         TokenType::SemiColon,

@@ -1,9 +1,9 @@
 use thrushc_ast::Ast;
-use thrushc_errors::CompilationIssue;
-use thrushc_token::traits::TokenExtensions;
+use thrushc_errors::{CompilationIssue, CompilationIssueCode};
+use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
 
-use crate::{ParserContext, control::ParserSyncPosition, statements};
+use crate::{ParserContext, control::ParserSyncPosition};
 
 pub mod asmfn;
 pub mod function;
@@ -33,7 +33,17 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         TokenType::GlobalAsm => Ok(glasm::build_global_assembler(ctx)?),
         TokenType::Import => Ok(import::build_import(ctx)?),
 
-        _ => Ok(statements::parse(ctx)?),
+        _ => {
+            let what: &Token = ctx.advance()?;
+
+            Err(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                "Expected a declaration or defination, not a statement and never an expression."
+                    .into(),
+                None,
+                what.get_span(),
+            ))
+        }
     };
 
     ctx.get_mut_control_ctx().pop_sync_position();

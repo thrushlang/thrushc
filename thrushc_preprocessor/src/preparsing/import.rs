@@ -1,3 +1,4 @@
+use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_lexer::Lexer;
 use thrushc_options::{CompilationUnit, CompilerOptions};
 use thrushc_span::Span;
@@ -8,37 +9,80 @@ use crate::{context::PreprocessorContext, module::Module, parser::ModuleParser};
 
 pub fn parse_import<'preprocessor>(
     parser: &mut PreprocessorContext<'preprocessor>,
-) -> Result<Module<'preprocessor>, ()> {
-    let _ = parser.consume(TokenType::Import)?;
+) -> Result<Option<Module<'preprocessor>>, ()> {
+    parser.consume(TokenType::Import)?;
 
     let module_path_tk: &Token = parser.consume(TokenType::Str)?;
-    let module_path_span: Span = module_path_tk.get_span();
+    let span: Span = module_path_tk.get_span();
 
     let mut module_path: std::path::PathBuf = std::path::PathBuf::from(module_path_tk.get_lexeme());
 
-    let _ = parser.consume(TokenType::SemiColon)?;
+    parser.consume(TokenType::SemiColon)?;
 
-    let _ = module_path.canonicalize().map(|path| module_path = path);
+    if let Ok(canocalized) = module_path.canonicalize() {
+        module_path = canocalized;
+    }
+
+    if parser.has_visited(&module_path) {
+        return Ok(None);
+    } else {
+        parser.mark_visited(module_path.clone());
+    }
 
     if !module_path.exists() {
+        parser.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0035,
+            "The path does not exist. Make sure it is a valid path.".into(),
+            None,
+            span,
+        ));
+
         return Err(());
     }
 
     if !module_path.is_file() {
+        parser.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0035,
+            "The path does not point to a file. Make sure it is a valid path to file.".into(),
+            None,
+            span,
+        ));
+
         return Err(());
     }
 
     if module_path.file_stem().is_none() {
+        parser.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0035,
+            "An name was expected in the path. Check that it points to a file with a valid the name.".into(),
+            None,
+            span,
+        ));
+
         return Err(());
     }
 
     if module_path.extension().is_none() {
+        parser.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0035,
+            "An extension was expected in the path. Check that it points to a file with a valid the extension.".into(),
+            None,
+            span,
+        ));
+
         return Err(());
     }
 
     if !module_path.extension().is_some_and(|ext| {
         thrushc_constants::COMPILER_OWN_FILE_EXTENSIONS.contains(&ext.to_str().unwrap_or("unknown"))
     }) {
+        parser.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0035,
+            "It was expected that it would target files with a '.thrush' or '.🐦' extension. Make sure they are valid thrush files.".into(),
+            None,
+            span,
+        ));
+
         return Err(());
     }
 
@@ -62,15 +106,16 @@ pub fn parse_import<'preprocessor>(
     let file: CompilationUnit = CompilationUnit::new(name, module_path, content, base_name.clone());
 
     let tokens: Vec<Token> = Lexer::lex_for_preprocessor(&file, options)?;
-    let subparser: ModuleParser = ModuleParser::new(base_name, tokens, options, &file);
 
-    let submodule: Module<'preprocessor> = match subparser.parse() {
-        Ok(submodule) => submodule,
-        Err(errors) => {
-            parser.merge_errors(errors);
-            return Err(());
-        }
-    };
+    let subparser: ModuleParser = ModuleParser::new(
+        base_name,
+        tokens,
+        options,
+        &file,
+        parser.get_global_visited_modules(),
+    );
 
-    Ok(submodule)
+    let submodule: Module<'preprocessor> = subparser.parse()?;
+
+    Ok(Some(submodule))
 }

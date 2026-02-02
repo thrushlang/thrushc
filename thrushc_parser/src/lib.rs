@@ -265,6 +265,11 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
+    pub fn go_back(&mut self) {
+        self.current = self.current.saturating_sub(1);
+    }
+
+    #[inline]
     pub fn match_token(&mut self, kind: TokenType) -> Result<bool, CompilationIssue> {
         if self.peek().kind == kind {
             self.only_advance()?;
@@ -277,7 +282,7 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn only_advance(&mut self) -> Result<(), CompilationIssue> {
         if !self.is_eof() {
-            self.current += 1;
+            self.current = self.current.saturating_add(1);
             Ok(())
         } else {
             Err(CompilationIssue::Error(
@@ -292,7 +297,7 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn advance(&mut self) -> Result<&'parser Token, CompilationIssue> {
         if !self.is_eof() {
-            self.current += 1;
+            self.current = self.current.saturating_add(1);
             Ok(self.previous())
         } else {
             Err(CompilationIssue::Error(
@@ -340,12 +345,12 @@ impl ParserContext<'_> {
 
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.scope += 1;
+        self.scope = self.scope.saturating_add(1);
     }
 
     #[inline]
     pub fn end_scope(&mut self) {
-        self.scope -= 1;
+        self.scope = self.scope.saturating_sub(1);
     }
 }
 
