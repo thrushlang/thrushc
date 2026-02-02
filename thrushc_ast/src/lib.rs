@@ -6,7 +6,7 @@ use thrushc_typesystem::Type;
 
 use crate::{
     builitins::ThrushBuiltin,
-    data::{ConstructorData, EnumData, StructureData},
+    data::{ConstructorData, EnumData, PropertyData, StructureData},
     metadata::{
         CastingMetadata, ConstantMetadata, DereferenceMetadata, FunctionParameterMetadata,
         IndexMetadata, LocalMetadata, PropertyMetadata, ReferenceMetadata, StaticMetadata,
@@ -108,7 +108,7 @@ pub enum Ast<'ctx> {
     },
     Property {
         source: std::boxed::Box<Ast<'ctx>>,
-        indexes: std::vec::Vec<(Type, u32)>,
+        data: PropertyData,
         metadata: PropertyMetadata,
         kind: Type,
         span: Span,

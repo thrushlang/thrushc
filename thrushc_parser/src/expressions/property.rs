@@ -1,8 +1,8 @@
 use thrushc_ast::{
     Ast,
-    data::{StructDataField, StructureData},
+    data::{PropertyData, StructDataField, StructureData},
     metadata::PropertyMetadata,
-    traits::{AstGetType, AstMemoryExtensions},
+    traits::{AstGetType, AstMemoryExtensions, AstStructureDataExtensions},
 };
 use thrushc_entities::parser::{FoundSymbolId, Struct};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
@@ -20,45 +20,42 @@ pub fn build_property<'parser>(
     ctx: &mut ParserContext<'parser>,
     source: Ast<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let source_type: &Type = source.get_value_type()?;
+    let base_type: &Type = source.get_value_type()?;
     let metadata: PropertyMetadata = PropertyMetadata::new(source.is_allocated());
 
     let mut property_names: Vec<&str> = Vec::with_capacity(10);
 
-    let first_property: &Token = ctx.consume(
+    let first: &Token = ctx.consume(
         TokenType::Identifier,
         CompilationIssueCode::E0001,
-        "Expected property name.".into(),
+        "Expected identifier.".into(),
     )?;
 
-    let mut span: Span = first_property.span;
+    let mut span: Span = first.get_span();
 
-    property_names.push(first_property.get_lexeme());
+    property_names.push(first.get_lexeme());
 
     while ctx.match_token(TokenType::Dot)? {
         let property: &Token = ctx.consume(
             TokenType::Identifier,
             CompilationIssueCode::E0001,
-            "Expected property name.".into(),
+            "Expected identifier.".into(),
         )?;
 
-        span = property.span;
-
+        span = property.get_span();
         property_names.push(property.get_lexeme());
     }
 
-    property_names.reverse();
+    let decomposed: (Type, PropertyData) =
+        self::decompose(ctx, 0, &source, property_names, base_type, span)?;
 
-    let decomposed_property: (Type, Vec<(Type, u32)>) =
-        self::decompose(ctx, 0, &source, property_names, source_type, span)?;
-
-    let property_type: Type = decomposed_property.0;
-    let indexes: Vec<(Type, u32)> = decomposed_property.1;
+    let kind: Type = decomposed.0;
+    let data: PropertyData = decomposed.1;
 
     Ok(Ast::Property {
         source: source.into(),
-        indexes,
-        kind: property_type,
+        data,
+        kind,
         metadata,
         span,
     })
@@ -71,90 +68,104 @@ fn decompose<'parser>(
     property_names: Vec<&str>,
     base_type: &Type,
     span: Span,
-) -> Result<(Type, Vec<(Type, u32)>), CompilationIssue> {
-    let mut indices: Vec<(Type, u32)> = Vec::with_capacity(50);
+) -> Result<(Type, PropertyData), CompilationIssue> {
+    let mut indices: PropertyData = PropertyData::with_capacity(u8::MAX as usize);
     let mut is_parent_ptr: bool = false;
 
     if position >= property_names.len() {
         return Ok((base_type.clone(), indices));
     }
 
-    let default_ptr_type: &Type = &Type::Ptr(None, base_type.get_span());
-
     let current_type: &Type = match base_type {
-        Type::Ptr(inner_ptr, ..) => {
+        Type::Ptr(Some(inner_type), ..) => {
             is_parent_ptr = true;
-            inner_ptr.as_ref().map_or(default_ptr_type, |v| v)
+            inner_type
         }
+
         _ => base_type,
     };
 
-    let field_name: &str = property_names[position];
+    let property_name: &str = property_names[position];
 
     if let Type::Struct(name, ..) = current_type {
         let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
 
-        let structure_id: (&str, usize) = object.expected_struct(span)?;
-        let id: &str = structure_id.0;
-        let scope_idx: usize = structure_id.1;
+        let struct_id: (&str, usize) = object.expected_struct(span)?;
+        let id: &str = struct_id.0;
+        let scope_idx: usize = struct_id.1;
 
         let structure: Struct = ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
-        let fields: StructureData = structure.get_fields();
+        let data: StructureData = structure.get_data();
 
-        let field: Option<StructDataField> = fields
-            .1
+        let field: Option<StructDataField> = data
+            .get_fields()
             .iter()
             .enumerate()
-            .find(|(_, (name, ..))| *name == field_name);
+            .find(|(_, (other_property_name, ..))| *other_property_name == property_name);
 
-        if let Some((index, (_, field_type, ..))) = field {
-            let adjusted_field_type: Type = if is_parent_ptr || source.is_allocated() {
-                Type::Ptr(Some(field_type.clone().into()), field_type.get_span())
-            } else {
-                field_type.clone()
-            };
+        let Some((index, (_, field_type, ..))) = field else {
+            return Err(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                format!("Expected a property, got '{}'.", property_name),
+                None,
+                span,
+            ));
+        };
 
-            indices.push((adjusted_field_type.clone(), index as u32));
+        let adjusted_inner_type: Type = if is_parent_ptr || source.is_allocated() {
+            Type::Ptr(Some(field_type.clone().into()), field_type.get_span())
+        } else {
+            field_type.clone()
+        };
 
-            position += 1;
+        indices.push((
+            current_type.clone(),
+            (
+                adjusted_inner_type.clone(),
+                u32::try_from(index).map_err(|_| {
+                    CompilationIssue::Error(
+                        CompilationIssueCode::E0037,
+                        "Too deeper for property indexing.".into(),
+                        None,
+                        span,
+                    )
+                })?,
+            ),
+        ));
 
-            let (field_inner_type, mut nested_indices) =
-                self::decompose(ctx, position, source, property_names, field_type, span)?;
+        position = position.saturating_add(1);
 
-            nested_indices.iter_mut().for_each(|(ty, ..)| {
-                *ty = if is_parent_ptr || source.is_allocated() {
-                    Type::Ptr(Some(ty.clone().into()), ty.get_span())
+        let (field_inner_type, mut nested_indices) =
+            self::decompose(ctx, position, source, property_names, field_type, span)?;
+
+        {
+            for (base_subtype, ..) in nested_indices.iter_mut() {
+                *base_subtype = if is_parent_ptr || source.is_allocated() {
+                    Type::Ptr(Some(base_subtype.clone().into()), base_subtype.get_span())
                 } else {
-                    ty.clone()
+                    base_subtype.clone()
                 };
-            });
-
-            indices.append(&mut nested_indices);
-
-            let adjusted_inner_field_type: Type = if is_parent_ptr || source.is_allocated() {
-                Type::Ptr(
-                    Some(field_inner_type.clone().into()),
-                    field_inner_type.get_span(),
-                )
-            } else {
-                field_inner_type
-            };
-
-            return Ok((adjusted_inner_field_type, indices));
+            }
         }
 
-        return Err(CompilationIssue::Error(
-            CompilationIssueCode::E0001,
-            format!("Expected a property, got '{}'.", field_name),
-            None,
-            span,
-        ));
+        indices.append(&mut nested_indices);
+
+        let adjusted_inner_type: Type = if is_parent_ptr || source.is_allocated() {
+            Type::Ptr(
+                Some(field_inner_type.clone().into()),
+                field_inner_type.get_span(),
+            )
+        } else {
+            field_inner_type
+        };
+
+        return Ok((adjusted_inner_type, indices));
     }
 
     if position < property_names.len() {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            format!("Property reference of '{}' isn't a structure.", field_name),
+            format!("Property '{}' isn't a structure.", property_name),
             None,
             span,
         ));

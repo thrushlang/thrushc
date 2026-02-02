@@ -77,7 +77,7 @@ impl<'parser> StructSymbolExtensions<'parser> for Struct<'parser> {
         }
     }
 
-    fn get_fields(&self) -> StructureData<'parser> {
+    fn get_data(&self) -> StructureData<'parser> {
         (self.0, self.1.clone(), self.3, self.4)
     }
 }

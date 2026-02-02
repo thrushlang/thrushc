@@ -7,7 +7,7 @@ use thrushc_typesystem::Type;
 
 use crate::{
     ParserContext, expressions,
-    statements::{block, local},
+    statements::{self, block, local},
 };
 
 pub fn build_for_loop<'parser>(
@@ -32,15 +32,11 @@ pub fn build_for_loop<'parser>(
     } else if ctx.match_token(TokenType::SemiColon)? {
         while ctx.match_token(TokenType::SemiColon)? {}
 
-        ctx.consume(
-            TokenType::LBrace,
-            CompilationIssueCode::E0001,
-            "Expected '{'.".into(),
-        )?;
-
-        ctx.go_back();
-
-        let body: Ast<'_> = block::build_block(ctx)?;
+        let body: Ast<'_> = if ctx.check(TokenType::LBrace) {
+            block::build_block(ctx)?
+        } else {
+            statements::parse(ctx)?
+        };
 
         Ok(Ast::Loop {
             block: body.into(),
@@ -48,10 +44,21 @@ pub fn build_for_loop<'parser>(
             span,
         })
     } else {
+        ctx.get_mut_symbols().begin_scope();
+        ctx.begin_scope();
+
         let local: Ast = local::build_local(ctx)?;
         let condition: Ast = expressions::build_expression(ctx)?;
         let actions: Ast = expressions::build_expression(ctx)?;
-        let body: Ast = block::build_block(ctx)?;
+
+        let body: Ast = if ctx.check(TokenType::LBrace) {
+            block::build_block(ctx)?
+        } else {
+            statements::parse(ctx)?
+        };
+
+        ctx.get_mut_symbols().end_scope();
+        ctx.end_scope();
 
         Ok(Ast::For {
             local: local.into(),
@@ -74,11 +81,14 @@ pub fn build_loop<'parser>(
     )?;
 
     let span: Span = loop_tk.get_span();
-
-    let block: Ast = block::build_block(ctx)?;
+    let body: Ast = if ctx.check(TokenType::LBrace) {
+        block::build_block(ctx)?
+    } else {
+        statements::parse(ctx)?
+    };
 
     Ok(Ast::Loop {
-        block: block.into(),
+        block: body.into(),
         kind: Type::Void(span),
         span,
     })
@@ -96,6 +106,9 @@ pub fn build_while_loop<'parser>(
     let span: Span = while_tk.get_span();
 
     if ctx.check(TokenType::Local) {
+        ctx.get_mut_symbols().begin_scope();
+        ctx.begin_scope();
+
         let local: Ast<'_> = local::build_local(ctx)?;
 
         ctx.consume(
@@ -105,12 +118,19 @@ pub fn build_while_loop<'parser>(
         )?;
 
         let condition: Ast = expressions::build_expr(ctx)?;
-        let block: Ast = block::build_block(ctx)?;
+        let body: Ast = if ctx.check(TokenType::LBrace) {
+            block::build_block(ctx)?
+        } else {
+            statements::parse(ctx)?
+        };
+
+        ctx.get_mut_symbols().end_scope();
+        ctx.end_scope();
 
         Ok(Ast::While {
             variable: Some(local.into()),
             condition: condition.into(),
-            block: block.into(),
+            block: body.into(),
             kind: Type::Void(span),
             span,
         })
@@ -122,6 +142,9 @@ pub fn build_while_loop<'parser>(
         }
 
         if ctx.check(TokenType::Local) {
+            ctx.get_mut_symbols().begin_scope();
+            ctx.begin_scope();
+
             let local: Ast<'_> = local::build_local(ctx)?;
 
             ctx.consume(
@@ -140,12 +163,19 @@ pub fn build_while_loop<'parser>(
                 )?;
             }
 
-            let block: Ast = block::build_block(ctx)?;
+            let body: Ast = if ctx.check(TokenType::LBrace) {
+                block::build_block(ctx)?
+            } else {
+                statements::parse(ctx)?
+            };
+
+            ctx.get_mut_symbols().end_scope();
+            ctx.end_scope();
 
             Ok(Ast::While {
                 variable: Some(local.into()),
                 condition: condition.into(),
-                block: block.into(),
+                block: body.into(),
                 kind: Type::Void(span),
                 span,
             })

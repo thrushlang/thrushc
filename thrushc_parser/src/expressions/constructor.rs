@@ -1,4 +1,4 @@
-use thrushc_ast::{Ast, data::ConstructorData};
+use thrushc_ast::{Ast, data::ConstructorData, traits::AstStructureDataExtensions};
 use thrushc_entities::parser::{FoundSymbolId, Struct};
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
@@ -44,10 +44,10 @@ pub fn build_constructor<'parser>(
     let structure: Struct = ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
     let modificator: StructureTypeModificator = structure.get_modificator();
 
-    let required: usize = structure.get_fields().1.len();
-
     let mut data: ConstructorData = ConstructorData::with_capacity(u8::MAX as usize);
     let mut count: usize = 0;
+
+    let required: usize = structure.get_data().get_fields().len();
 
     loop {
         if ctx.check(TokenType::RBrace) {
@@ -56,7 +56,7 @@ pub fn build_constructor<'parser>(
 
         if ctx.match_token(TokenType::Identifier)? {
             let field_tk: &Token = ctx.previous();
-            let field_span: Span = field_tk.span;
+            let field_span: Span = field_tk.get_span();
             let field_name: &str = field_tk.get_lexeme();
 
             ctx.consume(

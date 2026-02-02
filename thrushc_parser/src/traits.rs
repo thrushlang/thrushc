@@ -41,7 +41,7 @@ pub trait StructFieldsExtensions {
 pub trait StructSymbolExtensions<'parser> {
     fn contains_field(&self, name: &str) -> bool;
     fn get_field_type(&self, name: &str) -> Option<Type>;
-    fn get_fields(&self) -> StructureData<'parser>;
+    fn get_data(&self) -> StructureData<'parser>;
     fn get_modificator(&self) -> StructureTypeModificator;
 }
 

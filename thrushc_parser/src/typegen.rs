@@ -97,9 +97,9 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                     let (id, scope_idx) = object.expected_struct(span)?;
                     let structure: Struct =
                         ctx.get_symbols().get_struct_by_id(id, scope_idx, span)?;
-                    let fields: StructureData = structure.get_fields();
+                    let data: StructureData = structure.get_data();
 
-                    Ok(fields.get_type())
+                    Ok(data.get_type())
                 }
                 _ if object.is_custom_type() => {
                     let (id, scope_idx) = object.expected_custom_type(span)?;

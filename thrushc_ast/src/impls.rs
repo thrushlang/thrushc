@@ -5,11 +5,12 @@ use thrushc_typesystem::traits::TypeIsExtensions;
 use crate::{
     Ast,
     builitins::ThrushBuiltin,
-    data::StructureData,
+    data::{PropertyData, PropertyDataField, StructureData},
     traits::{
         AstCodeBlockEntensions, AstConstantExtensions, AstExpressionOperationExtensions,
-        AstGetType, AstMemoryExtensions, AstMutabilityExtensions, AstScopeExtensions,
-        AstStandardExtensions, AstStatementExtentions, AstStructureDataExtensions,
+        AstGetType, AstMemoryExtensions, AstMutabilityExtensions, AstPropertyDataExtensions,
+        AstPropertyDataFieldExtensions, AstScopeExtensions, AstStandardExtensions,
+        AstStatementExtentions, AstStructureDataExtensions,
     },
 };
 
@@ -350,6 +351,30 @@ impl AstExpressionOperationExtensions for Ast<'_> {
     }
 }
 
+impl AstPropertyDataExtensions for PropertyData {
+    #[inline]
+    fn get_first_property(&self) -> Option<&crate::data::PropertyDataField> {
+        self.first()
+    }
+}
+
+impl AstPropertyDataFieldExtensions for PropertyDataField {
+    #[inline]
+    fn get_base_type(&self) -> thrushc_typesystem::Type {
+        self.0.clone()
+    }
+
+    #[inline]
+    fn get_property_type(&self) -> thrushc_typesystem::Type {
+        self.1.0.clone()
+    }
+
+    #[inline]
+    fn get_index(&self) -> u32 {
+        self.1.1
+    }
+}
+
 impl<'parser> AstStructureDataExtensions<'parser> for StructureData<'parser> {
     fn new(
         name: &'parser str,
@@ -362,6 +387,10 @@ impl<'parser> AstStructureDataExtensions<'parser> for StructureData<'parser> {
             modificator,
             span,
         )
+    }
+
+    fn get_fields(&self) -> &crate::data::StructureDataFields<'_> {
+        &self.1
     }
 }
 

@@ -3,6 +3,8 @@ use thrushc_span::Span;
 use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, modificators::StructureTypeModificator};
 
+use crate::data::{PropertyDataField, StructureDataFields};
+
 pub trait AstGetType {
     fn get_any_type(&self) -> Result<&Type, CompilationIssue>;
     fn get_value_type(&self) -> Result<&Type, CompilationIssue>;
@@ -63,8 +65,19 @@ pub trait AstScopeExtensions {
     fn is_compatible_with_main_scope(&self) -> bool;
 }
 
-pub trait AstStructureDataExtensions<'parser> {
-    fn new(name: &'parser str, modificator: StructureTypeModificator, span: Span) -> Self;
+pub trait AstStructureDataExtensions<'ast> {
+    fn new(name: &'ast str, modificator: StructureTypeModificator, span: Span) -> Self;
+    fn get_fields(&self) -> &StructureDataFields<'_>;
+}
+
+pub trait AstPropertyDataExtensions {
+    fn get_first_property(&self) -> Option<&PropertyDataField>;
+}
+
+pub trait AstPropertyDataFieldExtensions {
+    fn get_base_type(&self) -> Type;
+    fn get_property_type(&self) -> Type;
+    fn get_index(&self) -> u32;
 }
 
 pub trait AstExpressionOperationExtensions {

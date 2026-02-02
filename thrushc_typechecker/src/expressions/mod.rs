@@ -234,9 +234,7 @@ pub fn validate<'type_checker>(
 
             Ok(())
         }
-        Ast::Property {
-            source, indexes, ..
-        } => {
+        Ast::Property { source, data, .. } => {
             let source_type: &Type = source.get_value_type()?;
             let source_span: Span = source.get_span();
 
@@ -260,13 +258,22 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            for (ty, _) in indexes.iter() {
+            for (ty, (subtype, ..)) in data.iter() {
                 if ty.contains_void_type() || ty.is_void_type() {
                     typechecker.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                         None,
                         ty.get_span(),
+                    ));
+                }
+
+                if subtype.contains_void_type() || subtype.is_void_type() {
+                    typechecker.add_error(CompilationIssue::Error(
+                        CompilationIssueCode::E0019,
+                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                        None,
+                        subtype.get_span(),
                     ));
                 }
             }

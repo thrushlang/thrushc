@@ -878,9 +878,7 @@ pub fn compile<'ctx>(
         Ast::Reference { name, .. } => context.get_table().get_symbol(name).load(context),
 
         // Compiles property access (e.g., struct field or array)
-        Ast::Property {
-            source, indexes, ..
-        } => expressions::property::compile(context, source, indexes),
+        Ast::Property { source, data, .. } => expressions::property::compile(context, source, data),
 
         // Memory Access Operations
         // Compiles an indexing operation (e.g., array access)
