@@ -139,14 +139,14 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         }
 
         let mut preprocessor: Preprocessor = Preprocessor::new();
-        let modules: Result<&[thrushc_preprocessor::module::Module<'_>], ()> =
+        let modules: Result<&[thrushc_preprocessor::module::Module], ()> =
             preprocessor.generate_modules(&tokens, self.options, file);
 
         if modules.is_err() {
             return interrupt::archive_compilation_unit(self, file, file_time);
         }
 
-        let modules: &[thrushc_preprocessor::module::Module<'_>] = modules.map_err(|_| {
+        let modules: &[thrushc_preprocessor::module::Module] = modules.map_err(|_| {
             let _ = interrupt::archive_compilation_unit_with_message(
                 self,
                 thrushc_logging::LoggingType::Error,
@@ -155,6 +155,8 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                 file_time,
             );
         })?;
+
+        println!("{:?}", modules);
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
 
@@ -426,14 +428,14 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         }
 
         let mut preprocessor: Preprocessor = Preprocessor::new();
-        let modules: Result<&[thrushc_preprocessor::module::Module<'_>], ()> =
+        let modules: Result<&[thrushc_preprocessor::module::Module], ()> =
             preprocessor.generate_modules(&tokens, self.options, file);
 
         if modules.is_err() {
             return interrupt::archive_compilation_unit_jit(self, file, file_time);
         }
 
-        let modules: &[thrushc_preprocessor::module::Module<'_>] = modules.map_err(|_| {
+        let modules: &[thrushc_preprocessor::module::Module] = modules.map_err(|_| {
             let _ = interrupt::archive_compilation_unit_with_message(
                 self,
                 thrushc_logging::LoggingType::Error,
@@ -442,6 +444,8 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                 file_time,
             );
         })?;
+
+        println!("{:?}", modules);
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
 

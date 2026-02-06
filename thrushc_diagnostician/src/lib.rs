@@ -26,7 +26,7 @@ enum Notificator {
     CompilerBackendBug,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Diagnostician {
     path: PathBuf,
     base_name: String,

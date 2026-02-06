@@ -24,8 +24,8 @@ use crate::{
     ParserContext,
     traits::{
         ConstantSymbolExtensions, FoundSymbolEitherExtensions, FoundSymbolExtensions,
-        FunctionParameterSymbolExtensions, LLISymbolExtensions, LocalSymbolExtensions,
-        StaticSymbolExtensions,
+        FunctionExtensions, FunctionParameterSymbolExtensions, LLISymbolExtensions,
+        LocalSymbolExtensions, StaticSymbolExtensions,
     },
 };
 
@@ -41,7 +41,7 @@ pub fn build_reference<'parser>(
 
         let function: Function = ctx.get_symbols().get_function_by_id(span, id)?;
 
-        let function_type: Type = function.0;
+        let function_type: Type = function.get_type();
         let function_parameter_types: Vec<Type> = function.1.0;
         let has_ignore_attr: bool = function.2;
 

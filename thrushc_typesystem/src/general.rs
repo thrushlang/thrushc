@@ -127,6 +127,11 @@ impl TypeIsExtensions for Type {
                 | Type::Char(..)
         )
     }
+
+    #[inline(always)]
+    fn is_unresolvedd_type(&self) -> bool {
+        matches!(self, Type::Unresolved { .. })
+    }
 }
 
 impl TypeExtensions for Type {
@@ -186,7 +191,8 @@ impl TypeExtensions for Type {
             | Type::Addr(..)
             | Type::Void(..)
             | Type::Ptr(None, ..)
-            | Type::Fn(..) => self,
+            | Type::Fn(..)
+            | Type::Unresolved { .. } => self,
         }
     }
 
@@ -277,6 +283,7 @@ impl std::fmt::Display for Type {
             Type::FPPC128(..) => write!(f, "fppc_128"),
             Type::Bool(..) => write!(f, "bool"),
             Type::Char(..) => write!(f, "char"),
+            Type::Unresolved { hint, .. } => write!(f, "unresolved[{}]", hint),
             Type::Fn(params, kind, modificator, ..) => {
                 let has_llvm_ignore: &str = if modificator.llvm().has_ignore() {
                     "<ignore>"

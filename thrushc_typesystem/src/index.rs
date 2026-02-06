@@ -43,7 +43,8 @@ impl IndexExtensions for Type {
             | Type::Addr(..)
             | Type::Void(..)
             | Type::Ptr(None, ..)
-            | Type::Fn(..) => self,
+            | Type::Fn(..)
+            | Type::Unresolved { .. } => self,
         }
     }
 }

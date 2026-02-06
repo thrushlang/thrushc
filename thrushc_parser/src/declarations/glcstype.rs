@@ -27,13 +27,13 @@ pub fn build_custom_type<'parser>(
     let name: &str = name_tk.get_lexeme();
     let span: Span = name_tk.get_span();
 
+    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
+
     ctx.consume(
         TokenType::Eq,
         CompilationIssueCode::E0001,
         "Expected '='.".into(),
     )?;
-
-    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
 
     let custom_type: Type = typegen::build_type(ctx, false)?;
 

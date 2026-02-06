@@ -203,9 +203,6 @@ impl std::fmt::Display for TokenType {
             // Direct Reference
             TokenType::DirectRef => write!(f, "ref"),
 
-            // Indirect Call
-            TokenType::Indirect => write!(f, "indirect"),
-
             // Types
             TokenType::Address => write!(f, "address"),
             TokenType::Bool => write!(f, "bool"),
@@ -308,7 +305,6 @@ impl std::fmt::Display for TokenType {
             TokenType::GreaterEq => write!(f, ">="),
             TokenType::Identifier => write!(f, "identifier"),
             TokenType::Fixed => write!(f, "fixed"),
-            TokenType::Instr => write!(f, "instr"),
             TokenType::LBrace => write!(f, "{{"),
             TokenType::LBracket => write!(f, "["),
             TokenType::Less => write!(f, "<"),

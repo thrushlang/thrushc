@@ -59,6 +59,7 @@ impl TypeArrayEntensions for Type {
             Type::Struct(..) => 25,
 
             Type::Void(..) => 26,
+            Type::Unresolved { .. } => 27,
         }
     }
 }

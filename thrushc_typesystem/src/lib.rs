@@ -84,4 +84,10 @@ pub enum Type {
 
     // Void Type
     Void(Span),
+
+    // Unresolved Type
+    Unresolved {
+        hint: String,
+        span: Span,
+    },
 }

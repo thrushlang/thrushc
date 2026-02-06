@@ -10,32 +10,28 @@ use crate::{
     signatures::{Signature, Symbol, Variant},
 };
 
-pub fn parse_constant<'module_parser>(
-    ctx: &mut ModuleParser<'module_parser>,
-) -> Result<Symbol, ()> {
-    ctx.consume(TokenType::Const)?;
+pub fn parse_type<'module_parser>(ctx: &mut ModuleParser<'module_parser>) -> Result<Symbol, ()> {
+    ctx.consume(TokenType::Type)?;
 
     let identifier_tk: &Token = ctx.consume(TokenType::Identifier)?;
     let name: String = identifier_tk.get_lexeme().to_string();
     let span: Span = identifier_tk.get_span();
 
-    ctx.consume(TokenType::Colon)?;
-
-    let r#type: Type = typegen::build_type(ctx)?;
-
     let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Eq])?;
 
     ctx.consume(TokenType::Eq)?;
 
-    ctx.advance_until(TokenType::SemiColon)?;
+    let r#type: Type = typegen::build_type(ctx)?;
+
+    ctx.consume(TokenType::SemiColon)?;
 
     Ok(Symbol {
         name,
-        signature: Signature::Constant {
+        signature: Signature::CustomType {
             kind: r#type,
-            span,
             attributes,
+            span,
         },
-        variant: Variant::Constant,
+        variant: Variant::CustomType,
     })
 }

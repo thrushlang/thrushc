@@ -121,7 +121,7 @@ pub fn parse_import<'module_parser>(parser: &mut ModuleParser<'module_parser>) -
         parser.get_global_visited_modules(),
     );
 
-    let submodule: Module<'module_parser> = subparser.parse()?;
+    let submodule: Module = subparser.parse()?;
 
     parser.get_mut_module().add_submodule(submodule);
 

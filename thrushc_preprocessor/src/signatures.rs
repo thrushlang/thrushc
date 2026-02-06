@@ -25,18 +25,18 @@ pub enum Signature {
     Function {
         kind: Type,
         parameters: Vec<(Type, Span)>,
-        span: Span,
         attributes: ThrushAttributes,
+        span: Span,
     },
     Constant {
         kind: Type,
-        span: Span,
         attributes: ThrushAttributes,
+        span: Span,
     },
     Static {
         kind: Type,
-        span: Span,
         attributes: ThrushAttributes,
+        span: Span,
     },
     Struct {
         kind: Type,
@@ -48,6 +48,7 @@ pub enum Signature {
     },
     CustomType {
         kind: Type,
+        attributes: ThrushAttributes,
         span: Span,
     },
 }

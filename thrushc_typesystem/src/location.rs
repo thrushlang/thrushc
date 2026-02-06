@@ -31,6 +31,7 @@ impl TypeCodeLocation for Type {
             | Type::Ptr(_, span)
             | Type::Struct(_, _, _, span)
             | Type::Fn(_, _, _, span) => *span,
+            Type::Unresolved { span, .. } => *span,
         }
     }
 }

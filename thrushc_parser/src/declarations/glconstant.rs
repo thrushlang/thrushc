@@ -12,7 +12,7 @@ use crate::{ParserContext, attributes, builder, expressions, typegen};
 
 pub fn build_global_const<'parser>(
     ctx: &mut ParserContext<'parser>,
-    declare_forward: bool,
+    parse_forward: bool,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
         TokenType::Const,
@@ -59,7 +59,7 @@ pub fn build_global_const<'parser>(
     let metadata: ConstantMetadata =
         ConstantMetadata::new(true, thread_local, is_volatile, atomic_ord);
 
-    if declare_forward {
+    if parse_forward {
         ctx.get_mut_symbols()
             .new_global_constant(name, (const_type, attributes), span)?;
 

@@ -24,3 +24,6 @@ thrushc_span = { path = "../thrushc_span" }
 thrushc_token = { path = "../thrushc_token" }
 thrushc_logging = { path = "../thrushc_logging" }
 thrushc_token_type = { path = "../thrushc_token_type" }
+thrushc_constants = { path = "../thrushc_constants" }
+thrushc_reader = { path = "../thrushc_reader" }
+thrushc_lexer = { path = "../thrushc_lexer" }

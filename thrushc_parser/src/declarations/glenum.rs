@@ -18,17 +18,16 @@ pub fn build_enum<'parser>(
         "Expected 'enum'.".into(),
     )?;
 
-    let name: &Token = ctx.consume(
+    let name_tk: &Token = ctx.consume(
         TokenType::Identifier,
         CompilationIssueCode::E0001,
         "Expected identifier.".into(),
     )?;
 
-    let enum_name: &str = name.get_lexeme();
-    let span: Span = name.get_span();
+    let name: &str = name_tk.get_lexeme();
+    let span: Span = name_tk.get_span();
 
-    let enum_attributes: ThrushAttributes =
-        attributes::build_attributes(ctx, &[TokenType::LBrace])?;
+    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
 
     ctx.consume(
         TokenType::LBrace,
@@ -90,14 +89,14 @@ pub fn build_enum<'parser>(
 
     if parse_forward {
         ctx.get_mut_symbols()
-            .new_global_enum(enum_name, (data, enum_attributes), span)?;
+            .new_global_enum(name, (data, attributes), span)?;
 
         Ok(Ast::new_nullptr(span))
     } else {
         Ok(Ast::Enum {
-            name: enum_name,
+            name,
             data,
-            attributes: enum_attributes,
+            attributes,
             kind: Type::Void(span),
             span,
         })

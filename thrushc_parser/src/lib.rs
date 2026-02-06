@@ -42,6 +42,8 @@ pub struct ParserContext<'parser> {
     control_ctx: ParserControlContext,
     type_ctx: ParserTypeContext,
 
+    options: &'parser CompilerOptions,
+
     diagnostician: Diagnostician,
     table: SymbolsTable<'parser>,
 
@@ -60,14 +62,17 @@ impl<'parser> Parser<'parser> {
     pub fn parse(
         tokens: &'parser [Token],
         file: &'parser CompilationUnit,
-        options: &CompilerOptions,
+        options: &'parser CompilerOptions,
     ) -> (ParserContext<'parser>, bool) {
-        Self { tokens, file }.start(options)
+        Self { tokens, file }.start_parsing(options)
     }
 }
 
 impl<'parser> Parser<'parser> {
-    fn start(&mut self, options: &CompilerOptions) -> (ParserContext<'parser>, bool) {
+    fn start_parsing(
+        &mut self,
+        options: &'parser CompilerOptions,
+    ) -> (ParserContext<'parser>, bool) {
         let mut ctx: ParserContext = ParserContext::new(self.tokens, self.file, options);
 
         declarations::parse_forward(&mut ctx);
@@ -99,23 +104,32 @@ impl<'parser> ParserContext<'parser> {
     pub fn new(
         tokens: &'parser [Token],
         file: &'parser CompilationUnit,
-        options: &CompilerOptions,
+        options: &'parser CompilerOptions,
     ) -> Self {
         let functions: Functions = Functions::with_capacity(u8::MAX as usize);
         let asm_functions: AssemblerFunctions = AssemblerFunctions::with_capacity(u8::MAX as usize);
 
+        let control_ctx: ParserControlContext = ParserControlContext::new();
+
+        let table: SymbolsTable =
+            SymbolsTable::with_functions(functions, asm_functions, options, file);
+
+        let type_ctx: ParserTypeContext = ParserTypeContext::default();
+
         Self {
             tokens,
+            ast: Vec::with_capacity(u8::MAX as usize),
 
-            ast: Vec::with_capacity(1000),
-            errors: Vec::with_capacity(1000),
-            bugs: Vec::with_capacity(1000),
+            errors: Vec::with_capacity(u8::MAX as usize),
+            bugs: Vec::with_capacity(u8::MAX as usize),
 
-            control_ctx: ParserControlContext::new(),
-            type_ctx: ParserTypeContext::default(),
+            control_ctx,
+            type_ctx,
+
+            options,
 
             diagnostician: Diagnostician::new(file, options),
-            table: SymbolsTable::with_functions(functions, asm_functions, options, file),
+            table,
 
             current: 0,
             scope: 0,
@@ -140,6 +154,10 @@ impl<'parser> ParserContext<'parser> {
         } else {
             false
         }
+    }
+
+    pub fn verify_for_only_parse_signature(&mut self) -> bool {
+        !self.errors.is_empty() || !self.bugs.is_empty()
     }
 }
 
@@ -368,6 +386,11 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn get_type_ctx(&self) -> &ParserTypeContext {
         &self.type_ctx
+    }
+
+    #[inline]
+    pub fn get_options(&self) -> &CompilerOptions {
+        self.options
     }
 
     #[inline]

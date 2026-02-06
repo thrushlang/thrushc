@@ -7,13 +7,13 @@ use thrushc_span::Span;
 use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
 
-use crate::{modparsing, module::Module};
+use crate::{modparsing, module::Module, signatures::Symbol};
 
 use ahash::AHashSet as HashSet;
 
 #[derive(Debug)]
 pub struct ModuleParser<'module_parser> {
-    module: Module<'module_parser>,
+    module: Module,
     tokens: Vec<Token>,
     diagnostician: Diagnostician,
     errors: Vec<CompilationIssue>,
@@ -45,7 +45,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
 }
 
 impl<'module_parser> ModuleParser<'module_parser> {
-    pub fn parse(mut self) -> Result<Module<'module_parser>, ()> {
+    pub fn parse(mut self) -> Result<Module, ()> {
         while !self.is_eof() {
             if self.start().is_err() {}
 
@@ -78,6 +78,16 @@ impl<'module_parser> ModuleParser<'module_parser> {
     pub fn start(&mut self) -> Result<(), ()> {
         if self.check(TokenType::Import) {
             modparsing::import::parse_import(self)?;
+        }
+
+        if self.check(TokenType::Const) {
+            let symbol: Symbol = modparsing::constant::parse_constant(self)?;
+            self.module.add_symbol(symbol);
+        }
+
+        if self.check(TokenType::Type) {
+            let symbol: Symbol = modparsing::customtype::parse_type(self)?;
+            self.module.add_symbol(symbol);
         }
 
         Ok(())
@@ -264,12 +274,12 @@ impl ModuleParser<'_> {
 
 impl<'module_parser> ModuleParser<'module_parser> {
     #[inline]
-    pub fn get_mut_module(&mut self) -> &mut Module<'module_parser> {
+    pub fn get_mut_module(&mut self) -> &mut Module {
         &mut self.module
     }
 
     #[inline]
-    pub fn get_module(&self) -> &Module<'module_parser> {
+    pub fn get_module(&self) -> &Module {
         &self.module
     }
 }

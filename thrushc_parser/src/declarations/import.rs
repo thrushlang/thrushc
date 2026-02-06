@@ -10,19 +10,19 @@ use crate::ParserContext;
 pub fn build_import<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let import_tk: &Token = ctx.consume(
+    ctx.consume(
         TokenType::Import,
         CompilationIssueCode::E0001,
         "Expected 'import' keyword.".into(),
     )?;
 
-    let span: Span = import_tk.get_span();
-
-    ctx.consume(
+    let path_literal_tk: &Token = ctx.consume(
         TokenType::Str,
         CompilationIssueCode::E0001,
         "Expected string literal.".into(),
     )?;
+
+    let span: Span = path_literal_tk.get_span();
 
     ctx.consume(
         TokenType::SemiColon,

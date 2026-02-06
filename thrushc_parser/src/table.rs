@@ -15,7 +15,7 @@ use thrushc_entities::parser::{
 pub const PREALLOCATED_GLOBAL_TABLE_CAPACITY: usize = 1000;
 pub const PREALLOCATED_LOCAL_TABLE_CAPACITY: usize = 255;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SymbolsTable<'parser> {
     functions: Functions<'parser>,
     asm_functions: AssemblerFunctions<'parser>,

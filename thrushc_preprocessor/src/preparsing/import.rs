@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_lexer::Lexer;
 use thrushc_options::{CompilationUnit, CompilerOptions};
@@ -9,13 +11,13 @@ use crate::{context::PreprocessorContext, module::Module, parser::ModuleParser};
 
 pub fn parse_import<'preprocessor>(
     parser: &mut PreprocessorContext<'preprocessor>,
-) -> Result<Option<Module<'preprocessor>>, ()> {
+) -> Result<Option<Module>, ()> {
     parser.consume(TokenType::Import)?;
 
     let module_path_tk: &Token = parser.consume(TokenType::Str)?;
     let span: Span = module_path_tk.get_span();
 
-    let mut module_path: std::path::PathBuf = std::path::PathBuf::from(module_path_tk.get_lexeme());
+    let mut module_path: PathBuf = PathBuf::from(module_path_tk.get_lexeme());
 
     parser.consume(TokenType::SemiColon)?;
 
@@ -115,7 +117,7 @@ pub fn parse_import<'preprocessor>(
         parser.get_global_visited_modules(),
     );
 
-    let submodule: Module<'preprocessor> = subparser.parse()?;
+    let submodule: Module = subparser.parse()?;
 
     Ok(Some(submodule))
 }

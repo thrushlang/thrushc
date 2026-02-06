@@ -55,7 +55,7 @@ pub fn parse_forward(ctx: &mut ParserContext) {
     let mut entered_at_block: bool = false;
 
     while !ctx.is_eof() {
-        match &ctx.peek().kind {
+        match ctx.peek().get_type() {
             TokenType::Type if !entered_at_block => {
                 let _ = glcstype::build_custom_type(ctx, true);
             }
@@ -93,6 +93,16 @@ pub fn parse_forward(ctx: &mut ParserContext) {
                 let _ = ctx.only_advance();
             }
         }
+    }
+
+    ctx.current = 0;
+
+    while !ctx.is_eof() {
+        if ctx.peek().get_type() == TokenType::Import {
+            let _ = import::build_import(ctx);
+        }
+
+        let _ = ctx.only_advance();
     }
 
     ctx.current = 0;

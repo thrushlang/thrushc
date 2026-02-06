@@ -22,6 +22,7 @@ pub trait TypeIsExtensions {
     fn is_signed_integer_type(&self) -> bool;
     fn is_lesseq_unsigned32bit_integer(&self) -> bool;
     fn is_integer_type(&self) -> bool;
+    fn is_unresolvedd_type(&self) -> bool;
 }
 
 pub trait FunctionReferenceExtensions {

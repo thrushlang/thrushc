@@ -102,12 +102,8 @@ pub enum TokenType {
     // --- LLI ---
     Alloc,
     Address,
-    Instr,
     Load,
     Write,
-
-    // -- Indirect Call
-    Indirect,
 
     // --- Keywords ---
     AsmFn,

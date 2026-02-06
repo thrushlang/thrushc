@@ -8,7 +8,7 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref ATOMIC: HashMap<&'static str, TokenType> = {
-        let mut atomic: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
+        let mut atomic: HashMap<&'static str, TokenType> = HashMap::with_capacity(u8::MAX as usize);
 
         atomic.insert("volatile", TokenType::Volatile);
         atomic.insert("lazyThread", TokenType::LazyThread);
@@ -32,7 +32,8 @@ lazy_static! {
 
 lazy_static! {
     pub static ref ATTRIBUTES: HashMap<&'static str, TokenType> = {
-        let mut attributes: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
+        let mut attributes: HashMap<&'static str, TokenType> =
+            HashMap::with_capacity(u8::MAX as usize);
 
         attributes.insert("@asmAlignStack", TokenType::AsmAlignStack);
         attributes.insert("@asmSyntax", TokenType::AsmSyntax);
@@ -68,7 +69,8 @@ lazy_static! {
 
 lazy_static! {
     pub static ref BUILTINS: HashMap<&'static str, TokenType> = {
-        let mut builtins: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
+        let mut builtins: HashMap<&'static str, TokenType> =
+            HashMap::with_capacity(u8::MAX as usize);
 
         builtins.insert("halloc", TokenType::Halloc);
         builtins.insert("sizeOf", TokenType::SizeOf);
@@ -86,7 +88,7 @@ lazy_static! {
 
 lazy_static! {
     pub static ref TYPES: HashMap<&'static str, TokenType> = {
-        let mut types: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
+        let mut types: HashMap<&'static str, TokenType> = HashMap::with_capacity(u8::MAX as usize);
 
         types.insert("s8", TokenType::S8);
         types.insert("s16", TokenType::S16);
@@ -117,7 +119,8 @@ lazy_static! {
 
 lazy_static! {
     pub static ref KEYWORDS: HashMap<&'static str, TokenType> = {
-        let mut keywords: HashMap<&'static str, TokenType> = HashMap::with_capacity(100);
+        let mut keywords: HashMap<&'static str, TokenType> =
+            HashMap::with_capacity(u8::MAX as usize);
 
         keywords.insert("local", TokenType::Local);
         keywords.insert("fn", TokenType::Fn);
@@ -140,8 +143,6 @@ lazy_static! {
         keywords.insert("continueall", TokenType::ContinueAll);
         keywords.insert("defer", TokenType::Defer);
         keywords.insert("pass", TokenType::Pass);
-        keywords.insert("instr", TokenType::Instr);
-        keywords.insert("mut", TokenType::Mut);
         keywords.insert("nullptr", TokenType::NullPtr);
         keywords.insert("as", TokenType::As);
         keywords.insert("asmfn", TokenType::AsmFn);
@@ -158,7 +159,6 @@ lazy_static! {
         keywords.insert("fixed", TokenType::Fixed);
         keywords.insert("ref", TokenType::DirectRef);
         keywords.insert("static", TokenType::Static);
-        keywords.insert("indirect", TokenType::Indirect);
         keywords.insert("unreachable", TokenType::Unreachable);
         keywords.insert("intrinsic", TokenType::Intrinsic);
         keywords.insert("import", TokenType::Import);

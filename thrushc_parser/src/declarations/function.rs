@@ -116,18 +116,18 @@ pub fn build_function<'parser>(
         attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
     let function_has_ignore: bool = attributes.has_ignore_attribute();
 
-    let mut proto: Ast = Ast::Function {
-        name,
-        ascii_name,
-        parameters: parameters.clone(),
-        parameter_types: parameters_types.clone(),
-        body: None,
-        return_type: return_type.clone(),
-        attributes,
-        span,
-    };
-
     if parse_forward {
+        let proto: Ast = Ast::Function {
+            name,
+            ascii_name,
+            parameters: parameters.clone(),
+            parameter_types: parameters_types.clone(),
+            body: None,
+            return_type: return_type.clone(),
+            attributes,
+            span,
+        };
+
         ctx.get_mut_symbols().new_function(
             name,
             (
@@ -145,6 +145,17 @@ pub fn build_function<'parser>(
         }
     } else {
         if ctx.match_token(TokenType::SemiColon)? {
+            let proto: Ast = Ast::Function {
+                name,
+                ascii_name,
+                parameters,
+                parameter_types: parameters_types,
+                body: None,
+                return_type,
+                attributes,
+                span,
+            };
+
             return Ok(proto);
         }
 
@@ -153,6 +164,17 @@ pub fn build_function<'parser>(
         let function_body: Ast = block::build_block(ctx)?;
 
         ctx.get_mut_symbols().finish_parameters();
+
+        let mut proto: Ast = Ast::Function {
+            name,
+            ascii_name,
+            parameters,
+            parameter_types: parameters_types,
+            body: None,
+            return_type,
+            attributes,
+            span,
+        };
 
         if let Ast::Function { body, .. } = &mut proto {
             *body = Some(function_body.into());

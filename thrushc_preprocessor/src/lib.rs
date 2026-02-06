@@ -11,31 +11,31 @@ use ahash::AHashSet as HashSet;
 mod context;
 mod modparsing;
 pub mod module;
+mod moduletable;
 mod parser;
 mod preparsing;
 mod signatures;
-mod table;
 
 #[derive(Debug)]
-pub struct Preprocessor<'preprocessor> {
-    modules: Vec<Module<'preprocessor>>,
+pub struct Preprocessor {
+    modules: Vec<Module>,
 }
 
-impl<'preprocessor> Preprocessor<'preprocessor> {
+impl Preprocessor {
     pub fn new() -> Self {
         Self {
-            modules: Vec::with_capacity(255),
+            modules: Vec::with_capacity(u8::MAX as usize),
         }
     }
 }
 
-impl<'preprocessor> Preprocessor<'preprocessor> {
+impl<'preprocessor> Preprocessor {
     pub fn generate_modules(
         &mut self,
         tokens: &'preprocessor [Token],
         options: &'preprocessor CompilerOptions,
         file: &CompilationUnit,
-    ) -> Result<&[Module<'preprocessor>], ()> {
+    ) -> Result<&[Module], ()> {
         let file_path: std::path::PathBuf = file.get_path().to_path_buf();
 
         let mut visited: HashSet<std::path::PathBuf> = HashSet::with_capacity(u8::MAX as usize);

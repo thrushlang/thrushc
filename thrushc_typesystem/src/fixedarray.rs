@@ -54,8 +54,8 @@ impl TypeFixedArrayEntensions for Type {
             Type::Struct(..) => 24,
 
             Type::Fn(..) => 25,
-
-            Type::Void(..) => 25,
+            Type::Void(..) => 26,
+            Type::Unresolved { .. } => 27,
         }
     }
 }

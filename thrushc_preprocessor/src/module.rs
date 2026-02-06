@@ -1,37 +1,42 @@
 use uuid::Uuid;
 
-use crate::table::ModuleTable;
+use crate::signatures::Symbol;
 
 #[derive(Debug)]
-pub struct Module<'module> {
+pub struct Module {
     base_name: String,
-    table: ModuleTable<'module>,
-    submodules: Vec<Module<'module>>,
+    symbols: Vec<Symbol>,
+    submodules: Vec<Module>,
     unique_id: Uuid,
 }
 
-impl Module<'_> {
+impl Module {
     pub fn new(base_name: String) -> Self {
         Module {
             base_name,
-            table: ModuleTable::new(),
-            submodules: Vec::with_capacity(255),
+            symbols: Vec::with_capacity(u8::MAX as usize),
+            submodules: Vec::with_capacity(u8::MAX as usize),
             unique_id: Uuid::new_v4(),
         }
     }
 }
 
-impl<'module> Module<'module> {
+impl Module {
     #[inline]
-    pub fn add_submodule(&mut self, module: Module<'module>) {
+    pub fn add_submodule(&mut self, module: Module) {
         self.submodules.push(module);
+    }
+
+    #[inline]
+    pub fn add_symbol(&mut self, symbol: Symbol) {
+        self.symbols.push(symbol);
     }
 }
 
-impl<'module> Module<'module> {
+impl Module {
     #[inline]
-    pub fn find_submodule(&self, access: Vec<String>) -> Option<&Module<'module>> {
-        let mut current_module: &Module<'_> = self;
+    pub fn find_submodule(&self, access: Vec<String>) -> Option<&Module> {
+        let mut current_module: &Module = self;
 
         for name in access.iter() {
             let mut found: bool = false;
@@ -53,26 +58,14 @@ impl<'module> Module<'module> {
     }
 }
 
-impl<'module> Module<'module> {
+impl Module {
     #[inline]
     pub fn get_name(&self) -> &str {
         &self.base_name
     }
 
     #[inline]
-    pub fn get_table(&self) -> &ModuleTable<'module> {
-        &self.table
-    }
-
-    #[inline]
     pub fn get_unique_id(&self) -> &Uuid {
         &self.unique_id
-    }
-}
-
-impl<'module> Module<'module> {
-    #[inline]
-    pub fn get_mut_table(&mut self) -> &mut ModuleTable<'module> {
-        &mut self.table
     }
 }
