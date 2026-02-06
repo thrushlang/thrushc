@@ -14,7 +14,6 @@ pub struct LLVMJITCompiler<'ctx> {
     engine: ExecutionEngine<'ctx>,
     config: &'ctx JITConfiguration,
     modules: Vec<Module<'ctx>>,
-
     mapped_symbols: HashSet<Vec<u8>>,
 }
 
@@ -29,7 +28,6 @@ impl<'ctx> LLVMJITCompiler<'ctx> {
             engine,
             modules,
             config,
-
             mapped_symbols: HashSet::with_capacity(100_000),
         }
     }
