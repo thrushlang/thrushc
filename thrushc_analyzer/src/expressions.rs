@@ -188,7 +188,8 @@ pub fn validate<'analyzer>(
         | Ast::Reference { .. }
         | Ast::Integer { .. }
         | Ast::Boolean { .. }
-        | Ast::Str { .. }
+        | Ast::CString { .. }
+        | Ast::CNString { .. }
         | Ast::Float { .. }
         | Ast::NullPtr { .. }
         | Ast::Char { .. } => Ok(()),

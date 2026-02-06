@@ -61,6 +61,15 @@ impl PreprocessorContext<'_> {
 
         Err(())
     }
+
+    #[inline]
+    pub fn consume_these(&mut self, these: &[TokenType]) -> Result<&Token, ()> {
+        if these.contains(&self.peek().get_type()) {
+            return self.advance();
+        }
+
+        Err(())
+    }
 }
 
 impl<'module_parser> PreprocessorContext<'module_parser> {

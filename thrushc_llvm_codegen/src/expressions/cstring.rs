@@ -17,6 +17,7 @@ use crate::obfuscation;
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     bytes: &'ctx [u8],
+    null_terminated: bool,
     span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
@@ -32,7 +33,7 @@ pub fn compile<'ctx>(
         )
     });
 
-    let fixed_cstr_size: u32 = if !bytes.is_empty() {
+    let fixed_cstr_size: u32 = if !bytes.is_empty() && null_terminated {
         parsed_size + 1
     } else {
         parsed_size
@@ -55,7 +56,7 @@ pub fn compile<'ctx>(
     );
 
     cstr.set_linkage(Linkage::LinkerPrivate);
-    cstr.set_initializer(&llvm_context.const_string(bytes, true));
+    cstr.set_initializer(&llvm_context.const_string(bytes, null_terminated));
     cstr.set_constant(true);
 
     if context.get_expressions_optimizations().has_unnamed_addr() {

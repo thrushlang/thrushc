@@ -26,7 +26,12 @@ pub mod traits;
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
 pub enum Ast<'ctx> {
-    Str {
+    CString {
+        bytes: std::vec::Vec<u8>,
+        kind: Type,
+        span: Span,
+    },
+    CNString {
         bytes: std::vec::Vec<u8>,
         kind: Type,
         span: Span,
@@ -468,8 +473,13 @@ impl<'ctx> Ast<'ctx> {
     }
 
     #[inline]
-    pub fn new_str(bytes: Vec<u8>, kind: Type, span: Span) -> Ast<'ctx> {
-        Ast::Str { bytes, kind, span }
+    pub fn new_cstring(bytes: Vec<u8>, kind: Type, span: Span) -> Ast<'ctx> {
+        Ast::CString { bytes, kind, span }
+    }
+
+    #[inline]
+    pub fn new_cnstring(bytes: Vec<u8>, kind: Type, span: Span) -> Ast<'ctx> {
+        Ast::CNString { bytes, kind, span }
     }
 
     #[inline]

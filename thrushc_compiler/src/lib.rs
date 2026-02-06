@@ -156,8 +156,6 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
             );
         })?;
 
-        println!("{:?}", modules);
-
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
 
         let parser_result: (ParserContext, bool) = parser;
@@ -444,8 +442,6 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
                 file_time,
             );
         })?;
-
-        println!("{:?}", modules);
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
 

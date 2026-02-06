@@ -29,7 +29,8 @@ pub trait AstStandardExtensions {
     fn is_global_asm(&self) -> bool;
     fn is_struct(&self) -> bool;
     fn is_enum(&self) -> bool;
-    fn is_str(&self) -> bool;
+    fn is_cstring(&self) -> bool;
+    fn is_cnstring(&self) -> bool;
     fn is_constant(&self) -> bool;
     fn is_static(&self) -> bool;
     fn is_integer(&self) -> bool;

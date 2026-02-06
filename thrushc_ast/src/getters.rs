@@ -15,7 +15,8 @@ impl AstGetType for Ast<'_> {
             Ast::Float { kind, .. } => Ok(kind),
             Ast::Boolean { kind, .. } => Ok(kind),
             Ast::Char { kind, .. } => Ok(kind),
-            Ast::Str { kind, .. } => Ok(kind),
+            Ast::CString { kind, .. } => Ok(kind),
+            Ast::CNString { kind, .. } => Ok(kind),
             Ast::NullPtr { kind, .. } => Ok(kind),
 
             // Custom Type
@@ -116,7 +117,8 @@ impl AstGetType for Ast<'_> {
             Ast::Float { kind, .. } => Ok(kind),
             Ast::Boolean { kind, .. } => Ok(kind),
             Ast::Char { kind, .. } => Ok(kind),
-            Ast::Str { kind, .. } => Ok(kind),
+            Ast::CString { kind, .. } => Ok(kind),
+            Ast::CNString { kind, .. } => Ok(kind),
             Ast::NullPtr { kind, .. } => Ok(kind),
 
             // Variables and references
@@ -184,7 +186,8 @@ impl AstCodeLocation for Ast<'_> {
             Ast::Float { span, .. } => *span,
             Ast::Boolean { span, .. } => *span,
             Ast::Char { span, .. } => *span,
-            Ast::Str { span, .. } => *span,
+            Ast::CString { span, .. } => *span,
+            Ast::CNString { span, .. } => *span,
             Ast::NullPtr { span, .. } => *span,
 
             // Custom Type

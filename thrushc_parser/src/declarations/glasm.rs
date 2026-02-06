@@ -30,15 +30,6 @@ pub fn build_global_assembler<'parser>(
     let assembler: Ast = expressions::build_expr(ctx)?;
     let asssembler_span: Span = assembler.get_span();
 
-    if !assembler.is_str() {
-        ctx.add_error(CompilationIssue::Error(
-            CompilationIssueCode::E0001,
-            "Expected string literal value.".into(),
-            None,
-            asssembler_span,
-        ));
-    }
-
     ctx.consume(
         TokenType::RParen,
         CompilationIssueCode::E0001,
@@ -51,7 +42,16 @@ pub fn build_global_assembler<'parser>(
         "Expected ';'.".into(),
     )?;
 
-    let asm: String = if let Ast::Str { bytes, .. } = assembler {
+    if !assembler.is_cnstring() {
+        ctx.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0001,
+            "Expected string literal value with null termination.".into(),
+            None,
+            asssembler_span,
+        ));
+    }
+
+    let asm: String = if let Ast::CString { bytes, .. } = assembler {
         String::from_utf8_lossy(&bytes).to_string()
     } else {
         String::new()

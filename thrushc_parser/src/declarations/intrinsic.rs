@@ -27,8 +27,8 @@ pub fn build_compiler_intrinsic<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let external_name_tk: &Token = ctx.consume(
-        TokenType::Str,
+    let external_name_tk: &Token = ctx.consume_these(
+        &[TokenType::CString, TokenType::CNString],
         CompilationIssueCode::E0001,
         "Expected string literal.".into(),
     )?;

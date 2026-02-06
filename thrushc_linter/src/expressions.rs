@@ -214,7 +214,8 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
 
         Ast::Integer { .. }
         | Ast::Boolean { .. }
-        | Ast::Str { .. }
+        | Ast::CString { .. }
+        | Ast::CNString { .. }
         | Ast::Float { .. }
         | Ast::NullPtr { .. }
         | Ast::Char { .. } => (),

@@ -52,9 +52,10 @@ pub fn lower_precedence<'parser>(
             }
         }
 
-        TokenType::Str => {
+        TokenType::CString | TokenType::CNString => {
             let tk: &Token = ctx.advance()?;
 
+            let tk_type: TokenType = tk.get_type();
             let content: &str = tk.get_lexeme();
             let span: Span = tk.get_span();
 
@@ -103,7 +104,11 @@ pub fn lower_precedence<'parser>(
                 }
             }
 
-            Ast::new_str(processed, cstring_type, span)
+            if tk_type == TokenType::CString {
+                Ast::new_cstring(processed, cstring_type, span)
+            } else {
+                Ast::new_cnstring(processed, cstring_type, span)
+            }
         }
 
         TokenType::Char => {

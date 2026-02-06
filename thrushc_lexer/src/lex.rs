@@ -44,7 +44,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             }
 
             if lexer.peek() == '\n' {
-                lexer.line += 1;
+                lexer.line = lexer.line.saturating_add(1);
             }
 
             lexer.advance_only();
@@ -80,10 +80,13 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         ' ' => {
             lexer.start_span();
         }
-        '\n' => lexer.line += 1,
+        '\n' => lexer.line = lexer.line.saturating_add(1),
 
         '\'' => character::lex(lexer)?,
-        '"' => string::lex(lexer)?,
+
+        'n' if lexer.char_match('#') && lexer.char_match('"') => string::lex(lexer, false)?,
+        '"' => string::lex(lexer, true)?,
+
         '0'..='9' => number::lex(lexer)?,
 
         identifier if lexer.is_identifier_boundary(identifier) => identifier::lex(lexer)?,

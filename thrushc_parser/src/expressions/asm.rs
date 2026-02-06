@@ -72,16 +72,16 @@ pub fn build_asm_code_block<'parser>(
         let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        if !raw_str.is_str() {
+        if !raw_str.is_cnstring() {
             ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected string literal value.".into(),
+                "Expected string literal value with null termination.".into(),
                 None,
                 raw_str_span,
             ));
         }
 
-        let assembly: String = if let Ast::Str { bytes, .. } = raw_str {
+        let assembly: String = if let Ast::CString { bytes, .. } = raw_str {
             String::from_utf8_lossy(&bytes).to_string()
         } else {
             String::new()
@@ -129,16 +129,16 @@ pub fn build_asm_code_block<'parser>(
         let raw_str: Ast = expressions::build_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        if !raw_str.is_str() {
+        if !raw_str.is_cnstring() {
             ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected string literal value.".into(),
+                "Expected string literal value with null termination.".into(),
                 None,
                 raw_str_span,
             ));
         }
 
-        let constraint: String = if let Ast::Str { bytes, .. } = raw_str {
+        let constraint: String = if let Ast::CString { bytes, .. } = raw_str {
             String::from_utf8_lossy(&bytes).to_string()
         } else {
             String::new()

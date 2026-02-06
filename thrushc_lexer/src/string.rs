@@ -5,9 +5,10 @@ use thrushc_token_type::TokenType;
 
 use crate::Lexer;
 
-pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
+pub fn lex(lexer: &mut Lexer, null_terminated: bool) -> Result<(), CompilationIssue> {
     lexer.start_span();
 
+    let mut content: String = String::with_capacity(u8::MAX as usize);
     let mut found_end_quote: bool = false;
 
     while !lexer.is_eof() {
@@ -18,17 +19,35 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             break;
         }
 
-        self::advance_string_char(lexer)?;
+        let ch: char = self::advance_string_char(lexer)?;
+        content.push(ch);
     }
 
     lexer.end_span();
 
     let span: Span = Span::new(lexer.line, lexer.span);
 
-    let lexeme: String = lexer.shrink_lexeme();
+    if !null_terminated && content.chars().any(|ch| ch == '\0') {
+        return Err(CompilationIssue::Error(
+            CompilationIssueCode::E0001,
+            "Invalid non null terminated string literal. The literal contains a null character."
+                .into(),
+            None,
+            span,
+        ));
+    }
+
+    let lexeme: String = content;
     let ascii: String = self::convert_to_ascii(lexer, &lexeme);
 
-    self::validate_and_finalize_string(lexer, found_end_quote, span, lexeme, ascii)?;
+    self::validate_and_finalize_string(
+        lexer,
+        found_end_quote,
+        null_terminated,
+        span,
+        lexeme,
+        ascii,
+    )?;
 
     Ok(())
 }
@@ -88,6 +107,7 @@ fn advance_string_char(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
 fn validate_and_finalize_string(
     lexer: &mut Lexer,
     found_end_quote: bool,
+    null_terminated: bool,
     span: Span,
     lexeme: String,
     ascii: String,
@@ -101,12 +121,21 @@ fn validate_and_finalize_string(
         ));
     }
 
-    lexer.tokens.push(Token {
-        lexeme,
-        ascii,
-        kind: TokenType::Str,
-        span,
-    });
+    if null_terminated {
+        lexer.tokens.push(Token {
+            lexeme,
+            ascii,
+            kind: TokenType::CString,
+            span,
+        });
+    } else {
+        lexer.tokens.push(Token {
+            lexeme,
+            ascii,
+            kind: TokenType::CNString,
+            span,
+        });
+    }
 
     Ok(())
 }
@@ -115,19 +144,19 @@ fn validate_and_finalize_string(
 pub fn convert_to_ascii(lexer: &Lexer, lexeme: &str) -> String {
     let mut scaped_unicode_string: String = String::with_capacity(lexeme.len());
 
-    lexeme.chars().for_each(|char| {
+    for char in lexeme.chars() {
         if lexer.is_ascii_char(char) {
             scaped_unicode_string.push(char);
-        } else {
-            let mut utf8_buf: [u8; 4] = [0u8; 4];
-
-            let utf8_bytes: &[u8] = char.encode_utf8(&mut utf8_buf).as_bytes();
-
-            utf8_bytes.iter().for_each(|byte| {
-                scaped_unicode_string.push_str(&format!("{:02X}", byte));
-            });
+            continue;
         }
-    });
+
+        let mut utf8_buf: [u8; 4] = [0u8; 4];
+        let utf8_bytes: &[u8] = char.encode_utf8(&mut utf8_buf).as_bytes();
+
+        for byte in utf8_bytes {
+            scaped_unicode_string.push_str(&format!("\\{:02X}", byte));
+        }
+    }
 
     scaped_unicode_string
 }

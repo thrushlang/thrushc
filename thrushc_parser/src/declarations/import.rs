@@ -16,8 +16,8 @@ pub fn build_import<'parser>(
         "Expected 'import' keyword.".into(),
     )?;
 
-    let path_literal_tk: &Token = ctx.consume(
-        TokenType::Str,
+    let path_literal_tk: &Token = ctx.consume_these(
+        &[TokenType::CString, TokenType::CNString],
         CompilationIssueCode::E0001,
         "Expected string literal.".into(),
     )?;

@@ -18,8 +18,8 @@ pub fn build_import_c<'parser>(
 
     let span: Span = tk.get_span();
 
-    ctx.consume(
-        TokenType::Str,
+    ctx.consume_these(
+        &[TokenType::CString, TokenType::CNString],
         CompilationIssueCode::E0001,
         "Expected string literal.".into(),
     )?;

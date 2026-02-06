@@ -11,7 +11,7 @@ pub fn build_attributes<'parser>(
     ctx: &mut ParserContext<'parser>,
     limits: &[TokenType],
 ) -> Result<ThrushAttributes, CompilationIssue> {
-    let mut attributes: ThrushAttributes = Vec::with_capacity(10);
+    let mut attributes: ThrushAttributes = Vec::with_capacity(u8::MAX as usize);
 
     while !limits.contains(&ctx.peek().get_type()) {
         let current_tk: &Token = ctx.peek();
@@ -78,8 +78,8 @@ fn build_linkage_attribute<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let linkage_tk: &Token = ctx.consume(
-        TokenType::Str,
+    let linkage_tk: &Token = ctx.consume_these(
+        &[TokenType::CString, TokenType::CNString],
         CompilationIssueCode::E0001,
         "Expected a string literal.".into(),
     )?;
@@ -107,8 +107,8 @@ fn build_external_attribute<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let name: &Token = ctx.consume(
-        TokenType::Str,
+    let name: &Token = ctx.consume_these(
+        &[TokenType::CString, TokenType::CNString],
         CompilationIssueCode::E0001,
         "Expected a string literal.".into(),
     )?;
@@ -135,8 +135,8 @@ fn build_assembler_syntax_attribute<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let syntax_tk: &Token = ctx.consume(
-        TokenType::Str,
+    let syntax_tk: &Token = ctx.consume_these(
+        &[TokenType::CString, TokenType::CNString],
         CompilationIssueCode::E0001,
         "Expected a string literal.".into(),
     )?;
@@ -161,8 +161,8 @@ fn build_call_convention_attribute(ctx: &mut ParserContext) -> Result<String, Co
         "Expected '('.".into(),
     )?;
 
-    let convention_tk: &Token = ctx.consume(
-        TokenType::Str,
+    let convention_tk: &Token = ctx.consume_these(
+        &[TokenType::CString, TokenType::CNString],
         CompilationIssueCode::E0001,
         "Expected a string literal.".into(),
     )?;

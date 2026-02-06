@@ -14,7 +14,8 @@ pub fn parse_import<'preprocessor>(
 ) -> Result<Option<Module>, ()> {
     parser.consume(TokenType::Import)?;
 
-    let module_path_tk: &Token = parser.consume(TokenType::Str)?;
+    let module_path_tk: &Token =
+        parser.consume_these(&[TokenType::CString, TokenType::CNString])?;
     let span: Span = module_path_tk.get_span();
 
     let mut module_path: PathBuf = PathBuf::from(module_path_tk.get_lexeme());

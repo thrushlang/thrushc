@@ -787,7 +787,12 @@ pub fn compile<'ctx>(
             .const_null()
             .into(),
 
-        Ast::Str { bytes, span, .. } => expressions::cstring::compile(context, bytes, *span).into(),
+        Ast::CString { bytes, span, .. } => {
+            expressions::cstring::compile(context, bytes, true, *span).into()
+        }
+        Ast::CNString { bytes, span, .. } => {
+            expressions::cstring::compile(context, bytes, false, *span).into()
+        }
 
         Ast::Char { byte, .. } => context
             .get_llvm_context()
@@ -1037,8 +1042,12 @@ pub fn compile_constant<'ctx>(
             expressions::farray::compile_const(context, items, cast_type, *span)
         }
 
-        // String literal compilation
-        Ast::Str { bytes, span, .. } => expressions::cstring::compile(context, bytes, *span).into(),
+        Ast::CString { bytes, span, .. } => {
+            expressions::cstring::compile(context, bytes, true, *span).into()
+        }
+        Ast::CNString { bytes, span, .. } => {
+            expressions::cstring::compile(context, bytes, false, *span).into()
+        }
 
         // Struct constructor handling
         Ast::Constructor { data, kind, .. } => {

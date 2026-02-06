@@ -22,7 +22,8 @@ impl AstStandardExtensions for Ast<'_> {
             | Ast::Float { .. }
             | Ast::Boolean { .. }
             | Ast::Char { .. }
-            | Ast::Str { .. }
+            | Ast::CString { .. }
+            | Ast::CNString { .. }
             | Ast::NullPtr { .. } => true,
 
             Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_literal_value()),
@@ -71,8 +72,13 @@ impl AstStandardExtensions for Ast<'_> {
     }
 
     #[inline]
-    fn is_str(&self) -> bool {
-        matches!(self, Ast::Str { .. })
+    fn is_cstring(&self) -> bool {
+        matches!(self, Ast::CString { .. })
+    }
+
+    #[inline]
+    fn is_cnstring(&self) -> bool {
+        matches!(self, Ast::CNString { .. })
     }
 
     #[inline]
@@ -278,7 +284,8 @@ impl AstConstantExtensions for Ast<'_> {
             | Ast::Float { .. }
             | Ast::Boolean { .. }
             | Ast::Char { .. }
-            | Ast::Str { .. }
+            | Ast::CNString { .. }
+            | Ast::CString { .. }
             | Ast::NullPtr { .. }
             | Self::Builtin {
                 builtin:
@@ -399,7 +406,8 @@ impl std::cmp::PartialEq for Ast<'_> {
         match (self, other) {
             (Ast::Integer { .. }, Ast::Integer { .. })
             | (Ast::Float { .. }, Ast::Float { .. })
-            | (Ast::Str { .. }, Ast::Str { .. }) => true,
+            | (Ast::CString { .. }, Ast::CString { .. })
+            | (Ast::CNString { .. }, Ast::CNString { .. }) => true,
             (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
         }
     }
@@ -413,7 +421,10 @@ impl std::fmt::Display for Ast<'_> {
             Ast::Integer { value, .. } => write!(f, "{}", value),
             Ast::Float { value, .. } => write!(f, "{}", value),
             Ast::Boolean { value, .. } => write!(f, "{}", value),
-            Ast::Str { bytes, .. } => {
+            Ast::CString { bytes, .. } => {
+                write!(f, "\"{}\"", String::from_utf8_lossy(bytes))
+            }
+            Ast::CNString { bytes, .. } => {
                 write!(f, "\"{}\"", String::from_utf8_lossy(bytes))
             }
             Ast::Function {

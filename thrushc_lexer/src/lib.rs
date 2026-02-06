@@ -151,7 +151,7 @@ impl Lexer {
     #[must_use]
     pub fn char_match(&mut self, char: char) -> bool {
         if !self.is_eof() && self.code[self.current] == char {
-            self.current += 1;
+            self.current = self.current.saturating_add(1);
             return true;
         }
 
@@ -165,7 +165,7 @@ impl Lexer {
         } else {
             let ch: char = self.code[self.current];
 
-            self.current += 1;
+            self.current = self.current.saturating_add(1);
 
             ch
         }
@@ -173,16 +173,18 @@ impl Lexer {
 
     #[inline]
     pub fn advance_only(&mut self) {
-        self.current += 1;
+        self.current = self.current.saturating_add(1);
     }
 
     #[inline]
     pub fn peek_next(&self) -> char {
-        if self.current + 1 >= self.code.len() {
+        let idx: usize = self.current.saturating_add(1);
+
+        if idx >= self.code.len() {
             return '\0';
         }
 
-        self.code[self.current + 1]
+        self.code[idx]
     }
 
     #[must_use]
@@ -190,7 +192,9 @@ impl Lexer {
         if self.current == 0 || self.current > self.code.len() {
             '\0'
         } else {
-            self.code[self.current - 1]
+            let idx: usize = self.current.saturating_sub(1);
+
+            self.code[idx]
         }
     }
 
@@ -217,25 +221,7 @@ impl Lexer {
             return String::from_iter(chars);
         }
 
-        thrushc_logging::print_warn(
-            LoggingType::Warning,
-            "Couldn't get some lexeme at lexical analysis phase.",
-        );
-
-        String::default()
-    }
-
-    #[inline]
-    pub fn shrink_lexeme(&self) -> String {
-        if let Some(chars) = self.code.get(self.start + 1..self.current - 1) {
-            return String::from_iter(chars);
-        }
-
-        thrushc_logging::print_warn(
-            LoggingType::Warning,
-            "Couldn't shrink some lexeme at lexical analysis phase.",
-        );
-
+        thrushc_logging::print_warn(LoggingType::Warning, "Couldn't get some lexeme.");
         String::default()
     }
 }

@@ -270,7 +270,26 @@ impl<'parser> ParserContext<'parser> {
         code: CompilationIssueCode,
         help: String,
     ) -> Result<&'parser Token, CompilationIssue> {
-        if self.peek().kind == kind {
+        if self.peek().get_type() == kind {
+            return self.advance();
+        }
+
+        Err(CompilationIssue::Error(
+            code,
+            help,
+            None,
+            self.previous().get_span(),
+        ))
+    }
+
+    #[inline]
+    pub fn consume_these(
+        &mut self,
+        these: &[TokenType],
+        code: CompilationIssueCode,
+        help: String,
+    ) -> Result<&'parser Token, CompilationIssue> {
+        if these.contains(&self.peek().get_type()) {
             return self.advance();
         }
 

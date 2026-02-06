@@ -178,7 +178,8 @@ pub enum TokenType {
 
     Bool,
     Char,
-    Str,
+    CString,
+    CNString,
     Ptr,
     Void,
     Addr,

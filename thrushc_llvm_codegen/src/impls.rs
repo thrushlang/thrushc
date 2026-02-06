@@ -16,7 +16,8 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::Float { kind, .. } => kind,
             Ast::Boolean { kind, .. } => kind,
             Ast::Char { kind, .. } => kind,
-            Ast::Str { kind, .. } => kind,
+            Ast::CString { kind, .. } => kind,
+            Ast::CNString { kind, .. } => kind,
             Ast::NullPtr { kind, .. } => kind,
 
             // Custom Type

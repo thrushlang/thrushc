@@ -524,7 +524,19 @@ pub fn validate<'type_checker>(
 
             Ok(())
         }
-        Ast::Str { kind, .. } => {
+        Ast::CString { kind, .. } => {
+            if kind.contains_void_type() || kind.is_void_type() {
+                typechecker.add_error(CompilationIssue::Error(
+                    CompilationIssueCode::E0019,
+                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    None,
+                    kind.get_span(),
+                ));
+            }
+
+            Ok(())
+        }
+        Ast::CNString { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
