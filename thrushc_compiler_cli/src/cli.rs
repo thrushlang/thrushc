@@ -471,6 +471,15 @@ impl CommandLine {
                 self.validate_aot_is_enable(arg);
             }
 
+            "--stack-protector" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .set_stack_protector();
+            }
+
             "--symbol-linkage-strategy" => {
                 self.advance();
                 self.validate_llvm_required(arg);

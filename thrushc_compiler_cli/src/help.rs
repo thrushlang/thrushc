@@ -317,6 +317,16 @@ pub fn show_help() -> ! {
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
         &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--stack-protector".custom_color((141, 141, 142)).bold(),
+            "It built a stack state guard that battles memory hacks and prevents memory corruptions.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
             "{} {} {} {}\n",
             "•".bold(),
             "--sanitizer".custom_color((141, 141, 142)).bold(),

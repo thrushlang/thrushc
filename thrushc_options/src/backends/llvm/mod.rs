@@ -31,6 +31,7 @@ pub struct LLVMBackend {
         DenormalFloatingPointBehavior32BitFloatingPoint,
     ),
 
+    stack_protector: bool,
     sanitizer: Sanitizer,
     dbg_config: DebugConfiguration,
 
@@ -86,6 +87,7 @@ impl LLVMBackend {
                 DenormalFloatingPointBehavior32BitFloatingPoint::IEEE,
             ),
 
+            stack_protector: false,
             sanitizer: Sanitizer::None,
             dbg_config: DebugConfiguration::new(),
 
@@ -210,6 +212,11 @@ impl LLVMBackend {
     }
 
     #[inline]
+    pub fn needs_stack_protector(&self) -> bool {
+        self.stack_protector
+    }
+
+    #[inline]
     pub fn is_full_jit(&self) -> bool {
         self.needs_jit
     }
@@ -330,6 +337,11 @@ impl LLVMBackend {
     #[inline]
     pub fn set_jit(&mut self, value: bool) {
         self.needs_jit = value;
+    }
+
+    #[inline]
+    pub fn set_stack_protector(&mut self) {
+        self.stack_protector = true;
     }
 }
 

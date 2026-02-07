@@ -10,7 +10,7 @@ use crate::traits::LLVMFunctionExtensions;
 
 #[inline]
 pub fn move_terminator_to_end(context: &mut LLVMCodeGenContext, span: Span) {
-    let function: FunctionValue = context.get_current_llvm_function(span).get_value();
+    let function: FunctionValue = context.get_current_function(span).get_value();
 
     let last_builder_block: BasicBlock = context.get_last_builder_block(span);
 

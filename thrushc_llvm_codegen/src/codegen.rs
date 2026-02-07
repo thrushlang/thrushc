@@ -11,6 +11,8 @@ use thrushc_ast::metadata::{ConstantMetadata, LocalMetadata, StaticMetadata};
 use thrushc_attributes::ThrushAttributes;
 use thrushc_entities::{GlobalConstant, GlobalStatic, LocalConstant, LocalStatic, LocalVariable};
 use thrushc_llvm_attributes::LLVMAttributes;
+use thrushc_options::CompilerOptions;
+use thrushc_options::backends::llvm::LLVMBackend;
 use thrushc_span::Span;
 
 use crate::anchor::PointerAnchor;
@@ -576,6 +578,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             Ast::Return {
                 expression, span, ..
             } => {
+                let compiler_options: &CompilerOptions = self.get_context().get_compiler_options();
+                let llvm_backend: &LLVMBackend = compiler_options.get_llvm_backend_options();
+
+                if llvm_backend.needs_stack_protector() {
+                    function::emit_stack_protector_epilogue(self.context, *span);
+                }
+
                 self.get_mut_context().mark_dbg_location(*span);
 
                 let llvm_builder: &Builder = self.context.get_llvm_builder();
@@ -595,13 +604,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 if let Some(expr) = expression {
                     let cast_type: &Type = self
                         .get_mut_context()
-                        .get_current_llvm_function(*span)
+                        .get_current_function(*span)
                         .get_return_type();
 
-                    if llvm_builder
-                        .build_return(Some(&self::compile(self.context, expr, Some(cast_type))))
-                        .is_err()
-                    {
+                    let return_v: &BasicValueEnum<'_> =
+                        &self::compile(self.context, expr, Some(cast_type));
+
+                    if llvm_builder.build_return(Some(return_v)).is_err() {
                         abort::abort_codegen(
                             self.context,
                             "Failed to compile a function terminator!",

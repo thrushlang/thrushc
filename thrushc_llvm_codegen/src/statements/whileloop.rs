@@ -20,7 +20,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
 
     let llvm_function: FunctionValue = codegen
         .get_mut_context()
-        .get_current_llvm_function(node.get_span())
+        .get_current_function(node.get_span())
         .get_value();
 
     let Ast::While {

@@ -1,3 +1,10 @@
+use inkwell::AddressSpace;
+use inkwell::IntPredicate;
+use inkwell::context::Context;
+use inkwell::targets::TargetData;
+use inkwell::values::BasicValue;
+use inkwell::values::IntValue;
+use inkwell::values::PointerValue;
 use thrushc_ast::Ast;
 use thrushc_ast::traits::AstCodeBlockEntensions;
 use thrushc_entities::Function;
@@ -10,6 +17,7 @@ use thrushc_span::Span;
 use thrushc_typesystem::Type;
 use thrushc_typesystem::traits::TypeIsExtensions;
 
+use crate::abort;
 use crate::attrbuilder::AttributeBuilder;
 use crate::attrbuilder::LLVMAttributeApplicant;
 use crate::block;
@@ -82,7 +90,7 @@ pub fn compile_top<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: F
         span,
     );
 
-    context.set_current_llvm_function(prototype);
+    context.set_current_function(prototype);
     context.new_function(name, prototype);
 }
 
@@ -109,7 +117,21 @@ pub fn compile_down<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
 
     llvm_builder.position_at_end(llvm_function_block);
 
-    codegen.get_mut_context().set_current_llvm_function(proto);
+    codegen.get_mut_context().set_current_function(proto);
+
+    if codegen
+        .get_context()
+        .get_compiler_options()
+        .get_llvm_backend_options()
+        .needs_stack_protector()
+    {
+        let stackprotector_ptr: PointerValue<'_> =
+            self::emit_stack_protector_prologue(codegen.get_mut_context(), span);
+
+        codegen
+            .get_mut_context()
+            .set_function_stackguard_protector_pointer(stackprotector_ptr);
+    }
 
     {
         for parameter in function_parameters
@@ -160,5 +182,251 @@ pub fn compile_down<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
         }
     }
 
-    codegen.get_mut_context().unset_current_llvm_function();
+    codegen.get_mut_context().unset_current_function();
+    codegen
+        .get_mut_context()
+        .unset_function_stackguard_protector_pointer();
+}
+
+pub fn emit_stack_protector_prologue<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    span: Span,
+) -> PointerValue<'ctx> {
+    let llvm_module: &Module<'_> = context.get_llvm_module();
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder<'_> = context.get_llvm_builder();
+
+    let stackguard_intrinsic: FunctionValue<'_> = llvm_module.add_function(
+        "llvm.stackguard",
+        llvm_context
+            .ptr_type(AddressSpace::default())
+            .fn_type(&[], false),
+        None,
+    );
+
+    let stackprotector_intrinsic: FunctionValue<'_> = llvm_module.add_function(
+        "llvm.stackprotector",
+        llvm_context.void_type().fn_type(
+            &[
+                llvm_context.ptr_type(AddressSpace::default()).into(),
+                llvm_context.ptr_type(AddressSpace::default()).into(),
+            ],
+            false,
+        ),
+        None,
+    );
+
+    llvm_module.add_function(
+        "__stack_chk_fail",
+        llvm_context.void_type().fn_type(&[], false),
+        None,
+    );
+
+    let stackguardslot_ptr: PointerValue<'_> = llvm_builder
+        .build_alloca(llvm_context.ptr_type(AddressSpace::default()), "")
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to compile stackguardslot pointer!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+    if let Some(instr) = stackguardslot_ptr.as_instruction_value() {
+        let target_data: &TargetData = context.get_target_data();
+
+        let _ = instr.set_alignment(
+            target_data.get_preferred_alignment(&llvm_context.ptr_type(AddressSpace::default())),
+        );
+    }
+
+    let stackguard: PointerValue<'_> = llvm_builder
+        .build_call(stackguard_intrinsic, &[], "")
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to get stackguard pointer!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        })
+        .try_as_basic_value()
+        .left()
+        .unwrap_or_else(|| {
+            abort::abort_codegen(
+                context,
+                "Failed to get stackguard pointer!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        })
+        .into_pointer_value();
+
+    llvm_builder
+        .build_call(
+            stackprotector_intrinsic,
+            &[stackguard.into(), stackguardslot_ptr.into()],
+            "",
+        )
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to compile the stackprotector call!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+    stackguardslot_ptr
+}
+
+pub fn emit_stack_protector_epilogue<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, span: Span) {
+    let llvm_module: &Module<'_> = context.get_llvm_module();
+    let llvm_context: &Context = context.get_llvm_context();
+    let llvm_builder: &Builder<'_> = context.get_llvm_builder();
+
+    let current_function: FunctionValue<'_> = context.get_current_function(span).get_value();
+
+    let Some(stack_protector_pointer) = context.get_function_stack_protector_pointer() else {
+        abort::abort_codegen(
+            context,
+            "Failed to get the stored stack guard!",
+            span,
+            std::path::PathBuf::from(file!()),
+            line!(),
+        )
+    };
+
+    let stored_guard: PointerValue<'_> = llvm_builder
+        .build_load(
+            llvm_context.ptr_type(AddressSpace::default()),
+            *stack_protector_pointer,
+            "",
+        )
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to get the last stack guard!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        })
+        .into_pointer_value();
+
+    if let Some(instr) = stored_guard.as_instruction_value() {
+        let target_data: &TargetData = context.get_target_data();
+
+        let _ = instr.set_alignment(
+            target_data.get_preferred_alignment(&llvm_context.ptr_type(AddressSpace::default())),
+        );
+    }
+
+    let current_guard: PointerValue<'_> = llvm_builder
+        .build_call(
+            llvm_module
+                .get_function("llvm.stackguard")
+                .unwrap_or_else(|| {
+                    llvm_module.add_function(
+                        "llvm.stackguard",
+                        llvm_context
+                            .ptr_type(AddressSpace::default())
+                            .fn_type(&[], false),
+                        None,
+                    )
+                }),
+            &[],
+            "",
+        )
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to get the current stack guard!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        })
+        .try_as_basic_value()
+        .left()
+        .unwrap_or_else(|| {
+            abort::abort_codegen(
+                context,
+                "Failed to get the current stack guard!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        })
+        .into_pointer_value();
+
+    let failbranch: BasicBlock<'_> = block::append_block(context, current_function);
+    let sucessbranch: BasicBlock<'_> = block::append_block(context, current_function);
+
+    let comparison: IntValue<'_> = llvm_builder
+        .build_int_compare(IntPredicate::EQ, stored_guard, current_guard, "")
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to compile a comparison between stored stack guard and current stack guard!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+    llvm_builder
+        .build_conditional_branch(comparison, sucessbranch, failbranch)
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to compile conditional comparison!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+    llvm_builder.position_at_end(failbranch);
+
+    llvm_builder
+        .build_call(
+            llvm_module
+                .get_function("__stack_chk_fail")
+                .unwrap_or_else(|| {
+                    llvm_module.add_function(
+                        "__stack_chk_fail",
+                        llvm_context.void_type().fn_type(&[], false),
+                        None,
+                    )
+                }),
+            &[],
+            "",
+        )
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to call '__stack_chk_fail'!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
+
+    llvm_builder.build_unreachable().unwrap_or_else(|_| {
+        abort::abort_codegen(
+            context,
+            "Failed to compile unreacheable instruction!",
+            span,
+            std::path::PathBuf::from(file!()),
+            line!(),
+        )
+    });
+
+    llvm_builder.position_at_end(sucessbranch);
 }

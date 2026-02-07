@@ -28,6 +28,7 @@ use crate::types::LLVMCtors;
 use crate::types::LLVMDBGFunction;
 use crate::types::LLVMDtors;
 use crate::types::LLVMFunction;
+use crate::types::LLVMStackProtectorPointer;
 
 #[derive(Debug)]
 pub struct LLVMCodeGenContext<'a, 'ctx> {
@@ -45,7 +46,9 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     dtors: LLVMDtors<'ctx>,
 
     ptr_anchor: Option<PointerAnchor<'ctx>>,
-    llvm_function: Option<LLVMFunction<'ctx>>,
+
+    current_function: Option<LLVMFunction<'ctx>>,
+    function_stack_protector_ptr: Option<LLVMStackProtectorPointer<'ctx>>,
 
     expression_optimizations: LLVMExpressionOptimization,
 
@@ -91,7 +94,9 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             dtors: LLVMDtors::new(),
 
             ptr_anchor: None,
-            llvm_function: None,
+
+            current_function: None,
+            function_stack_protector_ptr: None,
 
             expression_optimizations: LLVMExpressionOptimization::new(),
 
@@ -200,6 +205,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         self.ptr_anchor = Some(anchor);
     }
 
+    #[inline]
     pub fn mark_pointer_anchor(&mut self) {
         if let Some(anchor) = &mut self.ptr_anchor {
             anchor.triggered = true;
@@ -212,13 +218,23 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
     }
 
     #[inline]
-    pub fn set_current_llvm_function(&mut self, new_function: LLVMFunction<'ctx>) {
-        self.llvm_function = Some(new_function);
+    pub fn set_current_function(&mut self, new_function: LLVMFunction<'ctx>) {
+        self.current_function = Some(new_function);
     }
 
     #[inline]
-    pub fn unset_current_llvm_function(&mut self) {
-        self.llvm_function = None;
+    pub fn unset_current_function(&mut self) {
+        self.current_function = None;
+    }
+
+    #[inline]
+    pub fn set_function_stackguard_protector_pointer(&mut self, ptr: PointerValue<'ctx>) {
+        self.function_stack_protector_ptr = Some(ptr);
+    }
+
+    #[inline]
+    pub fn unset_function_stackguard_protector_pointer(&mut self) {
+        self.function_stack_protector_ptr = None;
     }
 
     #[inline]
@@ -300,6 +316,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
+    pub fn get_function_stack_protector_pointer(&self) -> Option<&PointerValue<'ctx>> {
+        self.function_stack_protector_ptr.as_ref()
+    }
+
+    #[inline]
     pub fn get_llvm_ctors(&self) -> &LLVMCtors<'ctx> {
         &self.ctors
     }
@@ -315,8 +336,8 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
-    pub fn get_current_llvm_function(&mut self, span: Span) -> LLVMFunction<'ctx> {
-        self.llvm_function.unwrap_or_else(|| {
+    pub fn get_current_function(&mut self, span: Span) -> LLVMFunction<'ctx> {
+        self.current_function.unwrap_or_else(|| {
             abort::abort_codegen(
                 self,
                 "Failed to compile a function internal reference!",
