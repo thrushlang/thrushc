@@ -518,7 +518,19 @@ pub fn show_help() -> ! {
 
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
-        "\nDebug compiler flags:\n\n",
+        "\nUseful compiler flags:\n\n",
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--copy-output-to-clipboard"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Copy the total printable output of the compiler into the operating system clipboard. It only works using '-print' compiler flag."
+        ),
     );
 
     thrushc_logging::write(
@@ -540,8 +552,6 @@ pub fn show_help() -> ! {
             "Displays the generated command for GCC in the phase of linking."
         ),
     );
-
-    thrushc_logging::write(thrushc_logging::OutputIn::Stderr, "\nUseful flags:\n\n");
 
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
@@ -645,7 +655,7 @@ pub fn show_help() -> ! {
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n\n",
+            "{} {} {}\n",
             "•".bold(),
             "--clean-objects".custom_color((141, 141, 142)).bold(),
             "Clean the compiler folder containing emitted object files."
@@ -667,7 +677,7 @@ pub fn show_help() -> ! {
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n\n",
+            "{} {} {}\n",
             "•".bold(),
             "--no-obfuscate-ir".custom_color((141, 141, 142)).bold(),
             "Stop generating name obfuscation in the emitted IR code."

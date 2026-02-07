@@ -37,17 +37,21 @@ pub fn validate<'analyzer>(
         }
 
         Ast::FixedArray { items, .. } => {
-            items
-                .iter()
-                .try_for_each(|item| analyzer.analyze_expr(item))?;
+            {
+                for node in items.iter() {
+                    analyzer.analyze_expr(node)?;
+                }
+            }
 
             Ok(())
         }
 
         Ast::Array { items, .. } => {
-            items
-                .iter()
-                .try_for_each(|item| analyzer.analyze_expr(item))?;
+            {
+                for node in items.iter() {
+                    analyzer.analyze_expr(node)?;
+                }
+            }
 
             Ok(())
         }

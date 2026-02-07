@@ -33,6 +33,7 @@ pub struct CompilerOptions {
     export_compiler_warning_diagnostics: bool,
     compiler_export_diagnostics_clean: bool,
 
+    copy_output_to_clipboard: bool,
     clean_tokens: bool,
     clean_assembler: bool,
     clean_object: bool,
@@ -203,6 +204,7 @@ impl CompilerOptions {
             export_compiler_warning_diagnostics: false,
             compiler_export_diagnostics_clean: false,
 
+            copy_output_to_clipboard: false,
             clean_tokens: false,
             clean_assembler: false,
             clean_object: false,
@@ -321,6 +323,11 @@ impl CompilerOptions {
     }
 
     #[inline]
+    pub fn set_copy_output_to_clipboard(&mut self) {
+        self.copy_output_to_clipboard = true;
+    }
+
+    #[inline]
     pub fn add_emit_option(&mut self, emit: EmitableUnit) {
         self.emit.push(emit);
     }
@@ -353,7 +360,7 @@ impl CompilerOptions {
             std::fs::create_dir_all(&self.build_dir).unwrap_or_else(|_| {
                 thrushc_logging::print_critical_error(
                     LoggingType::Panic,
-                    "The AOT compiler directory could not be created automatically.",
+                    "The compiler build directory could not be created automatically.",
                 );
             });
         }
@@ -404,6 +411,11 @@ impl CompilerOptions {
     #[inline]
     pub fn need_ansi_colors(&self) -> bool {
         self.enable_ansi_colors
+    }
+
+    #[inline]
+    pub fn need_copy_output_to_clipboard(&self) -> bool {
+        self.copy_output_to_clipboard
     }
 
     #[inline]
@@ -459,6 +471,11 @@ impl CompilerOptions {
     #[inline]
     pub fn get_build_id(&self) -> &uuid::Uuid {
         &self.build_id
+    }
+
+    #[inline]
+    pub fn it_will_print(&self) -> bool {
+        !self.printable.is_empty()
     }
 }
 

@@ -741,6 +741,14 @@ impl CommandLine {
                 self.advance();
             }
 
+            "--copy-output-to-clipboard" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+                self.validate_print_required(arg);
+
+                self.get_mut_options().set_copy_output_to_clipboard();
+            }
+
             "--debug-clang-commands" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -1241,6 +1249,15 @@ impl CommandLine {
         if self.options.get_llvm_backend_options().is_full_jit() {
             self.report_error(&format!(
                 "Can't use '{}' if the '-jit' flag was enabled previously.",
+                arg
+            ));
+        }
+    }
+
+    fn validate_print_required(&self, arg: &str) {
+        if !self.options.it_will_print() {
+            self.report_error(&format!(
+                "Can't use '{}' without '-print' flag previously.",
                 arg
             ));
         }

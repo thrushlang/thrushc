@@ -31,7 +31,9 @@ members = [
     "thrushc_attribute_checker", 
     "thrushc_llvm_intrinsic_checker", 
     "thrushc_llvm_callconventions_checker", 
-    "thrushc_modificators", "thrushc_token_type", "thrushc_preprocessor_type_resolver", 
+    "thrushc_modificators", 
+    "thrushc_token_type", 
+    "thrushc_preprocessor_type_resolver", 
 ]
 
 exclude = [

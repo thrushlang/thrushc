@@ -117,13 +117,11 @@ Omission compiler flags:
 • --omit-safe-trapping-math It allow trapping math operations that can cause exceptions. Useful for floating-point operations.
 • --omit-default-opt It omits default optimization that occurs even without specified optimization.
 
-Debug compiler flags:
+Useful compiler flags:
 
+• --copy-output-to-clipboard Copy the total printable output of the compiler into the operating system clipboard. It only works using '-print' compiler flag.
 • --debug-clang-command Displays the generated command for Clang in the phase of linking.
 • --debug-gcc-commands Displays the generated command for GCC in the phase of linking.
-
-Useful flags:
-
 • --export-compiler-errors Export compiler error diagnostics to files.
 • --export-compiler-warnings Export compiler warning diagnostics to files.
 • --export-diagnostics-path [diagnostics/] Specify the path where diagnostic files will be exported.
@@ -134,10 +132,8 @@ Useful flags:
 • --clean-llvm-ir Clean the compiler folder containing the emitted LLVM IR.
 • --clean-llvm-bitcode Clean the compiler folder containing emitted LLVM Bitcode.
 • --clean-objects Clean the compiler folder containing emitted object files.
-
 • --no-obfuscate-archive-names Stop generating name obfuscation for each file; this does not apply to the final build.
 • --no-obfuscate-ir Stop generating name obfuscation in the emitted IR code.
-
 • --print-targets Show the current target supported.
 • --print-supported-cpus Show the current supported CPUs for the current target.
 • --print-host-target-triple Show the host target triple.

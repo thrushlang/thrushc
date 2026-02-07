@@ -40,12 +40,11 @@ impl<'analyzer> Analyzer<'analyzer> {
         Self {
             ast,
 
-            bugs: Vec::with_capacity(100),
-            errors: Vec::with_capacity(100),
-            warnings: Vec::with_capacity(100),
+            bugs: Vec::with_capacity(u8::MAX as usize),
+            errors: Vec::with_capacity(u8::MAX as usize),
+            warnings: Vec::with_capacity(u8::MAX as usize),
 
             diagnostician: Diagnostician::new(file, options),
-
             context: AnalyzerContext::new(),
         }
     }

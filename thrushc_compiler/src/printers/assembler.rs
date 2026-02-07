@@ -39,6 +39,30 @@ pub fn print_llvm_assembler(
     let assembler_in_bytes: Vec<u8> = memory_buffer.as_slice().to_vec();
     let assembler: String = unsafe { String::from_utf8_unchecked(assembler_in_bytes) };
 
+    #[cfg(feature = "utils")]
+    {
+        if compiler_options.need_copy_output_to_clipboard() {
+            use clipboard::*;
+
+            let ctx: Result<ClipboardContext, Box<dyn std::error::Error>> =
+                ClipboardProvider::new();
+
+            if let Ok(mut ctx) = ctx {
+                ctx.set_contents(assembler.clone()).unwrap_or_else(|_| {
+                    thrushc_logging::print_warn(
+                        thrushc_logging::LoggingType::Warning,
+                        "Unable to copy the assembler code into system clipboard.",
+                    );
+                });
+            } else {
+                thrushc_logging::print_warn(
+                    thrushc_logging::LoggingType::Warning,
+                    "Failed to initialize clipboard processes.",
+                );
+            }
+        }
+    }
+
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stdout,
         &format!(

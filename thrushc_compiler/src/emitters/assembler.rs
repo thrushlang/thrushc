@@ -16,7 +16,7 @@ pub fn emit_llvm_assembler(
 ) -> Result<(), &'static str> {
     if !target_machine.get_target().has_asm_backend() {
         return Err(
-            "The object doesn't support emitting readable assembly; aborting assembly emission.",
+            "The backend doesn't support emitting readable assembly; aborting assembly emission.",
         );
     }
 
@@ -46,7 +46,7 @@ pub fn emit_llvm_assembler(
 
     target_machine
         .write_to_file(llvm_module, FileType::Assembly, &assembler_file_path)
-        .map_err(|_| "Failed to compile to readable assembler!")?;
+        .map_err(|_| "Failed to compile the readable assembler!")?;
 
     Ok(())
 }
