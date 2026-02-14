@@ -194,7 +194,8 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Co
         "Expected ']'.".into(),
     )?;
 
-    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Arrow])?;
+    let attributes: ThrushAttributes =
+        attributes::build_compiler_attributes(ctx, &[TokenType::Arrow])?;
     let has_ignore: bool = attributes.has_ignore_attribute();
 
     ctx.consume(

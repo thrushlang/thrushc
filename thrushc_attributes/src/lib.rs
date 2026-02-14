@@ -36,6 +36,7 @@ pub enum ThrushAttribute {
     NoUnwind(Span),
     OptFuzzing(Span),
     Pure(Span),
+    Thunk(Span),
 
     // LLVM Structure Modificator
     Packed(Span),
@@ -73,6 +74,7 @@ pub enum ThrushAttributeComparator {
     NoUnwind,
     OptFuzzing,
     Pure,
+    Thunk,
 
     Packed,
 
@@ -208,6 +210,7 @@ impl ThrushAttribute {
             ThrushAttribute::NoUnwind(span) => *span,
             ThrushAttribute::OptFuzzing(span) => *span,
             ThrushAttribute::Pure(span) => *span,
+            ThrushAttribute::Thunk(span) => *span,
             ThrushAttribute::Constructor(span) => *span,
             ThrushAttribute::Destructor(span) => *span,
         }
@@ -227,7 +230,6 @@ pub fn as_attribute(token_type: TokenType, span: Span) -> Option<ThrushAttribute
         TokenType::WeakStack => Some(ThrushAttribute::WeakStack(span)),
         TokenType::StrongStack => Some(ThrushAttribute::StrongStack(span)),
         TokenType::PreciseFloats => Some(ThrushAttribute::PreciseFloats(span)),
-        TokenType::Stack => Some(ThrushAttribute::Stack(span)),
         TokenType::Heap => Some(ThrushAttribute::Heap(span)),
         TokenType::AsmThrow => Some(ThrushAttribute::AsmThrow(span)),
         TokenType::AsmSideEffects => Some(ThrushAttribute::AsmSideEffects(span)),
@@ -236,6 +238,7 @@ pub fn as_attribute(token_type: TokenType, span: Span) -> Option<ThrushAttribute
         TokenType::NoUnwind => Some(ThrushAttribute::NoUnwind(span)),
         TokenType::OptFuzzing => Some(ThrushAttribute::OptFuzzing(span)),
         TokenType::Pure => Some(ThrushAttribute::Pure(span)),
+        TokenType::Thunk => Some(ThrushAttribute::Thunk(span)),
         TokenType::Constructor => Some(ThrushAttribute::Constructor(span)),
         TokenType::Destructor => Some(ThrushAttribute::Destructor(span)),
 
@@ -376,6 +379,7 @@ impl ThrushAttributeComparatorExtensions for ThrushAttribute {
             ThrushAttribute::NoUnwind(..) => ThrushAttributeComparator::NoUnwind,
             ThrushAttribute::OptFuzzing(..) => ThrushAttributeComparator::OptFuzzing,
             ThrushAttribute::Pure(..) => ThrushAttributeComparator::Pure,
+            ThrushAttribute::Thunk(..) => ThrushAttributeComparator::Thunk,
             ThrushAttribute::Constructor(..) => ThrushAttributeComparator::Constructor,
             ThrushAttribute::Destructor(..) => ThrushAttributeComparator::Destructor,
         }
@@ -411,6 +415,7 @@ impl std::fmt::Display for ThrushAttribute {
             ThrushAttribute::Packed(..) => write!(f, "@packed"),
             ThrushAttribute::OptFuzzing(..) => write!(f, "@optfuzzing"),
             ThrushAttribute::Pure(..) => write!(f, "@pure"),
+            ThrushAttribute::Thunk(..) => write!(f, "@thunk"),
             ThrushAttribute::Constructor(..) => write!(f, "@constructor"),
             ThrushAttribute::Destructor(..) => write!(f, "@destructor"),
         }

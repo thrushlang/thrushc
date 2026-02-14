@@ -8,7 +8,7 @@ use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 
-use crate::{ParserContext, attributes, builder, expressions, typegen};
+use crate::{ParserContext, attributes, expressions, modificators, typegen};
 
 pub fn build_global_const<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -21,7 +21,7 @@ pub fn build_global_const<'parser>(
     )?;
 
     let modificators: Modificators =
-        builder::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
 
     let thread_local: bool = modificators.has_lazythread();
     let is_volatile: bool = modificators.has_volatile();
@@ -46,7 +46,8 @@ pub fn build_global_const<'parser>(
 
     let const_type: Type = typegen::build_type(ctx, false)?;
 
-    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::Eq])?;
+    let attributes: ThrushAttributes =
+        attributes::build_compiler_attributes(ctx, &[TokenType::Eq])?;
 
     ctx.consume(
         TokenType::Eq,

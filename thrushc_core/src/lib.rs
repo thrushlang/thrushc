@@ -43,7 +43,7 @@ use thrushc_options::linkage::LinkingCompilersConfiguration;
 use thrushc_parser::Parser;
 use thrushc_parser::ParserContext;
 use thrushc_preprocessor::Preprocessor;
-use thrushc_semantic::SemantiAnalysis;
+use thrushc_semantic::SemanticAnalysis;
 
 #[derive(Debug)]
 pub struct ThrushCompiler<'thrushc> {
@@ -72,7 +72,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
 
 impl ThrushCompiler<'_> {
     pub fn compile(&mut self) -> (u128, u128) {
-        if self.get_options().uses_llvm() {
+        if self.get_options().llvm() {
             Target::initialize_all(&InitializationConfig::default());
 
             if self.get_options().get_llvm_backend_options().is_full_jit() {
@@ -80,6 +80,11 @@ impl ThrushCompiler<'_> {
             } else {
                 return self.compile_aot_llvm();
             }
+        } else {
+            thrushc_logging::print_warn(
+                thrushc_logging::LoggingType::Warning,
+                "Unrecognizable code generator selection. You should select either LLVM or GCC.",
+            );
         }
 
         (self.thrushc_time.as_millis(), self.linking_time.as_millis())
@@ -166,7 +171,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let ast: &[Ast] = parser_context.get_ast();
 
         let semantic_analysis_throwed_errors: bool =
-            SemantiAnalysis::new(ast, file, self.options).analyze(parser_throwed_errors);
+            SemanticAnalysis::new(ast, file, self.options).analyze(parser_throwed_errors);
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return finisher::archive_compilation(self, file_time, file);
@@ -453,7 +458,7 @@ impl<'thrushc> ThrushCompiler<'thrushc> {
         let ast: &[Ast] = parser_context.get_ast();
 
         let semantic_analysis_throwed_errors: bool =
-            SemantiAnalysis::new(ast, file, self.options).analyze(parser_throwed_errors);
+            SemanticAnalysis::new(ast, file, self.options).analyze(parser_throwed_errors);
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return finisher::archive_compilation_module_jit(self, file_time, file);

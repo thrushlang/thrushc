@@ -132,7 +132,6 @@ impl TokenTypeAttributesExtensions for TokenType {
                 | TokenType::WeakStack
                 | TokenType::StrongStack
                 | TokenType::PreciseFloats
-                | TokenType::Stack
                 | TokenType::Heap
                 | TokenType::AsmThrow
                 | TokenType::AsmSideEffects
@@ -148,6 +147,7 @@ impl TokenTypeAttributesExtensions for TokenType {
                 | TokenType::Extern
                 | TokenType::Convention
                 | TokenType::Pure
+                | TokenType::Thunk
         )
     }
 }
@@ -184,6 +184,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Enum => write!(f, "enum"),
             TokenType::False => write!(f, "false"),
             TokenType::Intrinsic => write!(f, "intrinsic"),
+            TokenType::Embedded => write!(f, "embedded"),
             TokenType::Fn => write!(f, "fn"),
             TokenType::For => write!(f, "for"),
             TokenType::If => write!(f, "if"),
@@ -197,6 +198,7 @@ impl std::fmt::Display for TokenType {
             TokenType::While => write!(f, "while"),
             TokenType::Write => write!(f, "write"),
             TokenType::Local => write!(f, "local"),
+            TokenType::Static => write!(f, "static"),
             TokenType::Asm => write!(f, "asm"),
             TokenType::GlobalAsm => write!(f, "global_asm"),
 
@@ -255,8 +257,7 @@ impl std::fmt::Display for TokenType {
             TokenType::OptFuzzing => write!(f, "@optFuzzing"),
             TokenType::NoUnwind => write!(f, "@noUnwind"),
             TokenType::Packed => write!(f, "@packed"),
-            TokenType::Stack => write!(f, "@stack"),
-            TokenType::Static => write!(f, "@static"),
+            TokenType::Thunk => writeln!(f, "@thunk"),
             TokenType::Heap => write!(f, "@heap"),
             TokenType::AlwaysInline => write!(f, "@alwaysInline"),
             TokenType::AsmAlignStack => write!(f, "@asmAlignStack"),

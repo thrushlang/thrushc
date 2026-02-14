@@ -22,6 +22,9 @@ impl AstGetType for Ast<'_> {
             // Custom Type
             Ast::CustomType { kind, .. } => Ok(kind),
 
+            // Embedded
+            Ast::Embedded { kind, .. } => Ok(kind),
+
             // Static
             Ast::Static { kind, .. } => Ok(kind),
 
@@ -189,6 +192,9 @@ impl AstCodeLocation for Ast<'_> {
             Ast::CString { span, .. } => *span,
             Ast::CNString { span, .. } => *span,
             Ast::NullPtr { span, .. } => *span,
+
+            // Embedded
+            Ast::Embedded { span, .. } => *span,
 
             // Custom Type
             Ast::CustomType { span, .. } => *span,

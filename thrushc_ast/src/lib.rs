@@ -96,6 +96,15 @@ pub enum Ast<'ctx> {
         span: Span,
     },
 
+    //
+    Embedded {
+        name: &'ctx str,
+        path: std::path::PathBuf,
+        literal: &'ctx str,
+        kind: Type,
+        span: Span,
+    },
+
     // Structures
     Struct {
         name: &'ctx str,

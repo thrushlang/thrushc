@@ -303,7 +303,7 @@ impl AstConstantExtensions for Ast<'_> {
                 left.is_constant_value() && right.is_constant_value()
             }
             Ast::UnaryOp { expression, .. } => expression.is_constant_value(),
-            Ast::Reference { metadata, .. } => metadata.is_constant(),
+            Ast::Reference { metadata, .. } => metadata.is_constant_ref(),
             Ast::As { metadata, .. } => metadata.is_constant(),
             Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_constant_value()),
             Ast::Constructor { data, .. } => data.iter().all(|arg| arg.1.is_constant_value()),
@@ -426,6 +426,9 @@ impl std::fmt::Display for Ast<'_> {
             }
             Ast::CNString { bytes, .. } => {
                 write!(f, "\"{}\"", String::from_utf8_lossy(bytes))
+            }
+            Ast::Embedded { name, literal, .. } => {
+                write!(f, "embedded {} \"{}\";", name, literal)
             }
             Ast::Function {
                 name,

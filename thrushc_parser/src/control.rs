@@ -20,7 +20,7 @@ impl ParserControlContext {
     #[inline]
     pub fn new() -> Self {
         Self {
-            sync_position: Vec::with_capacity(100),
+            sync_position: Vec::with_capacity(u8::MAX as usize),
             expression_depth: 0,
         }
     }

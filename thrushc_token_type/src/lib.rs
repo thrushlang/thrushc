@@ -53,7 +53,6 @@ pub enum TokenType {
 
     // --- Attributes ---
     Heap,
-    Stack,
     Extern,
     Ignore,
     Public,
@@ -76,6 +75,7 @@ pub enum TokenType {
     OptFuzzing,
     Linkage,
     Pure,
+    Thunk,
     Constructor,
     Destructor,
 
@@ -117,6 +117,7 @@ pub enum TokenType {
     Fixed,
     Import,
     ImportC,
+    Embedded,
     Mut,
     Type,
     Enum,

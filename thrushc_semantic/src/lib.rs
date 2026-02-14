@@ -7,7 +7,7 @@ use thrushc_scoper::Scoper;
 use thrushc_typechecker::TypeChecker;
 
 #[derive(Debug)]
-pub struct SemantiAnalysis<'semantic_analyzer> {
+pub struct SemanticAnalysis<'semantic_analyzer> {
     type_checker: TypeChecker<'semantic_analyzer>,
     analyzer: Analyzer<'semantic_analyzer>,
     attr_checker: AttributeChecker<'semantic_analyzer>,
@@ -16,7 +16,7 @@ pub struct SemantiAnalysis<'semantic_analyzer> {
     linter: Linter<'semantic_analyzer>,
 }
 
-impl<'semantic_analyzer> SemantiAnalysis<'semantic_analyzer> {
+impl<'semantic_analyzer> SemanticAnalysis<'semantic_analyzer> {
     #[inline]
     pub fn new(
         ast: &'semantic_analyzer [Ast<'semantic_analyzer>],
@@ -39,7 +39,7 @@ impl<'semantic_analyzer> SemantiAnalysis<'semantic_analyzer> {
     }
 }
 
-impl<'semantic_analyzer> SemantiAnalysis<'semantic_analyzer> {
+impl<'semantic_analyzer> SemanticAnalysis<'semantic_analyzer> {
     pub fn analyze(&mut self, parser_throwed_errors: bool) -> bool {
         if parser_throwed_errors {
             return true;

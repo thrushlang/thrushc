@@ -101,7 +101,9 @@ pub fn build_compiler_intrinsic<'parser>(
     )?;
 
     let return_type: Type = typegen::build_type(ctx, false)?;
-    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::SemiColon])?;
+
+    let attributes: ThrushAttributes =
+        attributes::build_compiler_attributes(ctx, &[TokenType::SemiColon])?;
     let has_ignore: bool = attributes.has_ignore_attribute();
 
     ctx.consume(

@@ -20,6 +20,9 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::CNString { kind, .. } => kind,
             Ast::NullPtr { kind, .. } => kind,
 
+            // Embedded
+            Ast::Embedded { kind, .. } => kind,
+
             // Custom Type
             Ast::CustomType { kind, .. } => kind,
 

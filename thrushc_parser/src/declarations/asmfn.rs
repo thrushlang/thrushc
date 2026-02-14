@@ -104,7 +104,8 @@ pub fn build_assembler_function<'parser>(
         typegen::build_type(ctx, false)?
     };
 
-    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
+    let attributes: ThrushAttributes =
+        attributes::build_compiler_attributes(ctx, &[TokenType::LBrace])?;
     let is_public: bool = attributes.has_public_attribute();
 
     ctx.consume(

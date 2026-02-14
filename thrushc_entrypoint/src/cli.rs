@@ -210,6 +210,17 @@ impl CommandLine {
                 self.advance();
             }
 
+            "-tools-dir" => {
+                self.advance();
+
+                let compiler_home_path: PathBuf = self.peek().into();
+
+                self.get_mut_options()
+                    .set_compiler_tools_path(compiler_home_path);
+
+                self.advance();
+            }
+
             "-jit" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -382,6 +393,36 @@ impl CommandLine {
                     .get_mut_llvm_backend_options()
                     .get_mut_target_cpu()
                     .set_processador_features(features);
+
+                self.advance();
+            }
+
+            "-cpu-enable-features" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let features: String = self.peek().to_string();
+                let features_to_replace: Vec<&str> = features.split(";").collect();
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target_cpu()
+                    .add_cpu_features(features_to_replace);
+
+                self.advance();
+            }
+
+            "-cpu-disable-features" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                let features: String = self.peek().to_string();
+                let features_to_replace: Vec<&str> = features.split(";").collect();
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target_cpu()
+                    .remove_cpu_features(features_to_replace);
 
                 self.advance();
             }
@@ -1228,7 +1269,7 @@ impl CommandLine {
 
 impl CommandLine {
     fn validate_llvm_required(&self, arg: &str) {
-        if !self.options.uses_llvm() {
+        if !self.options.llvm() {
             self.report_error(&format!(
                 "Can't use '{}' without '-llvm-backend' flag previously.",
                 arg

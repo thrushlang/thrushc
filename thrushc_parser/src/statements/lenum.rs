@@ -27,7 +27,7 @@ pub fn build_enum<'parser>(
     let span: Span = name.get_span();
 
     let enum_attributes: ThrushAttributes =
-        attributes::build_attributes(ctx, &[TokenType::LBrace])?;
+        attributes::build_compiler_attributes(ctx, &[TokenType::LBrace])?;
 
     ctx.consume(
         TokenType::LBrace,

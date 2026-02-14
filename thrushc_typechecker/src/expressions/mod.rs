@@ -276,6 +276,15 @@ pub fn validate<'type_checker>(
                         subtype.get_span(),
                     ));
                 }
+
+                if !ty.is_struct_type() {
+                    typechecker.add_error(CompilationIssue::Error(
+                        CompilationIssueCode::E0019,
+                        "Expcted a structure type reference.".into(),
+                        None,
+                        node.get_span(),
+                    ));
+                }
             }
 
             Ok(())

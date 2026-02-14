@@ -8,7 +8,7 @@ use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, traits::InfererTypeExtensions};
 
-use crate::{ParserContext, attributes, builder, expressions, typegen};
+use crate::{ParserContext, attributes, expressions, modificators, typegen};
 
 pub fn build_local<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -22,7 +22,7 @@ pub fn build_local<'parser>(
     let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
 
     let modificators: Modificators =
-        builder::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
     let is_volatile: bool = modificators.has_volatile();
     let atomic_ord: Option<ThrushAtomicOrdering> = modificators.get_atomic_ordering();
 
@@ -45,7 +45,7 @@ pub fn build_local<'parser>(
     let mut local_type: Type = typegen::build_type(ctx, false)?;
 
     let attributes: ThrushAttributes =
-        attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
+        attributes::build_compiler_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
 
     if ctx.match_token(TokenType::SemiColon)? {
         let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable, is_volatile, atomic_ord);
@@ -122,7 +122,7 @@ pub fn build_local_as_not_inserted_yet<'parser>(
     let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
 
     let modificators: Modificators =
-        builder::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
     let is_volatile: bool = modificators.has_volatile();
     let atomic_ord: Option<ThrushAtomicOrdering> = modificators.get_atomic_ordering();
 
@@ -145,7 +145,7 @@ pub fn build_local_as_not_inserted_yet<'parser>(
     let mut local_type: Type = typegen::build_type(ctx, false)?;
 
     let attributes: ThrushAttributes =
-        attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
+        attributes::build_compiler_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
 
     if ctx.match_token(TokenType::SemiColon)? {
         let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable, is_volatile, atomic_ord);

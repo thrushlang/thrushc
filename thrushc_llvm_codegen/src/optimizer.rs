@@ -14,6 +14,7 @@ use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::targets::TargetData;
 use inkwell::targets::TargetMachine;
+use inkwell::types::BasicTypeEnum;
 use inkwell::values::AsValueRef;
 use inkwell::values::BasicValueEnum;
 use inkwell::values::CallSiteValue;
@@ -975,7 +976,8 @@ impl<'a, 'ctx> LLVMMachineSpecificFunctionOptimizer<'a, 'ctx> {
             for i in 0..instruction.get_num_operands() {
                 if let Some(op) = instruction.get_operand(i) {
                     if let Some(value) = op.left() {
-                        let ty = value.get_type();
+                        let ty: BasicTypeEnum<'_> = value.get_type();
+
                         if ty.is_float_type() {
                             return true;
                         }
@@ -1311,6 +1313,7 @@ impl<'a, 'ctx> LLVMComdatApplier<'a, 'ctx> {
 
                         CString::default()
                     });
+
                 let c_str: &CStr = c_string_str.as_c_str();
 
                 let comdat: Comdat = unsafe {
@@ -1351,7 +1354,6 @@ impl<'a, 'ctx> LLVMSanitizer<'a, 'ctx> {
         Self {
             module,
             context,
-
             function: None,
             optimization: None,
             config,
@@ -2000,17 +2002,6 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
                 }
             }
         }
-
-        if optimizations.has_immarg() {
-            let kind_id: u32 = Attribute::get_named_enum_kind_id("immarg");
-            let attribute: Attribute = self.context.create_enum_attribute(kind_id, 0);
-
-            if let Some(function) = self.function {
-                if let Some(target_pos) = self.target_position {
-                    function.add_attribute(AttributeLoc::Param(target_pos), attribute);
-                }
-            }
-        }
     }
 }
 
@@ -2023,7 +2014,6 @@ pub struct LLVMParameterOptimizations {
     readonly: bool,
     writeonly: bool,
     readnone: bool,
-    immarg: bool,
 }
 
 impl LLVMParameterOptimizations {
@@ -2036,7 +2026,6 @@ impl LLVMParameterOptimizations {
             readonly: false,
             writeonly: false,
             readnone: false,
-            immarg: false,
         }
     }
 }
@@ -2060,11 +2049,6 @@ impl LLVMParameterOptimizations {
     #[inline]
     pub fn set_readnone_opt(&mut self, value: bool) {
         self.readnone = value;
-    }
-
-    #[inline]
-    pub fn set_immarg_opt(&mut self, value: bool) {
-        self.immarg = value;
     }
 }
 
@@ -2102,11 +2086,6 @@ impl LLVMParameterOptimizations {
     #[inline]
     pub fn has_readnone(&self) -> bool {
         self.readnone
-    }
-
-    #[inline]
-    pub fn has_immarg(&self) -> bool {
-        self.immarg
     }
 }
 

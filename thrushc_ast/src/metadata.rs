@@ -104,6 +104,7 @@ pub struct ReferenceMetadata {
 #[derive(Debug, Clone, Copy, Default)]
 pub enum ReferenceType {
     Constant,
+    Static,
 
     #[default]
     None,
@@ -133,8 +134,14 @@ impl ReferenceMetadata {
 }
 
 impl ReferenceMetadata {
-    pub fn is_constant(&self) -> bool {
+    #[inline]
+    pub fn is_constant_ref(&self) -> bool {
         matches!(self.reference_type, ReferenceType::Constant)
+    }
+
+    #[inline]
+    pub fn is_static_ref(&self) -> bool {
+        matches!(self.reference_type, ReferenceType::Static)
     }
 }
 

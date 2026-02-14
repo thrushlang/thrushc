@@ -37,8 +37,8 @@ pub fn build_function<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let mut parameters: Vec<Ast> = Vec::with_capacity(10);
-    let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
+    let mut parameters: Vec<Ast> = Vec::with_capacity(12);
+    let mut parameters_types: Vec<Type> = Vec::with_capacity(12);
     let mut parameter_position: u32 = 0;
 
     loop {
@@ -113,7 +113,7 @@ pub fn build_function<'parser>(
     };
 
     let attributes: ThrushAttributes =
-        attributes::build_attributes(ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
+        attributes::build_compiler_attributes(ctx, &[TokenType::SemiColon, TokenType::LBrace])?;
     let function_has_ignore: bool = attributes.has_ignore_attribute();
 
     if parse_forward {

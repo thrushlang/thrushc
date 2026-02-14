@@ -20,14 +20,14 @@ pub fn build_asm_code_block<'parser>(
         "Expected 'asm' keyword.".into(),
     )?;
 
-    let asm_type: Type = typegen::build_type(ctx, false)?;
-
     let span: Span = asm_tk.get_span();
 
     let mut args: Vec<Ast> = Vec::with_capacity(10);
 
+    let asm_type: Type = typegen::build_type(ctx, false)?;
+
     let attributes: ThrushAttributes =
-        attributes::build_attributes(ctx, &[TokenType::LParen, TokenType::LBrace])?;
+        attributes::build_compiler_attributes(ctx, &[TokenType::LParen, TokenType::LBrace])?;
 
     if ctx.match_token(TokenType::LParen)? {
         loop {

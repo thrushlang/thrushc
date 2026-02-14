@@ -44,7 +44,6 @@ lazy_static! {
         attributes.insert("@noUnwind", TokenType::NoUnwind);
         attributes.insert("@packed", TokenType::Packed);
         attributes.insert("@heap", TokenType::Heap);
-        attributes.insert("@stack", TokenType::Stack);
         attributes.insert("@public", TokenType::Public);
         attributes.insert("@linkage", TokenType::Linkage);
         attributes.insert("@extern", TokenType::Extern);
@@ -60,6 +59,7 @@ lazy_static! {
         attributes.insert("@preciseFloatingPoint", TokenType::PreciseFloats);
         attributes.insert("@convention", TokenType::Convention);
         attributes.insert("@pure", TokenType::Pure);
+        attributes.insert("@thunk", TokenType::Thunk);
         attributes.insert("@constructor", TokenType::Constructor);
         attributes.insert("@destructor", TokenType::Destructor);
 
@@ -161,6 +161,7 @@ lazy_static! {
         keywords.insert("static", TokenType::Static);
         keywords.insert("unreachable", TokenType::Unreachable);
         keywords.insert("intrinsic", TokenType::Intrinsic);
+        keywords.insert("embedded", TokenType::Embedded);
         keywords.insert("import", TokenType::Import);
         keywords.insert("importC", TokenType::ImportC);
         keywords.insert("new", TokenType::New);

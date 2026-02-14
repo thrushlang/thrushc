@@ -54,7 +54,17 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "-build-dir".custom_color((141, 141, 142)).bold(),
-            "Specifies the compiler artifacts directory.",
+            "Specify the compiler artifacts directory.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-tools-dir".custom_color((141, 141, 142)).bold(),
+            "Specify the compiler tools directory for search tools and expand compiler capatibilities.",
         ),
     );
 
@@ -133,7 +143,29 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-cpu".custom_color((141, 141, 142)).bold(),
             "haswell|alderlake|ivybridge|pentium|pantherlake",
-            "Specify the CPU to optimize.",
+            "It specify the CPU to optimize.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
+            "-cpu-enable-features".custom_color((141, 141, 142)).bold(),
+            "sse2;cx16;sahf;tbm",
+            "It specify to enable certain CPU features to use.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
+            "-cpu-disable-features".custom_color((141, 141, 142)).bold(),
+            "sse2;cx16;sahf;tbm",
+            "It specify to disable certain CPU features to use.",
         ),
     );
 
@@ -144,7 +176,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-cpu-features".custom_color((141, 141, 142)).bold(),
             "+sse2,+cx16,+sahf,-tbm",
-            "Specify the new features of the CPU to use.",
+            "It overwrites the CPU features to use.",
         ),
     );
 

@@ -7,7 +7,7 @@ use thrushc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
 
 use crate::ParserContext;
 
-pub fn build_attributes<'parser>(
+pub fn build_compiler_attributes<'parser>(
     ctx: &mut ParserContext<'parser>,
     limits: &[TokenType],
 ) -> Result<ThrushAttributes, CompilationIssue> {
@@ -19,6 +19,12 @@ pub fn build_attributes<'parser>(
 
         match current_tk.get_type() {
             TokenType::Extern => {
+                ctx.consume(
+                    TokenType::Extern,
+                    CompilationIssueCode::E0001,
+                    "Expected '@extern' prologue for an attribute.".into(),
+                )?;
+
                 attributes.push(ThrushAttribute::Extern(
                     self::build_external_attribute(ctx)?,
                     span,
@@ -26,6 +32,12 @@ pub fn build_attributes<'parser>(
             }
 
             TokenType::Convention => {
+                ctx.consume(
+                    TokenType::Convention,
+                    CompilationIssueCode::E0001,
+                    "Expected '@convention' prologue for an attribute.".into(),
+                )?;
+
                 attributes.push(ThrushAttribute::Convention(
                     self::build_call_convention_attribute(ctx)?,
                     span,
@@ -33,6 +45,12 @@ pub fn build_attributes<'parser>(
             }
 
             TokenType::Linkage => {
+                ctx.consume(
+                    TokenType::Linkage,
+                    CompilationIssueCode::E0001,
+                    "Expected '@linkage' prologue for an attribute.".into(),
+                )?;
+
                 let result: (ThrushLinkage, String) = self::build_linkage_attribute(ctx)?;
 
                 let linkage: ThrushLinkage = result.0;
@@ -42,14 +60,27 @@ pub fn build_attributes<'parser>(
             }
 
             TokenType::Public => {
+                ctx.consume(
+                    TokenType::Public,
+                    CompilationIssueCode::E0001,
+                    "Expected '@public' as attribute.".into(),
+                )?;
+
                 attributes.push(ThrushAttribute::Public(span));
-                ctx.only_advance()?;
             }
 
-            TokenType::AsmSyntax => attributes.push(ThrushAttribute::AsmSyntax(
-                self::build_assembler_syntax_attribute(ctx)?,
-                span,
-            )),
+            TokenType::AsmSyntax => {
+                ctx.consume(
+                    TokenType::AsmSyntax,
+                    CompilationIssueCode::E0001,
+                    "Expected '@asmSyntax' prologue for an attribute.".into(),
+                )?;
+
+                attributes.push(ThrushAttribute::AsmSyntax(
+                    self::build_assembler_syntax_attribute(ctx)?,
+                    span,
+                ))
+            }
 
             tk_type if tk_type.is_attribute() => {
                 if let Some(compiler_attribute) = thrushc_attributes::as_attribute(tk_type, span) {
@@ -70,8 +101,6 @@ pub fn build_attributes<'parser>(
 fn build_linkage_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<(ThrushLinkage, String), CompilationIssue> {
-    ctx.only_advance()?;
-
     ctx.consume(
         TokenType::LParen,
         CompilationIssueCode::E0001,
@@ -99,8 +128,6 @@ fn build_linkage_attribute<'parser>(
 fn build_external_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<String, CompilationIssue> {
-    ctx.only_advance()?;
-
     ctx.consume(
         TokenType::LParen,
         CompilationIssueCode::E0001,
@@ -127,8 +154,6 @@ fn build_external_attribute<'parser>(
 fn build_assembler_syntax_attribute<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<String, CompilationIssue> {
-    ctx.only_advance()?;
-
     ctx.consume(
         TokenType::LParen,
         CompilationIssueCode::E0001,
@@ -153,8 +178,6 @@ fn build_assembler_syntax_attribute<'parser>(
 }
 
 fn build_call_convention_attribute(ctx: &mut ParserContext) -> Result<String, CompilationIssue> {
-    ctx.only_advance()?;
-
     ctx.consume(
         TokenType::LParen,
         CompilationIssueCode::E0001,

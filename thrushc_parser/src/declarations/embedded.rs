@@ -1,20 +1,21 @@
+use std::path::PathBuf;
+
 use thrushc_ast::Ast;
-use thrushc_attributes::ThrushAttributes;
 use thrushc_errors::{CompilationIssue, CompilationIssueCode};
 use thrushc_span::Span;
 use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
 use thrushc_typesystem::Type;
 
-use crate::{ParserContext, attributes, typegen};
+use crate::ParserContext;
 
-pub fn build_custom_type<'parser>(
+pub fn build_embedded<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
-        TokenType::Type,
+        TokenType::Embedded,
         CompilationIssueCode::E0001,
-        "Expected 'type' keyword.".into(),
+        "Expected 'embedded' keyword.".into(),
     )?;
 
     let name_tk: &Token = ctx.consume(
@@ -23,19 +24,14 @@ pub fn build_custom_type<'parser>(
         "Expected identifier.".into(),
     )?;
 
-    let name: &str = name_tk.get_lexeme();
+    let lexeme: &str = name_tk.get_lexeme();
     let span: Span = name_tk.get_span();
 
-    ctx.consume(
-        TokenType::Eq,
+    ctx.consume_these(
+        &[TokenType::CNString, TokenType::CString],
         CompilationIssueCode::E0001,
-        String::from("Expected '='."),
+        "Expected string literal.".into(),
     )?;
-
-    let attributes: ThrushAttributes =
-        attributes::build_compiler_attributes(ctx, &[TokenType::LBrace])?;
-
-    let custom_type: Type = typegen::build_type(ctx, false)?;
 
     ctx.consume(
         TokenType::SemiColon,
@@ -43,15 +39,15 @@ pub fn build_custom_type<'parser>(
         "Expected ';'.".into(),
     )?;
 
-    if !ctx.is_main_scope() {
-        ctx.get_mut_symbols()
-            .new_custom_type(name, (custom_type.clone(), attributes), span)?;
-
-        Ok(Ast::CustomType {
-            kind: custom_type,
+    Ok(Ast::Embedded {
+        name: lexeme,
+        path: lexeme.into(),
+        literal: lexeme,
+        kind: Type::Array {
+            base_type: Type::U8(span).into(),
+            infered_type: None,
             span,
-        })
-    } else {
-        Ok(Ast::invalid_ast(span))
-    }
+        },
+        span,
+    })
 }

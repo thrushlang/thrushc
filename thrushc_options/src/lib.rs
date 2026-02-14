@@ -17,7 +17,9 @@ use std::path::PathBuf;
 
 #[derive(Debug)]
 pub struct CompilerOptions {
-    use_llvm_backend: bool,
+    compiler_tools_path: PathBuf,
+
+    llvm: bool,
     llvm_backend: LLVMBackend,
     files: Vec<CompilationUnit>,
     build_dir: PathBuf,
@@ -187,12 +189,14 @@ impl CompilerOptions {
     #[inline]
     pub fn new() -> Self {
         Self {
-            use_llvm_backend: true,
-            llvm_backend: LLVMBackend::new(),
-            files: Vec::with_capacity(1000),
+            compiler_tools_path: PathBuf::new(),
 
-            emit: Vec::with_capacity(10),
-            printable: Vec::with_capacity(10),
+            llvm: true,
+            llvm_backend: LLVMBackend::new(),
+            files: Vec::with_capacity(u8::MAX as usize),
+
+            emit: Vec::with_capacity(u8::MAX as usize),
+            printable: Vec::with_capacity(u8::MAX as usize),
 
             build_dir: "build".into(),
 
@@ -243,8 +247,8 @@ impl CompilerOptions {
 
 impl CompilerOptions {
     #[inline]
-    pub fn set_use_llvm_backend(&mut self, use_llvm_backend: bool) {
-        self.use_llvm_backend = use_llvm_backend;
+    pub fn set_use_llvm_backend(&mut self, value: bool) {
+        self.llvm = value;
     }
 
     #[inline]
@@ -328,6 +332,11 @@ impl CompilerOptions {
     }
 
     #[inline]
+    pub fn set_compiler_tools_path(&mut self, path: PathBuf) {
+        self.compiler_tools_path = path;
+    }
+
+    #[inline]
     pub fn add_emit_option(&mut self, emit: EmitableUnit) {
         self.emit.push(emit);
     }
@@ -340,8 +349,8 @@ impl CompilerOptions {
 
 impl CompilerOptions {
     #[inline]
-    pub fn uses_llvm(&self) -> bool {
-        self.use_llvm_backend
+    pub fn llvm(&self) -> bool {
+        self.llvm
     }
 
     #[inline]
@@ -396,6 +405,11 @@ impl CompilerOptions {
     #[inline]
     pub fn get_clean_build(&self) -> bool {
         self.clean_build
+    }
+
+    #[inline]
+    pub fn get_compiler_tools_path(&self) -> &Path {
+        &self.compiler_tools_path
     }
 
     #[inline]

@@ -81,7 +81,7 @@ pub fn build_reference<'parser>(
             name,
             kind: static_type,
             span,
-            metadata: ReferenceMetadata::new(true, is_mutable, ReferenceType::default()),
+            metadata: ReferenceMetadata::new(true, is_mutable, ReferenceType::Static),
         });
     }
 

@@ -60,7 +60,8 @@ General Commands:
 
 General flags:
 
-• -build-dir Specifies the compiler artifacts directory.
+• -build-dir Specify the compiler artifacts directory.
+• -tools-dir Specify the compiler tools directory for search tools and expand compiler capatibilities.
 
 Linkage flags:
 
@@ -73,8 +74,10 @@ Compiler flags:
 
 • -target [x86_64] Set the target arquitecture.
 • -target-triple [x86_64-pc-linux-gnu|x86_64-pc-windows-msvc] Set the target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.
-• -cpu [haswell|alderlake|ivybridge|pentium|pantherlake] Specify the CPU to optimize.
-• -cpu-features [+sse2,+cx16,+sahf,-tbm] Specify the new features of the CPU to use.
+• -cpu [haswell|alderlake|ivybridge|pentium|pantherlake] It specify the CPU to optimize.
+• -cpu-enable-features [sse2;cx16;sahf;tbm] It specify to enable certain CPU features to use.
+• -cpu-disable-features [sse2;cx16;sahf;tbm] It specify to disable certain CPU features to use.
+• -cpu-features [+sse2,+cx16,+sahf,-tbm] It overwrites the CPU features to use.
 • -emit [llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|ast|tokens] Compile the code into specified representation.
 • -print [llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens] Displays the final compilation on standard output.
 • -opt [O0|O1|O2|O3|Os|Oz] Optimization level.

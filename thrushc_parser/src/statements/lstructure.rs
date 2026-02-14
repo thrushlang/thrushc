@@ -7,7 +7,7 @@ use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, modificators::StructureTypeModificator};
 
-use crate::{ParserContext, attributes, builder, traits::StructFieldsExtensions, typegen};
+use crate::{ParserContext, attributes, modificators, traits::StructFieldsExtensions, typegen};
 
 pub fn build_structure<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -24,8 +24,10 @@ pub fn build_structure<'parser>(
         "Expected identifier.".into(),
     )?;
 
-    let attributes: ThrushAttributes = attributes::build_attributes(ctx, &[TokenType::LBrace])?;
-    let modificator: StructureTypeModificator = builder::build_structure_modificator(&attributes);
+    let attributes: ThrushAttributes =
+        attributes::build_compiler_attributes(ctx, &[TokenType::LBrace])?;
+    let modificator: StructureTypeModificator =
+        modificators::build_structure_modificator(&attributes);
 
     ctx.consume(
         TokenType::LBrace,

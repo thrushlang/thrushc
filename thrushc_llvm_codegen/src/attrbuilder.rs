@@ -168,6 +168,13 @@ impl<'ctx> AttributeBuilder<'ctx> {
                         );
                     }
 
+                    LLVMAttribute::Thunk => {
+                        let thunk_attribute: Attribute =
+                            llvm_context.create_string_attribute("thunk", "");
+
+                        function.add_attribute(AttributeLoc::Function, thunk_attribute);
+                    }
+
                     LLVMAttribute::Constructor => {
                         context.add_ctor(function.as_global_value().as_pointer_value());
                     }

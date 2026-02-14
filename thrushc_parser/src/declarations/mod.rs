@@ -6,6 +6,7 @@ use thrushc_token_type::TokenType;
 use crate::{ParserContext, control::ParserSyncPosition};
 
 pub mod asmfn;
+pub mod embedded;
 pub mod function;
 pub mod glasm;
 pub mod glconstant;
@@ -32,6 +33,7 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         TokenType::Intrinsic => Ok(intrinsic::build_compiler_intrinsic(ctx, false)?),
         TokenType::GlobalAsm => Ok(glasm::build_global_assembler(ctx)?),
         TokenType::Import => Ok(import::build_import(ctx)?),
+        TokenType::Embedded => Ok(embedded::build_embedded(ctx)?),
 
         _ => {
             let what: &Token = ctx.advance()?;

@@ -7,7 +7,7 @@ use thrushc_token::{Token, traits::TokenExtensions};
 use thrushc_token_type::TokenType;
 use thrushc_typesystem::{Type, traits::DereferenceExtensions};
 
-use crate::{ParserContext, builder, expressions};
+use crate::{ParserContext, expressions, modificators};
 
 pub fn build_dereference<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -16,7 +16,7 @@ pub fn build_dereference<'parser>(
     let span: Span = initial_deref_tk.get_span();
 
     let modificators: Modificators =
-        builder::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
 
     let is_volatile: bool = modificators.has_volatile();
     let atomic_ord: Option<ThrushAtomicOrdering> = modificators.get_atomic_ordering();
