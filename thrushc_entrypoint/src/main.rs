@@ -2,6 +2,11 @@ mod cli;
 mod console;
 mod help;
 
+use thrushc_heap_allocator::ThrushCompilerHeapAllocator;
+
+#[global_allocator]
+static GLOBAL: ThrushCompilerHeapAllocator = ThrushCompilerHeapAllocator;
+
 fn main() -> ! {
     use thrushc_core::ThrushCompiler;
 

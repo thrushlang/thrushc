@@ -34,6 +34,8 @@ members = [
     "thrushc_modificators", 
     "thrushc_token_type", 
     "thrushc_preprocessor_type_resolver", 
+    "thrushc_ast_verifier", 
+    "thrushc_heap_allocator", 
     "thrushc_utils", 
 ]
 

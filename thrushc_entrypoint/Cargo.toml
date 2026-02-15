@@ -12,7 +12,8 @@ default-run = "thrushc_entrypoint"
 ahash = "0.8.11"
 colored = "3.0.0"
 
-thrushc_core= { path = "../thrushc_core"  }
+thrushc_core = { path = "../thrushc_core"  }
+thrushc_heap_allocator = { path = "../thrushc_heap_allocator" }
 thrushc_options = { path = "../thrushc_options" }
 thrushc_logging = { path = "../thrushc_logging"}
 thrushc_parser = { path = "../thrushc_parser"}
