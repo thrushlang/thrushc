@@ -28,7 +28,7 @@ pub fn show_help() -> ! {
             "•".bold(),
             "-h".custom_color((141, 141, 142)).bold(),
             "--help".custom_color((141, 141, 142)).bold(),
-            "optional[opt|emit|print|code-model|reloc-model|sanitizer|symbol-linkage-strategy|denormal-floating-point-behavior|denormal-floating-point-32-bits-behavior]"
+            "optional[opt|emit|print|code-model|\n\treloc-model|sanitizer|symbol-linkage-strategy|denormal-floating-point-behavior|\n\tdenormal-floating-point-32-bits-behavior]"
                 .custom_color((141, 141, 142))
                 .bold(),
             "Show help message.",
@@ -38,33 +38,11 @@ pub fn show_help() -> ! {
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
         &format!(
-            "{} {}, {} {}\n\n",
+            "{} {}, {} {}\n",
             "•".bold(),
             "-v".custom_color((141, 141, 142)).bold(),
             "--version".custom_color((141, 141, 142)).bold(),
             "Show the version.",
-        ),
-    );
-
-    thrushc_logging::write(thrushc_logging::OutputIn::Stderr, "General flags:\n\n");
-
-    thrushc_logging::write(
-        thrushc_logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "-build-dir".custom_color((141, 141, 142)).bold(),
-            "Specify the compiler artifacts directory.",
-        ),
-    );
-
-    thrushc_logging::write(
-        thrushc_logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "-tools-dir".custom_color((141, 141, 142)).bold(),
-            "Specify the compiler tools directory for search tools and expand compiler capatibilities.",
         ),
     );
 
@@ -113,6 +91,26 @@ pub fn show_help() -> ! {
     );
 
     thrushc_logging::write(thrushc_logging::OutputIn::Stderr, "\nCompiler flags:\n\n");
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-build-dir".custom_color((141, 141, 142)).bold(),
+            "Specify the compiler artifacts directory.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-tools-dir".custom_color((141, 141, 142)).bold(),
+            "Specify the compiler tools directory for search tools and expand compiler capatibilities.",
+        ),
+    );
 
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
@@ -218,52 +216,6 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "-dbg".custom_color((141, 141, 142)).bold(),
-            "Enable generation of debug information (DWARF).",
-        ),
-    );
-
-    thrushc_logging::write(
-        thrushc_logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "-dbg-for-inlining".custom_color((141, 141, 142)).bold(),
-            "Enable debug information specifically optimized for inlined functions.",
-        ),
-    );
-
-    thrushc_logging::write(
-        thrushc_logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "-dbg-for-profiling".custom_color((141, 141, 142)).bold(),
-            "Emit extra debug info to support source-level profiling tools.",
-        ),
-    );
-
-    thrushc_logging::write(
-        thrushc_logging::OutputIn::Stderr,
-        &format!(
-            "{} {} [{}] {}\n",
-            "•".bold(),
-            "-dbg-dwarf-version".custom_color((141, 141, 142)).bold(),
-            "v4|v5",
-            "Configure the Dwarf version for debugging purposes.",
-        ),
-    );
-
-    thrushc_logging::write(
-        thrushc_logging::OutputIn::Stderr,
-        "\nJIT compiler flags:\n\n",
-    );
-
-    thrushc_logging::write(
-        thrushc_logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
             "-jit".custom_color((141, 141, 142)).bold(),
             "Enable the use of the JIT compiler for code execution.",
         ),
@@ -304,7 +256,43 @@ pub fn show_help() -> ! {
 
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
-        "\nOthers compiler flags:\n\n",
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-dbg".custom_color((141, 141, 142)).bold(),
+            "Enable generation of debug information (DWARF).",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-dbg-for-inlining".custom_color((141, 141, 142)).bold(),
+            "Enable debug information specifically optimized for inlined functions.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "-dbg-for-profiling".custom_color((141, 141, 142)).bold(),
+            "Emit extra debug info to support source-level profiling tools.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} [{}] {}\n",
+            "•".bold(),
+            "-dbg-dwarf-version".custom_color((141, 141, 142)).bold(),
+            "v4|v5",
+            "Configure the Dwarf version for debugging purposes.",
+        ),
     );
 
     thrushc_logging::write(
@@ -376,6 +364,18 @@ pub fn show_help() -> ! {
                 .custom_color((141, 141, 142))
                 .bold(),
             "Disable all sanitizers that may be enabled.",
+        ),
+    );
+
+    thrushc_logging::write(
+        thrushc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--disable-all-cpu-features"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Disable the all CPU features. that may be enabled.",
         ),
     );
 
@@ -472,7 +472,7 @@ pub fn show_help() -> ! {
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}",
+            "{} {} {}\n",
             "•".bold(),
             "--enable-ansi-color".custom_color((141, 141, 142)).bold(),
             "It allows ANSI color formatting in compiler diagnostics.",
@@ -481,7 +481,7 @@ pub fn show_help() -> ! {
 
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
-        "\n\nOmission compiler flags:\n\n",
+        "\nOmission compiler flags:\n\n",
     );
 
     thrushc_logging::write(
@@ -550,7 +550,7 @@ pub fn show_help() -> ! {
 
     thrushc_logging::write(
         thrushc_logging::OutputIn::Stderr,
-        "\nUseful compiler flags:\n\n",
+        "\nOther compiler flags:\n\n",
     );
 
     thrushc_logging::write(
@@ -680,7 +680,7 @@ pub fn show_help() -> ! {
             "{} {} {}\n",
             "•".bold(),
             "--clean-llvm-bitcode".custom_color((141, 141, 142)).bold(),
-            "Clean the compiler folder containing emitted LLVM Bitcode."
+            "Clean the compiler folder containing emitted LLVM bitcode."
         ),
     );
 

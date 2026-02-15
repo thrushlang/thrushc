@@ -512,6 +512,16 @@ impl CommandLine {
                 self.validate_aot_is_enable(arg);
             }
 
+            "--disable-all-cpu-features" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend_options()
+                    .get_mut_target_cpu()
+                    .disable_cpu_all_features();
+            }
+
             "--stack-protector" => {
                 self.advance();
                 self.validate_llvm_required(arg);

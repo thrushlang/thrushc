@@ -29,7 +29,19 @@ impl LLVMTargetCPU {
         self.target_cpu_features = features;
     }
 
-    #[inline]
+    pub fn disable_cpu_all_features(&mut self) {
+        let mut changed: Vec<String> = Vec::with_capacity(self.target_cpu_features.len());
+
+        for feat in self.target_cpu_features.split(',') {
+            let base: &str = &feat[1..];
+            let formated: String = format!("-{}", base);
+
+            changed.push(formated);
+        }
+
+        self.target_cpu_features = changed.join(",")
+    }
+
     pub fn remove_cpu_features(&mut self, blacklist: Vec<&str>) {
         if self.target_cpu_features.is_empty() {
             return;
@@ -65,7 +77,6 @@ impl LLVMTargetCPU {
         self.target_cpu_features = kept.join(",");
     }
 
-    #[inline]
     pub fn add_cpu_features(&mut self, blacklist: Vec<&str>) {
         if self.target_cpu_features.is_empty() {
             return;

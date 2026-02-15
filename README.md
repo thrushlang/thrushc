@@ -55,13 +55,10 @@ Usage: thrushc [-flags|--flags] [files..]
 
 General Commands:
 
-• -h, --help optional[opt|emit|print|code-model|reloc-model|sanitizer|symbol-linkage-strategy|denormal-floating-point-behavior|denormal-floating-point-32-bits-behavior] Show help message.
+• -h, --help optional[opt|emit|print|code-model|
+        reloc-model|sanitizer|symbol-linkage-strategy|denormal-floating-point-behavior|
+        denormal-floating-point-32-bits-behavior] Show help message.
 • -v, --version Show the version.
-
-General flags:
-
-• -build-dir Specify the compiler artifacts directory.
-• -tools-dir Specify the compiler tools directory for search tools and expand compiler capatibilities.
 
 Linkage flags:
 
@@ -72,6 +69,8 @@ Linkage flags:
 
 Compiler flags:
 
+• -build-dir Specify the compiler artifacts directory.
+• -tools-dir Specify the compiler tools directory for search tools and expand compiler capatibilities.
 • -target [x86_64] Set the target arquitecture.
 • -target-triple [x86_64-pc-linux-gnu|x86_64-pc-windows-msvc] Set the target triple. For more information, see 'https://clang.llvm.org/docs/CrossCompilation.html'.
 • -cpu [haswell|alderlake|ivybridge|pentium|pantherlake] It specify the CPU to optimize.
@@ -81,26 +80,21 @@ Compiler flags:
 • -emit [llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|ast|tokens] Compile the code into specified representation.
 • -print [llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens] Displays the final compilation on standard output.
 • -opt [O0|O1|O2|O3|Os|Oz] Optimization level.
-• -dbg Enable generation of debug information (DWARF).
-• -dbg-for-inlining Enable debug information specifically optimized for inlined functions.
-• -dbg-for-profiling Emit extra debug info to support source-level profiling tools.
-• -dbg-dwarf-version [v4|v5] Configure the Dwarf version for debugging purposes.
-
-JIT compiler flags:
-
 • -jit Enable the use of the JIT compiler for code execution.
 • -jit-libc [path/to/libc.so] Specify the C runtime to link for code execution via the JIT compiler.
 • -jit-link [path/to/raylib.so] Specify, add, and link an external dynamic library for code execution via the JIT compiler.
 • -jit-entry [main] Specify the entry point name for the JIT compiler.
-
-Others compiler flags:
-
+• -dbg Enable generation of debug information (DWARF).
+• -dbg-for-inlining Enable debug information specifically optimized for inlined functions.
+• -dbg-for-profiling Emit extra debug info to support source-level profiling tools.
+• -dbg-dwarf-version [v4|v5] Configure the Dwarf version for debugging purposes.
 • --denormal-floating-point-behavior ["IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic,IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic"] Configure how denormal floating-point values are handled during calculations.
 • --denormal-floating-point-32-bits-behavior ["IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic,IEEE|preserve-sign-signature|transform-to-positive-zero|dynamic"] Configure how denormal 32-bit floating-point values are handled during calculations.
 • --symbol-linkage-strategy [any|exact|large|samesize|noduplicates] Configure the symbol linkage merge strategy.
 • --stack-protector It built a stack state guard that battles memory hacks and prevents memory corruptions.
 • --sanitizer [address|hwaddress|memory|thread|memtag] Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.
 • --disable-all-sanitizers Disable all sanitizers that may be enabled.
+• --disable-all-cpu-features Disable the all CPU features. that may be enabled.
 • --no-sanitize [bounds;coverage] Modifies certain code emissions for the selected sanitizer.
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
 • --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes.
@@ -120,7 +114,7 @@ Omission compiler flags:
 • --omit-safe-trapping-math It allow trapping math operations that can cause exceptions. Useful for floating-point operations.
 • --omit-default-opt It omits default optimization that occurs even without specified optimization.
 
-Useful compiler flags:
+Other compiler flags:
 
 • --copy-output-to-clipboard Copy the total printable output of the compiler into the operating system clipboard. It only works using '-print' compiler flag.
 • --debug-clang-command Displays the generated command for Clang in the phase of linking.
@@ -133,7 +127,7 @@ Useful compiler flags:
 • --clean-tokens Clean the compiler folder that holds the lexical analysis tokens.
 • --clean-assembler Clean the compiler folder containing emitted assembler.
 • --clean-llvm-ir Clean the compiler folder containing the emitted LLVM IR.
-• --clean-llvm-bitcode Clean the compiler folder containing emitted LLVM Bitcode.
+• --clean-llvm-bitcode Clean the compiler folder containing emitted LLVM bitcode.
 • --clean-objects Clean the compiler folder containing emitted object files.
 • --no-obfuscate-archive-names Stop generating name obfuscation for each file; this does not apply to the final build.
 • --no-obfuscate-ir Stop generating name obfuscation in the emitted IR code.
