@@ -1368,7 +1368,11 @@ impl CommandLine {
         let path: PathBuf = PathBuf::from(path);
 
         if let Some(extension) = path.extension() {
-            if path.exists() && path.is_file() && (extension.eq("thrust") || extension.eq("🐦")) {
+            if path.exists()
+                && path.is_file()
+                && (thrustc_constants::COMPILER_OWN_FILE_EXTENSIONS
+                    .contains(&extension.to_str().unwrap_or("unknown")))
+            {
                 return true;
             }
         }
