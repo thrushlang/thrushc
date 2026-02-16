@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: Thrush Compiler
+title: Thrust Compiler
 message: >-
   If you use this software in your work, please cite it
   using the following metadata...
@@ -8,12 +8,12 @@ authors:
   - given-names: Stevens Benavides
     family-names: DevCheckOG
     email: foss.stevens.benavides@gmail.com
-repository-code: 'https://github.com/thrushlang/thrushc'
-url: 'https://github.com/thrushlang'
+repository-code: 'https://github.com/thrustlang/thrustc'
+url: 'https://github.com/thrustlang'
 abstract: >-
    A general-purpose, statically typed systems programming language for writing verbose, accurate, and fast code. 
 keywords:
   - Compiler
   - Programming Language
-  - Thrush Programming Language
+  - Thrust Programming Language
 license: GPL-3.0
