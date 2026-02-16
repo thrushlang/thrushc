@@ -1,8 +1,8 @@
-<img src= "https://github.com/thrushlang/.github/blob/main/assets/logos/thrushlang-logo-name.png" alt= "logo" style= "width: 80%; height: 80%;"></img>
+<img src= "https://github.com/thrustlang/.github/blob/main/assets/logos/thrustlang-logo-name.png" alt= "logo" style= "width: 80%; height: 80%;"></img>
 
-# The Thrush Compiler 
+# The Thrust Compiler 
 
-The **Thrush Compiler** is a compiler that transfers the source code of Thrush files directly to the specified destination. The process includes static type analysis, code generation, destination-specific optimizations, machine-specific code compilation, and finally, emitting or linking.
+The **Thrust Compiler** is a compiler that transfers the source code of Thrust files directly to the specified destination. The process includes static type analysis, code generation, destination-specific optimizations, machine-specific code compilation, and finally, emitting or linking.
 
 > [!WARNING]  
 > The compiler is in an early development phase. It may contain bugs when testing certain syntax. Continue on your own.
@@ -16,7 +16,7 @@ Among the dependencies required by the compiler is LLVM infrastructure.
 Automatically:
 
 ```console
-$ git clone --depth=1 https://github.com/thrushlang/compiler-builder 
+$ git clone --depth=1 https://github.com/thrustlang/compiler-builder 
 $ cd compiler-builder 
 $ cargo run 
 ```
@@ -24,8 +24,8 @@ $ cargo run
 You must first clone the repository and access it locally. 
 
 ```console
-$ git clone --depth=1 https://github.com/thrushlang/thrushc 
-$ cd thrushc
+$ git clone --depth=1 https://github.com/thrustlang/thrustc 
+$ cd thrustc
 ```
 
 ### Build the Compiler
@@ -43,15 +43,15 @@ $ cargo run -- --help
 
 ## Commands & Flags
 
-A list of the commands supported by the Thrush Compiler command line.
+A list of the commands supported by the Thrust Compiler command line.
 
 > [!WARNING]  
 > This might be a bit outdated, it could be information that's somewhat distant from the changes.
 
 ```console
-The Thrush Compiler
+The Thrust Compiler
 
-Usage: thrushc [-flags|--flags] [files..]
+Usage: thrustc [-flags|--flags] [files..]
 
 General Commands:
 
@@ -141,11 +141,11 @@ Other compiler flags:
 
 The language syntax is under construction at the same time as the compiler. It may be outdated compared to the compiler, as the latter progresses more rapidly. This will be normalized once a valid and sufficiently stable beta is released.
 
-**[Thrush Programming Language - General Syntax](https://github.com/thrushlang/syntax)**
+**[Thrust Programming Language - General Syntax](https://github.com/thrustlang/syntax)**
 
 ## ¿How it works?
 
-Currently, the only backend available for the thrush compiler to compile is the current LLVM, using the LLVM-C API. 
+Currently, the only backend available for the thrust compiler to compile is the current LLVM, using the LLVM-C API. 
 
 #### Embedded Clang
 
@@ -162,12 +162,12 @@ The code generation is in 3 phases.
 In summary:
 
 <p align="center">
-  <img src= "https://github.com/thrushlang/.github/blob/main/assets/explanations/how%20it%20works%20(thrushc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
+  <img src= "https://github.com/thrustlang/.github/blob/main/assets/explanations/how%20it%20works%20(thrustc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
 </p>
 
 ## LLVM
 
-The LLVM backend infrastructure is the default code generator for the **[Thrush Programming Language](https://github.com/thrushlang/)**. It offers full scope and portability across many architectures or targets.
+The LLVM backend infrastructure is the default code generator for the **[Thrust Programming Language](https://github.com/thrustlang/)**. It offers full scope and portability across many architectures or targets.
 
 ### LLVM Version
 
@@ -217,7 +217,7 @@ You must also have ``libgccjit.so`` dynamically installed in your distribution s
 
 ### Notes
 
-Currently, the very same Rust is using ``libgccjit`` as a library for an AOT backend prototype for Rust. Called ``rustc_codegen_gcc``. Thrush will integrate it in his own way for use in the language.
+Currently, the very same Rust is using ``libgccjit`` as a library for an AOT backend prototype for Rust. Called ``rustc_codegen_gcc``. Thrust will integrate it in his own way for use in the language.
 
 For more information: [Rust - GCC AOT Code Generation](https://github.com/rust-lang/rustc_codegen_gcc)
 

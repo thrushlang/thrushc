@@ -1,0 +1,423 @@
+use thrustc_span::Span;
+use thrustc_token_type::TokenType;
+
+use crate::{
+    linkage::ThrustLinkage,
+    traits::{ThrustAttributeComparatorExtensions, ThrustAttributesExtensions},
+};
+
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+pub mod assembler;
+pub mod callconventions;
+pub mod linkage;
+pub mod traits;
+
+pub type ThrustAttributes = Vec<ThrustAttribute>;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
+#[derive(Debug, Clone)]
+pub enum ThrustAttribute {
+    Extern(String, Span),
+    Convention(String, Span),
+    Linkage(ThrustLinkage, String, Span),
+    Public(Span),
+    Ignore(Span),
+    Hot(Span),
+    NoInline(Span),
+    InlineHint(Span),
+    MinSize(Span),
+    AlwaysInline(Span),
+    SafeStack(Span),
+    StrongStack(Span),
+    WeakStack(Span),
+    PreciseFloats(Span),
+    NoUnwind(Span),
+    OptFuzzing(Span),
+    Pure(Span),
+    Thunk(Span),
+
+    // LLVM Structure Modificator
+    Packed(Span),
+
+    // Memory Management
+    Stack(Span),
+    Heap(Span),
+
+    AsmThrow(Span),
+    AsmSyntax(String, Span),
+    AsmAlignStack(Span),
+    AsmSideEffects(Span),
+
+    //Ctors & Dtors
+    Constructor(Span),
+    Destructor(Span),
+}
+
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
+pub enum ThrustAttributeComparator {
+    Extern,
+    Convention,
+    Linkage,
+    Public,
+    Ignore,
+    Hot,
+    NoInline,
+    InlineHint,
+    MinSize,
+    AlwaysInline,
+    SafeStack,
+    StrongStack,
+    WeakStack,
+    PreciseFloats,
+    NoUnwind,
+    OptFuzzing,
+    Pure,
+    Thunk,
+
+    Packed,
+
+    Stack,
+    Heap,
+
+    AsmThrow,
+    AsmSyntax,
+    AsmAlignStack,
+    AsmSideEffects,
+
+    Constructor,
+    Destructor,
+}
+
+impl ThrustAttribute {
+    #[inline]
+    pub fn is_extern_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Extern(..))
+    }
+
+    #[inline]
+    pub fn is_hot_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Hot(..))
+    }
+
+    #[inline]
+    pub fn is_ignore_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Ignore(..))
+    }
+
+    #[inline]
+    pub fn is_public_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Public(..))
+    }
+
+    #[inline]
+    pub fn is_noinline_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::NoInline(..))
+    }
+
+    #[inline]
+    pub fn is_inline_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::InlineHint(..))
+    }
+
+    #[inline]
+    pub fn is_alwaysinline_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::AlwaysInline(..))
+    }
+
+    #[inline]
+    pub fn is_minsize_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::MinSize(..))
+    }
+
+    #[inline]
+    pub fn is_heap_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Heap(..))
+    }
+
+    #[inline]
+    pub fn is_asmsideeffects_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::AsmSideEffects(..))
+    }
+
+    #[inline]
+    pub fn is_asmthrow_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::AsmThrow(..))
+    }
+
+    #[inline]
+    pub fn is_asmalingstack_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::AsmAlignStack(..))
+    }
+
+    #[inline]
+    pub fn is_asmsyntax_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::AsmSyntax(..))
+    }
+
+    #[inline]
+    pub fn is_packed(&self) -> bool {
+        matches!(self, ThrustAttribute::Packed(..))
+    }
+
+    #[inline]
+    pub fn is_linkage_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Linkage(..))
+    }
+
+    #[inline]
+    pub fn is_conv_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Convention(..))
+    }
+
+    #[inline]
+    pub fn is_constructor_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Constructor(..))
+    }
+
+    #[inline]
+    pub fn is_destructor_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Destructor(..))
+    }
+}
+
+impl ThrustAttribute {
+    #[inline]
+    pub fn get_span(&self) -> Span {
+        match self {
+            ThrustAttribute::Extern(_, span) => *span,
+            ThrustAttribute::Convention(_, span) => *span,
+            ThrustAttribute::Linkage(.., span) => *span,
+            ThrustAttribute::Public(span) => *span,
+            ThrustAttribute::Ignore(span) => *span,
+            ThrustAttribute::Hot(span) => *span,
+            ThrustAttribute::NoInline(span) => *span,
+            ThrustAttribute::InlineHint(span) => *span,
+            ThrustAttribute::MinSize(span) => *span,
+            ThrustAttribute::AlwaysInline(span) => *span,
+            ThrustAttribute::SafeStack(span) => *span,
+            ThrustAttribute::StrongStack(span) => *span,
+            ThrustAttribute::WeakStack(span) => *span,
+            ThrustAttribute::PreciseFloats(span) => *span,
+            ThrustAttribute::AsmThrow(span) => *span,
+            ThrustAttribute::AsmSyntax(_, span) => *span,
+            ThrustAttribute::AsmSideEffects(span) => *span,
+            ThrustAttribute::AsmAlignStack(span) => *span,
+            ThrustAttribute::Stack(span) => *span,
+            ThrustAttribute::Heap(span) => *span,
+            ThrustAttribute::Packed(span) => *span,
+            ThrustAttribute::NoUnwind(span) => *span,
+            ThrustAttribute::OptFuzzing(span) => *span,
+            ThrustAttribute::Pure(span) => *span,
+            ThrustAttribute::Thunk(span) => *span,
+            ThrustAttribute::Constructor(span) => *span,
+            ThrustAttribute::Destructor(span) => *span,
+        }
+    }
+}
+
+#[must_use]
+pub fn as_attribute(token_type: TokenType, span: Span) -> Option<ThrustAttribute> {
+    match token_type {
+        TokenType::Ignore => Some(ThrustAttribute::Ignore(span)),
+        TokenType::MinSize => Some(ThrustAttribute::MinSize(span)),
+        TokenType::NoInline => Some(ThrustAttribute::NoInline(span)),
+        TokenType::AlwaysInline => Some(ThrustAttribute::AlwaysInline(span)),
+        TokenType::InlineHint => Some(ThrustAttribute::InlineHint(span)),
+        TokenType::Hot => Some(ThrustAttribute::Hot(span)),
+        TokenType::SafeStack => Some(ThrustAttribute::SafeStack(span)),
+        TokenType::WeakStack => Some(ThrustAttribute::WeakStack(span)),
+        TokenType::StrongStack => Some(ThrustAttribute::StrongStack(span)),
+        TokenType::PreciseFloats => Some(ThrustAttribute::PreciseFloats(span)),
+        TokenType::Heap => Some(ThrustAttribute::Heap(span)),
+        TokenType::AsmThrow => Some(ThrustAttribute::AsmThrow(span)),
+        TokenType::AsmSideEffects => Some(ThrustAttribute::AsmSideEffects(span)),
+        TokenType::AsmAlignStack => Some(ThrustAttribute::AsmAlignStack(span)),
+        TokenType::Packed => Some(ThrustAttribute::Packed(span)),
+        TokenType::NoUnwind => Some(ThrustAttribute::NoUnwind(span)),
+        TokenType::OptFuzzing => Some(ThrustAttribute::OptFuzzing(span)),
+        TokenType::Pure => Some(ThrustAttribute::Pure(span)),
+        TokenType::Thunk => Some(ThrustAttribute::Thunk(span)),
+        TokenType::Constructor => Some(ThrustAttribute::Constructor(span)),
+        TokenType::Destructor => Some(ThrustAttribute::Destructor(span)),
+
+        _ => None,
+    }
+}
+
+impl ThrustAttributesExtensions for ThrustAttributes {
+    #[inline]
+    fn has_linkage_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_linkage_attribute())
+    }
+
+    #[inline]
+    fn has_extern_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_extern_attribute())
+    }
+
+    #[inline]
+    fn has_ignore_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_ignore_attribute())
+    }
+
+    #[inline]
+    fn has_heap_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_heap_attribute())
+    }
+
+    #[inline]
+    fn has_public_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_public_attribute())
+    }
+
+    #[inline]
+    fn has_hot_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_hot_attribute())
+    }
+
+    #[inline]
+    fn has_inline_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_inline_attribute())
+    }
+
+    #[inline]
+    fn has_minsize_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_minsize_attribute())
+    }
+
+    #[inline]
+    fn has_inlinealways_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_alwaysinline_attribute())
+    }
+
+    #[inline]
+    fn has_noinline_attr(&self) -> bool {
+        self.iter().any(|attr| attr.is_noinline_attribute())
+    }
+
+    #[inline]
+    fn has_asmalignstack_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmalingstack_attribute())
+    }
+
+    #[inline]
+    fn has_asmsideffects_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmsideeffects_attribute())
+    }
+
+    #[inline]
+    fn has_asmthrow_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmthrow_attribute())
+    }
+
+    #[inline]
+    fn has_asmsyntax_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_asmsyntax_attribute())
+    }
+
+    #[inline]
+    fn has_convention_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_conv_attribute())
+    }
+
+    #[inline]
+    fn has_constructor_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_constructor_attribute())
+    }
+
+    #[inline]
+    fn has_destructor_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_destructor_attribute())
+    }
+
+    #[inline]
+    fn match_attr(&self, cmp: ThrustAttributeComparator) -> Option<Span> {
+        if let Some(attr_found) = self.iter().find(|attr| attr.as_attr_cmp() == cmp) {
+            return Some(attr_found.get_span());
+        }
+
+        None
+    }
+
+    #[inline]
+    fn get_attr(&self, cmp: ThrustAttributeComparator) -> Option<ThrustAttribute> {
+        if let Some(attr_found) = self.iter().find(|attr| attr.as_attr_cmp() == cmp) {
+            return Some(attr_found.clone());
+        }
+
+        None
+    }
+}
+
+impl ThrustAttributeComparatorExtensions for ThrustAttribute {
+    #[inline]
+    fn as_attr_cmp(&self) -> ThrustAttributeComparator {
+        match self {
+            ThrustAttribute::Extern(..) => ThrustAttributeComparator::Extern,
+            ThrustAttribute::Convention(..) => ThrustAttributeComparator::Convention,
+            ThrustAttribute::Linkage(..) => ThrustAttributeComparator::Linkage,
+            ThrustAttribute::Stack(..) => ThrustAttributeComparator::Stack,
+            ThrustAttribute::Heap(..) => ThrustAttributeComparator::Heap,
+            ThrustAttribute::Public(..) => ThrustAttributeComparator::Public,
+            ThrustAttribute::Ignore(..) => ThrustAttributeComparator::Ignore,
+            ThrustAttribute::Hot(..) => ThrustAttributeComparator::Hot,
+            ThrustAttribute::NoInline(..) => ThrustAttributeComparator::NoInline,
+            ThrustAttribute::InlineHint(..) => ThrustAttributeComparator::InlineHint,
+            ThrustAttribute::MinSize(..) => ThrustAttributeComparator::MinSize,
+            ThrustAttribute::AlwaysInline(..) => ThrustAttributeComparator::AlwaysInline,
+            ThrustAttribute::SafeStack(_) => ThrustAttributeComparator::SafeStack,
+            ThrustAttribute::StrongStack(..) => ThrustAttributeComparator::StrongStack,
+            ThrustAttribute::WeakStack(..) => ThrustAttributeComparator::WeakStack,
+            ThrustAttribute::PreciseFloats(..) => ThrustAttributeComparator::PreciseFloats,
+            ThrustAttribute::AsmAlignStack(..) => ThrustAttributeComparator::AsmAlignStack,
+            ThrustAttribute::AsmSyntax(..) => ThrustAttributeComparator::AsmSyntax,
+            ThrustAttribute::AsmThrow(..) => ThrustAttributeComparator::AsmThrow,
+            ThrustAttribute::AsmSideEffects(..) => ThrustAttributeComparator::AsmSideEffects,
+            ThrustAttribute::Packed(..) => ThrustAttributeComparator::Packed,
+            ThrustAttribute::NoUnwind(..) => ThrustAttributeComparator::NoUnwind,
+            ThrustAttribute::OptFuzzing(..) => ThrustAttributeComparator::OptFuzzing,
+            ThrustAttribute::Pure(..) => ThrustAttributeComparator::Pure,
+            ThrustAttribute::Thunk(..) => ThrustAttributeComparator::Thunk,
+            ThrustAttribute::Constructor(..) => ThrustAttributeComparator::Constructor,
+            ThrustAttribute::Destructor(..) => ThrustAttributeComparator::Destructor,
+        }
+    }
+}
+
+impl std::fmt::Display for ThrustAttribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ThrustAttribute::AlwaysInline(..) => write!(f, "@alwaysinline"),
+            ThrustAttribute::NoInline(..) => write!(f, "@noinline"),
+            ThrustAttribute::InlineHint(..) => write!(f, "@inline"),
+            ThrustAttribute::Linkage(linkage, ..) => write!(f, "@linkage(\"{}\")", linkage),
+            ThrustAttribute::Extern(name, ..) => write!(f, "@extern(\"{}\")", name),
+            ThrustAttribute::Convention(convention, ..) => {
+                write!(f, "@convention(\"{}\")", convention)
+            }
+            ThrustAttribute::Stack(..) => write!(f, "@stack"),
+            ThrustAttribute::Heap(..) => write!(f, "@heap"),
+            ThrustAttribute::Public(..) => write!(f, "@public"),
+            ThrustAttribute::StrongStack(..) => write!(f, "@strongstack"),
+            ThrustAttribute::WeakStack(..) => write!(f, "@weakstack"),
+            ThrustAttribute::SafeStack(..) => write!(f, "@safestack"),
+            ThrustAttribute::PreciseFloats(..) => write!(f, "@precisefp"),
+            ThrustAttribute::MinSize(..) => write!(f, "@minsize"),
+            ThrustAttribute::Hot(..) => write!(f, "@hot"),
+            ThrustAttribute::Ignore(..) => write!(f, "@ignore"),
+            ThrustAttribute::NoUnwind(..) => write!(f, "@nounwind"),
+            ThrustAttribute::AsmThrow(..) => write!(f, "@asmthrow"),
+            ThrustAttribute::AsmSyntax(..) => write!(f, "@asmsyntax"),
+            ThrustAttribute::AsmSideEffects(..) => write!(f, "@asmeffects"),
+            ThrustAttribute::AsmAlignStack(..) => write!(f, "@asmalingstack"),
+            ThrustAttribute::Packed(..) => write!(f, "@packed"),
+            ThrustAttribute::OptFuzzing(..) => write!(f, "@optfuzzing"),
+            ThrustAttribute::Pure(..) => write!(f, "@pure"),
+            ThrustAttribute::Thunk(..) => write!(f, "@thunk"),
+            ThrustAttribute::Constructor(..) => write!(f, "@constructor"),
+            ThrustAttribute::Destructor(..) => write!(f, "@destructor"),
+        }
+    }
+}

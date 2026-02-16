@@ -598,7 +598,7 @@ fn get_backend_llvm_build_path() -> std::path::PathBuf {
             logging::log(LoggingType::Panic, "Missing $HOME environment variable.\n");
             std::process::exit(1);
         }))
-        .join(".thrushlang/backends/llvm/build"),
+        .join(".thrustlang/backends/llvm/build"),
 
         "windows" => std::path::PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| {
             logging::log(
@@ -607,12 +607,12 @@ fn get_backend_llvm_build_path() -> std::path::PathBuf {
             );
             std::process::exit(1);
         }))
-        .join(".thrushlang/backends/llvm/build"),
+        .join(".thrustlang/backends/llvm/build"),
 
         _ => {
             logging::log(
                 LoggingType::Panic,
-                "Unsopported operating system for installing the dependencies required to build the Thrush Compiler LLVM Backend.",
+                "Unsopported operating system for installing the dependencies required to build the Thrust Compiler LLVM Backend.",
             );
 
             std::process::exit(1);
@@ -643,7 +643,7 @@ fn main() {
         None => {
             logging::log(
                 LoggingType::Panic,
-                "The LLVM libraries could not be found in '%HOME%/.thrushlang/backends/llvm/build/', compile and run the compiler-builder again.",
+                "The LLVM libraries could not be found in '%HOME%/.thrustlang/backends/llvm/build/', compile and run the compiler-builder again.",
             );
 
             std::process::exit(1);

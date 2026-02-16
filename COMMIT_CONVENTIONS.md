@@ -1,8 +1,8 @@
-<img src= "https://github.com/thrushlang/.github/blob/main/assets/logos/thrushlang-logo-name.png" alt= "logo" style= "width: 80%; height: 80%;"></img>
+<img src= "https://github.com/thrustlang/.github/blob/main/assets/logos/thrustlang-logo-name.png" alt= "logo" style= "width: 80%; height: 80%;"></img>
 
-# The Thrush Compiler 
+# The Thrust Compiler 
 
-There is a simple guide of standard conventions to follow in order to delivery a good Github commit for the Thrush Compiler (**thrushc**).
+There is a simple guide of standard conventions to follow in order to delivery a good Github commit for the Thrust Compiler (**thrustc**).
 
 ### Title
 

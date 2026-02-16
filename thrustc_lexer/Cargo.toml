@@ -1,0 +1,22 @@
+[package]
+name = "thrustc_lexer"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ahash = "0.8.11"
+lazy_static = "1.5.0"
+fastrand = "2.3.0"
+colored = "3.0.0"
+unicode_categories = "0.1.1"
+
+thrustc_options = { path = "../thrustc_options" }
+thrustc_diagnostician = { path = "../thrustc_diagnostician" }
+thrustc_errors = { path = "../thrustc_errors" }
+thrustc_span = { path = "../thrustc_span" }
+thrustc_token = { path = "../thrustc_token" }
+thrustc_token_type = { path = "../thrustc_token_type" }
+thrustc_logging = { path = "../thrustc_logging" }

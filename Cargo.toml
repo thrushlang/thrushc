@@ -1,42 +1,42 @@
 [workspace]
 members = [
-    "thrushc_entrypoint",
-    "thrushc_core",
-    "thrushc_ast",
-    "thrushc_lexer",
-    "thrushc_parser",
-    "thrushc_typesystem", 
-    "thrushc_span", 
-    "thrushc_diagnostician", 
-    "thrushc_errors", 
-    "thrushc_logging",
-    "thrushc_options",
-    "thrushc_mir", 
-    "thrushc_token", 
-    "thrushc_attributes", 
-    "thrushc_typechecker", 
-    "thrushc_scoper", 
-    "thrushc_analyzer", 
-    "thrushc_linter", 
-    "thrushc_constants", 
-    "thrushc_reader", 
-    "thrushc_frontend_abort", 
-    "thrushc_semantic", 
-    "thrushc_entities", 
-    "thrushc_preprocessor",
-    "thrushc_llvm_codegen", 
-    "thrushc_llvm_attributes", 
-    "thrushc_llvm_callconventions", 
-    "thrushc_llvm_builtins", 
-    "thrushc_attribute_checker", 
-    "thrushc_llvm_intrinsic_checker", 
-    "thrushc_llvm_callconventions_checker", 
-    "thrushc_modificators", 
-    "thrushc_token_type", 
-    "thrushc_preprocessor_type_resolver", 
-    "thrushc_ast_verifier", 
-    "thrushc_heap_allocator", 
-    "thrushc_utils", 
+    "thrustc_entrypoint",
+    "thrustc_core",
+    "thrustc_ast",
+    "thrustc_lexer",
+    "thrustc_parser",
+    "thrustc_typesystem", 
+    "thrustc_span", 
+    "thrustc_diagnostician", 
+    "thrustc_errors", 
+    "thrustc_logging",
+    "thrustc_options",
+    "thrustc_mir", 
+    "thrustc_token", 
+    "thrustc_attributes", 
+    "thrustc_typechecker", 
+    "thrustc_scoper", 
+    "thrustc_analyzer", 
+    "thrustc_linter", 
+    "thrustc_constants", 
+    "thrustc_reader", 
+    "thrustc_frontend_abort", 
+    "thrustc_semantic", 
+    "thrustc_entities", 
+    "thrustc_preprocessor",
+    "thrustc_llvm_codegen", 
+    "thrustc_llvm_attributes", 
+    "thrustc_llvm_callconventions", 
+    "thrustc_llvm_builtins", 
+    "thrustc_attribute_checker", 
+    "thrustc_llvm_intrinsic_checker", 
+    "thrustc_llvm_callconventions_checker", 
+    "thrustc_modificators", 
+    "thrustc_token_type", 
+    "thrustc_preprocessor_type_resolver", 
+    "thrustc_ast_verifier", 
+    "thrustc_heap_allocator", 
+    "thrustc_utils", 
 ]
 
 exclude = [
@@ -46,20 +46,20 @@ exclude = [
 resolver = "2"
 
 [workspace.package]
-name = "thrushc"
-description = "The compiler for Thrush Programming Language."
+name = "thrustc"
+description = "The compiler for Thrust Programming Language."
 edition = "2024"
 license = "GPL-3.0"
 version = "0.1.0"
 rust-version = "1.85.0"
 
 authors = [
-    "Thrush Team <thrushlangproject@gmail.com>",
+    "Thrust Team <thrustlangproject@gmail.com>",
     "Stevens Benavides <foss.stevens.benavides@gmail.com>"
 ]
 
-homepage = "https://github.com/thrushlang/thrushc"
-repository = "https://github.com/thrushlang/thrushc"
+homepage = "https://github.com/thrustlang/thrustc"
+repository = "https://github.com/thrustlang/thrustc"
 
 [patch.crates-io]
 clang-sys = { path = "crates/llvm/17/clang-sys" }

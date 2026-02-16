@@ -1,0 +1,217 @@
+use thrustc_ast::{Ast, traits::AstGetType};
+use thrustc_errors::{CompilationIssue, CompilationIssueCode};
+use thrustc_span::Span;
+use thrustc_token::{Token, traits::TokenExtensions};
+use thrustc_token_type::{TokenType, traits::TokenTypeBuiltinExtensions};
+use thrustc_typesystem::{Type, traits::TypeExtensions};
+
+use crate::{
+    ParserContext, builtins,
+    expressions::{self, array, asm, call, constructor, deref, enumv, farray, reference},
+    reinterpret,
+};
+
+pub fn lower_precedence<'parser>(
+    ctx: &mut ParserContext<'parser>,
+) -> Result<Ast<'parser>, CompilationIssue> {
+    ctx.enter_expression()?;
+
+    let primary: Ast = match &ctx.peek().kind {
+        TokenType::New => constructor::build_constructor(ctx)?,
+
+        TokenType::Fixed => farray::build_fixed_array(ctx)?,
+        TokenType::LBracket => array::build_array(ctx)?,
+        TokenType::Deref => deref::build_dereference(ctx)?,
+
+        tk_type if tk_type.is_builtin() => builtins::build_builtin(ctx, *tk_type)?,
+
+        TokenType::Asm => asm::build_asm_code_block(ctx)?,
+
+        TokenType::LParen => {
+            let lparen_tk: &Token = ctx.consume(
+                TokenType::LParen,
+                CompilationIssueCode::E0001,
+                "Expected '('.".into(),
+            )?;
+
+            let span: Span = lparen_tk.get_span();
+
+            let expr: Ast = expressions::build_expr(ctx)?;
+            let expr_type: &Type = expr.get_value_type()?;
+
+            ctx.consume(
+                TokenType::RParen,
+                CompilationIssueCode::E0001,
+                "Expected ')'.".into(),
+            )?;
+
+            Ast::Group {
+                expression: expr.clone().into(),
+                kind: expr_type.clone(),
+                span,
+            }
+        }
+
+        TokenType::CString | TokenType::CNString => {
+            let tk: &Token = ctx.advance()?;
+
+            let tk_type: TokenType = tk.get_type();
+            let content: &str = tk.get_lexeme();
+            let span: Span = tk.get_span();
+
+            let cstring_type: Type = Type::Const(
+                Type::Array {
+                    base_type: Type::Char(span).into(),
+                    infered_type: None,
+                    span,
+                }
+                .into(),
+                span,
+            );
+
+            let source: &[u8] = content.as_bytes();
+
+            let mut processed: Vec<u8> = Vec::with_capacity(source.len());
+            let mut idx: usize = 0;
+
+            while idx < source.len() {
+                if let Some(byte) = source.get(idx) {
+                    if *byte == b'\\' {
+                        idx = idx.saturating_add(1);
+
+                        match source.get(idx) {
+                            Some(b'n') => processed.push(b'\n'),
+                            Some(b't') => processed.push(b'\t'),
+                            Some(b'r') => processed.push(b'\r'),
+                            Some(b'\\') => processed.push(b'\\'),
+                            Some(b'0') => processed.push(b'\0'),
+                            Some(b'\'') => processed.push(b'\''),
+                            Some(b'"') => processed.push(b'"'),
+
+                            _ => (),
+                        }
+
+                        idx = idx.saturating_add(1);
+
+                        continue;
+                    }
+
+                    if let Some(byte) = source.get(idx) {
+                        processed.push(*byte);
+                    }
+
+                    idx = idx.saturating_add(1);
+                }
+            }
+
+            if tk_type == TokenType::CString {
+                Ast::new_cstring(processed, cstring_type, span)
+            } else {
+                Ast::new_cnstring(processed, cstring_type, span)
+            }
+        }
+
+        TokenType::Char => {
+            let tk: &Token = ctx.advance()?;
+            let span: Span = tk.get_span();
+
+            Ast::new_char(Type::Char(span), tk.get_lexeme_first_byte(), span)
+        }
+
+        TokenType::NullPtr => Ast::new_nullptr(ctx.advance()?.span),
+
+        TokenType::Integer => {
+            let tk: &Token = ctx.advance()?;
+
+            let integer: &str = tk.get_lexeme();
+            let span: Span = tk.get_span();
+
+            let parsed_integer: (Type, u64) = reinterpret::integer(integer, span)?;
+
+            let integer_type: Type = parsed_integer.0;
+            let integer_value: u64 = parsed_integer.1;
+
+            Ast::new_integer(integer_type, integer_value, false, span)
+        }
+
+        TokenType::Float => {
+            let tk: &Token = ctx.advance()?;
+
+            let float: &str = tk.get_lexeme();
+            let span: Span = tk.get_span();
+
+            let parsed_float: (Type, f64) = reinterpret::floating_point(float, span)?;
+
+            let float_type: Type = parsed_float.0;
+            let float_value: f64 = parsed_float.1;
+
+            Ast::new_float(float_type, float_value, false, span)
+        }
+
+        TokenType::Identifier => {
+            let tk: &Token = ctx.advance()?;
+
+            let name: &str = tk.get_lexeme();
+            let span: Span = tk.get_span();
+
+            if ctx.match_token(TokenType::Arrow)? {
+                enumv::build_enum_value(ctx, name, span)?
+            } else if ctx.match_token(TokenType::LParen)? {
+                call::build_call(ctx, name, span)?
+            } else {
+                reference::build_reference(ctx, name, span)?
+            }
+        }
+
+        TokenType::DirectRef => {
+            let span: Span = ctx.advance()?.get_span();
+
+            let expr: Ast = expressions::build_expr(ctx)?;
+            let expr_type: &Type = expr.get_value_type()?;
+
+            Ast::DirectRef {
+                expr: expr.clone().into(),
+                kind: expr_type.get_type_ref(),
+                span,
+            }
+        }
+
+        TokenType::True => {
+            let span: Span = ctx.advance()?.get_span();
+            Ast::new_boolean(Type::Bool(span), 1, span)
+        }
+        TokenType::False => {
+            let span: Span = ctx.advance()?.get_span();
+            Ast::new_boolean(Type::Bool(span), 0, span)
+        }
+        TokenType::Unreachable => {
+            let span: Span = ctx.advance()?.get_span();
+
+            Ast::Unreachable {
+                span,
+                kind: Type::Void(span),
+            }
+        }
+
+        _ => {
+            let previous: &Token = ctx.advance()?;
+            let span: Span = previous.get_span();
+
+            ctx.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                format!(
+                    "It is not recognized '{}' as an expression at this point.",
+                    previous.get_lexeme()
+                ),
+                None,
+                span,
+            ));
+
+            Ast::invalid_ast(span)
+        }
+    };
+
+    ctx.leave_expression();
+
+    Ok(primary)
+}

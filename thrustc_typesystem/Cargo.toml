@@ -1,0 +1,16 @@
+[package]
+name = "thrustc_typesystem"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thrustc_span = { path = "../thrustc_span" }
+thrustc_token_type = { path = "../thrustc_token_type" }
+
+arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
+
+[features]
+fuzz = ["dep:arbitrary"]

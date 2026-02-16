@@ -1,0 +1,13 @@
+[package]
+name = "thrustc_reader"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+encoding_rs = "0.8.35"
+encoding_rs_io = "0.1.7"
+
+thrustc_logging = { path = "../thrustc_logging" }

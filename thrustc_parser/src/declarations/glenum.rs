@@ -1,0 +1,105 @@
+use thrustc_ast::{Ast, data::EnumData};
+use thrustc_attributes::ThrustAttributes;
+use thrustc_errors::{CompilationIssue, CompilationIssueCode};
+use thrustc_span::Span;
+use thrustc_token::{Token, traits::TokenExtensions};
+use thrustc_token_type::TokenType;
+use thrustc_typesystem::Type;
+
+use crate::{ParserContext, attributes, expressions, typegen};
+
+pub fn build_enum<'parser>(
+    ctx: &mut ParserContext<'parser>,
+    parse_forward: bool,
+) -> Result<Ast<'parser>, CompilationIssue> {
+    ctx.consume(
+        TokenType::Enum,
+        CompilationIssueCode::E0001,
+        "Expected 'enum'.".into(),
+    )?;
+
+    let name_tk: &Token = ctx.consume(
+        TokenType::Identifier,
+        CompilationIssueCode::E0001,
+        "Expected identifier.".into(),
+    )?;
+
+    let name: &str = name_tk.get_lexeme();
+    let span: Span = name_tk.get_span();
+
+    let attributes: ThrustAttributes =
+        attributes::build_compiler_attributes(ctx, &[TokenType::LBrace])?;
+
+    ctx.consume(
+        TokenType::LBrace,
+        CompilationIssueCode::E0001,
+        "Expected '{'.".into(),
+    )?;
+
+    let mut data: EnumData = EnumData::with_capacity(u8::MAX as usize);
+
+    loop {
+        if ctx.check(TokenType::RBrace) {
+            break;
+        }
+
+        if ctx.match_token(TokenType::Identifier)? {
+            let field_tk: &Token = ctx.previous();
+
+            let name: &str = field_tk.get_lexeme();
+            ctx.consume(
+                TokenType::Colon,
+                CompilationIssueCode::E0001,
+                "Expected ':'.".into(),
+            )?;
+
+            let field_type: Type = typegen::build_type(ctx, false)?;
+
+            ctx.consume(
+                TokenType::Eq,
+                CompilationIssueCode::E0001,
+                "Expected '='.".into(),
+            )?;
+
+            let expr: Ast = expressions::build_expr(ctx)?;
+
+            ctx.consume(
+                TokenType::SemiColon,
+                CompilationIssueCode::E0001,
+                "Expected ';'.".into(),
+            )?;
+
+            data.push((name, field_type, expr));
+        } else {
+            let span: Span = ctx.advance()?.get_span();
+
+            ctx.add_error(CompilationIssue::Error(
+                CompilationIssueCode::E0001,
+                "Expected identifier in enum field.".into(),
+                None,
+                span,
+            ));
+        }
+    }
+
+    ctx.consume(
+        TokenType::RBrace,
+        CompilationIssueCode::E0001,
+        "Expected '}'.".into(),
+    )?;
+
+    if parse_forward {
+        ctx.get_mut_symbols()
+            .new_global_enum(name, (data, attributes), span)?;
+
+        Ok(Ast::new_nullptr(span))
+    } else {
+        Ok(Ast::Enum {
+            name,
+            data,
+            attributes,
+            kind: Type::Void(span),
+            span,
+        })
+    }
+}

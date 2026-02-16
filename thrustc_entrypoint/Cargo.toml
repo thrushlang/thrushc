@@ -1,0 +1,29 @@
+[package]
+name = "thrustc_entrypoint"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+default-run = "thrustc_entrypoint"
+
+[dependencies]
+ahash = "0.8.11"
+colored = "3.0.0"
+
+thrustc_core = { path = "../thrustc_core"  }
+thrustc_heap_allocator = { path = "../thrustc_heap_allocator" }
+thrustc_options = { path = "../thrustc_options" }
+thrustc_logging = { path = "../thrustc_logging"}
+thrustc_parser = { path = "../thrustc_parser"}
+thrustc_lexer = { path = "../thrustc_lexer" }
+thrustc_ast = { path = "../thrustc_ast"}
+thrustc_diagnostician = { path = "../thrustc_diagnostician"}
+thrustc_typesystem = { path = "../thrustc_typesystem"}
+thrustc_span = { path = "../thrustc_span" }
+thrustc_errors = { path = "../thrustc_errors" }
+thrustc_reader = { path = "../thrustc_reader" }
+thrustc_constants = { path = "../thrustc_constants" }
+
+

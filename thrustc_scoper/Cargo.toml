@@ -1,0 +1,14 @@
+[package]
+name = "thrustc_scoper"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thrustc_errors = { path = "../thrustc_errors" }
+thrustc_ast = { path = "../thrustc_ast" }
+thrustc_options = { path = "../thrustc_options" }
+thrustc_diagnostician = { path = "../thrustc_diagnostician" }
+thrustc_logging = { path = "../thrustc_logging" }

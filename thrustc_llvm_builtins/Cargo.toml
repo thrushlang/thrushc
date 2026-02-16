@@ -1,0 +1,12 @@
+[package]
+name = "thrustc_llvm_builtins"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thrustc_ast = { path = "../thrustc_ast" }
+thrustc_typesystem = { path = "../thrustc_typesystem" }
+thrustc_span = { path = "../thrustc_span" }
