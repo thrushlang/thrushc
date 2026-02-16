@@ -143,28 +143,6 @@ The language syntax is under construction at the same time as the compiler. It m
 
 **[Thrust Programming Language - General Syntax](https://github.com/thrustlang/syntax)**
 
-## ¿How it works?
-
-Currently, the only backend available for the thrust compiler to compile is the current LLVM, using the LLVM-C API. 
-
-#### Embedded Clang
-
-The compiler has Clang compiled for Linux & Windows inside the executable in case the programmer does not have access to it; however, you can specify a custom Clang & GCC.
-
-#### Code Generations Phases
-
-The code generation is in 3 phases. 
-
-- Intermediate Code Generation (``LLVM IR``).
-- Emit object files (``.o``). 
-- Linking with some linker through the ``Clang`` or ``GCC`` C compilers. ~ *Rust 2015 be like*
-
-In summary:
-
-<p align="center">
-  <img src= "https://github.com/thrustlang/.github/blob/main/assets/explanations/how%20it%20works%20(thrustc)%20v1.3.png" style= "width: 1hv; height: 1hv;"> </img>
-</p>
-
 ## LLVM
 
 The LLVM backend infrastructure is the default code generator for the **[Thrust Programming Language](https://github.com/thrustlang/)**. It offers full scope and portability across many architectures or targets.
