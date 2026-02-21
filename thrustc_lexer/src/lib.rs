@@ -9,7 +9,7 @@ use thrustc_token::Token;
 use thrustc_token_type::{TokenType, traits::TokenTypeExtensions};
 use unicode_categories::UnicodeCategories;
 
-const PREALLOCATED_TOKENS_CAPACITY: usize = 10_000;
+const PREALLOCATED_TOKENS_CAPACITY: usize = 20 << 10;
 
 mod character;
 mod identifier;
@@ -38,7 +38,7 @@ impl Lexer {
 
         Self {
             tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
-            errors: Vec::with_capacity(100),
+            errors: Vec::with_capacity(u8::MAX as usize),
             code,
             start: 0,
             current: 0,
@@ -57,7 +57,7 @@ impl Lexer {
 
         Self {
             tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
-            errors: Vec::with_capacity(100),
+            errors: Vec::with_capacity(u8::MAX as usize),
             code,
             start: 0,
             current: 0,
@@ -93,7 +93,7 @@ impl Lexer {
             lexeme: String::default(),
             ascii: String::default(),
             kind: TokenType::Eof,
-            span: Span::new(self.line, self.span),
+            span: Span::new(self.peek_span()),
         });
 
         Ok(std::mem::take(&mut self.tokens))
@@ -110,17 +110,17 @@ impl Lexer {
         }
 
         if !self.errors.is_empty() {
-            Err(())
-        } else {
-            self.tokens.push(Token {
-                lexeme: String::default(),
-                ascii: String::default(),
-                kind: TokenType::Eof,
-                span: Span::new(self.line, self.span),
-            });
-
-            Ok(std::mem::take(&mut self.tokens))
+            return Err(());
         }
+
+        self.tokens.push(Token {
+            lexeme: String::default(),
+            ascii: String::default(),
+            kind: TokenType::Eof,
+            span: Span::new(self.peek_span()),
+        });
+
+        Ok(std::mem::take(&mut self.tokens))
     }
 }
 
@@ -128,7 +128,7 @@ impl Lexer {
     pub fn make(&mut self, kind: TokenType) {
         self.end_span();
 
-        let span: Span = Span::new(self.line, self.span);
+        let span: Span = Span::new(self.peek_span());
 
         let lexeme: String = self.lexeme();
 
@@ -272,6 +272,17 @@ impl Lexer {
 }
 
 impl Lexer {
+    #[inline]
+    pub fn peek_span(&self) -> (u32, (u32, u32)) {
+        (u32::try_from(self.line).unwrap_or_else(|_| {
+            thrustc_logging::print_critical_error(LoggingType::Error, "The current line is too large to be represented as valid compiler span. Aborting compilation.")
+        }), (u32::try_from(self.span.0).unwrap_or_else(|_| {
+            thrustc_logging::print_critical_error(LoggingType::Error, "The current first span marker is too large to be represented as valid compiler span. Aborting compilation.")
+        }), u32::try_from(self.span.1).unwrap_or_else(|_| {
+            thrustc_logging::print_critical_error(LoggingType::Error, "The current last span marker is too large to be represented as valid compiler span. Aborting compilation.")
+        })))
+    }
+
     #[inline]
     pub fn start_span(&mut self) {
         self.span.0 = self.start;

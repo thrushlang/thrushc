@@ -11,7 +11,7 @@ pub fn archive_compilation_unit(
     file: &CompilationUnit,
     file_time: std::time::Instant,
 ) -> Result<(), ()> {
-    compiler.thrustc_time += file_time.elapsed();
+    compiler.update_thrushc_time(file_time.elapsed());
 
     thrustc_logging::write(
         thrustc_logging::OutputIn::Stderr,
@@ -32,7 +32,7 @@ pub fn archive_compilation_unit_jit(
     file: &CompilationUnit,
     file_time: std::time::Instant,
 ) -> Result<either::Either<MemoryBuffer, ()>, ()> {
-    compiler.thrustc_time += file_time.elapsed();
+    compiler.update_thrushc_time(file_time.elapsed());
 
     thrustc_logging::write(
         thrustc_logging::OutputIn::Stderr,
@@ -57,7 +57,7 @@ pub fn archive_compilation_unit_with_message(
 ) -> Result<(), ()> {
     thrustc_logging::print_error(log_type, msg);
 
-    compiler.thrustc_time += file_time.elapsed();
+    compiler.update_thrushc_time(file_time.elapsed());
 
     thrustc_logging::write(
         thrustc_logging::OutputIn::Stderr,

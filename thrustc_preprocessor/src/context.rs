@@ -80,7 +80,7 @@ impl<'module_parser> PreprocessorContext<'module_parser> {
                 &mut self.diagnostician,
                 CompilationPosition::Parser,
                 "Unable to get current a lexical token!",
-                Span::void(),
+                Span::nothing(),
                 std::path::PathBuf::from(file!()),
                 line!(),
             )

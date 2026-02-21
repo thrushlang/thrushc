@@ -32,8 +32,8 @@ impl CodePosition {
 }
 
 pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
-    let start: usize = span.get_span_start();
-    let end: usize = span.get_span_end();
+    let start: usize = span.get_span_start().try_into().unwrap();
+    let end: usize = span.get_span_end().try_into().unwrap();
 
     let mut line_start: usize = 0;
     let mut line_num: usize = 1;

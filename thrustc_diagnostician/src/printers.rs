@@ -21,8 +21,16 @@ pub fn print_to_string(diagnostic: &Diagnostic, error: Error<'_>) -> String {
     let code: &str = diagnostic.get_code();
     let signaler: &str = diagnostic.get_signaler();
 
-    let line: usize = diagnostic.get_span().get_line();
-    let end: usize = diagnostic.get_span().get_span_end();
+    let line: usize = diagnostic
+        .get_span()
+        .get_line()
+        .try_into()
+        .unwrap_or_default();
+    let end: usize = diagnostic
+        .get_span()
+        .get_span_end()
+        .try_into()
+        .unwrap_or_default();
 
     let mut buffer = String::new();
 
@@ -59,8 +67,16 @@ pub fn print_compiler_frontend_bug(diagnostic: &Diagnostic, error: FrontendError
     let code: &str = diagnostic.get_code();
     let signaler: &str = diagnostic.get_signaler();
 
-    let line: usize = diagnostic.get_span().get_line();
-    let start: usize = diagnostic.get_span().get_span_start();
+    let line: usize = diagnostic
+        .get_span()
+        .get_line()
+        .try_into()
+        .unwrap_or_default();
+    let start: usize = diagnostic
+        .get_span()
+        .get_span_start()
+        .try_into()
+        .unwrap_or_default();
 
     thrustc_logging::write(
         OutputIn::Stderr,
@@ -116,8 +132,16 @@ pub fn print_compiler_backend_bug(diagnostic: &Diagnostic, error: BackendError<'
     let code: &str = diagnostic.get_code();
     let signaler: &str = diagnostic.get_signaler();
 
-    let line: usize = diagnostic.get_span().get_line();
-    let start: usize = diagnostic.get_span().get_span_start();
+    let line: usize = diagnostic
+        .get_span()
+        .get_line()
+        .try_into()
+        .unwrap_or_default();
+    let start: usize = diagnostic
+        .get_span()
+        .get_span_start()
+        .try_into()
+        .unwrap_or_default();
 
     thrustc_logging::write(
         OutputIn::Stderr,

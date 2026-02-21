@@ -64,14 +64,14 @@ pub(crate) fn generate_basic<'a>(
     notificator: Notificator,
 ) -> Diagnostic<'a> {
     let lines: Vec<&str> = code.lines().collect();
-    let line_idx: usize = span.line.saturating_sub(1);
+    let line_idx: usize = span.line.saturating_sub(1).try_into().unwrap();
 
     let code_line: &str = lines.get(line_idx).map(|s| s.trim_start()).unwrap_or("");
 
-    let mut signaler: String = String::with_capacity(256);
+    let mut signaler: String = String::with_capacity(u8::MAX as usize);
 
     if line_idx > 0 {
-        if let Some(prev_line) = lines.get(line_idx - 1) {
+        if let Some(prev_line) = lines.get(line_idx.saturating_sub(1)) {
             signaler.push_str(&format!(
                 "{:>4} │ {}\n",
                 span.line - 1,
@@ -94,10 +94,10 @@ pub(crate) fn generate_basic<'a>(
 
     signaler.push_str(&format!("{}{}\n", notificator, message.bright_yellow()));
 
-    if let Some(next_line) = lines.get(line_idx + 1) {
+    if let Some(next_line) = lines.get(line_idx.saturating_add(1)) {
         signaler.push_str(&format!(
             "{:>4} │ {}\n",
-            span.line + 1,
+            span.line.saturating_add(1),
             next_line.bright_black()
         ));
     }
@@ -132,8 +132,12 @@ pub(crate) fn generate<'a>(
     let mut signaler: String = String::with_capacity(256);
 
     if line_idx > 0 {
-        if let Some(prev_line) = lines.get(line_idx - 1) {
-            signaler.push_str(&format!("{:>4} │ {}\n", line - 1, prev_line.bright_black()));
+        if let Some(prev_line) = lines.get(line_idx.saturating_sub(1)) {
+            signaler.push_str(&format!(
+                "{:>4} │ {}\n",
+                line.saturating_sub(1),
+                prev_line.bright_black()
+            ));
         }
     }
 
@@ -155,8 +159,12 @@ pub(crate) fn generate<'a>(
 
     signaler.push_str(&format!("{}{}\n", notificator, message.bright_yellow()));
 
-    if let Some(next_line) = lines.get(line_idx + 1) {
-        signaler.push_str(&format!("{:>4} │ {}\n", line + 1, next_line.bright_black()));
+    if let Some(next_line) = lines.get(line_idx.saturating_add(1)) {
+        signaler.push_str(&format!(
+            "{:>4} │ {}\n",
+            line.saturating_add(1),
+            next_line.bright_black()
+        ));
     }
 
     signaler.push('\n');
@@ -164,6 +172,9 @@ pub(crate) fn generate<'a>(
     Some(Diagnostic::new(
         code_line,
         signaler,
-        Span::new(line, (start, end)),
+        Span::new((
+            line.try_into().unwrap(),
+            (start.try_into().unwrap(), end.try_into().unwrap()),
+        )),
     ))
 }

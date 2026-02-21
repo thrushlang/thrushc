@@ -10,6 +10,8 @@ mod starter;
 mod utils;
 mod validate;
 
+use std::time::Duration;
+
 use inkwell::OptimizationLevel;
 use inkwell::builder::Builder;
 use inkwell::context::Context;
@@ -47,8 +49,8 @@ use thrustc_semantic::SemanticAnalysis;
 
 #[derive(Debug)]
 pub struct ThrustCompiler<'thrustc> {
-    compiled: Vec<std::path::PathBuf>,
-    uncompiled: &'thrustc [CompilationUnit],
+    ready: Vec<std::path::PathBuf>,
+    unready: &'thrustc [CompilationUnit],
 
     options: &'thrustc CompilerOptions,
 
@@ -59,8 +61,8 @@ pub struct ThrustCompiler<'thrustc> {
 impl<'thrustc> ThrustCompiler<'thrustc> {
     pub fn new(files: &'thrustc [CompilationUnit], options: &'thrustc CompilerOptions) -> Self {
         Self {
-            compiled: Vec::with_capacity(files.len()),
-            uncompiled: files,
+            ready: Vec::with_capacity(files.len()),
+            unready: files,
 
             options,
 
@@ -97,7 +99,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         let mut interrumped: bool = false;
 
-        self.uncompiled.iter().for_each(|file| {
+        self.unready.iter().for_each(|file| {
             interrumped = self.compile_file_with_llvm_aot(file).is_err();
         });
 
@@ -347,9 +349,9 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let context: Context = Context::create();
 
         let mut interrumped: bool = false;
-        let mut modules: Vec<Module> = Vec::with_capacity(100_000);
+        let mut modules: Vec<Module> = Vec::with_capacity(u8::MAX as usize);
 
-        self.uncompiled.iter().for_each(|file| {
+        self.unready.iter().for_each(|file| {
             let compiled_file: Result<either::Either<MemoryBuffer, ()>, ()> =
                 self.compile_file_with_llvm_jit(file);
 
@@ -611,9 +613,15 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 }
 
 impl ThrustCompiler<'_> {
+    pub fn update_thrushc_time(&mut self, elapsed: Duration) {
+        self.thrustc_time = self.thrustc_time.saturating_add(elapsed);
+    }
+}
+
+impl ThrustCompiler<'_> {
     #[inline]
     pub fn get_compiled_files(&self) -> &[std::path::PathBuf] {
-        &self.compiled
+        &self.ready
     }
 
     #[inline]
@@ -625,6 +633,6 @@ impl ThrustCompiler<'_> {
 impl ThrustCompiler<'_> {
     #[inline]
     pub fn add_compiled_unit(&mut self, path: std::path::PathBuf) {
-        self.compiled.push(path);
+        self.ready.push(path);
     }
 }

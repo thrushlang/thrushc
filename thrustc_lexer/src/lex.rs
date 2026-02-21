@@ -33,7 +33,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             } else if lexer.is_eof() {
                 lexer.end_span();
 
-                let span: Span = Span::new(lexer.line, lexer.span);
+                let span: Span = Span::new(lexer.peek_span());
 
                 return Err(CompilationIssue::Error(
                     CompilationIssueCode::E0001,
@@ -94,7 +94,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         _ => {
             lexer.end_span();
 
-            let span: Span = Span::new(lexer.line, lexer.span);
+            let span: Span = Span::new(lexer.peek_span());
 
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
