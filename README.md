@@ -7,6 +7,9 @@ The **Thrust Compiler** is a compiler that transfers the source code of Thrust f
 > [!WARNING]  
 > The compiler is in an early development phase. It may contain bugs when testing certain syntax. Continue on your own.
 
+> [!IMPORTANT]  
+> We're transitioning the name of the project from thrush to thrust, since the possible bad interpretation of "thrush" in the English slang as sometimes it is not refered as a the bird. This would be benefict to the language in the future.
+
 ## Getting Started
 
 ### Build dependencies 
