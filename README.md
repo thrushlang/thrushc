@@ -209,3 +209,10 @@ For more information: [Rust - GCC AOT Code Generation](https://github.com/rust-l
 Regarding the concept of bootstrapping in compilers (For more information: https://www.bootstrappable.org/).
 
 The decision was made to fully implement all the programming language functions in the compiler written in Rust, because it proposes a development approach similar to what Gleam Team did for Gleam Programming Language, and also to lighten the workload, given that we are already using LLVM.
+
+#### > When will this be released?
+
+https://github.com/user-attachments/assets/2cb6a406-eb2d-41d5-b5d8-784074a490d5
+
+
+
