@@ -115,6 +115,30 @@ impl TokenTypeExtensions for TokenType {
     fn is_identifier(&self) -> bool {
         matches!(self, TokenType::Identifier)
     }
+
+    #[inline]
+    fn is_stmt(&self) -> bool {
+        [
+            TokenType::LBrace,
+            TokenType::Return,
+            TokenType::Static,
+            TokenType::Const,
+            TokenType::Struct,
+            TokenType::Type,
+            TokenType::Enum,
+            TokenType::Local,
+            TokenType::If,
+            TokenType::For,
+            TokenType::While,
+            TokenType::Loop,
+            TokenType::Continue,
+            TokenType::ContinueAll,
+            TokenType::Break,
+            TokenType::BreakAll,
+            TokenType::Defer,
+        ]
+        .contains(self)
+    }
 }
 
 impl TokenTypeAttributesExtensions for TokenType {

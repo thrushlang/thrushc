@@ -58,10 +58,6 @@ pub trait AstConstantExtensions {
     fn is_constant_value(&self) -> bool;
 }
 
-pub trait AstMutabilityExtensions {
-    fn is_mutable(&self) -> bool;
-}
-
 pub trait AstScopeExtensions {
     fn is_compatible_with_main_scope(&self) -> bool;
 }

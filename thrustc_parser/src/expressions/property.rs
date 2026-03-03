@@ -23,7 +23,7 @@ pub fn build_property<'parser>(
     let base_type: &Type = source.get_value_type()?;
     let metadata: PropertyMetadata = PropertyMetadata::new(source.is_allocated());
 
-    let mut property_names: Vec<&str> = Vec::with_capacity(10);
+    let mut property_names: Vec<&str> = Vec::with_capacity(u8::MAX as usize);
 
     let first: &Token = ctx.consume(
         TokenType::Identifier,
@@ -43,6 +43,7 @@ pub fn build_property<'parser>(
         )?;
 
         span = property.get_span();
+
         property_names.push(property.get_lexeme());
     }
 

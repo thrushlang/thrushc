@@ -67,7 +67,7 @@ pub fn build_structure<'parser>(
             data.1
                 .push((field_name, field_type, field_position, field_span));
 
-            field_position += 1;
+            field_position = field_position.saturating_add(1);
 
             if ctx.check(TokenType::RBrace) {
                 break;

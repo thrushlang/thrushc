@@ -19,8 +19,7 @@ pub fn build_array<'parser>(
     let span: Span = tk.get_span();
 
     let mut array_type: Type = Type::Void(span);
-
-    let mut items: Vec<Ast> = Vec::with_capacity(100);
+    let mut items: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
 
     loop {
         if ctx.check(TokenType::RBracket) {

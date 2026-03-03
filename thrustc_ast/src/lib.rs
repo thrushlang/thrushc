@@ -9,7 +9,7 @@ use crate::{
     data::{ConstructorData, EnumData, PropertyData, StructureData},
     metadata::{
         CastingMetadata, ConstantMetadata, DereferenceMetadata, FunctionParameterMetadata,
-        IndexMetadata, LocalMetadata, PropertyMetadata, ReferenceMetadata, StaticMetadata,
+        LocalMetadata, PropertyMetadata, ReferenceMetadata, StaticMetadata,
     },
 };
 
@@ -88,11 +88,11 @@ pub enum Ast<'ctx> {
         kind: Type,
         span: Span,
     },
+
     Index {
         source: std::boxed::Box<Ast<'ctx>>,
         index: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
-        metadata: IndexMetadata,
         span: Span,
     },
 

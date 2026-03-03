@@ -18,7 +18,7 @@ pub fn build_call<'parser>(
     name: &'parser str,
     span: Span,
 ) -> Result<Ast<'parser>, CompilationIssue> {
-    let mut args: Vec<Ast> = Vec::with_capacity(10);
+    let mut args: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
 
     loop {
         if ctx.check(TokenType::RParen) {

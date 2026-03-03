@@ -61,7 +61,7 @@ pub fn build_asm_code_block<'parser>(
         "Expected '{'.".into(),
     )?;
 
-    let mut assembler: String = String::with_capacity(100);
+    let mut assembler: String = String::with_capacity(u8::MAX as usize);
     let mut assembler_pos: usize = 0;
 
     loop {

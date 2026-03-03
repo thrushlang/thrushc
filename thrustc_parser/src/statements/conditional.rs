@@ -29,7 +29,7 @@ pub fn build_conditional<'parser>(
         statements::parse(ctx)?
     };
 
-    let mut elseif: Vec<Ast> = Vec::with_capacity(10);
+    let mut elseif: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
 
     while ctx.check(TokenType::Elif)
         || (ctx.check(TokenType::Else) && ctx.check_to(TokenType::If, 1))

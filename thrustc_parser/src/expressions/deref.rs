@@ -31,7 +31,7 @@ pub fn build_dereference<'parser>(
                 "Expected 'deref' keyword.".into(),
             )?;
 
-            deref_count += 1;
+            deref_count = deref_count.saturating_add(1);
         }
 
         let expr: Ast = expressions::build_expr(ctx)?;

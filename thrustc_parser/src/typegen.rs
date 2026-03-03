@@ -33,7 +33,7 @@ use crate::{
 };
 
 pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type, CompilationIssue> {
-    match ctx.peek().kind {
+    match ctx.peek().get_type() {
         tk_kind if tk_kind.is_type() => {
             let tk: &Token = ctx.advance()?;
             let span: Span = tk.get_span();

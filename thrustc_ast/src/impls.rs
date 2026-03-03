@@ -8,9 +8,9 @@ use crate::{
     data::{PropertyData, PropertyDataField, StructureData},
     traits::{
         AstCodeBlockEntensions, AstConstantExtensions, AstExpressionOperationExtensions,
-        AstGetType, AstMemoryExtensions, AstMutabilityExtensions, AstPropertyDataExtensions,
-        AstPropertyDataFieldExtensions, AstScopeExtensions, AstStandardExtensions,
-        AstStatementExtentions, AstStructureDataExtensions,
+        AstGetType, AstMemoryExtensions, AstPropertyDataExtensions, AstPropertyDataFieldExtensions,
+        AstScopeExtensions, AstStandardExtensions, AstStatementExtentions,
+        AstStructureDataExtensions,
     },
 };
 
@@ -237,21 +237,6 @@ impl AstCodeBlockEntensions for Ast<'_> {
         }
 
         false
-    }
-}
-
-impl AstMutabilityExtensions for Ast<'_> {
-    #[inline]
-    fn is_mutable(&self) -> bool {
-        match self {
-            Ast::Local { metadata, .. } => metadata.is_mutable(),
-            Ast::FunctionParameter { metadata, .. } => metadata.is_mutable(),
-            Ast::Index { metadata, .. } => metadata.is_mutable(),
-            Ast::Reference { metadata, .. } => metadata.is_mutable(),
-            Ast::Property { source, .. } => source.is_reference(),
-
-            _ => false,
-        }
     }
 }
 

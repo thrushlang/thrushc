@@ -746,7 +746,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("'{}' isn't declared or defined.", id),
+            format!("'{}' isn't found", id),
             None,
             span,
         ))

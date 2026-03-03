@@ -248,7 +248,7 @@ pub fn build_reference<'parser>(
 
             ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0028,
-                format!("'{}' isn't declared or defined.", name),
+                format!("'{}' isn't found.", name),
                 None,
                 span,
             ));

@@ -87,9 +87,7 @@ impl<'parser> Parser<'parser> {
                         ctx.add_error(error);
                     }
 
-                    if let Either::Left(ast) = ctx.sync() {
-                        ctx.add_ast(ast);
-                    }
+                    ctx.sync()
                 }
             }
         }
@@ -278,7 +276,7 @@ impl<'parser> ParserContext<'parser> {
             code,
             help,
             None,
-            self.previous().get_span(),
+            self.peek().get_span(),
         ))
     }
 
@@ -297,7 +295,7 @@ impl<'parser> ParserContext<'parser> {
             code,
             help,
             None,
-            self.previous().get_span(),
+            self.peek().get_span(),
         ))
     }
 
@@ -360,7 +358,7 @@ impl<'parser> ParserContext<'parser> {
 
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0037,
-                "Too many depth for a expression. Try to remove some levels of nesting.".into(),
+                "Too many depth for a expression. Try to remove some the nesting.".into(),
                 None,
                 span,
             ));

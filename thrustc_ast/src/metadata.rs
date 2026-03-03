@@ -54,26 +54,6 @@ impl FunctionParameterMetadata {
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
-pub struct IndexMetadata {
-    is_mutable: bool,
-}
-
-impl IndexMetadata {
-    #[inline]
-    pub fn new(is_mutable: bool) -> Self {
-        Self { is_mutable }
-    }
-}
-
-impl IndexMetadata {
-    #[inline]
-    pub fn is_mutable(&self) -> bool {
-        self.is_mutable
-    }
-}
-
-#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
-#[derive(Debug, Clone, Copy)]
 pub struct PropertyMetadata {
     is_allocated: bool,
 }

@@ -19,8 +19,6 @@ pub fn build_local<'parser>(
         "Expected 'local' keyword.".into(),
     )?;
 
-    let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
-
     let modificators: Modificators =
         modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
     let is_volatile: bool = modificators.has_volatile();
@@ -39,7 +37,7 @@ pub fn build_local<'parser>(
     ctx.consume(
         TokenType::Colon,
         CompilationIssueCode::E0001,
-        String::from("Expected ':'."),
+        "Expected ':'.".into(),
     )?;
 
     let mut local_type: Type = typegen::build_type(ctx, false)?;
@@ -48,7 +46,7 @@ pub fn build_local<'parser>(
         attributes::build_compiler_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;
 
     if ctx.match_token(TokenType::SemiColon)? {
-        let metadata: LocalMetadata = LocalMetadata::new(true, is_mutable, is_volatile, atomic_ord);
+        let metadata: LocalMetadata = LocalMetadata::new(true, true, is_volatile, atomic_ord);
 
         if !ctx.is_main_scope() {
             ctx.get_mut_symbols()
@@ -70,8 +68,7 @@ pub fn build_local<'parser>(
             Ok(Ast::invalid_ast(span))
         }
     } else {
-        let metadata: LocalMetadata =
-            LocalMetadata::new(false, is_mutable, is_volatile, atomic_ord);
+        let metadata: LocalMetadata = LocalMetadata::new(false, true, is_volatile, atomic_ord);
 
         ctx.consume(
             TokenType::Eq,

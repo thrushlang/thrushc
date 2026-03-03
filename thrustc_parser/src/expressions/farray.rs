@@ -37,7 +37,7 @@ pub fn build_fixed_array<'parser>(
         array_type = Type::FixedArray(array_type.into(), 0, span);
     }
 
-    let mut items: Vec<Ast> = Vec::with_capacity(100);
+    let mut items: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
 
     loop {
         if ctx.check(TokenType::RBracket) {

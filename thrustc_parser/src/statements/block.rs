@@ -22,7 +22,7 @@ pub fn build_block<'parser>(
     ctx.get_mut_symbols().begin_scope();
 
     let mut nodes: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
-    let mut post: Vec<Ast> = Vec::with_capacity(32);
+    let mut post: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
 
     while !ctx.match_token(TokenType::RBrace)? {
         let statement: Ast<'_> = statements::parse(ctx)?;
@@ -52,7 +52,7 @@ pub fn build_block_without_start<'parser>(
     ctx.get_mut_symbols().begin_scope();
 
     let mut nodes: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
-    let mut post: Vec<Ast> = Vec::with_capacity(32);
+    let mut post: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
 
     while !ctx.check(TokenType::RBrace) {
         let statement: Ast<'_> = statements::parse(ctx)?;
