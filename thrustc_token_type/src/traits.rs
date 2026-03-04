@@ -18,6 +18,7 @@ pub trait TokenTypeExtensions {
     fn is_integer(&self) -> bool;
     fn is_type(&self) -> bool;
     fn is_identifier(&self) -> bool;
+    fn is_declaration(&self) -> bool;
     fn is_stmt(&self) -> bool;
 }
 

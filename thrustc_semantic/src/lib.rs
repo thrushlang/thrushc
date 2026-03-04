@@ -1,5 +1,6 @@
 use thrustc_analyzer::Analyzer;
 use thrustc_ast::Ast;
+use thrustc_ast_verifier::AstVerifier;
 use thrustc_attribute_checker::AttributeChecker;
 use thrustc_linter::Linter;
 use thrustc_options::{CompilationUnit, CompilerOptions};
@@ -12,6 +13,7 @@ pub struct SemanticAnalysis<'semantic_analyzer> {
     analyzer: Analyzer<'semantic_analyzer>,
     attr_checker: AttributeChecker<'semantic_analyzer>,
     scoper: Scoper<'semantic_analyzer>,
+    verifier: AstVerifier<'semantic_analyzer>,
 
     linter: Linter<'semantic_analyzer>,
 }
@@ -23,17 +25,19 @@ impl<'semantic_analyzer> SemanticAnalysis<'semantic_analyzer> {
         file: &'semantic_analyzer CompilationUnit,
         options: &CompilerOptions,
     ) -> Self {
-        let type_checker: TypeChecker = TypeChecker::new(ast, file, options);
-        let analyzer: Analyzer = Analyzer::new(ast, file, options);
-        let attr_checker: AttributeChecker = AttributeChecker::new(ast, file, options);
-        let scoper: Scoper = Scoper::new(ast, file, options);
-        let linter: Linter = Linter::new(ast, file, options);
+        let type_checker: TypeChecker<'_> = TypeChecker::new(ast, file, options);
+        let analyzer: Analyzer<'_> = Analyzer::new(ast, file, options);
+        let attr_checker: AttributeChecker<'_> = AttributeChecker::new(ast, file, options);
+        let scoper: Scoper<'_> = Scoper::new(ast, file, options);
+        let verifier: AstVerifier<'_> = AstVerifier::new(ast, file, options);
+        let linter: Linter<'_> = Linter::new(ast, file, options);
 
         Self {
             type_checker,
             analyzer,
             attr_checker,
             scoper,
+            verifier,
             linter,
         }
     }
@@ -45,20 +49,33 @@ impl<'semantic_analyzer> SemanticAnalysis<'semantic_analyzer> {
             return true;
         }
 
-        let scoper_errors: bool = self.scoper.start();
+        let scoper_threw_errors: bool = self.scoper.start();
 
-        if scoper_errors {
+        if scoper_threw_errors {
             return true;
         }
 
-        let type_checker_errors: bool = self.type_checker.start();
-        let analyzer_errors: bool = self.analyzer.start();
-        let attr_checker_errors: bool = self.attr_checker.start();
+        let verifier_threw_errors: bool = self.verifier.analyze_top();
 
-        if !type_checker_errors && !analyzer_errors && !attr_checker_errors && !scoper_errors {
+        if verifier_threw_errors {
+            return true;
+        }
+
+        let type_checker_threw_errors: bool = self.type_checker.start();
+        let analyzer_threw_errors: bool = self.analyzer.start();
+        let attr_checker_threw_errors: bool = self.attr_checker.start();
+
+        if !type_checker_threw_errors
+            && !analyzer_threw_errors
+            && !attr_checker_threw_errors
+            && !scoper_threw_errors
+        {
             self.linter.check();
         }
 
-        type_checker_errors || analyzer_errors || attr_checker_errors || scoper_errors
+        type_checker_threw_errors
+            || analyzer_threw_errors
+            || attr_checker_threw_errors
+            || scoper_threw_errors
     }
 }

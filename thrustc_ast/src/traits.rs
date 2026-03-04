@@ -14,8 +14,16 @@ pub trait AstCodeLocation {
     fn get_span(&self) -> Span;
 }
 
-pub trait AstStatementExtentions {
+pub trait AstStatementExtensions {
     fn is_statement(&self) -> bool;
+}
+
+pub trait AstDeclarationExtensions {
+    fn is_declaration(&self) -> bool;
+}
+
+pub trait AstExpressionExtensions {
+    fn is_expression(&self) -> bool;
 }
 
 pub trait AstStandardExtensions {

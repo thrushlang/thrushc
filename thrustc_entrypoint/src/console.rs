@@ -23,19 +23,32 @@ pub fn ansi(options: &CompilerOptions) {
 }
 
 #[inline]
-pub fn report_comptime(start_time: std::time::Instant, comptime: (u128, u128)) -> ! {
+pub fn report_comptime(
+    options: &CompilerOptions,
+    start_time: std::time::Instant,
+    comptime: (u128, u128, u128, u128),
+) -> ! {
     let thrustc_time: u128 = comptime.0;
-    let linking_time: u128 = comptime.1;
+    let frontend_time: u128 = comptime.1;
+    let backend_time: u128 = comptime.2;
+    let linking_time: u128 = comptime.3;
+
+    let backend_identifier: &str = if options.llvm() { "LLVM" } else { "GCC" };
 
     thrustc_logging::write(
         thrustc_logging::OutputIn::Stdout,
         &format!(
-            "\n{}\n{}\n\n{}\n{}\n{}\n",
+            "\n{}\n{}\n\n{}\n{}\n{}\n{}\n{}\n",
             "─────────────────────────────────────────"
                 .custom_color((141, 141, 142))
                 .bold(),
             "Compile time report".custom_color((141, 141, 142)).bold(),
             format_args!("Thrust Compiler: {}ms", thrustc_time),
+            format_args!("Thrust Compiler - Frontend: {}ms", frontend_time),
+            format_args!(
+                "Thrust Compiler - Backend ({}): {}ms",
+                backend_identifier, backend_time
+            ),
             format_args!("Linking: {}ms", linking_time),
             "─────────────────────────────────────────"
                 .custom_color((141, 141, 142))

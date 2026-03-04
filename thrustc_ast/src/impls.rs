@@ -15,10 +15,11 @@ use crate::{
     },
     traits::{
         AstCodeBlockEntensions, AstConstantExtensions, AstConstructorDataExtensions,
-        AstEnumFieldsDataExtensions, AstExpressionOperationExtensions, AstGetType,
-        AstMemoryExtensions, AstPropertyDataExtensions, AstPropertyDataFieldExtensions,
-        AstScopeExtensions, AstStandardExtensions, AstStatementExtentions,
-        AstStructFieldsDataExtensions, AstStructureDataExtensions,
+        AstDeclarationExtensions, AstEnumFieldsDataExtensions, AstExpressionExtensions,
+        AstExpressionOperationExtensions, AstGetType, AstMemoryExtensions,
+        AstPropertyDataExtensions, AstPropertyDataFieldExtensions, AstScopeExtensions,
+        AstStandardExtensions, AstStatementExtensions, AstStructFieldsDataExtensions,
+        AstStructureDataExtensions,
     },
 };
 
@@ -160,7 +161,7 @@ impl AstStandardExtensions for Ast<'_> {
     }
 }
 
-impl AstStatementExtentions for Ast<'_> {
+impl AstStatementExtensions for Ast<'_> {
     fn is_statement(&self) -> bool {
         matches!(
             self,
@@ -182,6 +183,31 @@ impl AstStatementExtentions for Ast<'_> {
                 | Ast::Static { .. }
                 | Ast::Defer { .. }
         )
+    }
+}
+
+impl AstDeclarationExtensions for Ast<'_> {
+    fn is_declaration(&self) -> bool {
+        matches!(
+            self,
+            Ast::CustomType { .. }
+                | Ast::Struct { .. }
+                | Ast::Const { .. }
+                | Ast::Static { .. }
+                | Ast::Enum { .. }
+                | Ast::Function { .. }
+                | Ast::Intrinsic { .. }
+                | Ast::AssemblerFunction { .. }
+                | Ast::GlobalAssembler { .. }
+                | Ast::Import { .. }
+                | Ast::Embedded { .. }
+        )
+    }
+}
+
+impl AstExpressionExtensions for Ast<'_> {
+    fn is_expression(&self) -> bool {
+        !self.is_declaration() && !self.is_statement()
     }
 }
 

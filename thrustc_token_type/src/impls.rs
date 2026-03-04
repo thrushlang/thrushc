@@ -139,6 +139,24 @@ impl TokenTypeExtensions for TokenType {
         ]
         .contains(self)
     }
+
+    #[inline]
+    fn is_declaration(&self) -> bool {
+        [
+            TokenType::Type,
+            TokenType::Struct,
+            TokenType::Const,
+            TokenType::Static,
+            TokenType::Enum,
+            TokenType::Fn,
+            TokenType::AsmFn,
+            TokenType::Intrinsic,
+            TokenType::GlobalAsm,
+            TokenType::Import,
+            TokenType::Embedded,
+        ]
+        .contains(self)
+    }
 }
 
 impl TokenTypeAttributesExtensions for TokenType {

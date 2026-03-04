@@ -40,8 +40,7 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
 
             Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected a declaration or defination, not a statement and never an expression."
-                    .into(),
+                "Expected a top entity, not a statement and never an expression.".into(),
                 None,
                 what.get_span(),
             ))

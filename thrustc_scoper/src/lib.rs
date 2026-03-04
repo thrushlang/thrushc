@@ -1,6 +1,6 @@
 use thrustc_ast::{
     Ast,
-    traits::{AstCodeLocation, AstScopeExtensions, AstStandardExtensions},
+    traits::{AstCodeLocation, AstDeclarationExtensions, AstStandardExtensions},
 };
 use thrustc_diagnostician::Diagnostician;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -62,7 +62,7 @@ impl<'scoper> Scoper<'scoper> {
 
 impl<'scoper> Scoper<'scoper> {
     fn analyze_global_node(&mut self, node: &Ast) {
-        if !node.is_compatible_with_main_scope() {
+        if !node.is_declaration() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "This expression, statement, or declaration should not be in the main scope. It should be in a local scope. Reposition it.".into(),

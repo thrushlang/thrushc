@@ -4,29 +4,37 @@ use thrustc_token_type::TokenType;
 
 use crate::{ParserContext, control::ParserSyncPosition, statements::block};
 
-pub const SYNC_STATEMENTS: [TokenType; 13] = [
+pub const SYNC_STATEMENTS: [TokenType; 16] = [
     TokenType::Return,
+    TokenType::Static,
+    TokenType::Const,
+    TokenType::Struct,
+    TokenType::Type,
+    TokenType::Enum,
     TokenType::Local,
-    TokenType::For,
-    TokenType::New,
     TokenType::If,
+    TokenType::For,
     TokenType::While,
+    TokenType::Loop,
     TokenType::Continue,
     TokenType::ContinueAll,
     TokenType::Break,
     TokenType::BreakAll,
-    TokenType::Loop,
-    TokenType::Const,
-    TokenType::Static,
+    TokenType::Defer,
 ];
 
-pub const SYNC_DECLARATIONS: [TokenType; 6] = [
+pub const SYNC_DECLARATIONS: [TokenType; 11] = [
     TokenType::Type,
     TokenType::Struct,
-    TokenType::Fn,
-    TokenType::Enum,
     TokenType::Const,
     TokenType::Static,
+    TokenType::Enum,
+    TokenType::Fn,
+    TokenType::AsmFn,
+    TokenType::Intrinsic,
+    TokenType::GlobalAsm,
+    TokenType::Import,
+    TokenType::Embedded,
 ];
 
 impl<'parser> ParserContext<'parser> {
