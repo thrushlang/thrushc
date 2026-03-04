@@ -20,7 +20,7 @@ pub fn build_const<'parser>(
     )?;
 
     let modificators: Modificators =
-        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_statement_modificator(ctx, &[TokenType::Identifier])?;
 
     let thread_local: bool = modificators.has_lazythread();
     let is_volatile: bool = modificators.has_volatile();

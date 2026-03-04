@@ -276,7 +276,7 @@ impl<'parser> ParserContext<'parser> {
             code,
             help,
             None,
-            self.peek().get_span(),
+            self.previous().get_span(),
         ))
     }
 
@@ -295,7 +295,7 @@ impl<'parser> ParserContext<'parser> {
             code,
             help,
             None,
-            self.peek().get_span(),
+            self.previous().get_span(),
         ))
     }
 

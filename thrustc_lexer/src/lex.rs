@@ -75,11 +75,10 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         '|' => lexer.make(TokenType::Bor),
         '&' if lexer.char_match('&') => lexer.make(TokenType::And),
         '&' => lexer.make(TokenType::BAnd),
-        '\r' | '\t' => {}
 
-        ' ' => {
-            lexer.start_span();
-        }
+        '\r' | '\t' => {}
+        ' ' => {}
+
         '\n' => lexer.line = lexer.line.saturating_add(1),
 
         '\'' => character::lex(lexer)?,

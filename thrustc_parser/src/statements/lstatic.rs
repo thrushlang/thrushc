@@ -22,7 +22,7 @@ pub fn build_static<'parser>(
     let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
 
     let modificators: Modificators =
-        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_statement_modificator(ctx, &[TokenType::Identifier])?;
 
     let thread_local: bool = modificators.has_lazythread();
     let is_volatile: bool = modificators.has_volatile();

@@ -3,7 +3,7 @@ use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
 
-use crate::data::{PropertyDataField, StructureDataFields};
+use crate::data::{EnumDataField, PropertyDataField, StructureDataFields};
 
 pub trait AstGetType {
     fn get_any_type(&self) -> Result<&Type, CompilationIssue>;
@@ -82,4 +82,17 @@ pub trait AstExpressionOperationExtensions {
     fn get_binary_operator(&self) -> Option<TokenType>;
     fn is_unary_operation(&self) -> bool;
     fn is_unary_preeval_operation(&self) -> bool;
+}
+
+pub trait AstEnumFieldsDataExtensions<'a> {
+    fn get_field(&self, name: &'a str) -> Option<EnumDataField<'a>>;
+}
+
+pub trait AstStructFieldsDataExtensions {
+    fn get_type(&self) -> Type;
+    fn get_modificator(&self) -> StructureTypeModificator;
+}
+
+pub trait AstConstructorDataExtensions {
+    fn get_type(&self, name: &str, modificator: StructureTypeModificator, span: Span) -> Type;
 }

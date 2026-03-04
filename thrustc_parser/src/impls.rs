@@ -1,5 +1,5 @@
 use thrustc_ast::{
-    data::{ConstructorData, EnumData, EnumDataField, StructureData},
+    data::{ConstructorData, EnumData, StructureData},
     metadata::{FunctionParameterMetadata, LocalMetadata, StaticMetadata},
 };
 use thrustc_entities::parser::{
@@ -12,10 +12,10 @@ use thrustc_typesystem::{
 };
 
 use crate::traits::{
-    ConstantSymbolExtensions, ConstructorExtensions, EnumExtensions, EnumFieldsExtensions,
-    FoundSymbolExtensions, FunctionAssemblerExtensions, FunctionExtensions,
-    FunctionParameterSymbolExtensions, IntrinsicExtensions, LLISymbolExtensions,
-    LocalSymbolExtensions, StaticSymbolExtensions, StructFieldsExtensions, StructSymbolExtensions,
+    ConstantSymbolExtensions, ConstructorExtensions, EnumExtensions, FoundSymbolExtensions,
+    FunctionAssemblerExtensions, FunctionExtensions, FunctionParameterSymbolExtensions,
+    IntrinsicExtensions, LLISymbolExtensions, LocalSymbolExtensions, StaticSymbolExtensions,
+    StructSymbolExtensions,
 };
 
 impl FoundSymbolExtensions for FoundSymbolId<'_> {
@@ -82,23 +82,6 @@ impl<'parser> StructSymbolExtensions<'parser> for Struct<'parser> {
     }
 }
 
-impl StructFieldsExtensions for StructureData<'_> {
-    #[inline]
-    fn get_type(&self) -> Type {
-        let types: Vec<Type> = self.1.iter().map(|field| field.1.clone()).collect();
-
-        let name: String = self.0.to_string();
-        let span: Span = self.3;
-
-        Type::create_struct_type(name, types.as_slice(), self.get_modificator(), span)
-    }
-
-    #[inline]
-    fn get_modificator(&self) -> StructureTypeModificator {
-        self.2
-    }
-}
-
 impl LocalSymbolExtensions for LocalSymbol<'_> {
     fn get_metadata(&self) -> LocalMetadata {
         self.1
@@ -162,19 +145,6 @@ impl LLISymbolExtensions for LLISymbol<'_> {
 impl<'parser> EnumExtensions<'parser> for EnumSymbol<'parser> {
     fn get_fields(&self) -> EnumData<'parser> {
         self.0.clone()
-    }
-}
-
-impl<'parser> EnumFieldsExtensions<'parser> for EnumData<'parser> {
-    fn contain_field(&self, name: &'parser str) -> bool {
-        self.iter().any(|enum_field| enum_field.0 == name)
-    }
-
-    fn get_field(&self, name: &'parser str) -> EnumDataField<'parser> {
-        self.iter()
-            .find(|enum_field| enum_field.0 == name)
-            .cloned()
-            .unwrap()
     }
 }
 

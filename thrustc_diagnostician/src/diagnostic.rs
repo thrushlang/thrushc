@@ -66,6 +66,7 @@ pub(crate) fn generate_basic<'a>(
     let lines: Vec<&str> = code.lines().collect();
     let line_idx: usize = span.line.saturating_sub(1).try_into().unwrap();
 
+    let line: u32 = span.get_line();
     let code_line: &str = lines.get(line_idx).map(|s| s.trim_start()).unwrap_or("");
 
     let mut signaler: String = String::with_capacity(u8::MAX as usize);
@@ -97,7 +98,7 @@ pub(crate) fn generate_basic<'a>(
     if let Some(next_line) = lines.get(line_idx.saturating_add(1)) {
         signaler.push_str(&format!(
             "{:>4} │ {}\n",
-            span.line.saturating_add(1),
+            line.saturating_add(1),
             next_line.bright_black()
         ));
     }
@@ -122,14 +123,20 @@ pub(crate) fn generate<'a>(
     let trim_difference: usize = code_before_trim.saturating_sub(code_line.len());
 
     let line: usize = position.get_line();
-    let start: usize = position.get_start().saturating_sub(trim_difference);
-    let end: usize = position.get_end().saturating_sub(trim_difference);
+    let start: usize = position
+        .get_start()
+        .saturating_sub(trim_difference)
+        .saturating_sub(1);
+    let end: usize = position
+        .get_end()
+        .saturating_sub(trim_difference)
+        .saturating_sub(1);
 
     if start > end || end > code_line.len() {
         return None;
     }
 
-    let mut signaler: String = String::with_capacity(256);
+    let mut signaler: String = String::with_capacity(u8::MAX as usize);
 
     if line_idx > 0 {
         if let Some(prev_line) = lines.get(line_idx.saturating_sub(1)) {
@@ -173,8 +180,11 @@ pub(crate) fn generate<'a>(
         code_line,
         signaler,
         Span::new((
-            line.try_into().unwrap(),
-            (start.try_into().unwrap(), end.try_into().unwrap()),
+            position.get_line().try_into().unwrap_or_default(),
+            (
+                position.get_start().try_into().unwrap_or_default(),
+                position.get_end().try_into().unwrap_or_default(),
+            ),
         )),
     ))
 }

@@ -746,7 +746,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("'{}' isn't found", id),
+            format!("'{}' not found", id),
             None,
             span,
         ))
@@ -796,7 +796,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("Assembler Function '{}' not found in this scope.", id),
+            format!("Assembler function '{}' not found in this scope.", id),
             None,
             span,
         ))
@@ -832,7 +832,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("Compiler Intrinsic '{}' not found in this scope.", id),
+            format!("Compiler intrinsic '{}' not found in this scope.", id),
             None,
             span,
         ))
@@ -904,7 +904,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            "Custom type reference not found.".into(),
+            format!("Type '{}' not found in this scope.", id),
             None,
             span,
         ))
@@ -934,7 +934,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            "Local not found.".into(),
+            format!("Local '{}' not found in this scope.", local_id),
             None,
             span,
         ))
@@ -970,7 +970,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            "Static reference not found.".into(),
+            format!("Static '{}' not found in this scope.", id),
             None,
             span,
         ))
@@ -1006,7 +1006,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            "Constant reference not found.".into(),
+            format!("Constant '{}' not found in this scope.", id),
             None,
             span,
         ))
@@ -1060,7 +1060,7 @@ impl<'parser> SymbolsTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("'{}' structure not defined.", id),
+            format!("'{}' structure not found in this scope.", id),
             None,
             span,
         ))

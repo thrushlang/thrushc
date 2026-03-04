@@ -22,7 +22,7 @@ pub fn build_structure_modificator(attributes: &ThrustAttributes) -> StructureTy
     )
 }
 
-pub fn build_stmt_modificator(
+pub fn build_statement_modificator(
     ctx: &mut ParserContext,
     limits: &[TokenType],
 ) -> Result<Modificators, CompilationIssue> {

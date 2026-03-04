@@ -1,7 +1,7 @@
 use thrustc_ast::{
     Ast,
     data::StructureData,
-    traits::{AstGetType, AstStandardExtensions},
+    traits::{AstGetType, AstStandardExtensions, AstStructFieldsDataExtensions},
 };
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -26,10 +26,7 @@ use thrustc_entities::parser::{
 
 use crate::{
     ParserContext, attributes, expressions,
-    traits::{
-        FoundSymbolEitherExtensions, FoundSymbolExtensions, StructFieldsExtensions,
-        StructSymbolExtensions,
-    },
+    traits::{FoundSymbolEitherExtensions, FoundSymbolExtensions, StructSymbolExtensions},
 };
 
 pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type, CompilationIssue> {
@@ -44,7 +41,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                 _ if tk_kind.is_fn_ref() => self::build_fn_ref_type(ctx, span),
                 _ => match tk_kind {
                     ty if ty.is_ptr() && ctx.check(TokenType::LBracket) => {
-                        self::build_recursive_type(ctx, Type::Ptr(None, span), span)
+                        self::build_recursive_pointer_type(ctx, Type::Ptr(None, span), span)
                     }
                     TokenType::Char => Ok(Type::Char(span)),
 
@@ -76,7 +73,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
 
                     any => Err(CompilationIssue::Error(
                         CompilationIssueCode::E0001,
-                        format!("{} isn't a valid type.", any),
+                        format!("Not found type '{}'.", any),
                         None,
                         span,
                     )),
@@ -214,11 +211,11 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
 
         _ if parse_expr => expressions::build_expr(ctx)?.get_value_type().cloned(),
 
-        what_heck => Err(CompilationIssue::Error(
+        any => Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            format!("Expected type, not '{}'", what_heck),
+            format!("Not found type '{}'.", any),
             None,
-            ctx.previous().span,
+            ctx.peek().get_span(),
         )),
     }
 }
@@ -367,7 +364,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
     })
 }
 
-fn build_recursive_type(
+fn build_recursive_pointer_type(
     ctx: &mut ParserContext<'_>,
     mut before_type: Type,
     span: Span,
@@ -382,7 +379,7 @@ fn build_recursive_type(
         let mut inner_type: Type = self::build_type(ctx, false)?;
 
         while ctx.check(TokenType::LBracket) {
-            inner_type = self::build_recursive_type(ctx, inner_type, span)?;
+            inner_type = self::build_recursive_pointer_type(ctx, inner_type, span)?;
         }
 
         ctx.consume(

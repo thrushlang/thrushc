@@ -16,7 +16,7 @@ pub fn build_dereference<'parser>(
     let span: Span = initial_deref_tk.get_span();
 
     let modificators: Modificators =
-        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_statement_modificator(ctx, &[TokenType::Identifier])?;
 
     let is_volatile: bool = modificators.has_volatile();
     let atomic_ord: Option<ThrustAtomicOrdering> = modificators.get_atomic_ordering();

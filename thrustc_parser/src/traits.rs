@@ -33,11 +33,6 @@ pub trait FoundSymbolEitherExtensions<'parser> {
     fn expected_asm_function(&self, span: Span) -> Result<&'parser str, CompilationIssue>;
 }
 
-pub trait StructFieldsExtensions {
-    fn get_type(&self) -> Type;
-    fn get_modificator(&self) -> StructureTypeModificator;
-}
-
 pub trait StructSymbolExtensions<'parser> {
     fn contains_field(&self, name: &str) -> bool;
     fn get_field_type(&self, name: &str) -> Option<Type>;

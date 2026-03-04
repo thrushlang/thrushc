@@ -1,4 +1,4 @@
-use thrustc_ast::traits::AstStructureDataExtensions;
+use thrustc_ast::traits::{AstStructFieldsDataExtensions, AstStructureDataExtensions};
 use thrustc_ast::{Ast, data::StructureData};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -7,7 +7,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
 
-use crate::{ParserContext, attributes, modificators, traits::StructFieldsExtensions, typegen};
+use crate::{ParserContext, attributes, modificators, typegen};
 
 pub fn build_structure<'parser>(
     ctx: &mut ParserContext<'parser>,

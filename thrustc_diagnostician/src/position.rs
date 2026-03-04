@@ -43,8 +43,8 @@ pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
             break;
         }
         if c == '\n' {
-            line_start = i + 1;
-            line_num += 1;
+            line_start = i.saturating_add(1);
+            line_num = line_num.saturating_add(1);
         }
     }
 
@@ -54,7 +54,7 @@ pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
 
     Some(CodePosition::new(
         line_num,
-        start.saturating_sub(line_start),
-        end.saturating_sub(line_start),
+        start.saturating_sub(line_start).saturating_add(1),
+        end.saturating_sub(line_start).saturating_add(1),
     ))
 }

@@ -99,14 +99,32 @@ fn sync_with_statement<'parser>(ctx: &mut ParserContext<'parser>) {
         let peeked: &Token = ctx.peek();
 
         if SYNC_STATEMENTS.contains(&peeked.get_type()) {
-            let _: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
+            let first_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
                 block::build_block_without_start(ctx);
 
-            while ctx.check_ahead(TokenType::RBrace, &SYNC_DECLARATIONS) {
-                let _ = block::build_block_without_start(ctx);
-            }
+            if first_.is_ok() {
+                let mut continue_first_loop: bool = false;
 
-            break;
+                while ctx.check_ahead(TokenType::RBrace, &SYNC_DECLARATIONS) {
+                    let second_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
+                        block::build_block_without_start(ctx);
+
+                    if second_.is_err() {
+                        continue_first_loop = true;
+                        break;
+                    }
+                }
+
+                if continue_first_loop {
+                    let _ = ctx.only_advance();
+                    continue;
+                }
+
+                break;
+            } else {
+                let _ = ctx.only_advance();
+                continue;
+            }
         }
 
         let _ = ctx.only_advance();
@@ -147,14 +165,32 @@ fn sync_with_expression<'parser>(ctx: &mut ParserContext<'parser>) {
         let peeked: &Token = ctx.peek();
 
         if SYNC_STATEMENTS.contains(&peeked.get_type()) {
-            let _: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
+            let first_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
                 block::build_block_without_start(ctx);
 
-            while ctx.check_ahead(TokenType::RBrace, &SYNC_DECLARATIONS) {
-                let _ = block::build_block_without_start(ctx);
-            }
+            if first_.is_ok() {
+                let mut continue_first_loop: bool = false;
 
-            break;
+                while ctx.check_ahead(TokenType::RBrace, &SYNC_DECLARATIONS) {
+                    let second_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
+                        block::build_block_without_start(ctx);
+
+                    if second_.is_err() {
+                        continue_first_loop = true;
+                        break;
+                    }
+                }
+
+                if continue_first_loop {
+                    let _ = ctx.only_advance();
+                    continue;
+                }
+
+                break;
+            } else {
+                let _ = ctx.only_advance();
+                continue;
+            }
         }
 
         let _ = ctx.only_advance();

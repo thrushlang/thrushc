@@ -26,16 +26,17 @@ pub fn print_to_string(diagnostic: &Diagnostic, error: Error<'_>) -> String {
         .get_line()
         .try_into()
         .unwrap_or_default();
-    let end: usize = diagnostic
+
+    let start: usize = diagnostic
         .get_span()
-        .get_span_end()
+        .get_span_start()
         .try_into()
         .unwrap_or_default();
 
-    let mut buffer = String::new();
+    let mut buffer: String = String::new();
 
     buffer.push_str(&format!(
-        "{} {}:{}\n",
+        "{}:{}:{}:\n",
         format_args!(
             "{}",
             logging_type
@@ -43,7 +44,7 @@ pub fn print_to_string(diagnostic: &Diagnostic, error: Error<'_>) -> String {
                 .underline()
         ),
         logging_type.text_with_color(&line.to_string()),
-        logging_type.text_with_color(&end.to_string()),
+        logging_type.text_with_color(&start.to_string()),
     ));
 
     buffer.push_str(&format!("\n{}\n", title.to_uppercase()));
@@ -81,7 +82,7 @@ pub fn print_compiler_frontend_bug(diagnostic: &Diagnostic, error: FrontendError
     thrustc_logging::write(
         OutputIn::Stderr,
         &format!(
-            "{} {}:{}\n",
+            "{}:{}:{}:\n",
             format_args!(
                 "{}",
                 logging_type

@@ -36,7 +36,7 @@ members = [
     "thrustc_preprocessor_type_resolver", 
     "thrustc_ast_verifier", 
     "thrustc_heap_allocator", 
-    "thrustc_utils", 
+    "thrustc_utils",
 ]
 
 exclude = [

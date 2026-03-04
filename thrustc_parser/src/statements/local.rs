@@ -20,7 +20,7 @@ pub fn build_local<'parser>(
     )?;
 
     let modificators: Modificators =
-        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_statement_modificator(ctx, &[TokenType::Identifier])?;
     let is_volatile: bool = modificators.has_volatile();
     let atomic_ord: Option<ThrustAtomicOrdering> = modificators.get_atomic_ordering();
 
@@ -119,7 +119,7 @@ pub fn build_local_as_not_inserted_yet<'parser>(
     let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
 
     let modificators: Modificators =
-        modificators::build_stmt_modificator(ctx, &[TokenType::Identifier])?;
+        modificators::build_statement_modificator(ctx, &[TokenType::Identifier])?;
     let is_volatile: bool = modificators.has_volatile();
     let atomic_ord: Option<ThrustAtomicOrdering> = modificators.get_atomic_ordering();
 
