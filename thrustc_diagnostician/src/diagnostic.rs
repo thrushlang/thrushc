@@ -1,3 +1,5 @@
+use std::usize;
+
 use colored::Colorize;
 
 use thrustc_logging::LoggingType;
@@ -48,13 +50,14 @@ pub(crate) fn build<'a>(
     notificator: Notificator,
     logging_type: LoggingType,
 ) -> Diagnostic<'a> {
-    match crate::position::find_line_and_range(code, span) {
-        Some(code_position) => {
-            self::generate(code, code_position, message, notificator, logging_type)
-                .unwrap_or_else(|| self::generate_basic(code, span, message, notificator))
-        }
-        None => self::generate_basic(code, span, message, notificator),
-    }
+    let code_position: CodePosition = CodePosition::new(
+        span.get_line().try_into().unwrap_or(usize::MAX),
+        span.get_span_start().try_into().unwrap_or(usize::MAX),
+        span.get_span_end().try_into().unwrap_or(usize::MAX),
+    );
+
+    self::generate(code, code_position, message, notificator, logging_type)
+        .unwrap_or_else(|| self::generate_basic(code, span, message, notificator))
 }
 
 pub(crate) fn generate_basic<'a>(
@@ -123,6 +126,7 @@ pub(crate) fn generate<'a>(
     let trim_difference: usize = code_before_trim.saturating_sub(code_line.len());
 
     let line: usize = position.get_line();
+
     let start: usize = position
         .get_start()
         .saturating_sub(trim_difference)
@@ -176,15 +180,13 @@ pub(crate) fn generate<'a>(
 
     signaler.push('\n');
 
-    Some(Diagnostic::new(
-        code_line,
-        signaler,
-        Span::new((
-            position.get_line().try_into().unwrap_or_default(),
-            (
-                position.get_start().try_into().unwrap_or_default(),
-                position.get_end().try_into().unwrap_or_default(),
-            ),
-        )),
-    ))
+    let span: Span = Span::new((
+        position.get_line().try_into().unwrap_or(u32::MAX),
+        (
+            position.get_start().try_into().unwrap_or(u32::MAX),
+            position.get_end().try_into().unwrap_or(u32::MAX),
+        ),
+    ));
+
+    Some(Diagnostic::new(code_line, signaler, span))
 }

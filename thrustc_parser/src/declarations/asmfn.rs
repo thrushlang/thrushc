@@ -39,8 +39,8 @@ pub fn build_assembler_function<'parser>(
 
     let span: Span = asm_function_name_tk.get_span();
 
-    let mut parameters: Vec<Ast> = Vec::with_capacity(10);
-    let mut parameters_types: Vec<Type> = Vec::with_capacity(10);
+    let mut parameters: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
+    let mut parameters_types: Vec<Type> = Vec::with_capacity(u8::MAX as usize);
 
     let mut parameter_position: u32 = 0;
 
@@ -69,7 +69,7 @@ pub fn build_assembler_function<'parser>(
             span: parameter_span,
         });
 
-        parameter_position += 1;
+        parameter_position = parameter_position.saturating_add(1);
 
         if ctx.check(TokenType::RParen) {
             break;
@@ -114,7 +114,7 @@ pub fn build_assembler_function<'parser>(
         "Expected '{'.".into(),
     )?;
 
-    let mut assembler: String = String::with_capacity(100);
+    let mut assembler: String = String::with_capacity(u8::MAX as usize);
     let mut assembler_pos: usize = 0;
 
     loop {
@@ -156,7 +156,7 @@ pub fn build_assembler_function<'parser>(
             )?;
         }
 
-        assembler_pos += 1;
+        assembler_pos = assembler_pos.saturating_add(1);
     }
 
     ctx.consume(
@@ -171,7 +171,7 @@ pub fn build_assembler_function<'parser>(
         "Expected '{'.".into(),
     )?;
 
-    let mut constraints: String = String::with_capacity(100);
+    let mut constraints: String = String::with_capacity(u8::MAX as usize);
     let mut constraint_pos: usize = 0;
 
     loop {
@@ -213,7 +213,7 @@ pub fn build_assembler_function<'parser>(
             )?;
         }
 
-        constraint_pos += 1;
+        constraint_pos = constraint_pos.saturating_add(1);
     }
 
     ctx.consume(

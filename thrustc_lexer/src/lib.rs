@@ -24,6 +24,8 @@ pub struct Lexer {
     errors: Vec<CompilationIssue>,
     code: Vec<char>,
 
+    start_column: usize,
+    end_column: usize,
     start: usize,
     current: usize,
     line: usize,
@@ -40,6 +42,8 @@ impl Lexer {
             tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
             errors: Vec::with_capacity(u8::MAX as usize),
             code,
+            start_column: 0,
+            end_column: 0,
             start: 0,
             current: 0,
             line: 1,
@@ -59,6 +63,8 @@ impl Lexer {
             tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
             errors: Vec::with_capacity(u8::MAX as usize),
             code,
+            start_column: 0,
+            end_column: 0,
             start: 0,
             current: 0,
             line: 1,
@@ -152,6 +158,9 @@ impl Lexer {
     pub fn char_match(&mut self, char: char) -> bool {
         if !self.is_eof() && self.code[self.current] == char {
             self.current = self.current.saturating_add(1);
+            self.start_column = self.start_column.saturating_add(1);
+            self.end_column = self.end_column.saturating_add(1);
+
             return true;
         }
 
@@ -166,6 +175,8 @@ impl Lexer {
             let ch: char = self.code[self.current];
 
             self.current = self.current.saturating_add(1);
+            self.start_column = self.start_column.saturating_add(1);
+            self.end_column = self.end_column.saturating_add(1);
 
             ch
         }
@@ -174,6 +185,17 @@ impl Lexer {
     #[inline]
     pub fn advance_only(&mut self) {
         self.current = self.current.saturating_add(1);
+        self.start_column = self.start_column.saturating_add(1);
+        self.end_column = self.end_column.saturating_add(1);
+    }
+
+    #[inline]
+    pub fn peek_at(&self, idx: usize) -> char {
+        if idx >= self.code.len() {
+            return '\0';
+        }
+
+        self.code[idx]
     }
 
     #[inline]
@@ -285,11 +307,11 @@ impl Lexer {
 
     #[inline]
     pub fn start_span(&mut self) {
-        self.span.0 = self.start;
+        self.span.0 = self.start_column;
     }
 
     #[inline]
     pub fn end_span(&mut self) {
-        self.span.1 = self.current;
+        self.span.1 = self.end_column;
     }
 }

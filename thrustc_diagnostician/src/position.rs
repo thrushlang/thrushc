@@ -30,31 +30,3 @@ impl CodePosition {
         self.end
     }
 }
-
-pub fn find_line_and_range(code: &str, span: Span) -> Option<CodePosition> {
-    let start: usize = span.get_span_start().try_into().unwrap();
-    let end: usize = span.get_span_end().try_into().unwrap();
-
-    let mut line_start: usize = 0;
-    let mut line_num: usize = 1;
-
-    for (i, c) in code.char_indices() {
-        if i >= start {
-            break;
-        }
-        if c == '\n' {
-            line_start = i.saturating_add(1);
-            line_num = line_num.saturating_add(1);
-        }
-    }
-
-    if start >= code.len() || end > code.len() || start > end {
-        return None;
-    }
-
-    Some(CodePosition::new(
-        line_num,
-        start.saturating_sub(line_start).saturating_add(1),
-        end.saturating_sub(line_start).saturating_add(1),
-    ))
-}

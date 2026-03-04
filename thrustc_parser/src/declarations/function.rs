@@ -5,7 +5,7 @@ use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
-use thrustc_typesystem::Type;
+use thrustc_typesystem::{Type, traits::TypeIsExtensions};
 
 use crate::{ParserContext, attributes, statements::block, typegen};
 
@@ -46,8 +46,6 @@ pub fn build_function<'parser>(
             break;
         }
 
-        let is_mutable: bool = ctx.match_token(TokenType::Mut)?;
-
         let parameter_name_tk: &Token = ctx.consume(
             TokenType::Identifier,
             CompilationIssueCode::E0001,
@@ -64,20 +62,22 @@ pub fn build_function<'parser>(
             "Expected ':'.".into(),
         )?;
 
-        let parameter_type: Type = typegen::build_type(ctx, false)?;
+        let kind: Type = typegen::build_type(ctx, false)?;
+        let metadata: FunctionParameterMetadata =
+            FunctionParameterMetadata::new(kind.is_ptr_like_type());
 
-        parameters_types.push(parameter_type.clone());
+        parameters_types.push(kind.clone());
 
         parameters.push(Ast::FunctionParameter {
             name,
             ascii_name,
-            kind: parameter_type,
+            kind,
             position: parameter_position,
-            metadata: FunctionParameterMetadata::new(is_mutable),
+            metadata,
             span,
         });
 
-        parameter_position += 1;
+        parameter_position = parameter_position.saturating_add(1);
 
         if ctx.check(TokenType::RParen) {
             break;
@@ -144,7 +144,13 @@ pub fn build_function<'parser>(
             Ok(Ast::new_nullptr(span))
         }
     } else {
-        if ctx.match_token(TokenType::SemiColon)? {
+        if ctx.check(TokenType::SemiColon) {
+            ctx.consume(
+                TokenType::SemiColon,
+                CompilationIssueCode::E0001,
+                "Expected ';'.".into(),
+            )?;
+
             let proto: Ast = Ast::Function {
                 name,
                 ascii_name,

@@ -79,7 +79,12 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         '\r' | '\t' => {}
         ' ' => {}
 
-        '\n' => lexer.line = lexer.line.saturating_add(1),
+        '\n' => {
+            lexer.start_column = 1;
+            lexer.end_column = 1;
+
+            lexer.line = lexer.line.saturating_add(1)
+        }
 
         '\'' => character::lex(lexer)?,
 

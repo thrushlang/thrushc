@@ -54,40 +54,40 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
 }
 
 pub fn parse_forward(ctx: &mut ParserContext) {
-    let mut entered_at_block: bool = false;
+    let mut at_block: bool = false;
 
     while !ctx.is_eof() {
         match ctx.peek().get_type() {
-            TokenType::Type if !entered_at_block => {
+            TokenType::Type if !at_block => {
                 let _ = glcstype::build_custom_type(ctx, true);
             }
-            TokenType::Struct if !entered_at_block => {
+            TokenType::Struct if !at_block => {
                 let _ = glstructure::build_structure(ctx, true);
             }
-            TokenType::Static if !entered_at_block => {
+            TokenType::Static if !at_block => {
                 let _ = glstatic::build_global_static(ctx, true);
             }
-            TokenType::Const if !entered_at_block => {
+            TokenType::Const if !at_block => {
                 let _ = glconstant::build_global_const(ctx, true);
             }
-            TokenType::Enum if !entered_at_block => {
+            TokenType::Enum if !at_block => {
                 let _ = glenum::build_enum(ctx, true);
             }
-            TokenType::Intrinsic if !entered_at_block => {
+            TokenType::Intrinsic if !at_block => {
                 let _ = intrinsic::build_compiler_intrinsic(ctx, true);
             }
-            TokenType::Fn if !entered_at_block => {
+            TokenType::Fn if !at_block => {
                 let _ = function::build_function(ctx, true);
             }
-            TokenType::AsmFn if !entered_at_block => {
+            TokenType::AsmFn if !at_block => {
                 let _ = asmfn::build_assembler_function(ctx, true);
             }
             TokenType::LBrace => {
-                entered_at_block = true;
+                at_block = true;
                 let _ = ctx.only_advance();
             }
             TokenType::RBrace => {
-                entered_at_block = false;
+                at_block = false;
                 let _ = ctx.only_advance();
             }
 
@@ -95,16 +95,6 @@ pub fn parse_forward(ctx: &mut ParserContext) {
                 let _ = ctx.only_advance();
             }
         }
-    }
-
-    ctx.current = 0;
-
-    while !ctx.is_eof() {
-        if ctx.peek().get_type() == TokenType::Import {
-            let _ = import::build_import(ctx);
-        }
-
-        let _ = ctx.only_advance();
     }
 
     ctx.current = 0;
