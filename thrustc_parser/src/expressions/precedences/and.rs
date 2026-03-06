@@ -1,4 +1,4 @@
-use thrustc_ast::Ast;
+use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
 use thrustc_token::Token;
@@ -28,6 +28,7 @@ pub fn and_precedence<'parser>(
             right: right.into(),
             kind: Type::Bool(span),
             span,
+            id: NodeId::new(),
         }
     }
 

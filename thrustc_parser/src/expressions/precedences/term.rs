@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, traits::AstGetType};
+use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -40,6 +40,7 @@ pub fn term_precedence<'parser>(
             right: right.into(),
             kind,
             span,
+            id: NodeId::new(),
         };
     }
 

@@ -1,5 +1,5 @@
 use thrustc_ast::{
-    Ast,
+    Ast, NodeId,
     traits::{AstCodeLocation, AstGetType},
 };
 use thrustc_entities::parser::{FoundSymbolId, Function, Intrinsic};
@@ -99,6 +99,7 @@ pub fn build_call<'parser>(
                 args,
                 kind: function_type,
                 span,
+                id: NodeId::new(),
             })
         }
 
@@ -158,5 +159,6 @@ pub fn build_anonymous_call<'parser>(
         args,
         kind: return_type,
         span,
+        id: NodeId::new(),
     })
 }

@@ -1,4 +1,4 @@
-use thrustc_ast::Ast;
+use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -28,6 +28,7 @@ pub fn build_for_loop<'parser>(
             block: body.into(),
             kind: Type::Void(span),
             span,
+            id: NodeId::new(),
         })
     } else if ctx.match_token(TokenType::SemiColon)? {
         while ctx.match_token(TokenType::SemiColon)? {}
@@ -42,6 +43,7 @@ pub fn build_for_loop<'parser>(
             block: body.into(),
             kind: Type::Void(span),
             span,
+            id: NodeId::new(),
         })
     } else {
         ctx.get_mut_symbols().begin_scope();
@@ -67,6 +69,7 @@ pub fn build_for_loop<'parser>(
             block: body.into(),
             kind: Type::Void(span),
             span,
+            id: NodeId::new(),
         })
     }
 }
@@ -91,6 +94,7 @@ pub fn build_loop<'parser>(
         block: body.into(),
         kind: Type::Void(span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -133,12 +137,13 @@ pub fn build_while_loop<'parser>(
             block: body.into(),
             kind: Type::Void(span),
             span,
+            id: NodeId::new(),
         })
     } else if ctx.check(TokenType::LParen) {
-        let mut found_rparen: usize = 0;
+        let mut found_rparen: u64 = 0;
 
         while ctx.match_token(TokenType::LParen)? {
-            found_rparen += 1;
+            found_rparen = found_rparen.saturating_add(1);
         }
 
         if ctx.check(TokenType::Local) {
@@ -178,6 +183,7 @@ pub fn build_while_loop<'parser>(
                 block: body.into(),
                 kind: Type::Void(span),
                 span,
+                id: NodeId::new(),
             })
         } else {
             let condition: Ast = expressions::build_expr(ctx)?;
@@ -198,6 +204,7 @@ pub fn build_while_loop<'parser>(
                 block: block.into(),
                 kind: Type::Void(span),
                 span,
+                id: NodeId::new(),
             })
         }
     } else {
@@ -210,6 +217,7 @@ pub fn build_while_loop<'parser>(
             block: block.into(),
             kind: Type::Void(span),
             span,
+            id: NodeId::new(),
         })
     }
 }

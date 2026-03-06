@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, data::EnumData};
+use thrustc_ast::{Ast, NodeId, data::EnumData};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -100,6 +100,7 @@ pub fn build_enum<'parser>(
             attributes,
             kind: Type::Void(span),
             span,
+            id: NodeId::new(),
         })
     }
 }

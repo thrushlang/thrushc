@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, traits::AstGetType};
+use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -20,16 +20,17 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = precedences::indirect::indirect_precedence(ctx)?;
+        let expr: Ast = precedences::indirect::indirect_precedence(ctx)?;
 
         ctx.leave_expression();
 
         return Ok(Ast::UnaryOp {
             operator,
-            expression: expression.into(),
+            node: expr.into(),
             kind: Type::Bool(span),
             is_pre: false,
             span,
+            id: NodeId::new(),
         });
     }
 
@@ -38,19 +39,20 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = precedences::indirect::indirect_precedence(ctx)?;
+        let expr: Ast = precedences::indirect::indirect_precedence(ctx)?;
+        let expr_type: &Type = expr.get_value_type()?;
 
-        let expression_type: &Type = expression.get_value_type()?;
-        let kind: Type = expression_type.narrowing();
+        let kind: Type = expr_type.narrowing();
 
         ctx.leave_expression();
 
         return Ok(Ast::UnaryOp {
             operator,
-            expression: expression.clone().into(),
+            node: expr.clone().into(),
             kind,
             is_pre: false,
             span,
+            id: NodeId::new(),
         });
     }
 
@@ -59,17 +61,18 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = precedences::indirect::indirect_precedence(ctx)?;
-        let expression_type: &Type = expression.get_value_type()?;
+        let expr: Ast = precedences::indirect::indirect_precedence(ctx)?;
+        let expr_type: &Type = expr.get_value_type()?;
 
         ctx.leave_expression();
 
         return Ok(Ast::UnaryOp {
             operator,
-            expression: expression.clone().into(),
-            kind: expression_type.clone(),
+            node: expr.clone().into(),
+            kind: expr_type.clone(),
             is_pre: false,
             span,
+            id: NodeId::new(),
         });
     }
 
@@ -78,16 +81,16 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = expressions::build_expr(ctx)?;
-
-        let expression_type: &Type = expression.get_value_type()?;
+        let expr: Ast = expressions::build_expr(ctx)?;
+        let expr_type: &Type = expr.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {
             operator,
-            expression: expression.clone().into(),
-            kind: expression_type.clone(),
+            node: expr.clone().into(),
+            kind: expr_type.clone(),
             is_pre: true,
             span,
+            id: NodeId::new(),
         };
 
         ctx.leave_expression();
@@ -100,15 +103,16 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expression: Ast = expressions::build_expr(ctx)?;
-        let expression_type: &Type = expression.get_value_type()?;
+        let expr: Ast = expressions::build_expr(ctx)?;
+        let expr_type: &Type = expr.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {
             operator,
-            expression: expression.clone().into(),
-            kind: expression_type.clone(),
+            node: expr.clone().into(),
+            kind: expr_type.clone(),
             is_pre: true,
             span,
+            id: NodeId::new(),
         };
 
         ctx.leave_expression();

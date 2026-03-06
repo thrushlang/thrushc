@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, builitins::ThrustBuiltin};
+use thrustc_ast::{Ast, NodeId, builitins::ThrustBuiltin};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -69,6 +69,7 @@ pub fn build_halloc<'parser>(
         },
         kind: Type::Ptr(Some(of.into()), span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -122,6 +123,7 @@ pub fn build_memcpy<'parser>(
         },
         kind: Type::Ptr(None, span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -175,6 +177,7 @@ pub fn build_memmove<'parser>(
         },
         kind: Type::Ptr(None, span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -228,6 +231,7 @@ pub fn build_memset<'parser>(
         },
         kind: Type::Ptr(None, span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -260,6 +264,7 @@ pub fn build_alignof<'parser>(
         builtin: ThrustBuiltin::AlignOf { of, span },
         kind: Type::U32(span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -292,6 +297,7 @@ pub fn build_sizeof<'parser>(
         builtin: ThrustBuiltin::SizeOf { of, span },
         kind: Type::USize(span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -324,6 +330,7 @@ pub fn build_bit_size_of<'parser>(
         builtin: ThrustBuiltin::BitSizeOf { of, span },
         kind: Type::U64(span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -356,6 +363,7 @@ pub fn build_abi_size_of<'parser>(
         builtin: ThrustBuiltin::AbiSizeOf { of, span },
         kind: Type::U64(span),
         span,
+        id: NodeId::new(),
     })
 }
 
@@ -388,5 +396,6 @@ pub fn build_abi_align_of<'parser>(
         builtin: ThrustBuiltin::AbiAlignOf { of, span },
         kind: Type::U32(span),
         span,
+        id: NodeId::new(),
     })
 }

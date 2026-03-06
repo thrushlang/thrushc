@@ -40,11 +40,11 @@ impl AstStandardExtensions for Ast<'_> {
 
             Ast::EnumValue { value, .. } => value.is_literal_value(),
 
-            Ast::Group { expression, .. } => expression.is_literal_value(),
+            Ast::Group { node, .. } => node.is_literal_value(),
             Ast::BinaryOp { left, right, .. } => {
                 left.is_literal_value() && right.is_literal_value()
             }
-            Ast::UnaryOp { expression, .. } => expression.is_literal_value(),
+            Ast::UnaryOp { node, .. } => node.is_literal_value(),
 
             _ => false,
         }
@@ -317,11 +317,11 @@ impl AstConstantExtensions for Ast<'_> {
             } => true,
             Ast::EnumValue { value, .. } => value.is_constant_value(),
             Ast::DirectRef { expr, .. } => expr.is_constant_value(),
-            Ast::Group { expression, .. } => expression.is_constant_value(),
+            Ast::Group { node, .. } => node.is_constant_value(),
             Ast::BinaryOp { left, right, .. } => {
                 left.is_constant_value() && right.is_constant_value()
             }
-            Ast::UnaryOp { expression, .. } => expression.is_constant_value(),
+            Ast::UnaryOp { node, .. } => node.is_constant_value(),
             Ast::Reference { metadata, .. } => metadata.is_constant_ref(),
             Ast::As { metadata, .. } => metadata.is_constant(),
             Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_constant_value()),
@@ -537,14 +537,14 @@ impl std::fmt::Display for Ast<'_> {
             }
             Ast::UnaryOp {
                 operator,
-                expression,
+                node,
                 is_pre,
                 ..
             } => {
                 if *is_pre {
-                    write!(f, "{}{}", operator, expression)
+                    write!(f, "{}{}", operator, node)
                 } else {
-                    write!(f, "{}{}", expression, operator)
+                    write!(f, "{}{}", node, operator)
                 }
             }
             Ast::Break { .. } => {
@@ -656,8 +656,8 @@ impl std::fmt::Display for Ast<'_> {
                 write!(f, "nullptr")
             }
 
-            Ast::Group { expression, .. } => {
-                write!(f, "({})", expression)
+            Ast::Group { node, .. } => {
+                write!(f, "({})", node)
             }
 
             Ast::Elif {

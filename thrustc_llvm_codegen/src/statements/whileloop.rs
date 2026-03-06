@@ -171,14 +171,8 @@ fn short_circuit_comparison<'ctx>(
         }
     }
 
-    if let Ast::Group { expression, .. } = condition {
-        self::short_circuit_comparison(
-            codegen,
-            expression,
-            target_body,
-            target_exit,
-            llvm_function,
-        );
+    if let Ast::Group { node, .. } = condition {
+        self::short_circuit_comparison(codegen, node, target_body, target_exit, llvm_function);
     }
 
     let comparison: IntValue<'_> = codegen::compile(

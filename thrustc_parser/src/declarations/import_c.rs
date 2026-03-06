@@ -1,4 +1,4 @@
-use thrustc_ast::Ast;
+use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -33,5 +33,6 @@ pub fn build_import_c<'parser>(
     Ok(Ast::ImportC {
         span,
         kind: Type::Void(span),
+        id: NodeId::new(),
     })
 }

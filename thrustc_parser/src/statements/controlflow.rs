@@ -1,4 +1,4 @@
-use thrustc_ast::Ast;
+use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -27,6 +27,7 @@ pub fn build_continue<'parser>(
     Ok(Ast::Continue {
         span,
         kind: Type::Void(span),
+        id: NodeId::new(),
     })
 }
 
@@ -50,6 +51,7 @@ pub fn build_break<'parser>(
     Ok(Ast::Break {
         span,
         kind: Type::Void(span),
+        id: NodeId::new(),
     })
 }
 
@@ -73,6 +75,7 @@ pub fn build_continueall<'parser>(
     Ok(Ast::ContinueAll {
         span,
         kind: Type::Void(span),
+        id: NodeId::new(),
     })
 }
 
@@ -96,5 +99,6 @@ pub fn build_breakall<'parser>(
     Ok(Ast::BreakAll {
         span,
         kind: Type::Void(span),
+        id: NodeId::new(),
     })
 }

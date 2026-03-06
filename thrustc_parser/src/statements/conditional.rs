@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, traits::AstCodeBlockEntensions};
+use thrustc_ast::{Ast, NodeId, traits::AstCodeBlockEntensions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -70,6 +70,7 @@ pub fn build_conditional<'parser>(
                 block: body.into(),
                 kind: Type::Void(span),
                 span,
+                id: NodeId::new(),
             });
         }
     }
@@ -88,6 +89,7 @@ pub fn build_conditional<'parser>(
                 block: else_body.into(),
                 kind: Type::Void(span),
                 span,
+                id: NodeId::new(),
             };
 
             return Ok(Ast::If {
@@ -97,6 +99,7 @@ pub fn build_conditional<'parser>(
                 anyway: Some(else_node.into()),
                 kind: Type::Void(span),
                 span,
+                id: NodeId::new(),
             });
         }
     }
@@ -108,5 +111,6 @@ pub fn build_conditional<'parser>(
         anyway: None,
         kind: Type::Void(span),
         span,
+        id: NodeId::new(),
     })
 }

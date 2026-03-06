@@ -1,3 +1,4 @@
+use thrustc_ast::NodeId;
 use thrustc_ast::traits::{AstStructFieldsDataExtensions, AstStructureDataExtensions};
 use thrustc_ast::{Ast, data::StructureData};
 use thrustc_attributes::ThrustAttributes;
@@ -26,6 +27,7 @@ pub fn build_structure<'parser>(
 
     let attributes: ThrustAttributes =
         attributes::build_compiler_attributes(ctx, &[TokenType::LBrace])?;
+
     let modificator: StructureTypeModificator =
         modificators::build_structure_modificator(&attributes);
 
@@ -118,6 +120,7 @@ pub fn build_structure<'parser>(
             kind,
             attributes,
             span,
+            id: NodeId::new(),
         })
     } else {
         Ok(Ast::invalid_ast(span))

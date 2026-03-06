@@ -1,6 +1,17 @@
 use crate::{Type, traits::TypeArrayEntensions};
 
 impl TypeArrayEntensions for Type {
+    fn get_array_skipping_array_as_base_type(&self) -> Type {
+        if let Type::Array {
+            base_type: inner, ..
+        } = self
+        {
+            return inner.get_array_skipping_array_as_base_type();
+        }
+
+        self.clone()
+    }
+
     #[inline]
     fn get_array_base_type(&self) -> Type {
         if let Type::Array {

@@ -27,7 +27,7 @@ impl InfererTypeExtensions for Type {
                 return;
             };
 
-            refcounter += 1;
+            refcounter = refcounter.saturating_add(1);
 
             *lhs_infered_type = Some((
                 Type::FixedArray((*base_type).clone(), *size, span).into(),
@@ -58,7 +58,7 @@ impl InfererTypeExtensions for Type {
         false
     }
 
-    fn is_inferer_inner_type_refcounter_not_more_used(&self) -> bool {
+    fn is_inferer_inner_type_is_not_array_decay(&self) -> bool {
         if let Type::Array {
             infered_type: Some((_, 0..=1)),
             ..

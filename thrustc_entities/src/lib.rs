@@ -304,6 +304,7 @@ pub fn function_parameter_from_ast<'entity>(ast: &'entity Ast) -> FunctionParame
         position,
         metadata,
         span,
+        ..
     } = ast
     {
         return (name, ascii_name, kind, *position, *span, *metadata);

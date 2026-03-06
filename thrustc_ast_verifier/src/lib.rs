@@ -175,16 +175,12 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
                 self.analyze_expression(right);
             }
 
-            Ast::UnaryOp {
-                expression: node, ..
-            } => {
+            Ast::UnaryOp { node, .. } => {
                 self.expected_expression(node);
                 self.analyze_expression(node);
             }
 
-            Ast::Group {
-                expression: node, ..
-            } => {
+            Ast::Group { node, .. } => {
                 self.expected_expression(node);
                 self.analyze_expression(node);
             }

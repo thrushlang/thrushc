@@ -1,5 +1,5 @@
 use thrustc_ast::{
-    Ast,
+    Ast, NodeId,
     traits::{AstCodeLocation, AstStandardExtensions},
 };
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -61,5 +61,6 @@ pub fn build_global_assembler<'parser>(
         asm,
         span,
         kind: Type::Void(span),
+        id: NodeId::new(),
     })
 }

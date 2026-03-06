@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, data::ConstructorData, traits::AstStructureDataExtensions};
+use thrustc_ast::{Ast, NodeId, data::ConstructorData, traits::AstStructureDataExtensions};
 use thrustc_entities::parser::{FoundSymbolId, Struct};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -165,6 +165,7 @@ pub fn build_constructor<'parser>(
                         data,
                         kind: constructor_type,
                         span,
+                        id: NodeId::new(),
                     })
                 }
                 Err(error) => {

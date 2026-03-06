@@ -23,30 +23,30 @@ pub fn check_types(
     );
 
     if let Some(Ast::BinaryOp {
-        operator: op,
+        operator,
         kind: expression_type,
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, None, Some(op), metadata, span);
+        return self::check_types(lhs, expression_type, None, Some(operator), metadata, span);
     }
 
     if let Some(Ast::UnaryOp {
-        operator: op,
+        operator,
         kind: expression_type,
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, None, Some(op), metadata, span);
+        return self::check_types(lhs, expression_type, None, Some(operator), metadata, span);
     }
 
     if let Some(Ast::Group {
-        expression,
+        node,
         kind: expression_type,
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, Some(expression), None, metadata, span);
+        return self::check_types(lhs, expression_type, Some(node), None, metadata, span);
     }
 
     match (lhs, rhs, operator) {

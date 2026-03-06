@@ -635,10 +635,10 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
             Ast::UnaryOp {
                 operator,
                 kind,
-                expression,
+                node,
                 ..
             } => {
-                expressions::unaryop::compile(self.context, (operator, kind, expression), None);
+                expressions::unaryop::compile(self.context, (operator, kind, node), None);
             }
 
             Ast::BinaryOp {
@@ -647,6 +647,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 right,
                 kind,
                 span,
+                ..
             } => {
                 if kind.is_integer_type() {
                     expressions::binaryop::integer::compile(
@@ -840,7 +841,7 @@ pub fn compile<'ctx>(
 
         // Expressions
         // Compiles a grouped expression (e.g., parenthesized)
-        Ast::Group { expression, .. } => self::compile(context, expression, cast_type),
+        Ast::Group { node, .. } => self::compile(context, node, cast_type),
 
         Ast::BinaryOp {
             left,
@@ -880,9 +881,9 @@ pub fn compile<'ctx>(
         Ast::UnaryOp {
             operator,
             kind,
-            expression,
+            node,
             ..
-        } => expressions::unaryop::compile(context, (operator, kind, expression), cast_type),
+        } => expressions::unaryop::compile(context, (operator, kind, node), cast_type),
 
         // Direct Reference
         Ast::DirectRef { expr, .. } => self::compile_as_ptr(context, expr, cast_type),
@@ -1087,7 +1088,7 @@ pub fn compile_constant<'ctx>(
         Ast::Reference { name, .. } => context.get_table().get_symbol(name).get_value(context),
 
         // Grouped expression compilation
-        Ast::Group { expression, .. } => codegen::compile_constant(context, expression, cast_type),
+        Ast::Group { node, .. } => codegen::compile_constant(context, node, cast_type),
 
         // Binary operation dispatch
         Ast::BinaryOp {
@@ -1134,10 +1135,10 @@ pub fn compile_constant<'ctx>(
         // Unary operation dispatch
         Ast::UnaryOp {
             operator,
-            expression,
+            node,
             kind,
             ..
-        } => unaryop::compile_const(context, (operator, kind, expression), cast_type),
+        } => unaryop::compile_const(context, (operator, kind, node), cast_type),
 
         // Direct Reference
         Ast::DirectRef { expr, .. } => codegen::compile_as_ptr(context, expr, None),

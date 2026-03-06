@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, traits::AstStandardExtensions};
+use thrustc_ast::{Ast, NodeId, traits::AstStandardExtensions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -42,6 +42,7 @@ pub fn build_block<'parser>(
         post,
         span,
         kind: Type::Void(span),
+        id: NodeId::new(),
     })
 }
 
@@ -80,5 +81,6 @@ pub fn build_block_without_start<'parser>(
         post,
         span,
         kind: Type::Void(span),
+        id: NodeId::new(),
     })
 }

@@ -24,14 +24,14 @@ pub fn validate<'analyzer>(
             Ok(())
         }
 
-        Ast::UnaryOp { expression, .. } => {
-            analyzer.analyze_expr(expression)?;
+        Ast::UnaryOp { node, .. } => {
+            analyzer.analyze_expr(node)?;
 
             Ok(())
         }
 
-        Ast::Group { expression, .. } => {
-            analyzer.analyze_expr(expression)?;
+        Ast::Group { node, .. } => {
+            analyzer.analyze_expr(node)?;
 
             Ok(())
         }

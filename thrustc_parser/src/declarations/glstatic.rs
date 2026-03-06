@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, metadata::StaticMetadata};
+use thrustc_ast::{Ast, NodeId, metadata::StaticMetadata};
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::{atomicord::ThrustAtomicOrdering, threadmode::ThrustThreadMode};
@@ -83,6 +83,7 @@ pub fn build_global_static<'parser>(
                 modificators,
                 metadata,
                 span,
+                id: NodeId::new(),
             };
 
             Ok(static_)
@@ -125,6 +126,7 @@ pub fn build_global_static<'parser>(
                 modificators,
                 metadata,
                 span,
+                id: NodeId::new(),
             };
 
             Ok(static_)

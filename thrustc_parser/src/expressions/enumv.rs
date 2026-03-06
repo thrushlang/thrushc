@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, data::EnumData, traits::AstEnumFieldsDataExtensions};
+use thrustc_ast::{Ast, NodeId, data::EnumData, traits::AstEnumFieldsDataExtensions};
 use thrustc_entities::parser::FoundSymbolId;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -50,6 +50,7 @@ pub fn build_enum_value<'parser>(
                                 value: field_value.into(),
                                 kind: field_type,
                                 span,
+                                id: NodeId::new(),
                             })
                         }
                         None => {

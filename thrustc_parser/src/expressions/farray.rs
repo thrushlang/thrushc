@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, traits::AstGetType};
+use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -27,15 +27,8 @@ pub fn build_fixed_array<'parser>(
 
     let span: Span = array_start_tk.get_span();
 
-    let mut array_type: Type = ctx
-        .get_type_ctx()
-        .get_infered_type()
-        .unwrap_or(Type::Void(span))
-        .get_fixed_array_base_type();
-
-    if !array_type.is_fixed_array_type() {
-        array_type = Type::FixedArray(array_type.into(), 0, span);
-    }
+    let infered_type: Option<Type> = ctx.get_type_ctx().get_infered_type();
+    let mut array_type: Type = Type::Void(span);
 
     let mut items: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
 
@@ -72,6 +65,7 @@ pub fn build_fixed_array<'parser>(
             None => Some(item),
             Some(current) => {
                 let current_type: &Type = current.get_value_type()?;
+
                 if item_type.get_fixed_array_type_herarchy()
                     > current_type.get_fixed_array_type_herarchy()
                 {
@@ -82,21 +76,42 @@ pub fn build_fixed_array<'parser>(
             }
         })
     })? {
-        let size: u32 = u32::try_from(items.len()).map_err(|_| {
-            CompilationIssue::Error(
+        let size: Result<u32, std::num::TryFromIntError> = u32::try_from(items.len());
+
+        if size.is_err() {
+            ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "The size limit was exceeded.".into(),
+                format!(
+                    "Fixed array size is out of bounds, it is superior to '{}'.'",
+                    u32::MAX
+                ),
                 None,
                 span,
-            )
-        })?;
+            ));
+        }
 
-        array_type = Type::FixedArray(item.get_value_type()?.clone().into(), size, span);
+        array_type = Type::FixedArray(
+            item.get_value_type()?.clone().into(),
+            size.unwrap_or_default(),
+            span,
+        );
+    }
+
+    if items.is_empty()
+        && array_type.is_void_type()
+        && infered_type
+            .as_ref()
+            .is_some_and(|ty| ty.is_fixed_array_type())
+    {
+        if let Some(infered_type) = infered_type {
+            array_type = infered_type;
+        }
     }
 
     Ok(Ast::FixedArray {
         items,
         kind: array_type,
         span,
+        id: NodeId::new(),
     })
 }

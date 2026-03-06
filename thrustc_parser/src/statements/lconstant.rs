@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, metadata::ConstantMetadata};
+use thrustc_ast::{Ast, NodeId, metadata::ConstantMetadata};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::atomicord::ThrustAtomicOrdering;
@@ -72,6 +72,7 @@ pub fn build_const<'parser>(
             modificators,
             metadata,
             span,
+            id: NodeId::new(),
         })
     } else {
         Ok(Ast::invalid_ast(span))

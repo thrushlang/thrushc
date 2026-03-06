@@ -46,6 +46,7 @@ pub trait TypeFixedArrayEntensions {
 }
 
 pub trait TypeArrayEntensions {
+    fn get_array_skipping_array_as_base_type(&self) -> Type;
     fn get_array_base_type(&self) -> Type;
     fn get_array_type_herarchy(&self) -> u8;
 }
@@ -90,7 +91,7 @@ pub trait InfererTypeExtensions {
     fn inferer_inner_type_from_type(&mut self, other: &Type);
     fn has_inferer_inner_type(&self) -> bool;
     fn is_inferer_inner_type_valid(&self) -> bool;
-    fn is_inferer_inner_type_refcounter_not_more_used(&self) -> bool;
+    fn is_inferer_inner_type_is_not_array_decay(&self) -> bool;
     fn get_inferer_inner_type(&self) -> Type;
 }
 

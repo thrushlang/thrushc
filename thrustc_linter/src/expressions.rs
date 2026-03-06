@@ -7,8 +7,8 @@ use crate::Linter;
 
 pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
     match expr {
-        Ast::Group { expression, .. } => {
-            linter.analyze_expr(expression);
+        Ast::Group { node, .. } => {
+            linter.analyze_expr(node);
         }
 
         Ast::BinaryOp { left, right, .. } => {
@@ -16,12 +16,8 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
             linter.analyze_expr(right);
         }
 
-        Ast::UnaryOp {
-            operator,
-            expression,
-            ..
-        } => {
-            if let Ast::Reference { name, .. } = &**expression {
+        Ast::UnaryOp { operator, node, .. } => {
+            if let Ast::Reference { name, .. } = &**node {
                 crate::mark_as_used(linter, name);
 
                 if operator.is_minus_minus_operator() || operator.is_plus_plus_operator() {
@@ -29,7 +25,7 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 }
             }
 
-            linter.analyze_expr(expression);
+            linter.analyze_expr(node);
         }
 
         Ast::AsmValue { args, .. } => {

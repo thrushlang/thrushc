@@ -66,16 +66,16 @@ pub fn validate<'type_checker>(
 
         Ast::UnaryOp {
             operator,
-            expression,
+            node,
             kind,
             span,
             ..
         } => {
-            operations::unary::validate_unary(operator, expression.get_value_type()?, *span)?;
+            operations::unary::validate_unary(operator, node.get_value_type()?, *span)?;
 
-            typechecker.analyze_expr(expression)?;
+            typechecker.analyze_expr(node)?;
 
-            let expr_type: &Type = expression.get_value_type()?;
+            let expr_type: &Type = node.get_value_type()?;
 
             if expr_type.contains_void_type() || expr_type.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
@@ -98,10 +98,8 @@ pub fn validate<'type_checker>(
             Ok(())
         }
 
-        Ast::Group {
-            expression, kind, ..
-        } => {
-            typechecker.analyze_expr(expression)?;
+        Ast::Group { node, kind, .. } => {
+            typechecker.analyze_expr(node)?;
 
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
@@ -115,7 +113,9 @@ pub fn validate<'type_checker>(
             Ok(())
         }
 
-        Ast::FixedArray { items, kind, span } => {
+        Ast::FixedArray {
+            items, kind, span, ..
+        } => {
             if kind.is_void_type() {
                 typechecker.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0019,

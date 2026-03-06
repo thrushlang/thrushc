@@ -1,5 +1,5 @@
 use thrustc_ast::{
-    Ast,
+    Ast, NodeId,
     metadata::CastingMetadata,
     traits::{AstConstantExtensions, AstGetType, AstMemoryExtensions},
 };
@@ -32,6 +32,7 @@ pub fn cast_precedence<'parser>(
             cast,
             metadata: CastingMetadata::new(is_constant, is_allocated),
             span,
+            id: NodeId::new(),
         };
     }
 

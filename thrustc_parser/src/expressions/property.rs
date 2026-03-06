@@ -1,5 +1,5 @@
 use thrustc_ast::{
-    Ast,
+    Ast, NodeId,
     data::{PropertyData, StructDataField, StructureData},
     metadata::PropertyMetadata,
     traits::{AstGetType, AstMemoryExtensions, AstStructureDataExtensions},
@@ -61,6 +61,7 @@ pub fn build_property<'parser>(
                 kind,
                 metadata,
                 span,
+                id: NodeId::new(),
             })
         }
         Err(error) => {

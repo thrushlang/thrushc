@@ -1,4 +1,4 @@
-use thrustc_ast::Ast;
+use thrustc_ast::{Ast, NodeId};
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_entities::parser::IntrinsicParametersTypes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -81,7 +81,11 @@ pub fn build_compiler_intrinsic<'parser>(
 
         parameters_types.push(kind.clone());
 
-        parameters.push(Ast::IntrinsicParameter { kind, span });
+        parameters.push(Ast::IntrinsicParameter {
+            kind,
+            span,
+            id: NodeId::new(),
+        });
 
         if ctx.check(TokenType::RParen) {
             break;
@@ -132,6 +136,7 @@ pub fn build_compiler_intrinsic<'parser>(
             return_type,
             attributes,
             span,
+            id: NodeId::new(),
         })
     }
 }

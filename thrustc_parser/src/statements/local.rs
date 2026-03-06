@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, metadata::LocalMetadata, traits::AstGetType};
+use thrustc_ast::{Ast, NodeId, metadata::LocalMetadata, traits::AstGetType};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::atomicord::ThrustAtomicOrdering;
@@ -61,6 +61,7 @@ pub fn build_local<'parser>(
                 modificators,
                 metadata,
                 span,
+                id: NodeId::new(),
             };
 
             Ok(local)
@@ -98,6 +99,7 @@ pub fn build_local<'parser>(
                 modificators,
                 metadata,
                 span,
+                id: NodeId::new(),
             };
 
             Ok(local)
@@ -157,6 +159,7 @@ pub fn build_local_as_not_inserted_yet<'parser>(
                 modificators,
                 metadata,
                 span,
+                id: NodeId::new(),
             };
 
             Ok(local)
@@ -192,6 +195,7 @@ pub fn build_local_as_not_inserted_yet<'parser>(
                 modificators,
                 metadata,
                 span,
+                id: NodeId::new(),
             };
 
             Ok(local)

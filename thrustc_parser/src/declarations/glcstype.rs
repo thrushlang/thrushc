@@ -1,4 +1,4 @@
-use thrustc_ast::Ast;
+use thrustc_ast::{Ast, NodeId};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -53,6 +53,7 @@ pub fn build_custom_type<'parser>(
         Ok(Ast::CustomType {
             kind: custom_type,
             span,
+            id: NodeId::new(),
         })
     }
 }

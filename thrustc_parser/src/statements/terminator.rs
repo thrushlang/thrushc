@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, traits::AstGetType};
+use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -23,6 +23,7 @@ pub fn build_return<'parser>(
             expression: None,
             kind: Type::Void(span),
             span,
+            id: NodeId::new(),
         });
     }
 
@@ -39,5 +40,6 @@ pub fn build_return<'parser>(
         expression: Some(value.clone().into()),
         kind: kind.clone(),
         span,
+        id: NodeId::new(),
     })
 }

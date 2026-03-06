@@ -1,4 +1,4 @@
-use thrustc_ast::Ast;
+use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
 use thrustc_token::traits::TokenExtensions;
@@ -27,6 +27,7 @@ pub fn equal_precedence<'parser>(
             value: expr.into(),
             kind: Type::Void(span),
             span,
+            id: NodeId::new(),
         };
     }
 

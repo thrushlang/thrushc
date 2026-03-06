@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, traits::AstGetType};
+use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -46,9 +46,10 @@ pub fn lower_precedence<'parser>(
             )?;
 
             Ast::Group {
-                expression: expr.clone().into(),
+                node: expr.clone().into(),
                 kind: expr_type.clone(),
                 span,
+                id: NodeId::new(),
             }
         }
 
@@ -173,6 +174,7 @@ pub fn lower_precedence<'parser>(
                 expr: expr.clone().into(),
                 kind: expr_type.get_type_ref(),
                 span,
+                id: NodeId::new(),
             }
         }
 
@@ -190,6 +192,7 @@ pub fn lower_precedence<'parser>(
             Ast::Unreachable {
                 span,
                 kind: Type::Void(span),
+                id: NodeId::new(),
             }
         }
 

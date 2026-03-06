@@ -128,7 +128,7 @@ pub fn compile_from<'ctx>(
         Type::Array {
             infered_type: Some((infered_type, _)),
             ..
-        } if kind.is_inferer_inner_type_refcounter_not_more_used() => {
+        } if kind.is_inferer_inner_type_is_not_array_decay() => {
             self::compile_from(context, infered_type)
         }
 
@@ -315,7 +315,7 @@ pub fn compile_gep_type<'ctx>(
         Type::Array {
             infered_type: Some((infered_type, _)),
             ..
-        } if kind.is_inferer_inner_type_refcounter_not_more_used() => {
+        } if kind.is_inferer_inner_type_is_not_array_decay() => {
             self::compile_from(context, infered_type)
         }
         Type::Array {

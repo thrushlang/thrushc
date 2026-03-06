@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, metadata::DereferenceMetadata, traits::AstGetType};
+use thrustc_ast::{Ast, NodeId, metadata::DereferenceMetadata, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::atomicord::ThrustAtomicOrdering;
 use thrustc_modificators::{Modificators, traits::ModificatorsExtensions};
@@ -48,6 +48,7 @@ pub fn build_dereference<'parser>(
             modificators: modificators.clone(),
             metadata: DereferenceMetadata::new(is_volatile, atomic_ord),
             span,
+            id: NodeId::new(),
         };
 
         current_type = current_type.dereference();

@@ -1,5 +1,5 @@
 use thrustc_ast::{
-    Ast,
+    Ast, NodeId,
     traits::{AstCodeLocation, AstStandardExtensions},
 };
 use thrustc_attributes::ThrustAttributes;
@@ -176,5 +176,6 @@ pub fn build_asm_code_block<'parser>(
         kind: asm_type,
         attributes,
         span,
+        id: NodeId::new(),
     })
 }

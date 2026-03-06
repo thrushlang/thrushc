@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, metadata::FunctionParameterMetadata};
+use thrustc_ast::{Ast, NodeId, metadata::FunctionParameterMetadata};
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_entities::parser::FunctionParametersTypes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -75,6 +75,7 @@ pub fn build_function<'parser>(
             position: parameter_position,
             metadata,
             span,
+            id: NodeId::new(),
         });
 
         parameter_position = parameter_position.saturating_add(1);
@@ -126,6 +127,7 @@ pub fn build_function<'parser>(
             return_type: return_type.clone(),
             attributes,
             span,
+            id: NodeId::new(),
         };
 
         ctx.get_mut_symbols().new_function(
@@ -160,6 +162,7 @@ pub fn build_function<'parser>(
                 return_type,
                 attributes,
                 span,
+                id: NodeId::new(),
             };
 
             return Ok(proto);
@@ -180,6 +183,7 @@ pub fn build_function<'parser>(
             return_type,
             attributes,
             span,
+            id: NodeId::new(),
         };
 
         if let Ast::Function { body, .. } = &mut proto {

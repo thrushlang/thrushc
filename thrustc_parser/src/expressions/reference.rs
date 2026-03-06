@@ -1,5 +1,5 @@
 use thrustc_ast::{
-    Ast,
+    Ast, NodeId,
     metadata::{
         FunctionParameterMetadata, LocalMetadata, ReferenceMetadata, ReferenceType, StaticMetadata,
     },
@@ -64,6 +64,7 @@ pub fn build_reference<'parser>(
                             ),
                             span,
                             metadata: ReferenceMetadata::new(true, false, ReferenceType::default()),
+                            id: NodeId::new(),
                         });
                     }
                     Err(error) => {
@@ -99,6 +100,7 @@ pub fn build_reference<'parser>(
                                 is_mutable,
                                 ReferenceType::Static,
                             ),
+                            id: NodeId::new(),
                         });
                     }
 
@@ -128,6 +130,7 @@ pub fn build_reference<'parser>(
                             kind: constant_type,
                             span,
                             metadata: ReferenceMetadata::new(true, false, ReferenceType::Constant),
+                            id: NodeId::new(),
                         });
                     }
 
@@ -161,6 +164,7 @@ pub fn build_reference<'parser>(
                                 is_mutable,
                                 ReferenceType::default(),
                             ),
+                            id: NodeId::new(),
                         });
                     }
 
@@ -188,6 +192,7 @@ pub fn build_reference<'parser>(
                     kind: lli_type,
                     span,
                     metadata: ReferenceMetadata::new(is_allocated, false, ReferenceType::default()),
+                    id: NodeId::new(),
                 });
             }
 
@@ -215,6 +220,7 @@ pub fn build_reference<'parser>(
                                 is_mutable,
                                 ReferenceType::default(),
                             ),
+                            id: NodeId::new(),
                         };
 
                         if ctx.match_token(TokenType::PlusPlus)?
@@ -226,10 +232,11 @@ pub fn build_reference<'parser>(
 
                             let unaryop: Ast = Ast::UnaryOp {
                                 operator,
-                                expression: reference.into(),
+                                node: reference.into(),
                                 kind: local_type,
                                 is_pre: false,
                                 span,
+                                id: NodeId::new(),
                             };
 
                             return Ok(unaryop);

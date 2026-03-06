@@ -1,5 +1,5 @@
 use thrustc_ast::{
-    Ast,
+    Ast, NodeId,
     traits::{AstCodeLocation, AstStandardExtensions},
 };
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
@@ -67,6 +67,7 @@ pub fn build_assembler_function<'parser>(
             kind: parameter_type,
             position: parameter_position,
             span: parameter_span,
+            id: NodeId::new(),
         });
 
         parameter_position = parameter_position.saturating_add(1);
@@ -244,6 +245,7 @@ pub fn build_assembler_function<'parser>(
             return_type,
             attributes,
             span,
+            id: NodeId::new(),
         })
     }
 }

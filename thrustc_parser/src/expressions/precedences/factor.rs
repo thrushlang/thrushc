@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, traits::AstGetType};
+use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -27,6 +27,7 @@ pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>,
             right: right.into(),
             kind: left_type.clone(),
             span,
+            id: NodeId::new(),
         };
     }
 

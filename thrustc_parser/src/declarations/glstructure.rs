@@ -1,4 +1,4 @@
-use thrustc_ast::{Ast, data::StructureData, traits::AstStructFieldsDataExtensions};
+use thrustc_ast::{Ast, NodeId, data::StructureData, traits::AstStructFieldsDataExtensions};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -122,6 +122,7 @@ pub fn build_structure<'parser>(
             kind: structure_type,
             attributes,
             span,
+            id: NodeId::new(),
         })
     }
 }
