@@ -15,14 +15,14 @@
 use std::path::Path;
 
 #[macro_use]
-#[path = "build/macros.rs"]
+#[path = "dist/macros.rs"]
 pub mod macros;
 
-#[path = "build/common.rs"]
+#[path = "dist/common.rs"]
 pub mod common;
-#[path = "build/dynamic.rs"]
+#[path = "dist/dynamic.rs"]
 pub mod dynamic;
-#[path = "build/static.rs"]
+#[path = "dist/static.rs"]
 pub mod r#static;
 
 /// Copies a file.
