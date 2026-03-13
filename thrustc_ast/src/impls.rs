@@ -584,12 +584,12 @@ impl std::fmt::Display for Ast<'_> {
                 write!(f, "Stmt - Parameter {}: {}", name, kind)
             }
             Ast::Block { nodes, post, .. } => {
-                writeln!(f, "\nStmt - Code Block - Start {{")?;
+                writeln!(f, "Stmt - Code Block - Start {{")?;
                 for node in nodes {
-                    write!(f, "{}", node)?;
+                    writeln!(f, "{}", node)?;
                 }
                 for node in post {
-                    write!(f, "{}", node)?;
+                    writeln!(f, "{}", node)?;
                 }
                 write!(f, "}} Code Block - End")
             }
@@ -597,13 +597,17 @@ impl std::fmt::Display for Ast<'_> {
             Ast::BreakAll { .. } => writeln!(f, "Stmt - Breakall"),
             Ast::Continue { .. } => writeln!(f, "Stmt - Continue"),
             Ast::ContinueAll { .. } => writeln!(f, "Stmt - Continueall"),
-            Ast::Defer { node, .. } => writeln!(f, "\nStmt - Defer {}", node),
+            Ast::Defer { node, .. } => writeln!(f, "Stmt - Defer {}", node),
             Ast::Elif {
                 condition, block, ..
             } => {
-                writeln!(f, "Stmt - Else If/Elif {}{}", condition, block)
+                writeln!(f, "Stmt - Else If/Elif {}", condition)?;
+                writeln!(f, "{}", block)
             }
-            Ast::Else { block, .. } => writeln!(f, "Stmt - Else {}", block),
+            Ast::Else { block, .. } => {
+                writeln!(f, "Stmt - Else")?;
+                writeln!(f, "{}", block)
+            }
             Ast::For {
                 local,
                 condition,
@@ -630,7 +634,9 @@ impl std::fmt::Display for Ast<'_> {
                 anyway,
                 ..
             } => {
-                writeln!(f, "Stmt - If {}{}", condition, block)?;
+                writeln!(f, "Stmt - If {}", condition)?;
+                writeln!(f, "{}", block)?;
+
                 for elif in elseif {
                     writeln!(f, "Stmt - Else If/Elif {}", elif)?;
                 }
@@ -665,7 +671,8 @@ impl std::fmt::Display for Ast<'_> {
             Ast::While {
                 condition, block, ..
             } => {
-                writeln!(f, "Stmt - While {} {}", condition, block)
+                writeln!(f, "Stmt - While {}", condition)?;
+                writeln!(f, "{}", block)
             }
 
             // --- EXPRESSIONS ---
