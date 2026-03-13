@@ -541,7 +541,7 @@ impl std::fmt::Display for Ast<'_> {
                     .iter()
                     .try_for_each(|attr| write!(f, "{}", attr))?;
                 if let Some(body) = body {
-                    writeln!(f, "{}", body)?;
+                    writeln!(f, " {}", body)?;
                 }
                 Ok(())
             }
