@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::module::Module;
 use inkwell::targets::TargetMachine;
 
@@ -92,7 +91,7 @@ pub fn llvm_after_optimization(
 }
 
 #[inline]
-pub fn after_frontend(
+pub fn frontend_before(
     compiler: &mut ThrustCompiler,
     file: &CompilationUnit,
     emited: Emited,
@@ -101,7 +100,48 @@ pub fn after_frontend(
 
     if options.contains_printable(PrintableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {
-            if thrustc_lexer::printer::print_to_stdout_fine(tokens, file.get_name()).is_err() {
+            if printers::tokens::print_to_stdout_fine(options, tokens, file.get_name()).is_err() {
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    if options.contains_printable(PrintableUnit::UnCheckedAst) {
+        if let Emited::Ast(ast) = emited {
+            if printers::ast::print_to_stdout_pretty(options, ast, file.get_name()).is_err() {
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    false
+}
+
+#[inline]
+pub fn frontend_after(
+    compiler: &mut ThrustCompiler,
+    file: &CompilationUnit,
+    emited: Emited,
+) -> bool {
+    let options: &CompilerOptions = compiler.get_options();
+
+    if options.contains_printable(PrintableUnit::Tokens) {
+        if let Emited::Tokens(tokens) = emited {
+            if printers::tokens::print_to_stdout_fine(options, tokens, file.get_name()).is_err() {
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    if options.contains_printable(PrintableUnit::Ast) {
+        if let Emited::Ast(ast) = emited {
+            if printers::ast::print_to_stdout_pretty(options, ast, file.get_name()).is_err() {
                 return false;
             }
 

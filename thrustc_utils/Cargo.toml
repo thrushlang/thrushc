@@ -11,3 +11,4 @@ repository.workspace = true
 
 [dependencies]
 walkdir = "2.5.0"
+fastrand = "2.3.0"

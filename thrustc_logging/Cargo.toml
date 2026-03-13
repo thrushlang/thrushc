@@ -8,3 +8,5 @@ rust-version.workspace = true
 
 [dependencies]
 colored = "3.0.0"
+
+thrustc_constants = { path = "../thrustc_constants"}

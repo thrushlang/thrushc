@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(clippy::result_unit_err)]
 
 use thrustc_diagnostician::Diagnostician;
@@ -35,7 +34,6 @@ mod character;
 mod identifier;
 mod lex;
 mod number;
-pub mod printer;
 mod string;
 
 #[derive(Debug)]

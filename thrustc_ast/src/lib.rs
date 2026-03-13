@@ -17,7 +17,6 @@
 
 */
 
-
 use std::sync::atomic::AtomicU64;
 
 use thrustc_attributes::ThrustAttributes;

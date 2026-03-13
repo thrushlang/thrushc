@@ -7,6 +7,10 @@ version.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+colored = "3.0.0"
+arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
+clipboard = { version = "0.5.0", optional = true }
+
 thrustc_span = { path = "../thrustc_span" }
 thrustc_typesystem = { path = "../thrustc_typesystem" }
 thrustc_attributes = { path = "../thrustc_attributes" }
@@ -15,8 +19,7 @@ thrustc_mir = { path = "../thrustc_mir" }
 thrustc_token = { path = "../thrustc_token" }
 thrustc_errors = { path = "../thrustc_errors" }
 thrustc_token_type = { path = "../thrustc_token_type" }
-
-arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
+thrustc_logging = { path = "../thrustc_logging" }
 
 [features]
 fuzz = ["dep:arbitrary"]

@@ -17,7 +17,6 @@
 
 */
 
-
 use colored::Colorize;
 use thrustc_options::CompilerOptions;
 
@@ -46,12 +45,17 @@ pub fn ansi(options: &CompilerOptions) {
 pub fn report_comptime(
     options: &CompilerOptions,
     start_time: std::time::Instant,
-    comptime: (u128, u128, u128, u128),
+    compile_time: (
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+    ),
 ) -> ! {
-    let thrustc_time: u128 = comptime.0;
-    let frontend_time: u128 = comptime.1;
-    let backend_time: u128 = comptime.2;
-    let linking_time: u128 = comptime.3;
+    let thrustc_time_ms: f64 = compile_time.0.as_millis_f64();
+    let frontend_time_ms: f64 = compile_time.1.as_millis_f64();
+    let backend_time_ms: f64 = compile_time.2.as_millis_f64();
+    let linking_time_ms: f64 = compile_time.3.as_millis_f64();
 
     let backend_identifier: &str = if options.llvm() { "LLVM" } else { "GCC" };
 
@@ -63,13 +67,13 @@ pub fn report_comptime(
                 .custom_color((141, 141, 142))
                 .bold(),
             "Compile time report".custom_color((141, 141, 142)).bold(),
-            format_args!("Thrust Compiler: {}ms", thrustc_time),
-            format_args!("Thrust Compiler - Frontend: {}ms", frontend_time),
+            format_args!("Thrust Compiler: {}ms", thrustc_time_ms),
+            format_args!("Thrust Compiler - Frontend: {}ms", frontend_time_ms),
             format_args!(
                 "Thrust Compiler - Backend ({}): {}ms",
-                backend_identifier, backend_time
+                backend_identifier, backend_time_ms
             ),
-            format_args!("Linking: {}ms", linking_time),
+            format_args!("Linking: {}ms", linking_time_ms),
             "─────────────────────────────────────────"
                 .custom_color((141, 141, 142))
                 .bold(),
@@ -91,5 +95,5 @@ pub fn report_comptime(
         ),
     );
 
-    std::process::exit(0);
+    std::process::exit(thrustc_constants::SUCCESFUL_CODE);
 }

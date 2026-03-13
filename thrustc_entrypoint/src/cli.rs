@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(clippy::upper_case_acronyms)]
 
 use std::path::Path;
@@ -111,7 +110,7 @@ impl CommandLine {
             args: processed_args,
             current: 0,
             position: CommandLinePosition::default(),
-            validation_cache: HashMap::with_capacity(100),
+            validation_cache: HashMap::with_capacity(u8::MAX as usize),
         };
 
         command_line.build();
@@ -119,7 +118,7 @@ impl CommandLine {
     }
 
     fn preprocess_args(args: &mut Vec<String>) -> Vec<String> {
-        let mut processed: Vec<String> = Vec::with_capacity(args.len() * 2);
+        let mut processed: Vec<String> = Vec::with_capacity(args.len().saturating_mul(2));
 
         if !args.is_empty() {
             args.remove(0);
@@ -1201,6 +1200,8 @@ impl CommandLine {
             "asm" => PrintableUnit::Assembly,
             "unopt-asm" => PrintableUnit::UnOptAssembly,
             "tokens" => PrintableUnit::Tokens,
+            "unchecked-ast" => PrintableUnit::UnCheckedAst,
+            "ast" => PrintableUnit::Ast,
 
             any => {
                 self.report_error(&format!("Unknown print option: '{}'.", any));
@@ -1218,11 +1219,12 @@ impl CommandLine {
             "unopt-llvm-ir" => EmitableUnit::UnOptLLVMIR,
             "unopt-asm" => EmitableUnit::UnOptAssembly,
             "obj" => EmitableUnit::Object,
-            "ast" => EmitableUnit::AST,
+            "unchecked-ast" => EmitableUnit::UnCheckedAst,
+            "ast" => EmitableUnit::Ast,
             "tokens" => EmitableUnit::Tokens,
 
             any => {
-                self.report_error(&format!("Unknown emit option: '{}'.", any));
+                self.report_error(&format!("Unknown emission option: '{}'.", any));
             }
         }
     }

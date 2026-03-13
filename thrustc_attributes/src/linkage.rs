@@ -17,9 +17,7 @@
 
 */
 
-
 use inkwell::module::Linkage;
-use std::fmt::Display;
 
 #[cfg(feature = "fuzz")]
 use arbitrary::Arbitrary;
@@ -106,7 +104,7 @@ impl ThrustLinkage {
     }
 }
 
-impl Display for ThrustLinkage {
+impl std::fmt::Display for ThrustLinkage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ThrustLinkage::Standard => write!(f, "standard"),

@@ -17,7 +17,6 @@
 
 */
 
-
 pub mod backends;
 pub mod linkage;
 
@@ -86,7 +85,8 @@ pub enum EmitableUnit {
     Object,
     UnOptAssembly,
     Assembly,
-    AST,
+    UnCheckedAst,
+    Ast,
     Tokens,
 }
 
@@ -97,6 +97,8 @@ pub enum PrintableUnit {
     UnOptAssembly,
     Assembly,
     Tokens,
+    UnCheckedAst,
+    Ast,
 }
 
 #[derive(Debug)]

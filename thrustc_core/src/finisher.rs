@@ -17,7 +17,6 @@
 
 */
 
-
 use colored::Colorize;
 
 use inkwell::memory_buffer::MemoryBuffer;
@@ -36,7 +35,7 @@ pub fn archive_compilation(
     file_time: std::time::Instant,
     file: &CompilationUnit,
 ) -> Result<(), ()> {
-    compiler.thrustc_time += file_time.elapsed();
+    compiler.thrustc_time = compiler.thrustc_time.saturating_add(file_time.elapsed());
 
     thrustc_logging::write(
         thrustc_logging::OutputIn::Stdout,
@@ -57,7 +56,7 @@ pub fn archive_compilation_module_jit(
     file_time: std::time::Instant,
     file: &CompilationUnit,
 ) -> Result<either::Either<MemoryBuffer, ()>, ()> {
-    compiler.thrustc_time += file_time.elapsed();
+    compiler.thrustc_time = compiler.thrustc_time.saturating_add(file_time.elapsed());
 
     thrustc_logging::write(
         thrustc_logging::OutputIn::Stdout,
@@ -105,7 +104,7 @@ pub fn llvm_obj_compilation(
             thrustc_logging::print_backend_panic(
                 thrustc_logging::LoggingType::BackendPanic,
                 &format!(
-                    "'{}' cannot be emited as object file because LLVM: '{}'.",
+                    "'{}' cannot be emited as object file '{}'.",
                     obj_file_path.display(),
                     error
                 ),

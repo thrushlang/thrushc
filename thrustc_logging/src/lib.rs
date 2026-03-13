@@ -17,7 +17,6 @@
 
 */
 
-
 use colored::{ColoredString, Colorize};
 use std::io::{self, Write};
 
@@ -60,13 +59,13 @@ pub fn print_error(ltype: LoggingType, msg: &str) {
 #[inline]
 pub fn print_frontend_panic(ltype: LoggingType, msg: &str) -> ! {
     let _ = io::stderr().write_all(format!("\n{} {}", ltype.as_styled(), msg).as_bytes());
-    std::process::exit(1);
+    std::process::exit(thrustc_constants::FAILURE_CODE);
 }
 
 #[inline]
 pub fn print_critical_error(ltype: LoggingType, msg: &str) -> ! {
     let _ = io::stderr().write_all(format!("{} {}\n", ltype.as_styled(), msg).as_bytes());
-    std::process::exit(1);
+    std::process::exit(thrustc_constants::FAILURE_CODE);
 }
 
 #[inline]
@@ -116,7 +115,7 @@ pub fn print_backend_panic(ltype: LoggingType, msg: &str) -> ! {
         .as_bytes(),
     );
 
-    std::process::exit(1);
+    std::process::exit(thrustc_constants::FAILURE_CODE);
 }
 
 #[inline]
@@ -135,7 +134,7 @@ pub fn print_backend_bug(ltype: LoggingType, msg: &str) -> ! {
         .as_bytes(),
     );
 
-    std::process::exit(1);
+    std::process::exit(thrustc_constants::FAILURE_CODE);
 }
 
 #[inline]

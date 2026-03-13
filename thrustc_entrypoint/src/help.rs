@@ -17,7 +17,6 @@
 
 */
 
-
 use colored::Colorize;
 
 pub fn show_help() -> ! {
@@ -204,7 +203,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-emit".custom_color((141, 141, 142)).bold(),
-            "llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|ast|tokens",
+            "llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|unchecked-ast|ast|tokens",
             "Compile the code into specified representation.",
         ),
     );
@@ -215,7 +214,7 @@ pub fn show_help() -> ! {
             "{} {} [{}] {}\n",
             "•".bold(),
             "-print".custom_color((141, 141, 142)).bold(),
-            "llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens",
+            "llvm-ir|unopt-llvm-ir|asm|unopt-asm|unchecked-ast|ast|tokens",
             "Displays the final compilation on standard output.",
         ),
     );
@@ -870,7 +869,7 @@ pub fn show_emission_help() -> ! {
             "-emit value; -emit=value; -emit:value;"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|ast|tokens",
+            "llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|tokens|unchecked-ast|ast",
         ),
     );
 
@@ -949,8 +948,8 @@ pub fn show_emission_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "ast".custom_color((141, 141, 142)).bold(),
-            "Emit the compiler abstract syntax tree.",
+            "tokens".custom_color((141, 141, 142)).bold(),
+            "Emit the compiler lexical tokens.",
         ),
     );
 
@@ -959,12 +958,22 @@ pub fn show_emission_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "tokens".custom_color((141, 141, 142)).bold(),
-            "Emit the compiler lexical tokens.",
+            "unchecked-ast".custom_color((141, 141, 142)).bold(),
+            "Emit the raw Abstract Syntax Tree before semantic analysis.",
         ),
     );
 
-    std::process::exit(1)
+    thrustc_logging::write(
+        thrustc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "ast".custom_color((141, 141, 142)).bold(),
+            "Emit the validated and typed Abstract Syntax Tree.",
+        ),
+    );
+
+    std::process::exit(thrustc_constants::FAILURE_CODE)
 }
 
 pub fn show_printing_help() -> ! {
@@ -977,7 +986,7 @@ pub fn show_printing_help() -> ! {
             "-print value; -print=value; -print:value;"
                 .custom_color((141, 141, 142))
                 .bold(),
-            "llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens",
+            "llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens|unchecked-ast|ast",
         ),
     );
 
@@ -1031,7 +1040,27 @@ pub fn show_printing_help() -> ! {
         ),
     );
 
-    std::process::exit(1)
+    thrustc_logging::write(
+        thrustc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "unchecked-ast".custom_color((141, 141, 142)).bold(),
+            "Print the raw Abstract Syntax Tree before semantic analysis.",
+        ),
+    );
+
+    thrustc_logging::write(
+        thrustc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "ast".custom_color((141, 141, 142)).bold(),
+            "Print the typed and validated Abstract Syntax Tree.",
+        ),
+    );
+
+    std::process::exit(thrustc_constants::FAILURE_CODE)
 }
 
 pub fn show_code_model_help() -> ! {
@@ -1088,7 +1117,7 @@ pub fn show_code_model_help() -> ! {
         ),
     );
 
-    std::process::exit(1)
+    std::process::exit(thrustc_constants::FAILURE_CODE)
 }
 
 pub fn show_reloc_model_help() -> ! {
@@ -1135,7 +1164,7 @@ pub fn show_reloc_model_help() -> ! {
         ),
     );
 
-    std::process::exit(1)
+    std::process::exit(thrustc_constants::FAILURE_CODE)
 }
 
 pub fn show_symbol_linkage_strategy_help() -> ! {
@@ -1202,7 +1231,7 @@ pub fn show_symbol_linkage_strategy_help() -> ! {
         ),
     );
 
-    std::process::exit(1)
+    std::process::exit(thrustc_constants::FAILURE_CODE)
 }
 
 pub fn show_sanitizer_help() -> ! {
@@ -1269,7 +1298,7 @@ pub fn show_sanitizer_help() -> ! {
         ),
     );
 
-    std::process::exit(1)
+    std::process::exit(thrustc_constants::FAILURE_CODE)
 }
 
 pub fn show_denormal_floating_point_behavior_help() -> ! {
@@ -1330,7 +1359,7 @@ pub fn show_denormal_floating_point_behavior_help() -> ! {
         ),
     );
 
-    std::process::exit(1)
+    std::process::exit(thrustc_constants::FAILURE_CODE)
 }
 
 pub fn show_denormal_floating_point_32_bits_behavior_help() -> ! {
@@ -1391,5 +1420,5 @@ pub fn show_denormal_floating_point_32_bits_behavior_help() -> ! {
         ),
     );
 
-    std::process::exit(1)
+    std::process::exit(thrustc_constants::FAILURE_CODE)
 }

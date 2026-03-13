@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
@@ -403,7 +402,7 @@ pub fn validate<'type_checker>(
                     CompilationIssueCode::E0008,
                     format!(
                         "An value with memory address was expected, got '{}'. Try to allocate it.",
-                        value
+                        value_type
                     ),
                     None,
                     value.get_span(),

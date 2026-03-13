@@ -29,6 +29,7 @@ thrustc_options = { path = "../thrustc_options" }
 thrustc_semantic = { path = "../thrustc_semantic" }
 thrustc_llvm_codegen = { path = "../thrustc_llvm_codegen" }
 thrustc_logging = { path = "../thrustc_logging" }
+thrustc_utils = { path = "../thrustc_utils" }
 
 [features]
 default = ["llvm_backend_static", "cbindgen_static", "utils"]

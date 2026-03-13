@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 
@@ -31,6 +30,7 @@ use arbitrary::Arbitrary;
 
 pub mod assembler;
 pub mod callconventions;
+mod impls;
 pub mod linkage;
 pub mod traits;
 
@@ -402,42 +402,6 @@ impl ThrustAttributeComparatorExtensions for ThrustAttribute {
             ThrustAttribute::Thunk(..) => ThrustAttributeComparator::Thunk,
             ThrustAttribute::Constructor(..) => ThrustAttributeComparator::Constructor,
             ThrustAttribute::Destructor(..) => ThrustAttributeComparator::Destructor,
-        }
-    }
-}
-
-impl std::fmt::Display for ThrustAttribute {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ThrustAttribute::AlwaysInline(..) => write!(f, "@alwaysinline"),
-            ThrustAttribute::NoInline(..) => write!(f, "@noinline"),
-            ThrustAttribute::InlineHint(..) => write!(f, "@inline"),
-            ThrustAttribute::Linkage(linkage, ..) => write!(f, "@linkage(\"{}\")", linkage),
-            ThrustAttribute::Extern(name, ..) => write!(f, "@extern(\"{}\")", name),
-            ThrustAttribute::Convention(convention, ..) => {
-                write!(f, "@convention(\"{}\")", convention)
-            }
-            ThrustAttribute::Stack(..) => write!(f, "@stack"),
-            ThrustAttribute::Heap(..) => write!(f, "@heap"),
-            ThrustAttribute::Public(..) => write!(f, "@public"),
-            ThrustAttribute::StrongStack(..) => write!(f, "@strongstack"),
-            ThrustAttribute::WeakStack(..) => write!(f, "@weakstack"),
-            ThrustAttribute::SafeStack(..) => write!(f, "@safestack"),
-            ThrustAttribute::PreciseFloats(..) => write!(f, "@precisefp"),
-            ThrustAttribute::MinSize(..) => write!(f, "@minsize"),
-            ThrustAttribute::Hot(..) => write!(f, "@hot"),
-            ThrustAttribute::Ignore(..) => write!(f, "@ignore"),
-            ThrustAttribute::NoUnwind(..) => write!(f, "@nounwind"),
-            ThrustAttribute::AsmThrow(..) => write!(f, "@asmthrow"),
-            ThrustAttribute::AsmSyntax(..) => write!(f, "@asmsyntax"),
-            ThrustAttribute::AsmSideEffects(..) => write!(f, "@asmeffects"),
-            ThrustAttribute::AsmAlignStack(..) => write!(f, "@asmalingstack"),
-            ThrustAttribute::Packed(..) => write!(f, "@packed"),
-            ThrustAttribute::OptFuzzing(..) => write!(f, "@optfuzzing"),
-            ThrustAttribute::Pure(..) => write!(f, "@pure"),
-            ThrustAttribute::Thunk(..) => write!(f, "@thunk"),
-            ThrustAttribute::Constructor(..) => write!(f, "@constructor"),
-            ThrustAttribute::Destructor(..) => write!(f, "@destructor"),
         }
     }
 }

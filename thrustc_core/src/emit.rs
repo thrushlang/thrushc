@@ -17,12 +17,11 @@
 
 */
 
-
 use inkwell::module::Module;
 use inkwell::targets::TargetMachine;
 use thrustc_options::{CompilationUnit, CompilerOptions, EmitableUnit, Emited};
 
-use crate::{ThrustCompiler, emitters, interrupt};
+use crate::{ThrustCompiler, emitters, interrupt, printers};
 
 pub fn llvm_after_optimization(
     compiler: &mut ThrustCompiler,
@@ -163,7 +162,7 @@ pub fn llvm_before_optimization(
     Ok(false)
 }
 
-pub fn after_frontend(
+pub fn frontend_before(
     compiler: &mut ThrustCompiler,
     build_dir: &std::path::Path,
     file: &CompilationUnit,
@@ -173,7 +172,7 @@ pub fn after_frontend(
 
     if compiler_options.contains_emitable(EmitableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {
-            if thrustc_lexer::printer::print_to_file(tokens, build_dir, file.get_name()).is_err() {
+            if printers::tokens::print_to_file(tokens, build_dir, file.get_name()).is_err() {
                 return false;
             }
 
@@ -181,12 +180,42 @@ pub fn after_frontend(
         }
     }
 
-    if compiler_options.contains_emitable(EmitableUnit::AST) {
-        if let Emited::Ast(stmts) = emited {
-            let _ = std::fs::write(
-                build_dir.join(format!("{}.ast", file.get_name())),
-                format!("{:#?}", stmts),
-            );
+    if compiler_options.contains_emitable(EmitableUnit::UnCheckedAst) {
+        if let Emited::Ast(ast) = emited {
+            if printers::ast::print_to_file_pretty(ast, build_dir, file.get_name()).is_err() {
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    false
+}
+
+pub fn frontend_after(
+    compiler: &mut ThrustCompiler,
+    build_dir: &std::path::Path,
+    file: &CompilationUnit,
+    emited: Emited,
+) -> bool {
+    let compiler_options: &CompilerOptions = compiler.get_options();
+
+    if compiler_options.contains_emitable(EmitableUnit::Tokens) {
+        if let Emited::Tokens(tokens) = emited {
+            if printers::tokens::print_to_file(tokens, build_dir, file.get_name()).is_err() {
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    if compiler_options.contains_emitable(EmitableUnit::Ast) {
+        if let Emited::Ast(ast) = emited {
+            if printers::ast::print_to_file_pretty(ast, build_dir, file.get_name()).is_err() {
+                return false;
+            }
 
             return true;
         }

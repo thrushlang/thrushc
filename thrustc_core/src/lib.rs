@@ -17,7 +17,6 @@
 
 */
 
-
 mod cleaner;
 mod emit;
 pub mod emitters;
@@ -97,7 +96,14 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 }
 
 impl ThrustCompiler<'_> {
-    pub fn compile(&mut self) -> (u128, u128, u128, u128) {
+    pub fn compile(
+        &mut self,
+    ) -> (
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+    ) {
         if self.get_options().llvm() {
             Target::initialize_all(&InitializationConfig::default());
 
@@ -114,16 +120,23 @@ impl ThrustCompiler<'_> {
         }
 
         (
-            self.thrustc_time.as_millis(),
-            self.thrustc_frontend_time.as_millis(),
-            self.thrustc_backend_time.as_millis(),
-            self.linking_time.as_millis(),
+            self.thrustc_time,
+            self.thrustc_frontend_time,
+            self.thrustc_backend_time,
+            self.linking_time,
         )
     }
 }
 
 impl<'thrustc> ThrustCompiler<'thrustc> {
-    fn compile_aot_llvm(&mut self) -> (u128, u128, u128, u128) {
+    fn compile_aot_llvm(
+        &mut self,
+    ) -> (
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+    ) {
         cleaner::auto_clean(self.get_options());
 
         let mut interrumped: bool = false;
@@ -138,10 +151,10 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             || self.get_compiled_files().is_empty()
         {
             return (
-                self.thrustc_time.as_millis(),
-                self.thrustc_frontend_time.as_millis(),
-                self.thrustc_backend_time.as_millis(),
-                self.linking_time.as_millis(),
+                self.thrustc_time,
+                self.thrustc_frontend_time,
+                self.thrustc_backend_time,
+                self.linking_time,
             );
         }
 
@@ -157,10 +170,10 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         }
 
         (
-            self.thrustc_time.as_millis(),
-            self.thrustc_frontend_time.as_millis(),
-            self.thrustc_backend_time.as_millis(),
-            self.linking_time.as_millis(),
+            self.thrustc_time,
+            self.thrustc_frontend_time,
+            self.thrustc_backend_time,
+            self.linking_time,
         )
     }
 
@@ -179,11 +192,11 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         self.update_thrushc_frontend_time(frontend_time.elapsed());
 
-        if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
+        if print::frontend_before(self, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation(self, file_time, file);
         }
 
-        if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
+        if emit::frontend_before(self, build_dir, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation(self, file_time, file);
         }
 
@@ -216,6 +229,14 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         let ast: &[Ast] = parser_context.get_ast();
 
+        if emit::frontend_before(self, build_dir, file, Emited::Ast(ast)) {
+            return finisher::archive_compilation(self, file_time, file);
+        }
+
+        if print::frontend_before(self, file, Emited::Ast(ast)) {
+            return finisher::archive_compilation(self, file_time, file);
+        }
+
         let semantic_analysis_throwed_errors: bool =
             SemanticAnalysis::new(ast, file, self.options).analyze(parser_throwed_errors);
 
@@ -240,7 +261,11 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             return interrupt::archive_compilation_unit(self, file, file_time);
         }
 
-        if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
+        if print::frontend_after(self, file, Emited::Ast(ast)) {
+            return finisher::archive_compilation(self, file_time, file);
+        }
+
+        if emit::frontend_after(self, build_dir, file, Emited::Ast(ast)) {
             return finisher::archive_compilation(self, file_time, file);
         }
 
@@ -403,7 +428,14 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 }
 
 impl<'thrustc> ThrustCompiler<'thrustc> {
-    fn compile_jit_llvm(&mut self) -> (u128, u128, u128, u128) {
+    fn compile_jit_llvm(
+        &mut self,
+    ) -> (
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+    ) {
         cleaner::auto_clean(self.get_options());
 
         let context: Context = Context::create();
@@ -432,10 +464,10 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             || modules.is_empty()
         {
             return (
-                self.thrustc_time.as_millis(),
-                self.thrustc_frontend_time.as_millis(),
-                self.thrustc_backend_time.as_millis(),
-                self.linking_time.as_millis(),
+                self.thrustc_time,
+                self.thrustc_frontend_time,
+                self.thrustc_backend_time,
+                self.linking_time,
             );
         }
 
@@ -455,10 +487,10 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
                     );
 
                     return (
-                        self.thrustc_time.as_millis(),
-                        self.thrustc_frontend_time.as_millis(),
-                        self.thrustc_backend_time.as_millis(),
-                        self.linking_time.as_millis(),
+                        self.thrustc_time,
+                        self.thrustc_frontend_time,
+                        self.thrustc_backend_time,
+                        self.linking_time,
                     );
                 }
             };
@@ -472,15 +504,15 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         } else {
             thrustc_logging::print_warn(
                 thrustc_logging::LoggingType::Warning,
-                "Nothing to compile for the JIT compiler. Skipping compilation.",
+                "There's nothing to compile for the JIT compiler. Skipping compilation.",
             );
         }
 
         (
-            self.thrustc_time.as_millis(),
-            self.thrustc_frontend_time.as_millis(),
-            self.thrustc_backend_time.as_millis(),
-            self.linking_time.as_millis(),
+            self.thrustc_time,
+            self.thrustc_frontend_time,
+            self.thrustc_backend_time,
+            self.linking_time,
         )
     }
 
@@ -502,11 +534,11 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         self.update_thrushc_frontend_time(frontend_time.elapsed());
 
-        if print::after_frontend(self, file, Emited::Tokens(&tokens)) {
+        if print::frontend_before(self, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
 
-        if emit::after_frontend(self, build_dir, file, Emited::Tokens(&tokens)) {
+        if emit::frontend_before(self, build_dir, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
 
@@ -539,6 +571,14 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         let ast: &[Ast] = parser_context.get_ast();
 
+        if print::frontend_before(self, file, Emited::Ast(ast)) {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        if emit::frontend_before(self, build_dir, file, Emited::Ast(ast)) {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
         let semantic_analysis_throwed_errors: bool =
             SemanticAnalysis::new(ast, file, self.options).analyze(parser_throwed_errors);
 
@@ -563,7 +603,11 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             return interrupt::archive_compilation_unit_jit(self, file, file_time);
         }
 
-        if emit::after_frontend(self, build_dir, file, Emited::Ast(ast)) {
+        if print::frontend_after(self, file, Emited::Ast(ast)) {
+            return finisher::archive_compilation_module_jit(self, file_time, file);
+        }
+
+        if emit::frontend_after(self, build_dir, file, Emited::Ast(ast)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
 

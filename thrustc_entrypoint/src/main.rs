@@ -17,6 +17,7 @@
 
 */
 
+#![feature(duration_millis_float)]
 
 mod cli;
 mod console;
@@ -39,8 +40,12 @@ fn main() -> ! {
 
     let start_time: std::time::Instant = std::time::Instant::now();
 
-    let comptime: (u128, u128, u128, u128) =
-        ThrustCompiler::new(options.get_files(), options).compile();
+    let compile_time: (
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+    ) = ThrustCompiler::new(options.get_files(), options).compile();
 
-    console::report_comptime(options, start_time, comptime)
+    console::report_comptime(options, start_time, compile_time)
 }
