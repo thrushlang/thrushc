@@ -80,8 +80,8 @@ Compiler flags:
 • -cpu-enable-features [sse2;cx16;sahf;tbm] It specify to enable certain CPU features to use.
 • -cpu-disable-features [sse2;cx16;sahf;tbm] It specify to disable certain CPU features to use.
 • -cpu-features [+sse2,+cx16,+sahf,-tbm] It overwrites the CPU features to use.
-• -emit [llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|ast|tokens] Compile the code into specified representation.
-• -print [llvm-ir|unopt-llvm-ir|asm|unopt-asm|tokens] Displays the final compilation on standard output.
+• -emit [llvm-bc|llvm-ir|asm|unopt-llvm-ir|unopt-llvm-bc|unopt-asm|obj|unchecked-ast|ast|tokens] Compile the code into specified representation.
+• -print [llvm-ir|unopt-llvm-ir|asm|unopt-asm|unchecked-ast|ast|tokens] Displays the final compilation on standard output.
 • -opt [O0|O1|O2|O3|Os|Oz] Optimization level.
 • -jit Enable the use of the JIT compiler for code execution.
 • -jit-libc [path/to/libc.so] Specify the C runtime to link for code execution via the JIT compiler.
