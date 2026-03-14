@@ -17,11 +17,13 @@
 
 */
 
+#![feature(duration_millis_float)]
 #![allow(clippy::upper_case_acronyms)]
 
 use std::path::Path;
 use std::path::PathBuf;
 
+use colored::Colorize;
 use thrustc_logging::LoggingType;
 use thrustc_logging::OutputIn;
 use thrustc_options::CompilerOptions;
@@ -43,7 +45,7 @@ use thrustc_options::backends::llvm::debug::DwarfVersion;
 use thrustc_options::backends::llvm::passes::LLVMModificatorPasses;
 use thrustc_options::linkage::LinkingCompilersConfiguration;
 
-use crate::help;
+mod help;
 
 #[derive(Debug)]
 pub struct CommandLine {
@@ -1418,4 +1420,82 @@ impl CommandLine {
     pub fn get_mut_options(&mut self) -> &mut CompilerOptions {
         &mut self.options
     }
+}
+
+#[inline]
+pub fn set_up_basic() {
+    colored::control::set_override(false);
+}
+
+#[inline]
+pub fn set_up_ansi(options: &CompilerOptions) {
+    if options.need_ansi_colors() {
+        #[cfg(target_os = "windows")]
+        {
+            colored::control::set_virtual_terminal(true);
+            colored::control::set_override(true);
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            colored::control::set_override(true);
+        }
+    }
+}
+
+#[inline]
+pub fn report_comptime(
+    options: &CompilerOptions,
+    start_time: std::time::Instant,
+    compile_time: (
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+        std::time::Duration,
+    ),
+) -> ! {
+    let thrustc_time_ms: f64 = compile_time.0.as_millis_f64();
+    let frontend_time_ms: f64 = compile_time.1.as_millis_f64();
+    let backend_time_ms: f64 = compile_time.2.as_millis_f64();
+    let linking_time_ms: f64 = compile_time.3.as_millis_f64();
+
+    let backend_identifier: &str = if options.llvm() { "LLVM" } else { "GCC" };
+
+    thrustc_logging::write(
+        thrustc_logging::OutputIn::Stdout,
+        &format!(
+            "\n{}\n{}\n\n{}\n{}\n{}\n{}\n{}\n",
+            "─────────────────────────────────────────"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Compile time report".custom_color((141, 141, 142)).bold(),
+            format_args!("Thrust Compiler: {}ms", thrustc_time_ms),
+            format_args!("Thrust Compiler - Frontend: {}ms", frontend_time_ms),
+            format_args!(
+                "Thrust Compiler - Backend ({}): {}ms",
+                backend_identifier, backend_time_ms
+            ),
+            format_args!("Linking: {}ms", linking_time_ms),
+            "─────────────────────────────────────────"
+                .custom_color((141, 141, 142))
+                .bold(),
+        ),
+    );
+
+    thrustc_logging::write(
+        thrustc_logging::OutputIn::Stdout,
+        &format!(
+            "\r{} {}",
+            "Finished".custom_color((141, 141, 142)).bold(),
+            format!(
+                "{}.{}s",
+                start_time.elapsed().as_secs(),
+                start_time.elapsed().as_millis()
+            )
+            .custom_color((141, 141, 142))
+            .bold(),
+        ),
+    );
+
+    std::process::exit(thrustc_constants::SUCCESFUL_CODE);
 }

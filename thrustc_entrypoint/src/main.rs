@@ -17,26 +17,19 @@
 
 */
 
-#![feature(duration_millis_float)]
-
-mod cli;
-mod console;
-mod help;
-
-use thrustc_heap_allocator::ThrustCompilerHeapAllocator;
-
 #[global_allocator]
-static GLOBAL: ThrustCompilerHeapAllocator = ThrustCompilerHeapAllocator;
+static GLOBAL: thrustc_heap_allocator::ThrustCompilerHeapAllocator =
+    thrustc_heap_allocator::ThrustCompilerHeapAllocator;
 
 fn main() -> ! {
     use thrustc_core::ThrustCompiler;
 
-    console::set_up_basic();
+    thrustc_cli::set_up_basic();
 
-    let cli: cli::CommandLine = cli::CommandLine::parse(std::env::args().collect());
+    let cli: thrustc_cli::CommandLine = thrustc_cli::CommandLine::parse(std::env::args().collect());
     let options: &thrustc_options::CompilerOptions = cli.get_options();
 
-    console::ansi(options);
+    thrustc_cli::set_up_ansi(options);
 
     let start_time: std::time::Instant = std::time::Instant::now();
 
@@ -47,5 +40,5 @@ fn main() -> ! {
         std::time::Duration,
     ) = ThrustCompiler::new(options.get_files(), options).compile();
 
-    console::report_comptime(options, start_time, compile_time)
+    thrustc_cli::report_comptime(options, start_time, compile_time)
 }

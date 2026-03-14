@@ -31,6 +31,7 @@ pub fn llvm_after_optimization(
     file: &CompilationUnit,
     file_time: std::time::Instant,
 ) -> Result<bool, ()> {
+
     let compiler_options: &CompilerOptions = compiler.get_options();
 
     if compiler_options.contains_emitable(EmitableUnit::LLVMBitcode) {
@@ -44,7 +45,7 @@ pub fn llvm_after_optimization(
             thrustc_logging::print_error(
                 thrustc_logging::LoggingType::Error,
                 &format!(
-                    "Failed to emit LLVM bitcode for file '{}'.",
+                    "Failed t oemit LLVM bitcode for file '{}'.",
                     file.get_path().display()
                 ),
             );

@@ -749,29 +749,36 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 }
 
 impl ThrustCompiler<'_> {
+    #[inline]
     pub fn update_thrushc_time(&mut self, elapsed: Duration) {
         self.thrustc_time = elapsed;
     }
 
+    #[inline]
     pub fn update_thrushc_frontend_time(&mut self, elapsed: Duration) {
         self.thrustc_frontend_time = elapsed;
     }
 
+    #[inline]
     pub fn update_thrushc_backend_time(&mut self, elapsed: Duration) {
         self.thrustc_backend_time = elapsed;
     }
 }
+
 impl ThrustCompiler<'_> {
+    #[inline]
     pub fn get_compiled_files(&self) -> &[std::path::PathBuf] {
         &self.ready
     }
 
+    #[inline]
     pub fn get_options(&self) -> &CompilerOptions {
         self.options
     }
 }
 
 impl ThrustCompiler<'_> {
+    #[inline]
     pub fn add_compiled_unit(&mut self, path: std::path::PathBuf) {
         self.ready.push(path);
     }

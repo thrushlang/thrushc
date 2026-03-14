@@ -25,5 +25,6 @@ thrustc_span = { path = "../thrustc_span" }
 thrustc_errors = { path = "../thrustc_errors" }
 thrustc_reader = { path = "../thrustc_reader" }
 thrustc_constants = { path = "../thrustc_constants" }
+thrustc_cli = { path = "../thrustc_cli" }
 
 
