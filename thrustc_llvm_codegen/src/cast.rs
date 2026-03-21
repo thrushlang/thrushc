@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(unnecessary_transmutes)]
 
 use inkwell::builder::Builder;
@@ -494,7 +493,7 @@ pub fn compile<'ctx>(
             }
         }
 
-        (_, to) if to.is_ptr_type() => {
+        (_, to) if to.is_ptr_like_type() => {
             let value: BasicValueEnum = codegen::compile_as_ptr(context, expr, None);
 
             if value.is_pointer_value() {

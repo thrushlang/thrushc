@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, metadata::CastingMetadata};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -675,11 +674,32 @@ pub fn check_type_cast(
             Type::Ptr(..) | Type::Addr(..),
         ) if is_allocated => Ok(()),
 
-        (Type::Const(inner_type, ..), to) => self::check_type_cast(to, inner_type, metadata, span),
-
-        (Type::Ptr(..) | Type::Addr(..), Type::Const(inner_type, ..)) => {
-            self::check_type_cast(inner_type, from_type, metadata, span)
+        (Type::Const(from_type, ..), cast_type) => {
+            self::check_type_cast(from_type, cast_type, metadata, span)
         }
+
+        (from_type, Type::Const(cast_type, ..)) => {
+            self::check_type_cast(cast_type, from_type, metadata, span)
+        }
+
+        (
+            Type::Array {
+                base_type: from_type,
+                ..
+            },
+            Type::Array {
+                base_type: target_type,
+                ..
+            },
+        ) if from_type == target_type => Ok(()),
+
+        (
+            Type::FixedArray(from_type, ..),
+            Type::Array {
+                base_type: target_type,
+                ..
+            },
+        ) if from_type == target_type && is_allocated => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0032,

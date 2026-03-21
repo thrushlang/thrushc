@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -80,7 +79,7 @@ pub fn lower_precedence<'parser>(
             let content: &str = tk.get_lexeme();
             let span: Span = tk.get_span();
 
-            let cstring_type: Type = Type::Const(
+            let mut cstring_type: Type = Type::Const(
                 Type::Array {
                     base_type: Type::Char(span).into(),
                     infered_type: None,
@@ -89,6 +88,68 @@ pub fn lower_precedence<'parser>(
                 .into(),
                 span,
             );
+
+            let at_variable_position: bool = ctx
+                .get_control_context()
+                .get_position()
+                .is_variable_position();
+
+            let at_static_position: bool = ctx
+                .get_control_context()
+                .get_position()
+                .is_static_position();
+
+            let at_constant_position: bool = ctx
+                .get_control_context()
+                .get_position()
+                .is_constant_position();
+
+            let at_expression_position: bool = ctx
+                .get_control_context()
+                .get_position()
+                .is_expression_position();
+
+            {
+                if at_variable_position {
+                    cstring_type = Type::Array {
+                        base_type: Type::Char(span).into(),
+                        infered_type: None,
+                        span,
+                    };
+                }
+
+                if at_static_position {
+                    cstring_type = Type::Array {
+                        base_type: Type::Char(span).into(),
+                        infered_type: None,
+                        span,
+                    };
+                }
+
+                if at_constant_position {
+                    cstring_type = Type::Const(
+                        Type::Array {
+                            base_type: Type::Char(span).into(),
+                            infered_type: None,
+                            span,
+                        }
+                        .into(),
+                        span,
+                    );
+                }
+
+                if at_expression_position {
+                    cstring_type = Type::Const(
+                        Type::Array {
+                            base_type: Type::Char(span).into(),
+                            infered_type: None,
+                            span,
+                        }
+                        .into(),
+                        span,
+                    );
+                }
+            }
 
             let source: &[u8] = content.as_bytes();
 
@@ -149,10 +210,10 @@ pub fn lower_precedence<'parser>(
 
             let parsed_integer: (Type, u64) = reinterpret::integer(integer, span)?;
 
-            let integer_type: Type = parsed_integer.0;
-            let integer_value: u64 = parsed_integer.1;
+            let kind: Type = parsed_integer.0;
+            let value: u64 = parsed_integer.1;
 
-            Ast::new_integer(integer_type, integer_value, false, span)
+            Ast::new_integer(kind, value, false, span)
         }
 
         TokenType::Float => {
@@ -163,10 +224,10 @@ pub fn lower_precedence<'parser>(
 
             let parsed_float: (Type, f64) = reinterpret::floating_point(float, span)?;
 
-            let float_type: Type = parsed_float.0;
-            let float_value: f64 = parsed_float.1;
+            let kind: Type = parsed_float.0;
+            let value: f64 = parsed_float.1;
 
-            Ast::new_float(float_type, float_value, false, span)
+            Ast::new_float(kind, value, false, span)
         }
 
         TokenType::Identifier => {
@@ -220,7 +281,7 @@ pub fn lower_precedence<'parser>(
             let previous: &Token = ctx.advance()?;
             let span: Span = previous.get_span();
 
-            ctx.add_error(CompilationIssue::Error(
+            ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 format!(
                     "It is not recognized '{}' as an expression at this point.",

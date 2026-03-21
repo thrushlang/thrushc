@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast, NodeId,
     metadata::{
@@ -88,7 +87,7 @@ pub fn build_reference<'parser>(
                         });
                     }
                     Err(error) => {
-                        ctx.add_error(error);
+                        ctx.add_error_report(error);
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
@@ -125,7 +124,7 @@ pub fn build_reference<'parser>(
                     }
 
                     Err(error) => {
-                        ctx.add_error(error);
+                        ctx.add_error_report(error);
 
                         return Ok(Ast::invalid_ast(span));
                     }
@@ -155,7 +154,7 @@ pub fn build_reference<'parser>(
                     }
 
                     Err(error) => {
-                        ctx.add_error(error);
+                        ctx.add_error_report(error);
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
@@ -189,7 +188,7 @@ pub fn build_reference<'parser>(
                     }
 
                     Err(error) => {
-                        ctx.add_error(error);
+                        ctx.add_error_report(error);
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
@@ -266,14 +265,14 @@ pub fn build_reference<'parser>(
                     }
 
                     Err(error) => {
-                        ctx.add_error(error);
+                        ctx.add_error_report(error);
 
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
             }
 
-            ctx.add_error(CompilationIssue::Error(
+            ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0028,
                 format!("'{}' not found.", name),
                 None,
@@ -284,7 +283,7 @@ pub fn build_reference<'parser>(
         }
 
         Err(error) => {
-            ctx.add_error(error);
+            ctx.add_error_report(error);
 
             Ok(Ast::invalid_ast(span))
         }

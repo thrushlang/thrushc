@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, metadata::StaticMetadata};
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -28,7 +27,9 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, attributes, expressions, modificators, typegen};
+use crate::{
+    ParserContext, attributes, control::ParserPosition, expressions, modificators, typegen,
+};
 
 pub fn build_static<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -114,7 +115,12 @@ pub fn build_static<'parser>(
             "Expected '='.".into(),
         )?;
 
+        ctx.get_mut_control_context()
+            .set_position(ParserPosition::Static);
+
         let value: Ast = expressions::build_expression(ctx)?;
+
+        ctx.get_mut_control_context().reset_position();
 
         let metadata: StaticMetadata = StaticMetadata::new(
             true,

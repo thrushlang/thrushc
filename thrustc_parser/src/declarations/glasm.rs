@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast, NodeId,
     traits::{AstCodeLocation, AstStandardExtensions},
@@ -63,7 +62,7 @@ pub fn build_global_assembler<'parser>(
     )?;
 
     if !assembler.is_cnstring() {
-        ctx.add_error(CompilationIssue::Error(
+        ctx.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             "Expected string literal value with null termination.".into(),
             None,

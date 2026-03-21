@@ -17,9 +17,6 @@
 
 */
 
-
-use thrustc_span::Span;
-
 #[derive(Debug)]
 pub struct CodePosition {
     line: usize,

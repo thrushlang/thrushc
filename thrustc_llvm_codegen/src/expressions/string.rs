@@ -17,7 +17,6 @@
 
 */
 
-
 use std::path::PathBuf;
 
 use inkwell::values::PointerValue;
@@ -32,7 +31,7 @@ use thrustc_span::Span;
 
 use crate::abort;
 use crate::context::LLVMCodeGenContext;
-use crate::obfuscation;
+use crate::utils;
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -62,8 +61,8 @@ pub fn compile<'ctx>(
     let cstr_type: ArrayType = llvm_context.i8_type().array_type(fixed_cstr_size);
 
     let cstr_name: String = format!(
-        "cstr{}",
-        obfuscation::generate_string(context, obfuscation::SHORT_RANGE_OBFUSCATION)
+        "str{}",
+        utils::generate_string(context, utils::SHORT_RANGE_OBFUSCATION)
     );
 
     let cstr: GlobalValue =

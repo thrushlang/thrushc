@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
@@ -58,8 +57,10 @@ pub const SYNC_DECLARATIONS: [TokenType; 11] = [
 ];
 
 impl<'parser> ParserContext<'parser> {
-    pub fn sync(&mut self) {
-        if let Some(position) = self.get_control_ctx().get_sync_position() {
+    pub fn synchronize(&mut self) {
+        self.get_mut_control_context().reset_position();
+
+        if let Some(position) = self.get_control_context().get_sync_position() {
             match position {
                 ParserSyncPosition::Declaration => self::sync_with_declaration(self),
                 ParserSyncPosition::Statement => self::sync_with_statement(self),

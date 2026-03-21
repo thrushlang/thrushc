@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast, NodeId,
     data::{PropertyData, StructDataField, StructureData},
@@ -85,7 +84,7 @@ pub fn build_property<'parser>(
             })
         }
         Err(error) => {
-            ctx.add_error(error);
+            ctx.add_error_report(error);
 
             Ok(Ast::invalid_ast(span))
         }

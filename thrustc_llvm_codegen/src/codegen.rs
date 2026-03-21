@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(clippy::collapsible_if)]
 
 use inkwell::AddressSpace;
@@ -44,7 +43,7 @@ use crate::metadata::LLVMMetadata;
 use crate::statements::{conditional, forloop, infloop, whileloop};
 use crate::traits::{AstLLVMGetType, LLVMFunctionExtensions};
 use crate::{
-    abort, block, builtins, cast, codegen, expressions, memory, memstack, memstatic, typegeneration,
+    abort, block, builtins, cast, codegen, expressions, memory, stack, r#static, typegeneration,
 };
 
 use thrustc_ast::Ast;
@@ -133,7 +132,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                             kind,
                         );
 
-                        let ptr: PointerValue = memstatic::allocate_global_constant(
+                        let ptr: PointerValue = r#static::allocate_global_constant(
                             self.get_mut_context(),
                             ascii_name,
                             llvm_type,
@@ -188,7 +187,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                                 kind,
                             );
 
-                            let ptr: PointerValue = memstatic::allocate_global_static(
+                            let ptr: PointerValue = r#static::allocate_global_static(
                                 self.get_mut_context(),
                                 ascii_name,
                                 llvm_type,
@@ -210,7 +209,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                             let llvm_type: inkwell::types::BasicTypeEnum =
                                 typegeneration::compile_from(self.get_mut_context(), kind);
 
-                            let ptr: PointerValue = memstatic::allocate_global_static(
+                            let ptr: PointerValue = r#static::allocate_global_static(
                                 self.get_mut_context(),
                                 ascii_name,
                                 llvm_type,
@@ -417,7 +416,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let metadata: LocalMetadata = localvar.5;
                     let span: Span = localvar.6;
 
-                    let ptr: PointerValue = memstack::local_variable(
+                    let ptr: PointerValue = stack::local_variable(
                         self.get_mut_context(),
                         ascii_name,
                         kind,
@@ -442,7 +441,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let metadata: LocalMetadata = localvar.5;
                     let span: Span = localvar.6;
 
-                    let ptr: PointerValue = memstack::local_variable(
+                    let ptr: PointerValue = stack::local_variable(
                         self.get_mut_context(),
                         ascii_name,
                         kind,
@@ -501,7 +500,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 let value: BasicValueEnum =
                     cast::try_cast_const(self.get_mut_context(), llvm_value, value_type, kind);
 
-                let ptr: PointerValue = memstatic::allocate_local_constant(
+                let ptr: PointerValue = r#static::allocate_local_constant(
                     self.get_mut_context(),
                     ascii_name,
                     llvm_type,
@@ -548,7 +547,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let value: BasicValueEnum =
                         cast::try_cast_const(self.get_mut_context(), llvm_value, value_type, kind);
 
-                    let ptr: PointerValue = memstatic::allocate_local_static(
+                    let ptr: PointerValue = r#static::allocate_local_static(
                         self.get_mut_context(),
                         ascii_name,
                         llvm_type,
@@ -569,7 +568,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let llvm_type: BasicTypeEnum =
                         typegeneration::compile_from(self.get_mut_context(), kind);
 
-                    let ptr: PointerValue = memstatic::allocate_local_static(
+                    let ptr: PointerValue = r#static::allocate_local_static(
                         self.get_mut_context(),
                         ascii_name,
                         llvm_type,
@@ -818,10 +817,10 @@ pub fn compile<'ctx>(
             .into(),
 
         Ast::CString { bytes, span, .. } => {
-            expressions::cstring::compile(context, bytes, true, *span).into()
+            expressions::string::compile(context, bytes, true, *span).into()
         }
         Ast::CNString { bytes, span, .. } => {
-            expressions::cstring::compile(context, bytes, false, *span).into()
+            expressions::string::compile(context, bytes, false, *span).into()
         }
 
         Ast::Char { byte, .. } => context
@@ -1073,10 +1072,10 @@ pub fn compile_constant<'ctx>(
         }
 
         Ast::CString { bytes, span, .. } => {
-            expressions::cstring::compile(context, bytes, true, *span).into()
+            expressions::string::compile(context, bytes, true, *span).into()
         }
         Ast::CNString { bytes, span, .. } => {
-            expressions::cstring::compile(context, bytes, false, *span).into()
+            expressions::string::compile(context, bytes, false, *span).into()
         }
 
         // Struct constructor handling

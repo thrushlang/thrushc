@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -47,7 +46,7 @@ pub fn build_fixed_array<'parser>(
 
     let span: Span = array_start_tk.get_span();
 
-    let infered_type: Option<Type> = ctx.get_type_ctx().get_infered_type();
+    let infered_type: Option<Type> = ctx.get_type_context().get_infered_type();
     let mut array_type: Type = Type::Void(span);
 
     let mut items: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
@@ -99,7 +98,7 @@ pub fn build_fixed_array<'parser>(
         let size: Result<u32, std::num::TryFromIntError> = u32::try_from(items.len());
 
         if size.is_err() {
-            ctx.add_error(CompilationIssue::Error(
+            ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 format!(
                     "Fixed array size is out of bounds, it is superior to '{}'.'",

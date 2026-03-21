@@ -17,7 +17,6 @@
 
 */
 
-
 pub mod block;
 pub mod conditional;
 pub mod controlflow;
@@ -38,7 +37,7 @@ use thrustc_token_type::TokenType;
 use crate::{ParserContext, control::ParserSyncPosition, expressions};
 
 pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
-    ctx.get_mut_control_ctx()
+    ctx.get_mut_control_context()
         .add_sync_position(ParserSyncPosition::Statement);
 
     let statement: Result<Ast<'parser>, CompilationIssue> = match &ctx.peek().kind {
@@ -63,7 +62,7 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         _ => Ok(expressions::build_expression(ctx)?),
     };
 
-    ctx.get_mut_control_ctx().pop_sync_position();
+    ctx.get_mut_control_context().pop_sync_position();
 
     statement
 }

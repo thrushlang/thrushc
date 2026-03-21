@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
@@ -69,9 +68,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
             ast,
             position: 0,
 
-            bugs: Vec::with_capacity(100),
-            errors: Vec::with_capacity(100),
-            warnings: Vec::with_capacity(100),
+            bugs: Vec::with_capacity(u8::MAX as usize),
+            errors: Vec::with_capacity(u8::MAX as usize),
+            warnings: Vec::with_capacity(u8::MAX as usize),
 
             context: TypeCheckerTypeContext::new(),
             table: TypeCheckerSymbolsTable::new(),
@@ -271,9 +270,15 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 let from_type: &Type = value.get_value_type()?;
 
+                let fixed_from_type: &Type = if !from_type.is_const_type() {
+                    &Type::Const(from_type.clone().into(), from_type.get_span())
+                } else {
+                    from_type
+                };
+
                 checking::check_types(
                     target_type,
-                    &Type::Const(from_type.clone().into(), from_type.get_span()),
+                    fixed_from_type,
                     Some(value),
                     None,
                     metadata,
@@ -310,8 +315,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     TypeCheckerExpressionMetadata::new(local_value.is_literal_value());
 
                 let local_value_type: &Type = local_value.get_value_type()?;
-                let is_ref_ptr_like_type: bool =
-                    local_value.is_reference() && local_value_type.is_ptr_like_type();
+                let is_ref_ptr_like_type: bool = local_value_type.is_ptr_like_type();
 
                 if is_ref_ptr_like_type {
                     let local_value_type_fixed_ptr: Type = Type::Ptr(

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, data::EnumData};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -93,7 +92,7 @@ pub fn build_enum<'parser>(
         } else {
             let span: Span = ctx.advance()?.get_span();
 
-            ctx.add_error(CompilationIssue::Error(
+            ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected identifier in enum field.".into(),
                 None,

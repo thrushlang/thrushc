@@ -17,11 +17,9 @@
 
 */
 
-
 pub mod array;
 pub mod binaryop;
 pub mod call;
-pub mod cstring;
 pub mod farray;
 pub mod floatingpoint;
 pub mod index;
@@ -29,5 +27,6 @@ pub mod indirectcall;
 pub mod inlineasm;
 pub mod integer;
 pub mod property;
+pub mod string;
 pub mod structure;
 pub mod unaryop;

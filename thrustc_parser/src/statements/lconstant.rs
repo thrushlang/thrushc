@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, metadata::ConstantMetadata};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -28,7 +27,9 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, attributes, expressions, modificators, typegen};
+use crate::{
+    ParserContext, attributes, control::ParserPosition, expressions, modificators, typegen,
+};
 
 pub fn build_const<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -74,7 +75,12 @@ pub fn build_const<'parser>(
         "Expected '='.".into(),
     )?;
 
+    ctx.get_mut_control_context()
+        .set_position(ParserPosition::Constant);
+
     let value: Ast = expressions::build_expression(ctx)?;
+
+    ctx.get_mut_control_context().reset_position();
 
     let metadata: ConstantMetadata =
         ConstantMetadata::new(false, thread_local, is_volatile, atomic_ord);
@@ -83,7 +89,7 @@ pub fn build_const<'parser>(
         ctx.get_mut_symbols()
             .new_constant(name, (const_type.clone(), attributes.clone()), span)?;
 
-        Ok(Ast::Const {
+        let constant: Ast<'_> = Ast::Const {
             name,
             ascii_name,
             kind: const_type,
@@ -93,7 +99,9 @@ pub fn build_const<'parser>(
             metadata,
             span,
             id: NodeId::new(),
-        })
+        };
+
+        Ok(constant)
     } else {
         Ok(Ast::invalid_ast(span))
     }

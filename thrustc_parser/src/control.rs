@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_typesystem::Type;
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -30,9 +29,21 @@ pub enum ParserSyncPosition {
     NoRelevant,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub enum ParserPosition {
+    Constant,
+    Static,
+    Variable,
+    Expression,
+
+    #[default]
+    NoRelevant,
+}
+
 #[derive(Debug)]
 pub struct ParserControlContext {
-    sync_position: Vec<ParserSyncPosition>,
+    position: ParserPosition,
+    synchronous_position: Vec<ParserSyncPosition>,
     expression_depth: u32,
 }
 
@@ -40,7 +51,8 @@ impl ParserControlContext {
     #[inline]
     pub fn new() -> Self {
         Self {
-            sync_position: Vec::with_capacity(u8::MAX as usize),
+            position: ParserPosition::NoRelevant,
+            synchronous_position: Vec::with_capacity(u8::MAX as usize),
             expression_depth: 0,
         }
     }
@@ -48,18 +60,28 @@ impl ParserControlContext {
 
 impl ParserControlContext {
     #[inline]
+    pub fn set_position(&mut self, position: ParserPosition) {
+        self.position = position;
+    }
+
+    #[inline]
+    pub fn reset_position(&mut self) {
+        self.position = ParserPosition::NoRelevant;
+    }
+
+    #[inline]
     pub fn add_sync_position(&mut self, other: ParserSyncPosition) {
-        self.sync_position.push(other);
+        self.synchronous_position.push(other);
     }
 
     #[inline]
     pub fn pop_sync_position(&mut self) {
-        self.sync_position.pop();
+        self.synchronous_position.pop();
     }
 
     #[inline]
     pub fn reset_sync_position(&mut self) {
-        self.sync_position.clear();
+        self.synchronous_position.clear();
     }
 
     #[inline]
@@ -76,12 +98,17 @@ impl ParserControlContext {
 impl ParserControlContext {
     #[inline]
     pub fn get_sync_position(&self) -> Option<&ParserSyncPosition> {
-        self.sync_position.last()
+        self.synchronous_position.last()
     }
 
     #[inline]
     pub fn get_expression_depth(&self) -> u32 {
         self.expression_depth
+    }
+
+    #[inline]
+    pub fn get_position(&self) -> ParserPosition {
+        self.position
     }
 }
 
@@ -111,5 +138,32 @@ impl ParserTypeContext {
     #[inline]
     pub fn reset_infered_types(&mut self) {
         self.infered_types.clear();
+    }
+}
+
+impl ParserPosition {
+    #[inline]
+    pub fn is_constant_position(&self) -> bool {
+        matches!(self, ParserPosition::Constant)
+    }
+
+    #[inline]
+    pub fn is_static_position(&self) -> bool {
+        matches!(self, ParserPosition::Static)
+    }
+
+    #[inline]
+    pub fn is_variable_position(&self) -> bool {
+        matches!(self, ParserPosition::Variable)
+    }
+
+    #[inline]
+    pub fn is_expression_position(&self) -> bool {
+        matches!(self, ParserPosition::Expression)
+    }
+
+    #[inline]
+    pub fn is_irrelevant_position(&self) -> bool {
+        matches!(self, ParserPosition::NoRelevant)
     }
 }

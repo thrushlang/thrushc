@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, builitins::ThrustBuiltin};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -45,7 +44,7 @@ pub fn build_builtin<'parser>(
         _ => {
             let span: Span = ctx.advance()?.get_span();
 
-            ctx.add_error(CompilationIssue::Error(
+            ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0003,
                 format!("Unknown '{}' compiler builtin.", span),
                 None,

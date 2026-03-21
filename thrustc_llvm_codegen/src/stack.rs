@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::PointerValue;
 use thrustc_attributes::ThrustAttributes;
@@ -28,7 +27,7 @@ use thrustc_typesystem::Type;
 use std::path::PathBuf;
 
 use crate::context::LLVMCodeGenContext;
-use crate::{abort, memheap, typegeneration};
+use crate::{abort, heap, typegeneration};
 
 pub fn local_variable<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -43,7 +42,7 @@ pub fn local_variable<'ctx>(
     context.mark_dbg_location(span);
 
     if attributes.has_heap_attr() {
-        memheap::try_alloc_at_heap(context, llvm_type, &name, span)
+        heap::try_alloc_at_heap(context, llvm_type, &name, span)
     } else {
         self::try_alloc_at_stack(context, llvm_type, &name, span)
     }

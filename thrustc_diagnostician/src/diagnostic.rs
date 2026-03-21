@@ -17,9 +17,6 @@
 
 */
 
-
-use std::usize;
-
 use colored::Colorize;
 
 use thrustc_logging::LoggingType;

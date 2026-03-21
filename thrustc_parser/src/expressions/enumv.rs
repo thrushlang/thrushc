@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, data::EnumData, traits::AstEnumFieldsDataExtensions};
 use thrustc_entities::parser::FoundSymbolId;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -74,7 +73,7 @@ pub fn build_enum_value<'parser>(
                             })
                         }
                         None => {
-                            ctx.add_error(CompilationIssue::Error(
+                            ctx.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0028,
                                 format!("'{}' not found as field member.", field_name),
                                 None,
@@ -86,14 +85,14 @@ pub fn build_enum_value<'parser>(
                     }
                 }
                 Err(error) => {
-                    ctx.add_error(error);
+                    ctx.add_error_report(error);
                     Ok(Ast::invalid_ast(span))
                 }
             }
         }
 
         Err(error) => {
-            ctx.add_error(error);
+            ctx.add_error_report(error);
             Ok(Ast::invalid_ast(span))
         }
     }

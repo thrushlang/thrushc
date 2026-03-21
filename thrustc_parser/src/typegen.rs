@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     data::StructureData,
@@ -324,7 +323,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         let size_type: &Type = size.get_value_type()?;
 
         if !size.is_integer() {
-            ctx.add_error(CompilationIssue::Error(
+            ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected literal integer value as a max size indicator.".into(),
                 None,
@@ -333,7 +332,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         }
 
         if !size_type.is_unsigned_integer_type() || !size_type.is_lesseq_unsigned32bit_integer() {
-            ctx.add_error(CompilationIssue::Error(
+            ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected unsigned integer value less than or equal to 32 bits.".into(),
                 None,
@@ -350,7 +349,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         let array_size: Result<u32, std::num::TryFromIntError> = u32::try_from(size);
 
         if array_size.is_err() {
-            ctx.add_error(CompilationIssue::Error(
+            ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected any unsigned 32 bits integer value.".into(),
                 None,

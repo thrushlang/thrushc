@@ -17,9 +17,6 @@
 
 */
 
-
-use either::Either;
-
 use thrustc_ast::Ast;
 use thrustc_diagnostician::Diagnostician;
 use thrustc_entities::parser::{AssemblerFunctions, Functions};
@@ -98,17 +95,22 @@ impl<'parser> Parser<'parser> {
         declarations::parse_forward(&mut ctx);
 
         while !ctx.is_eof() {
-            match declarations::parse(&mut ctx) {
-                Ok(ast) => ctx.add_ast(ast),
-                Err(error) => {
-                    if error.is_bug() {
-                        ctx.add_bug(error);
-                    } else {
-                        ctx.add_error(error);
-                    }
+            let top_node: Result<Ast<'_>, CompilationIssue> = declarations::parse(&mut ctx);
 
-                    ctx.sync()
+            if let Ok(ast) = top_node {
+                ctx.add_ast_node(ast);
+                continue;
+            }
+
+            if let Err(error) = top_node {
+                if error.is_bug() {
+                    ctx.add_bug_report(error);
+                } else {
+                    ctx.add_error_report(error);
                 }
+
+                ctx.synchronize();
+                continue;
             }
         }
 
@@ -367,7 +369,7 @@ impl<'parser> ParserContext<'parser> {
 
 impl<'parser> ParserContext<'parser> {
     pub fn enter_expression(&mut self) -> Result<(), CompilationIssue> {
-        let control: &mut ParserControlContext = self.get_mut_control_ctx();
+        let control: &mut ParserControlContext = self.get_mut_control_context();
 
         control.increase_expression_depth();
 
@@ -387,8 +389,9 @@ impl<'parser> ParserContext<'parser> {
         Ok(())
     }
 
+    #[inline]
     pub fn leave_expression(&mut self) {
-        self.get_mut_control_ctx().decrease_expression_depth();
+        self.get_mut_control_context().decrease_expression_depth();
     }
 }
 
@@ -416,12 +419,12 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn get_control_ctx(&self) -> &ParserControlContext {
+    pub fn get_control_context(&self) -> &ParserControlContext {
         &self.control_ctx
     }
 
     #[inline]
-    pub fn get_type_ctx(&self) -> &ParserTypeContext {
+    pub fn get_type_context(&self) -> &ParserTypeContext {
         &self.type_ctx
     }
 
@@ -443,12 +446,12 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn get_mut_control_ctx(&mut self) -> &mut ParserControlContext {
+    pub fn get_mut_control_context(&mut self) -> &mut ParserControlContext {
         &mut self.control_ctx
     }
 
     #[inline]
-    pub fn get_mut_type_ctx(&mut self) -> &mut ParserTypeContext {
+    pub fn get_mut_type_context(&mut self) -> &mut ParserTypeContext {
         &mut self.type_ctx
     }
 
@@ -460,17 +463,17 @@ impl<'parser> ParserContext<'parser> {
 
 impl<'parser> ParserContext<'parser> {
     #[inline]
-    pub fn add_ast(&mut self, ast: Ast<'parser>) {
+    pub fn add_ast_node(&mut self, ast: Ast<'parser>) {
         self.ast.push(ast);
     }
 
     #[inline]
-    pub fn add_error(&mut self, error: CompilationIssue) {
+    pub fn add_error_report(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 
     #[inline]
-    pub fn add_bug(&mut self, error: CompilationIssue) {
+    pub fn add_bug_report(&mut self, error: CompilationIssue) {
         self.bugs.push(error);
     }
 }

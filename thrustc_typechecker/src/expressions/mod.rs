@@ -397,7 +397,7 @@ pub fn validate<'type_checker>(
         Ast::Deref { value, kind, .. } => {
             let value_type: &Type = value.get_value_type()?;
 
-            if !value_type.is_ptr_type() {
+            if !value_type.is_ptr_like_type() {
                 typechecker.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
                     format!(

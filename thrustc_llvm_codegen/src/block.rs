@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::basic_block::BasicBlock;
 use inkwell::context::Context;
 use inkwell::values::FunctionValue;
@@ -25,8 +24,8 @@ use inkwell::values::FunctionValue;
 use thrustc_span::Span;
 
 use crate::context::LLVMCodeGenContext;
-use crate::obfuscation;
 use crate::traits::LLVMFunctionExtensions;
+use crate::utils;
 
 #[inline]
 pub fn move_terminator_to_end(context: &mut LLVMCodeGenContext, span: Span) {
@@ -56,8 +55,7 @@ pub fn append_block<'ctx>(
 ) -> BasicBlock<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let obfuscated_name: &str =
-        &obfuscation::generate_string(context, obfuscation::SHORT_RANGE_OBFUSCATION);
+    let obfuscated_name: &str = &utils::generate_string(context, utils::SHORT_RANGE_OBFUSCATION);
 
     llvm_context.append_basic_block(function, obfuscated_name)
 }

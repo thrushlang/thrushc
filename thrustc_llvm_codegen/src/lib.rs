@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 
 use crate::{codegen::LLVMCodegen, context::LLVMCodeGenContext, metadata::LLVMMetadata};
@@ -25,7 +24,7 @@ use crate::{codegen::LLVMCodegen, context::LLVMCodeGenContext, metadata::LLVMMet
 mod abort;
 mod anchor;
 mod atomic;
-mod attrbuilder;
+mod attributebuilder;
 mod block;
 mod brancher;
 mod builtins;
@@ -35,17 +34,16 @@ pub mod context;
 mod debug;
 mod expressions;
 mod globals;
+mod heap;
 mod impls;
 pub mod jit;
-mod memheap;
 mod memory;
-mod memstack;
-mod memstatic;
 mod metadata;
-mod obfuscation;
 pub mod optimizer;
 mod predicates;
+mod stack;
 mod statements;
+mod r#static;
 mod table;
 mod targettriple;
 mod traits;

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -35,11 +34,11 @@ pub mod glenum;
 pub mod glstatic;
 pub mod glstructure;
 pub mod import;
-pub mod import_c;
+pub mod importc;
 pub mod intrinsic;
 
 pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
-    ctx.get_mut_control_ctx()
+    ctx.get_mut_control_context()
         .add_sync_position(ParserSyncPosition::Declaration);
 
     let declaration: Result<Ast<'parser>, CompilationIssue> = match ctx.peek().get_type() {
@@ -67,7 +66,7 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         }
     };
 
-    ctx.get_mut_control_ctx().pop_sync_position();
+    ctx.get_mut_control_context().pop_sync_position();
 
     declaration
 }

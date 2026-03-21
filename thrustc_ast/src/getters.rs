@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
@@ -193,7 +192,7 @@ impl AstGetType for Ast<'_> {
 
             _ => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected a valid value to determinate the type.".into(),
+                "Expected a value, not anything else.".into(),
                 None,
                 self.get_span(),
             )),

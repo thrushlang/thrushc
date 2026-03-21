@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, data::ConstructorData, traits::AstStructureDataExtensions};
 use thrustc_entities::parser::{FoundSymbolId, Struct};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -94,7 +93,7 @@ pub fn build_constructor<'parser>(
                             )?;
 
                             if !object.contains_field(field_name) {
-                                ctx.add_error(CompilationIssue::Error(
+                                ctx.add_error_report(CompilationIssue::Error(
                                     CompilationIssueCode::E0001,
                                     "Expected existing field name.".into(),
                                     None,
@@ -105,7 +104,7 @@ pub fn build_constructor<'parser>(
                             }
 
                             if count >= required {
-                                ctx.add_error(CompilationIssue::Error(
+                                ctx.add_error_report(CompilationIssue::Error(
                                     CompilationIssueCode::E0026,
                                     format!(
                                         "Expected '{}' fields, not '{}' fields.",
@@ -189,7 +188,7 @@ pub fn build_constructor<'parser>(
                     })
                 }
                 Err(error) => {
-                    ctx.add_error(error);
+                    ctx.add_error_report(error);
 
                     Ok(Ast::invalid_ast(span))
                 }
@@ -197,7 +196,7 @@ pub fn build_constructor<'parser>(
         }
 
         Err(error) => {
-            ctx.add_error(error);
+            ctx.add_error_report(error);
             Ok(Ast::invalid_ast(span))
         }
     }

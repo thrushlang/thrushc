@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(clippy::too_many_arguments)]
 
 use inkwell::AddressSpace;
@@ -39,10 +38,10 @@ use thrustc_llvm_attributes::LLVMAttributeComparator;
 use thrustc_llvm_attributes::LLVMAttributes;
 use thrustc_llvm_attributes::traits::LLVMAttributesExtensions;
 
-use crate::attrbuilder::AttributeBuilder;
-use crate::attrbuilder::LLVMAttributeApplicant;
+use crate::attributebuilder::AttributeBuilder;
+use crate::attributebuilder::LLVMAttributeApplicant;
 use crate::context::LLVMCodeGenContext;
-use crate::obfuscation;
+use crate::utils;
 
 fn generate_name(
     context: &LLVMCodeGenContext,
@@ -64,7 +63,7 @@ fn generate_name(
     format!(
         "{}.{}{}",
         prefix,
-        obfuscation::generate_string(context, obfuscation::SHORT_RANGE_OBFUSCATION),
+        utils::generate_string(context, utils::SHORT_RANGE_OBFUSCATION),
         base_name
     )
 }

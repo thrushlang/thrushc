@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_entities::Intrinsic;
 use thrustc_llvm_attributes::LLVMAttribute;
@@ -28,8 +27,8 @@ use thrustc_llvm_callconventions::LLVMCallConvention;
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
 
-use crate::attrbuilder::AttributeBuilder;
-use crate::attrbuilder::LLVMAttributeApplicant;
+use crate::attributebuilder::AttributeBuilder;
+use crate::attributebuilder::LLVMAttributeApplicant;
 use crate::context::LLVMCodeGenContext;
 use crate::typegeneration;
 use crate::types::LLVMFunction;

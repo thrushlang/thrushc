@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast, NodeId,
     traits::{AstCodeLocation, AstGetType},
@@ -79,7 +78,7 @@ pub fn build_call<'parser>(
                 match intrinsic {
                     Ok(intrinsic) => crate::traits::IntrinsicExtensions::get_type(&intrinsic),
                     Err(error) => {
-                        ctx.add_error(error);
+                        ctx.add_error_report(error);
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
@@ -96,7 +95,7 @@ pub fn build_call<'parser>(
                     }
 
                     Err(error) => {
-                        ctx.add_error(error);
+                        ctx.add_error_report(error);
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
@@ -108,7 +107,7 @@ pub fn build_call<'parser>(
                 match function {
                     Ok(function) => crate::traits::FunctionExtensions::get_type(&function),
                     Err(error) => {
-                        ctx.add_error(error);
+                        ctx.add_error_report(error);
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
@@ -124,7 +123,7 @@ pub fn build_call<'parser>(
         }
 
         Err(error) => {
-            ctx.add_error(error);
+            ctx.add_error_report(error);
             Ok(Ast::invalid_ast(span))
         }
     }

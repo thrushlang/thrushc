@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_entities::AssemblerFunction;
 use thrustc_llvm_attributes::LLVMAttribute;
@@ -30,13 +29,13 @@ use thrustc_typesystem::Type;
 use thrustc_typesystem::traits::TypeIsExtensions;
 
 use crate::abort;
-use crate::attrbuilder::AttributeBuilder;
-use crate::attrbuilder::LLVMAttributeApplicant;
+use crate::attributebuilder::AttributeBuilder;
+use crate::attributebuilder::LLVMAttributeApplicant;
 use crate::block;
 use crate::context::LLVMCodeGenContext;
-use crate::obfuscation;
 use crate::typegeneration;
 use crate::types::LLVMFunction;
+use crate::utils;
 
 use inkwell::InlineAsmDialect;
 use inkwell::basic_block::BasicBlock;
@@ -93,7 +92,7 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
     } else {
         format!(
             "__asm_fn_{}_{}",
-            obfuscation::generate_string(context, obfuscation::LONG_RANGE_OBFUSCATION),
+            utils::generate_string(context, utils::LONG_RANGE_OBFUSCATION),
             ascii_name
         )
     };
