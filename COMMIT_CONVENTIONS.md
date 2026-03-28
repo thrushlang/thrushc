@@ -6,9 +6,7 @@ There is a simple guide of standard conventions to follow in order to delivery a
 
 ### Title
 
-It needs to be detailed. It can be include a lot of technical slang.
-
-The base of a well designed Github commit title always will be and needs a specific this syntax as:
+It needs to be detailed. It can be include a lot of technical slang. The base of a well designed Github commit title always will be and needs a specific syntax as:
 
 #### Title - features
 
@@ -26,7 +24,7 @@ Valid locations:
 
 Example:
 
-`feat(llvm_backend) Adding support for TLS Thread priority.`
+`feat(llvm_backend)` Adding support for TLS Thread priority.
 
 #### Title - fixes
 
@@ -44,7 +42,7 @@ Any consecutive location written to the next one needs to be follow for a COMMA 
 
 Example:
 
-`fix(frontend) Fixing several issues on the abstract syntax analyzer.`
+`fix(frontend)` Fixing several issues on the abstract syntax analyzer.
 
 #### Title - Combinatory
 
