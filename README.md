@@ -34,7 +34,7 @@ $ cd thrustc
 
 Now you need to have Rust installed with a recent version.
 
-- \>= **[Rust](https://www.rust-lang.org/)** (v1.18.5) 
+- \>= [Rust](https://www.rust-lang.org/) (v1.18.5) 
 - Rust 2024 Edition
 
 Now you need to compile the compiler with Rust. 
@@ -143,11 +143,11 @@ Other compiler flags:
 
 The language syntax is under construction at the same time as the compiler. It may be outdated compared to the compiler, as the latter progresses more rapidly. This will be normalized once a valid and sufficiently stable beta is released.
 
-**[Thrust Programming Language - General Syntax](https://github.com/thrustlang/syntax)**
+[Thrust Programming Language - General Syntax](https://github.com/thrustlang/syntax)
 
 ## LLVM
 
-The LLVM backend infrastructure is the default code generator for the **[Thrust Programming Language](https://github.com/thrustlang/)**. It offers full scope and portability across many architectures or targets.
+The LLVM backend infrastructure is the default code generator for the [Thrust Programming Language](https://github.com/thrustlang/). It offers full scope and portability across many architectures or targets.
 
 ### LLVM Version
 
