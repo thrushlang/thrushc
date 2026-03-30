@@ -17,7 +17,6 @@
 
 */
 
-
 #[derive(Debug, Clone, Copy)]
 pub struct ScoperContext {
     loop_depth: u32,
@@ -37,12 +36,12 @@ impl ScoperContext {
 impl ScoperContext {
     #[inline]
     pub fn enter_loop(&mut self) {
-        self.loop_depth += 1;
+        self.loop_depth = self.loop_depth.saturating_add(1);
     }
 
     #[inline]
     pub fn leave_loop(&mut self) {
-        self.loop_depth -= 1;
+        self.loop_depth = self.loop_depth.saturating_sub(1);
     }
 
     #[inline]

@@ -24,16 +24,29 @@ use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::metadata::TypeCheckerExpressionMetadata;
+use crate::{context::TypeCheckerControlContext, metadata::TypeCheckerNodeMetadata};
 
 pub fn check_types(
     lhs: &Type,
     rhs: &Type,
     expr: Option<&Ast>,
     operator: Option<&TokenType>,
-    metadata: TypeCheckerExpressionMetadata,
+    metadata: TypeCheckerNodeMetadata,
     span: Span,
+
+    control_context: &mut TypeCheckerControlContext,
 ) -> Result<(), CompilationIssue> {
+    control_context.increase_checking_depth();
+
+    if control_context.get_checking_depth() >= thrustc_constants::COMPILER_TOO_MANY_TYPE_DEPTH {
+        return Err(CompilationIssue::Error(
+            CompilationIssueCode::E0037,
+            "Too many type depth, the expression exceeds type checking bounds!".into(),
+            None,
+            span,
+        ));
+    }
+
     let error: CompilationIssue = CompilationIssue::Error(
         CompilationIssueCode::E0020,
         format!("Expected '{}' type, got '{}' type.", lhs, rhs),
@@ -47,7 +60,15 @@ pub fn check_types(
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, None, Some(operator), metadata, span);
+        return self::check_types(
+            lhs,
+            expression_type,
+            None,
+            Some(operator),
+            metadata,
+            span,
+            control_context,
+        );
     }
 
     if let Some(Ast::UnaryOp {
@@ -56,7 +77,15 @@ pub fn check_types(
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, None, Some(operator), metadata, span);
+        return self::check_types(
+            lhs,
+            expression_type,
+            None,
+            Some(operator),
+            metadata,
+            span,
+            control_context,
+        );
     }
 
     if let Some(Ast::Group {
@@ -65,7 +94,15 @@ pub fn check_types(
         ..
     }) = expr
     {
-        return self::check_types(lhs, expression_type, Some(node), None, metadata, span);
+        return self::check_types(
+            lhs,
+            expression_type,
+            Some(node),
+            None,
+            metadata,
+            span,
+            control_context,
+        );
     }
 
     match (lhs, rhs, operator) {
@@ -90,7 +127,7 @@ pub fn check_types(
 
             {
                 for (lhs, rhs) in lhs.iter().zip(rhs) {
-                    self::check_types(lhs, rhs, None, None, metadata, span)?;
+                    self::check_types(lhs, rhs, None, None, metadata, span, control_context)?;
                 }
             }
 
@@ -122,7 +159,7 @@ pub fn check_types(
 
             {
                 for (lhs, rhs) in lhs.iter().zip(rhs) {
-                    self::check_types(lhs, rhs, None, None, metadata, span)?;
+                    self::check_types(lhs, rhs, None, None, metadata, span, control_context)?;
                 }
             }
 
@@ -130,16 +167,16 @@ pub fn check_types(
         }
 
         (Type::Const(lhs, ..), Type::Const(rhs, ..), None) => {
-            self::check_types(lhs, rhs, None, None, metadata, span)
+            self::check_types(lhs, rhs, None, None, metadata, span, control_context)
         }
 
         (Type::Const(lhs, ..), rhs, None) => {
-            self::check_types(lhs, rhs, None, None, metadata, span)
+            self::check_types(lhs, rhs, None, None, metadata, span, control_context)
         }
 
         (Type::FixedArray(lhs, lhs_size, ..), Type::FixedArray(rhs, rhs_size, ..), None) => {
             if lhs_size == rhs_size {
-                self::check_types(lhs, rhs, None, None, metadata, span)?;
+                self::check_types(lhs, rhs, None, None, metadata, span, control_context)?;
                 return Ok(());
             }
 
@@ -147,7 +184,7 @@ pub fn check_types(
         }
 
         (Type::Array { base_type: lhs, .. }, Type::Array { base_type: rhs, .. }, None) => {
-            self::check_types(lhs, rhs, None, None, metadata, span)?;
+            self::check_types(lhs, rhs, None, None, metadata, span, control_context)?;
             Ok(())
         }
 
@@ -162,7 +199,7 @@ pub fn check_types(
             Type::Ptr(Some(rhs), ..),
             Some(TokenType::EqEq | TokenType::BangEq) | None,
         ) => {
-            self::check_types(lhs, rhs, expr, operator, metadata, span)?;
+            self::check_types(lhs, rhs, expr, operator, metadata, span, control_context)?;
             Ok(())
         }
 
@@ -514,7 +551,7 @@ pub fn check_types(
                 | TokenType::BAnd,
             )
             | None,
-        ) if metadata.is_literal() => Ok(()),
+        ) if metadata.is_literal_value() => Ok(()),
 
         (
             Type::S16(..),
@@ -535,7 +572,7 @@ pub fn check_types(
                 | TokenType::BAnd,
             )
             | None,
-        ) if metadata.is_literal() => Ok(()),
+        ) if metadata.is_literal_value() => Ok(()),
 
         (
             Type::S32(..),
@@ -556,7 +593,7 @@ pub fn check_types(
                 | TokenType::BAnd,
             )
             | None,
-        ) if metadata.is_literal() => Ok(()),
+        ) if metadata.is_literal_value() => Ok(()),
 
         (
             Type::S64(..),
@@ -577,7 +614,7 @@ pub fn check_types(
                 | TokenType::BAnd,
             )
             | None,
-        ) if metadata.is_literal() => Ok(()),
+        ) if metadata.is_literal_value() => Ok(()),
 
         (Type::Void(..), Type::Void(..), None) => Ok(()),
 
@@ -590,8 +627,21 @@ pub fn check_type_cast(
     from_type: &Type,
     metadata: &CastingMetadata,
     span: &Span,
+
+    control_context: &mut TypeCheckerControlContext,
 ) -> Result<(), CompilationIssue> {
     let is_allocated: bool = metadata.is_allocated();
+
+    control_context.increase_type_cast_depth();
+
+    if control_context.get_type_cast_depth() >= thrustc_constants::COMPILER_TOO_MANY_TYPE_DEPTH {
+        return Err(CompilationIssue::Error(
+            CompilationIssueCode::E0037,
+            "Too many type depth, the expression exceeds type checking bounds!".into(),
+            None,
+            *span,
+        ));
+    }
 
     match (from_type, cast_type) {
         (
@@ -675,11 +725,11 @@ pub fn check_type_cast(
         ) if is_allocated => Ok(()),
 
         (Type::Const(from_type, ..), cast_type) => {
-            self::check_type_cast(from_type, cast_type, metadata, span)
+            self::check_type_cast(from_type, cast_type, metadata, span, control_context)
         }
 
         (from_type, Type::Const(cast_type, ..)) => {
-            self::check_type_cast(cast_type, from_type, metadata, span)
+            self::check_type_cast(cast_type, from_type, metadata, span, control_context)
         }
 
         (

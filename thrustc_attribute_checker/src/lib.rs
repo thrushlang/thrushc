@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_attributes::{
     ThrustAttribute, ThrustAttributeComparator, ThrustAttributes,
@@ -54,8 +53,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
     ) -> Self {
         Self {
             ast,
-            errors: Vec::with_capacity(100),
-            warnings: Vec::with_capacity(100),
+            errors: Vec::with_capacity(u8::MAX as usize),
+            warnings: Vec::with_capacity(u8::MAX as usize),
 
             diagnostician: Diagnostician::new(file, options),
         }

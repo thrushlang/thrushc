@@ -17,22 +17,21 @@
 
 */
 
-
 #[derive(Debug, Clone, Copy)]
-pub struct TypeCheckerExpressionMetadata {
-    is_literal: bool,
+pub struct TypeCheckerNodeMetadata {
+    is_literal_value: bool,
 }
 
-impl TypeCheckerExpressionMetadata {
+impl TypeCheckerNodeMetadata {
     #[inline]
-    pub fn new(is_literal: bool) -> Self {
-        Self { is_literal }
+    pub fn new(is_literal_value: bool) -> Self {
+        Self { is_literal_value }
     }
 }
 
-impl TypeCheckerExpressionMetadata {
+impl TypeCheckerNodeMetadata {
     #[inline]
-    pub fn is_literal(&self) -> bool {
-        self.is_literal
+    pub fn is_literal_value(&self) -> bool {
+        self.is_literal_value
     }
 }

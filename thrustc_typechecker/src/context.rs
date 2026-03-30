@@ -17,13 +17,63 @@
 
 */
 
-
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
+
+#[derive(Debug, Clone, Copy)]
+pub struct TypeCheckerControlContext {
+    checking_depth: u32,
+    type_cast_depth: u32,
+}
+
+impl TypeCheckerControlContext {
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            checking_depth: 0,
+            type_cast_depth: 0,
+        }
+    }
+}
+
+impl TypeCheckerControlContext {
+    #[inline]
+    pub fn increase_checking_depth(&mut self) {
+        self.checking_depth = self.checking_depth.saturating_add(1)
+    }
+
+    #[inline]
+    pub fn reset_checking_depth(&mut self) {
+        self.checking_depth = 0;
+    }
+
+    #[inline]
+    pub fn increase_type_cast_depth(&mut self) {
+        self.type_cast_depth = self.type_cast_depth.saturating_add(1);
+    }
+
+    #[inline]
+    pub fn reset_type_cast_depth(&mut self) {
+        self.type_cast_depth = 0;
+    }
+}
+
+impl TypeCheckerControlContext {
+    #[inline]
+    pub fn get_checking_depth(&self) -> u32 {
+        self.checking_depth
+    }
+
+    #[inline]
+    pub fn get_type_cast_depth(&self) -> u32 {
+        self.type_cast_depth
+    }
+}
 
 #[derive(Debug)]
 pub struct TypeCheckerTypeContext<'type_checker> {
     current_function_type: Option<(&'type_checker Type, Span)>,
+    call_depth: u64,
 }
 
 impl<'type_checker> TypeCheckerTypeContext<'type_checker> {
@@ -31,6 +81,7 @@ impl<'type_checker> TypeCheckerTypeContext<'type_checker> {
     pub fn new() -> Self {
         Self {
             current_function_type: None,
+            call_depth: 0,
         }
     }
 }
@@ -45,9 +96,20 @@ impl<'type_checker> TypeCheckerTypeContext<'type_checker> {
     pub fn unset_current_function_type(&mut self) {
         self.current_function_type = None;
     }
+
+    #[inline]
+    pub fn increase_call_depth(&mut self) {
+        self.call_depth = self.call_depth.saturating_add(1)
+    }
+
+    #[inline]
+    pub fn reset_call_depth(&mut self) {
+        self.call_depth = 0;
+    }
 }
 
 impl<'type_checker> TypeCheckerTypeContext<'type_checker> {
+    #[inline]
     pub fn get_current_function_type(&self) -> Option<(&'type_checker Type, Span)> {
         self.current_function_type
     }

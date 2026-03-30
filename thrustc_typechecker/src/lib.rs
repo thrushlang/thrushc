@@ -32,7 +32,8 @@ use thrustc_typesystem::{
 };
 
 use crate::{
-    context::TypeCheckerTypeContext, metadata::TypeCheckerExpressionMetadata,
+    context::{TypeCheckerControlContext, TypeCheckerTypeContext},
+    metadata::TypeCheckerNodeMetadata,
     table::TypeCheckerSymbolsTable,
 };
 
@@ -53,7 +54,8 @@ pub struct TypeChecker<'type_checker> {
     errors: Vec<CompilationIssue>,
     warnings: Vec<CompilationIssue>,
 
-    context: TypeCheckerTypeContext<'type_checker>,
+    control_context: TypeCheckerControlContext,
+    type_context: TypeCheckerTypeContext<'type_checker>,
     table: TypeCheckerSymbolsTable<'type_checker>,
     diagnostician: Diagnostician,
 }
@@ -72,7 +74,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
             errors: Vec::with_capacity(u8::MAX as usize),
             warnings: Vec::with_capacity(u8::MAX as usize),
 
-            context: TypeCheckerTypeContext::new(),
+            control_context: TypeCheckerControlContext::new(),
+            type_context: TypeCheckerTypeContext::new(),
             table: TypeCheckerSymbolsTable::new(),
             diagnostician: Diagnostician::new(file, options),
         }
@@ -86,28 +89,43 @@ impl<'type_checker> TypeChecker<'type_checker> {
         while !self.is_eof() {
             let node: &Ast = self.peek();
 
-            if let Err(error) = self.analyze_decl(node) {
-                self.add_error(error);
+            match self.analyze_decl(node) {
+                Ok(()) => (),
+                Err(error) => {
+                    self.add_error(error);
+
+                    {
+                        let context: &mut TypeCheckerControlContext =
+                            self.get_mut_control_context();
+
+                        context.reset_checking_depth();
+                        context.reset_type_cast_depth();
+
+                        self.get_mut_type_context().unset_current_function_type();
+                    }
+                }
             }
 
             self.advance();
         }
 
-        self.warnings.iter().for_each(|warn| {
+        for warning in self.warnings.iter() {
             self.diagnostician
-                .dispatch_diagnostic(warn, thrustc_logging::LoggingType::Warning);
-        });
+                .dispatch_diagnostic(warning, thrustc_logging::LoggingType::Warning);
+        }
 
         if !self.errors.is_empty() || !self.bugs.is_empty() {
-            self.bugs.iter().for_each(|warn| {
-                self.diagnostician
-                    .dispatch_diagnostic(warn, thrustc_logging::LoggingType::Bug);
-            });
+            {
+                for bug in self.bugs.iter() {
+                    self.diagnostician
+                        .dispatch_diagnostic(bug, thrustc_logging::LoggingType::Bug);
+                }
 
-            self.errors.iter().for_each(|error| {
-                self.diagnostician
-                    .dispatch_diagnostic(error, thrustc_logging::LoggingType::Error);
-            });
+                for error in self.errors.iter() {
+                    self.diagnostician
+                        .dispatch_diagnostic(error, thrustc_logging::LoggingType::Error);
+                }
+            }
 
             true
         } else {
@@ -128,17 +146,25 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     for (_, target_type, expr) in data.iter() {
                         let from_type: &Type = expr.get_value_type()?;
 
-                        let metadata: TypeCheckerExpressionMetadata =
-                            TypeCheckerExpressionMetadata::new(expr.is_literal_value());
+                        let metadata: TypeCheckerNodeMetadata =
+                            TypeCheckerNodeMetadata::new(expr.is_literal_value());
 
-                        checking::check_types(
-                            target_type,
-                            from_type,
-                            Some(expr),
-                            None,
-                            metadata,
-                            expr.get_span(),
-                        )?;
+                        {
+                            let control_context: &mut TypeCheckerControlContext =
+                                self.get_mut_control_context();
+
+                            checking::check_types(
+                                target_type,
+                                from_type,
+                                Some(expr),
+                                None,
+                                metadata,
+                                expr.get_span(),
+                                control_context,
+                            )?;
+
+                            control_context.reset_checking_depth();
+                        }
 
                         self.analyze_expr(expr)?;
                     }
@@ -155,19 +181,27 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     return Ok(());
                 };
 
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(value.is_literal_value());
 
                 let value_type: &Type = value.get_value_type()?;
 
-                checking::check_types(
-                    static_type,
-                    value_type,
-                    Some(value),
-                    None,
-                    metadata,
-                    node.get_span(),
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
+
+                    checking::check_types(
+                        static_type,
+                        value_type,
+                        Some(value),
+                        None,
+                        metadata,
+                        node.get_span(),
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 self.analyze_expr(value)?;
 
@@ -178,19 +212,27 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 value,
                 ..
             } => {
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(value.is_literal_value());
 
                 let from_type: &Type = value.get_value_type()?;
 
-                checking::check_types(
-                    target_type,
-                    &Type::Const(from_type.clone().into(), from_type.get_span()),
-                    Some(value),
-                    None,
-                    metadata,
-                    node.get_span(),
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
+
+                    checking::check_types(
+                        target_type,
+                        &Type::Const(from_type.clone().into(), from_type.get_span()),
+                        Some(value),
+                        None,
+                        metadata,
+                        node.get_span(),
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 self.analyze_expr(value)?;
 
@@ -215,17 +257,25 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     for (_, target_type, expr) in data.iter() {
                         let from_type: &Type = expr.get_value_type()?;
 
-                        let metadata: TypeCheckerExpressionMetadata =
-                            TypeCheckerExpressionMetadata::new(expr.is_literal_value());
+                        let metadata: TypeCheckerNodeMetadata =
+                            TypeCheckerNodeMetadata::new(expr.is_literal_value());
 
-                        checking::check_types(
-                            target_type,
-                            from_type,
-                            Some(expr),
-                            None,
-                            metadata,
-                            expr.get_span(),
-                        )?;
+                        {
+                            let control_context: &mut TypeCheckerControlContext =
+                                self.get_mut_control_context();
+
+                            checking::check_types(
+                                target_type,
+                                from_type,
+                                Some(expr),
+                                None,
+                                metadata,
+                                expr.get_span(),
+                                control_context,
+                            )?;
+
+                            control_context.reset_checking_depth();
+                        }
 
                         self.analyze_expr(expr)?;
                     }
@@ -242,19 +292,27 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     return Ok(());
                 };
 
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(value.is_literal_value());
 
                 let value_type: &Type = value.get_value_type()?;
 
-                checking::check_types(
-                    static_type,
-                    value_type,
-                    Some(value),
-                    None,
-                    metadata,
-                    node.get_span(),
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
+
+                    checking::check_types(
+                        static_type,
+                        value_type,
+                        Some(value),
+                        None,
+                        metadata,
+                        node.get_span(),
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 self.analyze_expr(value)?;
 
@@ -265,8 +323,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 value,
                 ..
             } => {
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(value.is_literal_value());
 
                 let from_type: &Type = value.get_value_type()?;
 
@@ -276,14 +334,22 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     from_type
                 };
 
-                checking::check_types(
-                    target_type,
-                    fixed_from_type,
-                    Some(value),
-                    None,
-                    metadata,
-                    node.get_span(),
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
+
+                    checking::check_types(
+                        target_type,
+                        fixed_from_type,
+                        Some(value),
+                        None,
+                        metadata,
+                        node.get_span(),
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 self.analyze_expr(value)?;
 
@@ -311,35 +377,51 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     return Ok(());
                 };
 
-                let type_metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(local_value.is_literal_value());
+                let type_metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(local_value.is_literal_value());
 
                 let local_value_type: &Type = local_value.get_value_type()?;
-                let is_ref_ptr_like_type: bool = local_value_type.is_ptr_like_type();
+                let is_ptr_type: bool = local_value_type.is_ptr_like_type();
 
-                if is_ref_ptr_like_type {
-                    let local_value_type_fixed_ptr: Type = Type::Ptr(
+                if is_ptr_type {
+                    let fixed_type: Type = Type::Ptr(
                         Some(local_value_type.clone().into()),
                         local_value_type.get_span(),
                     );
 
-                    checking::check_types(
-                        local_type,
-                        &local_value_type_fixed_ptr,
-                        Some(local_value),
-                        None,
-                        type_metadata,
-                        node.get_span(),
-                    )?;
+                    {
+                        let control_context: &mut TypeCheckerControlContext =
+                            self.get_mut_control_context();
+
+                        checking::check_types(
+                            local_type,
+                            &fixed_type,
+                            Some(local_value),
+                            None,
+                            type_metadata,
+                            node.get_span(),
+                            control_context,
+                        )?;
+
+                        control_context.reset_checking_depth();
+                    }
                 } else {
-                    checking::check_types(
-                        local_type,
-                        local_value_type,
-                        Some(local_value),
-                        None,
-                        type_metadata,
-                        node.get_span(),
-                    )?;
+                    {
+                        let control_context: &mut TypeCheckerControlContext =
+                            self.get_mut_control_context();
+
+                        checking::check_types(
+                            local_type,
+                            local_value_type,
+                            Some(local_value),
+                            None,
+                            type_metadata,
+                            node.get_span(),
+                            control_context,
+                        )?;
+
+                        control_context.reset_checking_depth();
+                    }
                 }
 
                 self.analyze_expr(local_value)?;
@@ -378,21 +460,31 @@ impl<'type_checker> TypeChecker<'type_checker> {
             } => {
                 self.analyze_expr(condition)?;
 
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(condition.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(condition.is_literal_value());
 
                 let span: Span = condition.get_span();
 
-                checking::check_types(
-                    &Type::Bool(span),
-                    condition.get_value_type()?,
-                    Some(condition),
-                    None,
-                    metadata,
-                    span,
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
 
-                elseif.iter().try_for_each(|elif| self.analyze_stmt(elif))?;
+                    checking::check_types(
+                        &Type::Bool(span),
+                        condition.get_value_type()?,
+                        Some(condition),
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
+
+                for node in elseif.iter() {
+                    self.analyze_stmt(node)?;
+                }
 
                 if let Some(otherwise) = anyway {
                     self.analyze_stmt(otherwise)?;
@@ -407,19 +499,27 @@ impl<'type_checker> TypeChecker<'type_checker> {
             } => {
                 self.analyze_expr(condition)?;
 
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(condition.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(condition.is_literal_value());
 
                 let span: Span = condition.get_span();
 
-                checking::check_types(
-                    &Type::Bool(condition.get_span()),
-                    condition.get_value_type()?,
-                    Some(condition),
-                    None,
-                    metadata,
-                    span,
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
+
+                    checking::check_types(
+                        &Type::Bool(condition.get_span()),
+                        condition.get_value_type()?,
+                        Some(condition),
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 self.analyze_stmt(block)?;
 
@@ -440,19 +540,27 @@ impl<'type_checker> TypeChecker<'type_checker> {
             } => {
                 self.analyze_stmt(local)?;
 
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(condition.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(condition.is_literal_value());
 
                 let span: Span = condition.get_span();
 
-                checking::check_types(
-                    &Type::Bool(span),
-                    condition.get_value_type()?,
-                    Some(condition),
-                    None,
-                    metadata,
-                    span,
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
+
+                    checking::check_types(
+                        &Type::Bool(span),
+                        condition.get_value_type()?,
+                        Some(condition),
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 self.analyze_expr(condition)?;
                 self.analyze_expr(actions)?;
@@ -466,19 +574,27 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 block,
                 ..
             } => {
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(condition.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(condition.is_literal_value());
 
                 let span: Span = condition.get_span();
 
-                checking::check_types(
-                    &Type::Bool(span),
-                    condition.get_value_type()?,
-                    Some(condition),
-                    None,
-                    metadata,
-                    span,
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
+
+                    checking::check_types(
+                        &Type::Bool(span),
+                        condition.get_value_type()?,
+                        Some(condition),
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 if let Some(variable) = variable {
                     self.analyze_stmt(variable)?;
@@ -500,11 +616,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     return Ok(());
                 };
 
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(expr.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(expr.is_literal_value());
 
                 let Some((return_type, function_loc)) =
-                    self.get_context().get_current_function_type()
+                    self.get_type_context().get_current_function_type()
                 else {
                     return Err(CompilationIssue::Error(
                         CompilationIssueCode::E0020,
@@ -514,22 +630,30 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     ));
                 };
 
-                checking::check_types(
-                    return_type,
-                    expr.get_value_type()?,
-                    Some(expr),
-                    None,
-                    metadata,
-                    function_loc,
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        self.get_mut_control_context();
+
+                    checking::check_types(
+                        return_type,
+                        expr.get_value_type()?,
+                        Some(expr),
+                        None,
+                        metadata,
+                        function_loc,
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 self.analyze_expr(expr)?;
 
                 Ok(())
             }
             Ast::Mut { source, value, .. } => {
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(value.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(value.is_literal_value());
 
                 let value_type: &Type = value.get_value_type()?;
                 let source_type: &Type = source.get_value_type()?;
@@ -538,14 +662,22 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let lhs_type: &Type = source_type;
                     let rhs_type: &Type = value_type;
 
-                    checking::check_types(
-                        lhs_type,
-                        rhs_type,
-                        Some(value),
-                        None,
-                        metadata,
-                        source.get_span(),
-                    )?;
+                    {
+                        let control_context: &mut TypeCheckerControlContext =
+                            self.get_mut_control_context();
+
+                        checking::check_types(
+                            lhs_type,
+                            rhs_type,
+                            Some(value),
+                            None,
+                            metadata,
+                            source.get_span(),
+                            control_context,
+                        )?;
+
+                        control_context.reset_checking_depth();
+                    }
                 }
 
                 self.analyze_expr(source)?;
@@ -559,6 +691,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
     fn analyze_expr(&mut self, node: &'type_checker Ast) -> Result<(), CompilationIssue> {
         expressions::validate(self, node)
+    }
+}
+
+impl<'type_checker> TypeChecker<'type_checker> {
+    fn post_expression_evaluation(&mut self) {
+        self.control_context.reset_checking_depth();
     }
 }
 
@@ -609,7 +747,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
     #[inline]
     fn advance(&mut self) {
         if !self.is_eof() {
-            self.position += 1;
+            self.position = self.position.saturating_add(1);
         }
     }
 
@@ -643,8 +781,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 
     #[inline]
-    fn get_context(&self) -> &TypeCheckerTypeContext<'type_checker> {
-        &self.context
+    fn get_type_context(&self) -> &TypeCheckerTypeContext<'type_checker> {
+        &self.type_context
+    }
+
+    #[inline]
+    fn get_control_context(&self) -> &TypeCheckerControlContext {
+        &self.control_context
     }
 }
 
@@ -655,8 +798,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 
     #[inline]
-    fn get_mut_context(&mut self) -> &mut TypeCheckerTypeContext<'type_checker> {
-        &mut self.context
+    fn get_mut_type_context(&mut self) -> &mut TypeCheckerTypeContext<'type_checker> {
+        &mut self.type_context
+    }
+
+    #[inline]
+    fn get_mut_control_context(&mut self) -> &mut TypeCheckerControlContext {
+        &mut self.control_context
     }
 }
 

@@ -626,7 +626,10 @@ static NODE_DISCRIMINANT_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn get_unique_discriminat() -> u64 {
     if NODE_DISCRIMINANT_COUNTER.load(std::sync::atomic::Ordering::Relaxed) >= u64::MAX - 1 {
-        return u64::MAX - 1;
+        thrustc_logging::print_critical_error(
+            thrustc_logging::LoggingType::Panic,
+            &format!("Current AST NodeId exceeds {}!.", u64::MAX),
+        )
     }
 
     NODE_DISCRIMINANT_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)

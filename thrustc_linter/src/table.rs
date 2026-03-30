@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, metadata::FunctionParameterMetadata};
 use thrustc_entities::{FunctionParameter, linter::*};
 
@@ -49,21 +48,21 @@ impl LinterSymbolsTable<'_> {
     #[inline]
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(1000),
-            asm_functions: HashMap::with_capacity(1000),
-            intrinsics: HashMap::with_capacity(1000),
+            functions: HashMap::with_capacity(u8::MAX as usize),
+            asm_functions: HashMap::with_capacity(u8::MAX as usize),
+            intrinsics: HashMap::with_capacity(u8::MAX as usize),
 
-            global_statics: HashMap::with_capacity(1000),
-            global_constants: HashMap::with_capacity(1000),
+            global_statics: HashMap::with_capacity(u8::MAX as usize),
+            global_constants: HashMap::with_capacity(u8::MAX as usize),
 
-            local_statics: Vec::with_capacity(255),
-            local_constants: Vec::with_capacity(255),
+            local_statics: Vec::with_capacity(u8::MAX as usize),
+            local_constants: Vec::with_capacity(u8::MAX as usize),
 
-            enums: HashMap::with_capacity(1000),
-            structs: HashMap::with_capacity(1000),
-            locals: Vec::with_capacity(255),
-            llis: Vec::with_capacity(255),
-            parameters: HashMap::with_capacity(15),
+            enums: HashMap::with_capacity(u8::MAX as usize),
+            structs: HashMap::with_capacity(u8::MAX as usize),
+            locals: Vec::with_capacity(u8::MAX as usize),
+            llis: Vec::with_capacity(u8::MAX as usize),
+            parameters: HashMap::with_capacity(u8::MAX as usize),
 
             scope: 0,
         }
@@ -328,11 +327,12 @@ impl<'linter> LinterSymbolsTable<'linter> {
 impl LinterSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.local_constants.push(HashMap::with_capacity(255));
-        self.locals.push(HashMap::with_capacity(255));
-        self.llis.push(HashMap::with_capacity(255));
+        self.local_constants
+            .push(HashMap::with_capacity(u8::MAX as usize));
+        self.locals.push(HashMap::with_capacity(u8::MAX as usize));
+        self.llis.push(HashMap::with_capacity(u8::MAX as usize));
 
-        self.scope += 1;
+        self.scope = self.scope.saturating_add(1);
     }
 
     #[inline]
@@ -341,7 +341,7 @@ impl LinterSymbolsTable<'_> {
         self.locals.pop();
         self.llis.pop();
 
-        self.scope -= 1;
+        self.scope = self.scope.saturating_sub(1);
     }
 }
 

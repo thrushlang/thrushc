@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
@@ -28,7 +27,9 @@ use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_typesystem::{Type, traits::VoidTypeExtensions};
 
-use crate::{TypeChecker, checking, metadata::TypeCheckerExpressionMetadata};
+use crate::{
+    TypeChecker, checking, context::TypeCheckerControlContext, metadata::TypeCheckerNodeMetadata,
+};
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
@@ -94,17 +95,25 @@ pub fn validate<'type_checker>(
     {
         for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
             let from_type: &Type = expr.get_value_type()?;
-            let expr_metadata: TypeCheckerExpressionMetadata =
-                TypeCheckerExpressionMetadata::new(expr.is_literal_value());
+            let expr_metadata: TypeCheckerNodeMetadata =
+                TypeCheckerNodeMetadata::new(expr.is_literal_value());
 
-            checking::check_types(
-                target_type,
-                from_type,
-                Some(expr),
-                None,
-                expr_metadata,
-                expr.get_span(),
-            )?;
+            {
+                let control_context: &mut TypeCheckerControlContext =
+                    typechecker.get_mut_control_context();
+
+                checking::check_types(
+                    target_type,
+                    from_type,
+                    Some(expr),
+                    None,
+                    expr_metadata,
+                    expr.get_span(),
+                    control_context,
+                )?;
+
+                control_context.reset_checking_depth();
+            }
         }
     }
 

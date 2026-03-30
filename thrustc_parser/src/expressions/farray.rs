@@ -116,14 +116,16 @@ pub fn build_fixed_array<'parser>(
         );
     }
 
-    if items.is_empty()
-        && array_type.is_void_type()
-        && infered_type
-            .as_ref()
-            .is_some_and(|ty| ty.is_fixed_array_type())
     {
-        if let Some(infered_type) = infered_type {
-            array_type = infered_type;
+        let is_unknown_array_type: bool = items.is_empty() && array_type.is_void_type();
+        let has_top_infered_type: bool = infered_type
+            .as_ref()
+            .is_some_and(|ty| ty.is_fixed_array_type());
+
+        if is_unknown_array_type && has_top_infered_type {
+            if let Some(infered_type) = infered_type {
+                array_type = infered_type;
+            }
         }
     }
 

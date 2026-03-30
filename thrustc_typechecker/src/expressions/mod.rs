@@ -32,7 +32,10 @@ use thrustc_typesystem::{
     },
 };
 
-use crate::{TypeChecker, checking, metadata::TypeCheckerExpressionMetadata, operations};
+use crate::{
+    TypeChecker, checking, context::TypeCheckerControlContext, metadata::TypeCheckerNodeMetadata,
+    operations,
+};
 
 mod builtins;
 mod call;
@@ -151,23 +154,33 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            items.iter().try_for_each(|item| {
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(item.is_literal_value());
-                let item_type: &Type = item.get_value_type()?;
+            for node in items.iter() {
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(node.is_literal_value());
+                let item_type: &Type = node.get_value_type()?;
                 let base_type: Type = kind.get_fixed_array_base_type();
 
-                checking::check_types(
-                    &base_type,
-                    item_type,
-                    Some(item),
-                    None,
-                    metadata,
-                    item.get_span(),
-                )?;
+                let span: Span = node.get_span();
 
-                typechecker.analyze_expr(item)
-            })?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        typechecker.get_mut_control_context();
+
+                    checking::check_types(
+                        &base_type,
+                        item_type,
+                        Some(node),
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
+
+                typechecker.analyze_expr(node)?;
+            }
 
             Ok(())
         }
@@ -191,32 +204,41 @@ pub fn validate<'type_checker>(
                 ));
             }
 
-            items.iter().try_for_each(|item| {
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(item.is_literal_value());
-                let item_type: &Type = item.get_value_type()?;
+            for node in items.iter() {
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(node.is_literal_value());
+                let item_type: &Type = node.get_value_type()?;
                 let base_type: Type = kind.get_array_base_type();
+                let span: Span = node.get_span();
 
                 if item_type.contains_void_type() || item_type.is_void_type() {
                     typechecker.add_error(CompilationIssue::Error(
-                        CompilationIssueCode::E0019,
-                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
-                        None,
-                        item_type.get_span(),
-                    ));
+                    CompilationIssueCode::E0019,
+                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    None,
+                    item_type.get_span(),
+                ));
                 }
 
-                checking::check_types(
-                    &base_type,
-                    item_type,
-                    Some(item),
-                    None,
-                    metadata,
-                    item.get_span(),
-                )?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        typechecker.get_mut_control_context();
 
-                typechecker.analyze_expr(item)
-            })?;
+                    checking::check_types(
+                        &base_type,
+                        item_type,
+                        Some(node),
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
+
+                typechecker.analyze_expr(node)?;
+            }
 
             Ok(())
         }
@@ -314,10 +336,25 @@ pub fn validate<'type_checker>(
                 let span: Span = expr.get_span();
                 let from_type: &Type = expr.get_value_type()?;
 
-                let metadata: TypeCheckerExpressionMetadata =
-                    TypeCheckerExpressionMetadata::new(expr.is_literal_value());
+                let metadata: TypeCheckerNodeMetadata =
+                    TypeCheckerNodeMetadata::new(expr.is_literal_value());
 
-                checking::check_types(target_type, from_type, Some(expr), None, metadata, span)?;
+                {
+                    let control_context: &mut TypeCheckerControlContext =
+                        typechecker.get_mut_control_context();
+
+                    checking::check_types(
+                        target_type,
+                        from_type,
+                        Some(expr),
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
+
+                    control_context.reset_checking_depth();
+                }
 
                 typechecker.analyze_expr(expr)?;
 
@@ -440,7 +477,12 @@ pub fn validate<'type_checker>(
         } => {
             let from_type: &Type = from.get_value_type()?;
 
-            checking::check_type_cast(cast_type, from_type, metadata, span)?;
+            let control_context: &mut TypeCheckerControlContext =
+                typechecker.get_mut_control_context();
+
+            checking::check_type_cast(cast_type, from_type, metadata, span, control_context)?;
+
+            control_context.reset_type_cast_depth();
 
             typechecker.analyze_expr(from)?;
 

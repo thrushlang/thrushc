@@ -113,18 +113,20 @@ pub fn build_array<'parser>(
         };
     }
 
-    if items.is_empty()
-        && array_type.is_void_type()
-        && infered_type.as_ref().is_some_and(|ty| ty.is_array_type())
     {
-        if let Some(infered_type) = infered_type {
-            let base_type: Type = infered_type.get_array_skipping_array_as_base_type();
-            let fixed_type: Type = Type::FixedArray(base_type.clone().into(), 0, span);
+        let is_unknown_array_type: bool = items.is_empty() && array_type.is_void_type();
+        let has_top_infered_type: bool = infered_type.as_ref().is_some_and(|ty| ty.is_array_type());
 
-            array_type = Type::Array {
-                base_type: base_type.into(),
-                infered_type: Some((fixed_type.into(), 0)),
-                span,
+        if is_unknown_array_type && has_top_infered_type {
+            if let Some(infered_type) = infered_type {
+                let base_type: Type = infered_type.get_array_skipping_array_as_base_type();
+                let fixed_type: Type = Type::FixedArray(base_type.clone().into(), 0, span);
+
+                array_type = Type::Array {
+                    base_type: base_type.into(),
+                    infered_type: Some((fixed_type.into(), 0)),
+                    span,
+                }
             }
         }
     }

@@ -17,7 +17,6 @@
 
 */
 
-
 use colored::Colorize;
 
 use thrustc_logging::{self, LoggingType};
@@ -59,7 +58,7 @@ impl CompilationIssue {
 
 lazy_static::lazy_static! {
     pub static ref COMPILATION_ISSUE_CODE_EXPLANATIONS: ahash::AHashMap<CompilationIssueCode, &'static str> = {
-        let mut explanations: ahash::AHashMap<CompilationIssueCode, &'static str> = ahash::AHashMap::with_capacity(100);
+        let mut explanations: ahash::AHashMap<CompilationIssueCode, &'static str> = ahash::AHashMap::with_capacity(u8::MAX as usize);
 
         explanations.insert(CompilationIssueCode::E0001, r#""#);
         explanations.insert(CompilationIssueCode::E0002, r#""#);

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     traits::{AstCodeBlockEntensions, AstCodeLocation, AstGetType},
@@ -132,7 +131,7 @@ pub fn validate<'type_checker>(
             ..
         } => {
             typechecker
-                .get_mut_context()
+                .get_mut_type_context()
                 .set_current_function_type((return_type, *span));
 
             if !typechecker.get_table().constains_function(name) {
@@ -179,7 +178,9 @@ pub fn validate<'type_checker>(
                 }
             }
 
-            typechecker.get_mut_context().unset_current_function_type();
+            typechecker
+                .get_mut_type_context()
+                .unset_current_function_type();
 
             Ok(())
         }

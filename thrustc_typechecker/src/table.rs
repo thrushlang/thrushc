@@ -17,7 +17,6 @@
 
 */
 
-
 use ahash::AHashMap as HashMap;
 
 use thrustc_entities::typechecker::*;
@@ -37,11 +36,10 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
     #[inline]
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(1000),
-            asm_functions: HashMap::with_capacity(1000),
-            intrinsics: HashMap::with_capacity(1000),
-
-            locals: Vec::with_capacity(255),
+            functions: HashMap::with_capacity(u8::MAX as usize),
+            asm_functions: HashMap::with_capacity(u8::MAX as usize),
+            intrinsics: HashMap::with_capacity(u8::MAX as usize),
+            locals: Vec::with_capacity(u8::MAX as usize),
 
             scope: 0,
         }

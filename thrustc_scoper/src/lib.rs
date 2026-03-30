@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     traits::{AstCodeLocation, AstDeclarationExtensions, AstStandardExtensions},
@@ -68,10 +67,10 @@ impl<'scoper> Scoper<'scoper> {
 impl<'scoper> Scoper<'scoper> {
     fn check(&mut self) -> bool {
         if !self.errors.is_empty() {
-            self.errors.iter().for_each(|error| {
+            for error in self.errors.iter() {
                 self.diagnostician
                     .dispatch_diagnostic(error, thrustc_logging::LoggingType::Error);
-            });
+            }
 
             true
         } else {

@@ -138,8 +138,8 @@ impl<'parser> ParserContext<'parser> {
 
         Self {
             tokens,
-            ast: Vec::with_capacity(u8::MAX as usize),
 
+            ast: Vec::with_capacity(u8::MAX as usize),
             errors: Vec::with_capacity(u8::MAX as usize),
             bugs: Vec::with_capacity(u8::MAX as usize),
 
@@ -160,15 +160,17 @@ impl<'parser> ParserContext<'parser> {
 impl<'parser> ParserContext<'parser> {
     pub fn verify(&mut self) -> bool {
         if !self.errors.is_empty() || !self.bugs.is_empty() {
-            self.bugs.iter().for_each(|bug: &CompilationIssue| {
-                self.diagnostician
-                    .dispatch_diagnostic(bug, LoggingType::Bug);
-            });
+            {
+                for bug in self.bugs.iter() {
+                    self.diagnostician
+                        .dispatch_diagnostic(bug, LoggingType::Bug);
+                }
 
-            self.errors.iter().for_each(|error: &CompilationIssue| {
-                self.diagnostician
-                    .dispatch_diagnostic(error, LoggingType::Error);
-            });
+                for error in self.errors.iter() {
+                    self.diagnostician
+                        .dispatch_diagnostic(error, LoggingType::Error);
+                }
+            }
 
             true
         } else {
@@ -373,9 +375,7 @@ impl<'parser> ParserContext<'parser> {
 
         control.increase_expression_depth();
 
-        const MAX_EXPRESSION_DEPTH: u32 = 516;
-
-        if control.get_expression_depth() > MAX_EXPRESSION_DEPTH {
+        if control.get_expression_depth() > thrustc_constants::COMPILER_TOO_MANY_EXPRESSION_DEPTH {
             let span: Span = self.peek().get_span();
 
             return Err(CompilationIssue::Error(

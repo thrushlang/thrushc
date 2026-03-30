@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, traits::AstCodeLocation};
 use thrustc_attributes::traits::ThrustAttributesExtensions;
 use thrustc_diagnostician::Diagnostician;
@@ -52,8 +51,9 @@ impl<'linter> Linter<'linter> {
     ) -> Self {
         Self {
             ast,
-            warnings: Vec::with_capacity(100),
-            bugs: Vec::with_capacity(100),
+            warnings: Vec::with_capacity(u8::MAX as usize),
+            bugs: Vec::with_capacity(u8::MAX as usize),
+
             diagnostician: Diagnostician::new(file, options),
             symbols: LinterSymbolsTable::new(),
         }
@@ -72,15 +72,19 @@ impl<'linter> Linter<'linter> {
 
         self.generate_warnings();
 
-        self.bugs.iter().for_each(|bug: &CompilationIssue| {
-            self.diagnostician
-                .dispatch_diagnostic(bug, thrustc_logging::LoggingType::Bug);
-        });
+        {
+            for bug in self.bugs.iter() {
+                self.diagnostician
+                    .dispatch_diagnostic(bug, thrustc_logging::LoggingType::Bug);
+            }
+        }
 
-        self.warnings.iter().for_each(|warn: &CompilationIssue| {
-            self.diagnostician
-                .dispatch_diagnostic(warn, thrustc_logging::LoggingType::Warning);
-        });
+        {
+            for warning in self.warnings.iter() {
+                self.diagnostician
+                    .dispatch_diagnostic(warning, thrustc_logging::LoggingType::Warning);
+            }
+        }
     }
 }
 
