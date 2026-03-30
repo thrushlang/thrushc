@@ -9,6 +9,7 @@ The **Thrust Compiler** is a compiler that transfers the source code of Thrust f
 > [!IMPORTANT]  
 > The compiler is in an early development phase. Continue on your own.
 
+
 ## Getting Started
 
 ### Build dependencies 
@@ -138,6 +139,10 @@ Other compiler flags:
 • --print-host-target-triple Show the host target triple.
 • --print-opt-passes Show all available optimization passes through '--opt-passes=p{passname, passname}'.
 ```
+
+## Compiler Structure
+
+If you want to know a little about the compiler's structure, you should check: [Thrust Programming Language - Compiler Structure](https://github.com/thrustlang/blob/master/PROJECT_STRUCTURE.md)
 
 ## Syntax 
 

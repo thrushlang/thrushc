@@ -163,9 +163,9 @@ pub enum Ast<'ctx> {
     },
     If {
         condition: std::boxed::Box<Ast<'ctx>>,
-        block: std::boxed::Box<Ast<'ctx>>,
-        elseif: std::vec::Vec<Ast<'ctx>>,
-        anyway: Option<std::boxed::Box<Ast<'ctx>>>,
+        then_branch: std::boxed::Box<Ast<'ctx>>,
+        else_if_branch: std::vec::Vec<Ast<'ctx>>,
+        else_branch: Option<std::boxed::Box<Ast<'ctx>>>,
         kind: Type,
         span: Span,
         id: NodeId,

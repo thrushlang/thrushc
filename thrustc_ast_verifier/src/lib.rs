@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     builitins::ThrustBuiltin,
@@ -86,23 +85,23 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
 
             Ast::If {
                 condition,
-                block,
-                elseif,
-                anyway,
+                then_branch,
+                else_if_branch,
+                else_branch,
                 ..
             } => {
                 self.expected_expression(condition);
                 self.analyze_expression(condition);
 
-                self.expected_statement(block);
-                self.analyze_stmt(block);
+                self.expected_statement(then_branch);
+                self.analyze_stmt(then_branch);
 
-                for node in elseif.iter() {
+                for node in else_if_branch.iter() {
                     self.expected_statement_or_loose_expression(node);
                     self.analyze_stmt(node);
                 }
 
-                if let Some(node) = anyway {
+                if let Some(node) = else_branch {
                     self.expected_statement_or_loose_expression(node);
                     self.analyze_stmt(node);
                 }

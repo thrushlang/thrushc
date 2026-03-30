@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, traits::AstCodeBlockEntensions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -62,15 +61,15 @@ pub fn build_conditional<'parser>(
             )?;
         } else {
             ctx.consume(
-                TokenType::If,
-                CompilationIssueCode::E0001,
-                "Expected 'if' keyword.".into(),
-            )?;
-
-            ctx.consume(
                 TokenType::Else,
                 CompilationIssueCode::E0001,
                 "Expected 'else' keyword.".into(),
+            )?;
+
+            ctx.consume(
+                TokenType::If,
+                CompilationIssueCode::E0001,
+                "Expected 'if' keyword.".into(),
             )?;
         }
 
@@ -114,9 +113,9 @@ pub fn build_conditional<'parser>(
 
             return Ok(Ast::If {
                 condition: condition.into(),
-                block: body.into(),
-                elseif,
-                anyway: Some(else_node.into()),
+                then_branch: body.into(),
+                else_if_branch: elseif,
+                else_branch: Some(else_node.into()),
                 kind: Type::Void(span),
                 span,
                 id: NodeId::new(),
@@ -124,13 +123,15 @@ pub fn build_conditional<'parser>(
         }
     }
 
-    Ok(Ast::If {
+    let normal: Ast<'_> = Ast::If {
         condition: condition.into(),
-        block: body.into(),
-        elseif,
-        anyway: None,
+        then_branch: body.into(),
+        else_if_branch: elseif,
+        else_branch: None,
         kind: Type::Void(span),
         span,
         id: NodeId::new(),
-    })
+    };
+
+    Ok(normal)
 }

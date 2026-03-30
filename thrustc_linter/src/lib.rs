@@ -232,20 +232,22 @@ impl<'linter> Linter<'linter> {
 
             Ast::If {
                 condition,
-                block,
-                elseif,
-                anyway,
+                then_branch,
+                else_if_branch,
+                else_branch,
                 ..
             } => {
                 self.analyze_expr(condition);
-                self.analyze_stmt(block);
+                self.analyze_stmt(then_branch);
 
-                elseif.iter().for_each(|elif| {
-                    self.analyze_stmt(elif);
-                });
+                {
+                    for node in else_if_branch.iter() {
+                        self.analyze_stmt(node);
+                    }
+                }
 
-                if let Some(otherwise) = anyway {
-                    self.analyze_stmt(otherwise);
+                if let Some(node) = else_branch {
+                    self.analyze_stmt(node);
                 }
             }
             Ast::Elif {

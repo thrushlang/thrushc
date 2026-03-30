@@ -180,19 +180,21 @@ impl<'scoper> Scoper<'scoper> {
 
         match node {
             Ast::If {
-                block,
-                elseif,
-                anyway,
+                then_branch,
+                else_if_branch,
+                else_branch,
                 ..
             } => {
-                self.analyze_local_node(block);
+                self.analyze_local_node(then_branch);
 
-                for elseif in elseif.iter() {
-                    self.analyze_local_node(elseif);
+                {
+                    for node in else_if_branch.iter() {
+                        self.analyze_local_node(node);
+                    }
                 }
 
-                if let Some(otherwise) = anyway {
-                    self.analyze_local_node(otherwise);
+                if let Some(node) = else_branch {
+                    self.analyze_local_node(node);
                 }
             }
             Ast::Elif { block, .. } => {

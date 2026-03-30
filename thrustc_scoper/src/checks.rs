@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     traits::{AstCodeLocation, AstStandardExtensions},
@@ -171,9 +170,9 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
     let Some((unreacheable_condition_idx, _)) =
         nodes.iter().enumerate().find_map(|(idx, stmt)| match stmt {
             Ast::If {
-                block,
-                elseif,
-                anyway,
+                then_branch,
+                else_if_branch,
+                else_branch,
                 ..
             } => {
                 let mut is_if_unreacheable: bool = false;
@@ -181,7 +180,7 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                 let mut is_else_unreacheable: bool = false;
 
                 {
-                    if let Ast::Block { nodes, .. } = block.as_ref() {
+                    if let Ast::Block { nodes, .. } = then_branch.as_ref() {
                         is_if_unreacheable = nodes.iter().any(|stmt| {
                             stmt.is_terminator()
                                 || stmt.is_unreacheable()
@@ -194,7 +193,7 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                 }
 
                 {
-                    for node in elseif {
+                    for node in else_if_branch.iter() {
                         if let Ast::Elif { block, .. } = node {
                             if let Ast::Block { nodes, .. } = &**block {
                                 is_else_if_unreacheable = nodes.iter().any(|stmt| {
@@ -211,7 +210,7 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                 }
 
                 {
-                    if let Some(otherwise) = anyway {
+                    if let Some(otherwise) = else_branch {
                         if let Ast::Else { block, .. } = &**otherwise {
                             if let Ast::Block { nodes, .. } = block.as_ref() {
                                 is_else_unreacheable = nodes.iter().any(|stmt| {
@@ -228,7 +227,7 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                 }
 
                 let is_unreacheable_if_else: bool =
-                    is_if_unreacheable && is_else_unreacheable && elseif.is_empty();
+                    is_if_unreacheable && is_else_unreacheable && else_if_branch.is_empty();
 
                 let is_full_unreacheable: bool =
                     is_if_unreacheable && is_else_if_unreacheable && is_else_unreacheable;

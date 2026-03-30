@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     traits::{
@@ -292,20 +291,24 @@ impl<'analyzer> Analyzer<'analyzer> {
             }
             Ast::If {
                 condition,
-                block,
-                elseif,
-                anyway,
+                then_branch,
+                else_if_branch,
+                else_branch,
                 ..
             } => {
                 self.analyze_expr(condition)?;
 
-                elseif.iter().try_for_each(|elif| self.analyze_stmt(elif))?;
-
-                if let Some(otherwise) = anyway {
-                    self.analyze_stmt(otherwise)?;
+                {
+                    for node in else_if_branch.iter() {
+                        self.analyze_stmt(node)?;
+                    }
                 }
 
-                self.analyze_stmt(block)?;
+                if let Some(node) = else_branch {
+                    self.analyze_stmt(node)?;
+                }
+
+                self.analyze_stmt(then_branch)?;
 
                 Ok(())
             }

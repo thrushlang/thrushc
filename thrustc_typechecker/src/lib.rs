@@ -453,9 +453,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
             Ast::If {
                 condition,
-                block,
-                elseif,
-                anyway,
+                then_branch,
+                else_if_branch,
+                else_branch,
                 ..
             } => {
                 self.analyze_expr(condition)?;
@@ -482,15 +482,17 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     control_context.reset_checking_depth();
                 }
 
-                for node in elseif.iter() {
-                    self.analyze_stmt(node)?;
+                {
+                    for node in else_if_branch.iter() {
+                        self.analyze_stmt(node)?;
+                    }
                 }
 
-                if let Some(otherwise) = anyway {
+                if let Some(otherwise) = else_branch {
                     self.analyze_stmt(otherwise)?;
                 }
 
-                self.analyze_stmt(block)?;
+                self.analyze_stmt(then_branch)?;
 
                 Ok(())
             }

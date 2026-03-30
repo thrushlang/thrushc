@@ -253,15 +253,15 @@ impl AstCodeBlockEntensions for Ast<'_> {
                 }
 
                 if let Ast::If {
-                    block,
-                    elseif,
-                    anyway,
+                    then_branch,
+                    else_if_branch,
+                    else_branch,
                     ..
                 } = node
                 {
-                    let if_branch_returns: bool = block.has_terminator();
+                    let if_branch_returns: bool = then_branch.has_terminator();
 
-                    let all_elif_return: bool = elseif.iter().all(|elif_node| {
+                    let all_elif_return: bool = else_if_branch.iter().all(|elif_node| {
                         if let Ast::Elif { block, .. } = elif_node {
                             block.has_terminator()
                         } else {
@@ -269,7 +269,7 @@ impl AstCodeBlockEntensions for Ast<'_> {
                         }
                     });
 
-                    let else_branch_returns: bool = anyway.as_ref().is_some_and(|otherwise| {
+                    let else_branch_returns: bool = else_branch.as_ref().is_some_and(|otherwise| {
                         if let Ast::Else { block, .. } = &**otherwise {
                             block.has_terminator()
                         } else {
@@ -278,7 +278,7 @@ impl AstCodeBlockEntensions for Ast<'_> {
                     });
 
                     let if_else_returns: bool =
-                        if_branch_returns && else_branch_returns && elseif.is_empty();
+                        if_branch_returns && else_branch_returns && else_if_branch.is_empty();
                     let full_returns: bool =
                         if_branch_returns && all_elif_return && else_branch_returns;
 
@@ -484,338 +484,6 @@ impl std::cmp::PartialEq for Ast<'_> {
 
 impl std::fmt::Display for Ast<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            // --- TOP-LEVEL DEFS ---
-            Ast::AssemblerFunction {
-                name,
-                parameters,
-                assembler,
-                constraints,
-                return_type,
-                ..
-            } => {
-                writeln!(f, "\nTop-Level - Assembler Function asmfn {}(", name)?;
-                for (i, param) in parameters.iter().enumerate() {
-                    writeln!(f, "{}", param)?;
-                    if i != parameters.len().saturating_sub(1) {
-                        write!(f, ", ")?;
-                    }
-                }
-                write!(f, ") {} ", return_type)?;
-                write!(f, "Assembler {{ {} }} ", assembler)?;
-                write!(f, "Assembler Constraints {{ {} }}", constraints)?;
-                Ok(())
-            }
-            Ast::Const {
-                name, kind, value, ..
-            } => {
-                write!(f, "Top-Level - Const {}: {} = {}", name, kind, value)
-            }
-            Ast::CustomType { kind, .. } => {
-                writeln!(f, "\nTop-Level - Type type {}", kind)
-            }
-            Ast::Embedded { name, literal, .. } => {
-                writeln!(f, "\nTop-Level - Embedded {} {:?};", name, literal)
-            }
-            Ast::Enum { name, .. } => {
-                writeln!(f, "\nTop-Level - Enum {} {{ ... }}", name)
-            }
-            Ast::Function {
-                name,
-                parameters,
-                body,
-                return_type,
-                attributes,
-                ..
-            } => {
-                writeln!(f, "\nTop Level - Function fn {}", name)?;
-                write!(f, "(")?;
-                for (i, param) in parameters.iter().enumerate() {
-                    write!(f, "{}", param)?;
-                    if i != parameters.len().saturating_sub(1) {
-                        write!(f, ", ")?;
-                    }
-                }
-                write!(f, ") {} ", return_type)?;
-                attributes
-                    .iter()
-                    .try_for_each(|attr| write!(f, "{}", attr))?;
-                if let Some(body) = body {
-                    writeln!(f, " {}", body)?;
-                }
-                Ok(())
-            }
-            Ast::Import { .. } => {
-                writeln!(f, "\nTop-Level - Module Importation import")
-            }
-            Ast::ImportC { .. } => {
-                writeln!(f, "\nTop-Level - Invoke C Preprocessador importC")
-            }
-            Ast::Intrinsic {
-                name,
-                parameters,
-                return_type,
-                ..
-            } => {
-                writeln!(f, "\nTop-Level - Compiler Intrinsic intrinsic {}(", name)?;
-                for (i, param) in parameters.iter().enumerate() {
-                    writeln!(f, "{}", param)?;
-                    if i != parameters.len().saturating_sub(1) {
-                        write!(f, ", ")?;
-                    }
-                }
-                write!(f, ") {} ", return_type)
-            }
-            Ast::Static {
-                name, kind, value, ..
-            } => {
-                if let Some(value) = value {
-                    writeln!(f, "\nTop-Level - Static {}: {} = {}", name, kind, value)
-                } else {
-                    writeln!(f, "\nTop-Level - Static {}: {}", name, kind)
-                }
-            }
-            Ast::Struct { name, .. } => {
-                writeln!(f, "\nTop-Level - Struct {} {{ ... }}", name)
-            }
-
-            // --- STATEMENTS ---
-            Ast::AssemblerFunctionParameter { name, kind, .. } => {
-                write!(f, "Stmt - Parameter {}: {}", name, kind)
-            }
-            Ast::Block { nodes, post, .. } => {
-                writeln!(f, "Stmt - Code Block - Start {{")?;
-                for node in nodes {
-                    writeln!(f, "{}", node)?;
-                }
-                for node in post {
-                    writeln!(f, "{}", node)?;
-                }
-                write!(f, "}} Code Block - End")
-            }
-            Ast::Break { .. } => writeln!(f, "Stmt - Break"),
-            Ast::BreakAll { .. } => writeln!(f, "Stmt - Breakall"),
-            Ast::Continue { .. } => writeln!(f, "Stmt - Continue"),
-            Ast::ContinueAll { .. } => writeln!(f, "Stmt - Continueall"),
-            Ast::Defer { node, .. } => writeln!(f, "Stmt - Defer {}", node),
-            Ast::Elif {
-                condition, block, ..
-            } => {
-                writeln!(f, "Stmt - Else If/Elif {}", condition)?;
-                writeln!(f, "{}", block)
-            }
-            Ast::Else { block, .. } => {
-                writeln!(f, "Stmt - Else")?;
-                writeln!(f, "{}", block)
-            }
-            Ast::For {
-                local,
-                condition,
-                actions,
-                block,
-                ..
-            } => {
-                writeln!(f, "Stmt - For")?;
-
-                write!(f, "{}", local)?;
-                writeln!(f, "{}", condition)?;
-                write!(f, "{}", actions)?;
-                write!(f, "{}", block)?;
-
-                Ok(())
-            }
-            Ast::FunctionParameter { name, kind, .. } => {
-                write!(f, "Stmt - Parameter {}: {}", name, kind)
-            }
-            Ast::If {
-                condition,
-                block,
-                elseif,
-                anyway,
-                ..
-            } => {
-                writeln!(f, "Stmt - If {}", condition)?;
-                writeln!(f, "{}", block)?;
-
-                for elif in elseif {
-                    writeln!(f, "Stmt - Else If/Elif {}", elif)?;
-                }
-                if let Some(anyway) = anyway {
-                    writeln!(f, "Stmt - Else {}", anyway)?;
-                }
-                Ok(())
-            }
-            Ast::IntrinsicParameter { kind, .. } => {
-                write!(f, "Stmt - Parameter {}", kind)
-            }
-            Ast::Local {
-                name, kind, value, ..
-            } => {
-                if let Some(value) = value {
-                    writeln!(f, "Stmt - Local {}: {} = {};", name, kind, value)
-                } else {
-                    writeln!(f, "Stmt - Local {}: {};", name, kind)
-                }
-            }
-            Ast::Loop { block, .. } => writeln!(f, "Stmt - Loop {}", block),
-            Ast::Mut { source, value, .. } => {
-                writeln!(f, "Stmt - Mutation {} = {}", source, value)
-            }
-            Ast::Return { expression, .. } => {
-                if let Some(expr) = expression {
-                    writeln!(f, "Stmt - Return {}", expr)
-                } else {
-                    writeln!(f, "Stmt - Return")
-                }
-            }
-            Ast::While {
-                condition, block, ..
-            } => {
-                writeln!(f, "Stmt - While {}", condition)?;
-                writeln!(f, "{}", block)
-            }
-
-            // --- EXPRESSIONS ---
-            Ast::Address {
-                source, indexes, ..
-            } => {
-                write!(f, "address {}[", source)?;
-                for (i, idx) in indexes.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", idx)?;
-                }
-                write!(f, "]")
-            }
-            Ast::Array { items, .. } => {
-                write!(f, "Expression - Array [")?;
-                for (i, item) in items.iter().enumerate() {
-                    write!(f, "{}", item)?;
-                    if i != items.len().saturating_sub(1) {
-                        write!(f, ", ")?;
-                    }
-                }
-                write!(f, "]")
-            }
-            Ast::As { from, cast, .. } => write!(f, "Expression - Type Cast {} as {}", from, cast),
-            Ast::AsmValue { assembler, .. } => {
-                write!(f, "Expression - Assembler Value asm(\"{}\")", assembler)
-            }
-            Ast::BinaryOp {
-                left,
-                operator,
-                right,
-                ..
-            } => {
-                write!(
-                    f,
-                    "Expression - BinaryOperation {} {} {}",
-                    left, operator, right
-                )
-            }
-            Ast::Boolean { value, .. } => write!(f, "Expression - Boolean {}", value),
-            Ast::Builtin { builtin, .. } => {
-                write!(f, "Expression - Compiler Built-in builtin({:?})", builtin)
-            }
-            Ast::Call { name, args, .. } => {
-                write!(f, "Expression - Function Call {}(", name)?;
-                for (index, arg) in args.iter().enumerate() {
-                    write!(f, "{}", arg)?;
-                    if index != args.len().saturating_sub(1) {
-                        write!(f, ", ")?;
-                    }
-                }
-                write!(f, ")")
-            }
-            Ast::Char { byte, .. } => write!(f, "Expression - Char {}", byte),
-            Ast::CNString { bytes, .. } => {
-                write!(
-                    f,
-                    "Expression - CNString {:?}",
-                    String::from_utf8_lossy(bytes)
-                )
-            }
-            Ast::Constructor { name, data, .. } => {
-                write!(f, "Expression - Constructor {}{{ ", name)?;
-                for (i, (field_name, ..)) in data.iter().enumerate() {
-                    write!(f, "{}", field_name)?;
-                    if i != data.len().saturating_sub(1) {
-                        write!(f, ", ")?;
-                    }
-                }
-                write!(f, " }}")
-            }
-            Ast::CString { bytes, .. } => {
-                write!(
-                    f,
-                    "Expression - CString {:?}",
-                    String::from_utf8_lossy(bytes)
-                )
-            }
-            Ast::Deref { value, .. } => write!(f, "Expression - Dereferentation defer {}", value),
-            Ast::DirectRef { expr, .. } => {
-                write!(f, "Expression - Direct Referentation ref {}", expr)
-            }
-            Ast::EnumValue { name, value, .. } => {
-                write!(f, "Expression - Enum Value {}->{}", name, value)
-            }
-            Ast::FixedArray { items, .. } => {
-                write!(f, "Expression - FixedArray fixed[")?;
-                for (i, item) in items.iter().enumerate() {
-                    write!(f, "{}", item)?;
-                    if i != items.len().saturating_sub(1) {
-                        write!(f, ", ")?;
-                    }
-                }
-                write!(f, "]")
-            }
-            Ast::Float { value, .. } => write!(f, "Expression - Float {}", value),
-            Ast::GlobalAssembler { asm, .. } => {
-                write!(f, "Expression - Global Assembler global_asm(\"{}\")", asm)
-            }
-            Ast::Group { node, .. } => write!(f, "Expression - Group ({})", node),
-            Ast::Index { source, index, .. } => {
-                write!(f, "Expression - Indexation {}[{}]", source, index)
-            }
-            Ast::IndirectCall { function, args, .. } => {
-                write!(f, "Expression - Anonymous Function Call {}(", function)?;
-                for (i, arg) in args.iter().enumerate() {
-                    write!(f, "{}", arg)?;
-                    if i != args.len().saturating_sub(1) {
-                        write!(f, ", ")?;
-                    }
-                }
-                write!(f, ")")
-            }
-            Ast::Integer { value, .. } => write!(f, "Expression - Integer {}", value),
-            Ast::Load { source, .. } => write!(f, "load {}", source),
-            Ast::NullPtr { .. } => write!(f, "Expression - nullptr"),
-            Ast::Property { source, .. } => write!(f, "Expresssion - Property {}.property", source),
-            Ast::Reference { name, .. } => write!(f, "Expression - {}", name),
-            Ast::UnaryOp {
-                operator,
-                node,
-                is_pre,
-                ..
-            } => {
-                if *is_pre {
-                    write!(f, "Expression - UnaryOperation {}{}", operator, node)
-                } else {
-                    write!(f, "Expression - UnaryOperation {}{}", node, operator)
-                }
-            }
-            Ast::Unreachable { .. } => write!(f, "Expression  - Unreachable"),
-            Ast::Write {
-                source,
-                write_value,
-                ..
-            } => {
-                write!(f, "write {} = {}", source, write_value)
-            }
-
-            // --- OTROS ---
-            Ast::Invalid { .. } => write!(f, "invalid ast"),
-        }
+        writeln!(f, "{:#?}", self)
     }
 }
