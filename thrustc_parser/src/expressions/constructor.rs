@@ -25,10 +25,11 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
 
-use crate::{
-    ParserContext, expressions,
-    traits::{ConstructorExtensions, FoundSymbolEitherExtensions, StructSymbolExtensions},
+use thrustc_parser_table::traits::{
+    ConstructorExtensions, FoundSymbolEitherExtensions, StructSymbolExtensions,
 };
+
+use crate::{ParserContext, expressions};
 
 pub fn build_constructor<'parser>(
     ctx: &mut ParserContext<'parser>,

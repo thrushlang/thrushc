@@ -17,9 +17,10 @@
 
 */
 
-
 use inkwell::values::FunctionValue;
+
 use thrustc_ast::Ast;
+use thrustc_ast_external::{ExternalSignature, ExternalSymbol};
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
 
@@ -72,6 +73,17 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::EnumValue { kind, .. } => kind,
 
             // Expressions
+            Ast::ExternalExpression { data, .. } => {
+                let ExternalSymbol { signature, .. } = data;
+
+                match signature {
+                    ExternalSignature::Constant { kind, .. } => kind,
+                    ExternalSignature::CustomType { kind, .. } => kind,
+                    ExternalSignature::Function { kind, .. } => kind,
+                    ExternalSignature::Struct { kind, .. } => kind,
+                    ExternalSignature::Static { kind, .. } => kind,
+                }
+            }
             Ast::Call { kind, .. } => kind,
             Ast::BinaryOp { kind, .. } => kind,
             Ast::UnaryOp { kind, .. } => kind,

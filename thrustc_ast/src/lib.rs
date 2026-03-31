@@ -19,6 +19,7 @@
 
 use std::sync::atomic::AtomicU64;
 
+use thrustc_ast_external::ExternalSymbol;
 use thrustc_attributes::ThrustAttributes;
 use thrustc_modificators::Modificators;
 use thrustc_span::Span;
@@ -436,6 +437,12 @@ pub enum Ast<'ctx> {
     DirectRef {
         expr: std::boxed::Box<Ast<'ctx>>,
         kind: Type,
+        span: Span,
+        id: NodeId,
+    },
+
+    ExternalExpression {
+        data: ExternalSymbol,
         span: Span,
         id: NodeId,
     },

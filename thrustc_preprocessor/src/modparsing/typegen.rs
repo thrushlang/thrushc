@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     traits::{AstGetType, AstStandardExtensions},
@@ -41,6 +40,7 @@ use thrustc_typesystem::{
 use crate::{
     modparsing::{attributes, expression},
     parser::ModuleParser,
+    signatures::{Signature, Symbol, Variant},
 };
 
 pub fn build_type(ctx: &mut ModuleParser<'_>) -> Result<Type, ()> {
@@ -93,13 +93,27 @@ pub fn build_type(ctx: &mut ModuleParser<'_>) -> Result<Type, ()> {
         TokenType::Identifier => {
             let identifier_tk: &Token = ctx.advance()?;
 
-            let name: &str = identifier_tk.get_lexeme();
-            let span: Span = identifier_tk.get_span();
+            let name: String = identifier_tk.get_lexeme().to_string();
 
-            Ok(Type::Unresolved {
-                hint: name.to_string(),
-                span,
-            })
+            let symbol: Option<&crate::signatures::Symbol> =
+                ctx.get_module().search_symbol(name, Variant::CustomType);
+
+            match symbol {
+                Some(symbol) => {
+                    if let Symbol {
+                        signature: Signature::CustomType { kind, .. },
+                        variant: Variant::CustomType,
+                        ..
+                    } = symbol
+                    {
+                        Ok(kind.clone())
+                    } else {
+                        Err(())
+                    }
+                }
+
+                None => Err(()),
+            }
         }
 
         _ => Err(()),

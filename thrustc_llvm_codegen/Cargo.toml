@@ -23,6 +23,7 @@ thrustc_typesystem = { path = "../thrustc_typesystem" }
 thrustc_mir = { path = "../thrustc_mir" }
 thrustc_errors = { path = "../thrustc_errors" }
 thrustc_ast = { path = "../thrustc_ast" }
+thrustc_ast_external = { path = "../thrustc_ast_external" }
 thrustc_logging = { path = "../thrustc_logging" }
 thrustc_diagnostician = { path = "../thrustc_diagnostician" }
 thrustc_options = { path = "../thrustc_options" }

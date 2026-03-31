@@ -17,6 +17,8 @@
 
 */
 
+mod impls;
+pub mod traits;
 
 use thrustc_ast::Ast;
 use thrustc_diagnostician::Diagnostician;
@@ -32,11 +34,8 @@ use thrustc_entities::parser::{
     Parameters, StaticSymbol, Struct,
 };
 
-pub const PREALLOCATED_GLOBAL_TABLE_CAPACITY: usize = 1000;
-pub const PREALLOCATED_LOCAL_TABLE_CAPACITY: usize = 255;
-
 #[derive(Clone, Debug, Default)]
-pub struct SymbolsTable<'parser> {
+pub struct SymbolTable<'parser> {
     functions: Functions<'parser>,
     asm_functions: AssemblerFunctions<'parser>,
     intrinsics: Intrinsics<'parser>,
@@ -60,7 +59,7 @@ pub struct SymbolsTable<'parser> {
     diagnostician: Diagnostician,
 }
 
-impl<'parser> SymbolsTable<'parser> {
+impl<'parser> SymbolTable<'parser> {
     pub fn with_functions(
         functions: Functions<'parser>,
         asm_functions: AssemblerFunctions<'parser>,
@@ -71,21 +70,21 @@ impl<'parser> SymbolsTable<'parser> {
             functions,
             asm_functions,
 
-            intrinsics: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
+            intrinsics: ahash::AHashMap::with_capacity(u8::MAX as usize),
 
-            global_structs: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
-            global_statics: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
-            global_constants: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
-            global_custom_types: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
-            global_enums: ahash::AHashMap::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
+            global_structs: ahash::AHashMap::with_capacity(u8::MAX as usize),
+            global_statics: ahash::AHashMap::with_capacity(u8::MAX as usize),
+            global_constants: ahash::AHashMap::with_capacity(u8::MAX as usize),
+            global_custom_types: ahash::AHashMap::with_capacity(u8::MAX as usize),
+            global_enums: ahash::AHashMap::with_capacity(u8::MAX as usize),
 
-            local_structs: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
-            local_statics: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
-            local_constants: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
-            local_custom_types: Vec::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
-            local_enums: Vec::with_capacity(PREALLOCATED_GLOBAL_TABLE_CAPACITY),
-            locals: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
-            llis: Vec::with_capacity(PREALLOCATED_LOCAL_TABLE_CAPACITY),
+            local_structs: Vec::with_capacity(u8::MAX as usize),
+            local_statics: Vec::with_capacity(u8::MAX as usize),
+            local_constants: Vec::with_capacity(u8::MAX as usize),
+            local_custom_types: Vec::with_capacity(u8::MAX as usize),
+            local_enums: Vec::with_capacity(u8::MAX as usize),
+            locals: Vec::with_capacity(u8::MAX as usize),
+            llis: Vec::with_capacity(u8::MAX as usize),
 
             parameters: ahash::AHashMap::with_capacity(10),
             diagnostician: Diagnostician::new(file, options),
@@ -93,31 +92,24 @@ impl<'parser> SymbolsTable<'parser> {
     }
 }
 
-impl SymbolsTable<'_> {
+impl SymbolTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.local_structs.push(ahash::AHashMap::with_capacity(
-            PREALLOCATED_LOCAL_TABLE_CAPACITY,
-        ));
-        self.local_custom_types.push(ahash::AHashMap::with_capacity(
-            PREALLOCATED_LOCAL_TABLE_CAPACITY,
-        ));
-        self.local_statics.push(ahash::AHashMap::with_capacity(
-            PREALLOCATED_LOCAL_TABLE_CAPACITY,
-        ));
-        self.local_constants.push(ahash::AHashMap::with_capacity(
-            PREALLOCATED_LOCAL_TABLE_CAPACITY,
-        ));
-        self.local_enums.push(ahash::AHashMap::with_capacity(
-            PREALLOCATED_LOCAL_TABLE_CAPACITY,
-        ));
+        self.local_structs
+            .push(ahash::AHashMap::with_capacity(u8::MAX as usize));
+        self.local_custom_types
+            .push(ahash::AHashMap::with_capacity(u8::MAX as usize));
+        self.local_statics
+            .push(ahash::AHashMap::with_capacity(u8::MAX as usize));
+        self.local_constants
+            .push(ahash::AHashMap::with_capacity(u8::MAX as usize));
+        self.local_enums
+            .push(ahash::AHashMap::with_capacity(u8::MAX as usize));
 
-        self.locals.push(ahash::AHashMap::with_capacity(
-            PREALLOCATED_LOCAL_TABLE_CAPACITY,
-        ));
-        self.llis.push(ahash::AHashMap::with_capacity(
-            PREALLOCATED_LOCAL_TABLE_CAPACITY,
-        ));
+        self.locals
+            .push(ahash::AHashMap::with_capacity(u8::MAX as usize));
+        self.llis
+            .push(ahash::AHashMap::with_capacity(u8::MAX as usize));
     }
 
     #[inline]
@@ -150,7 +142,7 @@ impl SymbolsTable<'_> {
     }
 }
 
-impl<'parser> SymbolsTable<'parser> {
+impl<'parser> SymbolTable<'parser> {
     pub fn new_parameters(&mut self, parameters: &[Ast<'parser>]) -> Result<(), CompilationIssue> {
         {
             for node in parameters.iter() {
@@ -180,7 +172,7 @@ impl<'parser> SymbolsTable<'parser> {
     }
 }
 
-impl<'parser> SymbolsTable<'parser> {
+impl<'parser> SymbolTable<'parser> {
     pub fn new_local(
         &mut self,
         id: &'parser str,
@@ -492,7 +484,7 @@ impl<'parser> SymbolsTable<'parser> {
     }
 }
 
-impl<'parser> SymbolsTable<'parser> {
+impl<'parser> SymbolTable<'parser> {
     pub fn get_symbols_id(
         &self,
         id: &'parser str,
@@ -773,7 +765,7 @@ impl<'parser> SymbolsTable<'parser> {
     }
 }
 
-impl<'parser> SymbolsTable<'parser> {
+impl<'parser> SymbolTable<'parser> {
     #[inline]
     pub fn get_lli_by_id(
         &self,

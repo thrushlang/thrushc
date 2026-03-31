@@ -17,10 +17,9 @@
 
 */
 
-
 use uuid::Uuid;
 
-use crate::signatures::Symbol;
+use crate::signatures::{Symbol, Variant};
 
 #[derive(Debug)]
 pub struct Module {
@@ -54,6 +53,20 @@ impl Module {
 }
 
 impl Module {
+    pub fn search_symbol(&self, hint: String, target_variant: Variant) -> Option<&Symbol> {
+        {
+            for symbol in self.symbols.iter() {
+                let Symbol { name, variant, .. } = symbol;
+
+                if hint == *name && *variant == target_variant {
+                    return Some(symbol);
+                }
+            }
+        }
+
+        None
+    }
+
     #[inline]
     pub fn find_submodule(&self, access: Vec<String>) -> Option<&Module> {
         let mut current_module: &Module = self;

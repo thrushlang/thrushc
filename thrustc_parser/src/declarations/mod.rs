@@ -115,5 +115,5 @@ pub fn parse_forward(ctx: &mut ParserContext) {
         }
     }
 
-    ctx.current = 0;
+    ctx.reset_position();
 }

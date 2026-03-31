@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_attributes::ThrustAttributes;
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -45,7 +44,7 @@ pub fn parse_type<'module_parser>(ctx: &mut ModuleParser<'module_parser>) -> Res
 
     ctx.consume(TokenType::SemiColon)?;
 
-    Ok(Symbol {
+    let symbol: Symbol = Symbol {
         name,
         signature: Signature::CustomType {
             kind: r#type,
@@ -53,5 +52,7 @@ pub fn parse_type<'module_parser>(ctx: &mut ModuleParser<'module_parser>) -> Res
             span,
         },
         variant: Variant::CustomType,
-    })
+    };
+
+    Ok(symbol)
 }

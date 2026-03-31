@@ -220,7 +220,9 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             );
         })?;
 
-        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
+        println!("{:?}", modules);
+
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, modules, file, self.options);
 
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;
@@ -562,7 +564,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             );
         })?;
 
-        let parser: (ParserContext, bool) = Parser::parse(&tokens, file, self.options);
+        let parser: (ParserContext, bool) = Parser::parse(&tokens, modules, file, self.options);
 
         let parser_result: (ParserContext, bool) = parser;
         let parser_throwed_errors: bool = parser_result.1;

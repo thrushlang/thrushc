@@ -17,9 +17,6 @@
 
 */
 
-
-use std::path::PathBuf;
-
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_lexer::Lexer;
 use thrustc_options::{CompilationUnit, CompilerOptions};
@@ -38,7 +35,7 @@ pub fn parse_import<'preprocessor>(
         parser.consume_these(&[TokenType::CString, TokenType::CNString])?;
     let span: Span = module_path_tk.get_span();
 
-    let mut module_path: PathBuf = PathBuf::from(module_path_tk.get_lexeme());
+    let mut module_path: std::path::PathBuf = std::path::PathBuf::from(module_path_tk.get_lexeme());
 
     parser.consume(TokenType::SemiColon)?;
 

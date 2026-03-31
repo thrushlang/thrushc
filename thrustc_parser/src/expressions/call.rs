@@ -27,10 +27,12 @@ use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{Type, traits::FunctionReferenceExtensions};
 
-use crate::{
-    ParserContext, expressions,
-    traits::{FoundSymbolEitherExtensions, FoundSymbolExtensions},
+use thrustc_parser_table::traits::{
+    FoundSymbolEitherExtensions, FoundSymbolExtensions, FunctionAssemblerExtensions,
+    FunctionExtensions, IntrinsicExtensions,
 };
+
+use crate::{ParserContext, expressions};
 
 pub fn build_call<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -76,7 +78,7 @@ pub fn build_call<'parser>(
                     ctx.get_symbols().get_intrinsic_by_id(span, id);
 
                 match intrinsic {
-                    Ok(intrinsic) => crate::traits::IntrinsicExtensions::get_type(&intrinsic),
+                    Ok(intrinsic) => IntrinsicExtensions::get_type(&intrinsic),
                     Err(error) => {
                         ctx.add_error_report(error);
                         return Ok(Ast::invalid_ast(span));
@@ -90,9 +92,7 @@ pub fn build_call<'parser>(
                 > = ctx.get_symbols().get_asm_function_by_id(span, id);
 
                 match asm_function {
-                    Ok(asm_function) => {
-                        crate::traits::FunctionAssemblerExtensions::get_type(&asm_function)
-                    }
+                    Ok(asm_function) => FunctionAssemblerExtensions::get_type(&asm_function),
 
                     Err(error) => {
                         ctx.add_error_report(error);
@@ -105,7 +105,7 @@ pub fn build_call<'parser>(
                     ctx.get_symbols().get_function_by_id(span, id);
 
                 match function {
-                    Ok(function) => crate::traits::FunctionExtensions::get_type(&function),
+                    Ok(function) => FunctionExtensions::get_type(&function),
                     Err(error) => {
                         ctx.add_error_report(error);
                         return Ok(Ast::invalid_ast(span));

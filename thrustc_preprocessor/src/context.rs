@@ -17,7 +17,6 @@
 
 */
 
-
 use std::path::PathBuf;
 
 use thrustc_diagnostician::Diagnostician;
@@ -34,6 +33,7 @@ pub struct PreprocessorContext<'preprocessor> {
     tokens: &'preprocessor [Token],
     options: &'preprocessor CompilerOptions,
     visited: HashSet<PathBuf>,
+    file: &'preprocessor CompilationUnit,
     diagnostician: Diagnostician,
     errors: Vec<CompilationIssue>,
     current: usize,
@@ -43,15 +43,16 @@ impl<'preprocessor> PreprocessorContext<'preprocessor> {
     pub fn new(
         tokens: &'preprocessor [Token],
         options: &'preprocessor CompilerOptions,
-        file: &CompilationUnit,
+        file: &'preprocessor CompilationUnit,
         visited: HashSet<PathBuf>,
     ) -> Self {
         Self {
             tokens,
             options,
             visited,
+            file,
             diagnostician: Diagnostician::new(file, options),
-            errors: Vec::with_capacity(100),
+            errors: Vec::with_capacity(u8::MAX as usize),
             current: 0,
         }
     }
@@ -282,5 +283,10 @@ impl<'module_parser> PreprocessorContext<'module_parser> {
     #[inline]
     pub fn get_global_visited_modules(&self) -> HashSet<PathBuf> {
         self.visited.clone()
+    }
+
+    #[inline]
+    pub fn get_compilation_unit(&self) -> &CompilationUnit {
+        self.file
     }
 }

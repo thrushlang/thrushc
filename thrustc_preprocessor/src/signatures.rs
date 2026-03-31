@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_attributes::ThrustAttributes;
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
@@ -29,7 +28,7 @@ pub struct Symbol {
     pub variant: Variant,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Variant {
     Function,
     Constant,

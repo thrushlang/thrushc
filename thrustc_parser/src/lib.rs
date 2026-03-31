@@ -23,48 +23,44 @@ use thrustc_entities::parser::{AssemblerFunctions, Functions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition};
 use thrustc_logging::LoggingType;
 use thrustc_options::{CompilationUnit, CompilerOptions};
+use thrustc_parser_table::SymbolTable;
+use thrustc_preprocessor::module::Module;
 use thrustc_span::Span;
 
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::{
-    control::{ParserControlContext, ParserTypeContext},
-    table::SymbolsTable,
-};
+use crate::control::{ParserControlContext, ParserTypeContext};
 
 mod attributes;
 mod builtins;
 mod control;
 mod declarations;
-mod expected;
 mod expressions;
-mod impls;
 mod modificators;
 mod reinterpret;
 mod statements;
-mod sync;
-mod table;
-mod traits;
+mod synchronize;
 mod typegen;
 
 #[derive(Debug)]
 pub struct ParserContext<'parser> {
     tokens: &'parser [Token],
     ast: Vec<Ast<'parser>>,
+    modules: &'parser [Module],
 
     errors: Vec<CompilationIssue>,
     bugs: Vec<CompilationIssue>,
 
-    control_ctx: ParserControlContext,
-    type_ctx: ParserTypeContext,
+    control_context: ParserControlContext,
+    type_context: ParserTypeContext,
 
     options: &'parser CompilerOptions,
 
     diagnostician: Diagnostician,
-    table: SymbolsTable<'parser>,
+    table: SymbolTable<'parser>,
 
-    current: usize,
+    position: usize,
     scope: usize,
 }
 
@@ -78,19 +74,21 @@ impl<'parser> Parser<'parser> {
     #[inline]
     pub fn parse(
         tokens: &'parser [Token],
+        modules: &'parser [Module],
         file: &'parser CompilationUnit,
         options: &'parser CompilerOptions,
     ) -> (ParserContext<'parser>, bool) {
-        Self { tokens, file }.start_parsing(options)
+        Self { tokens, file }.start_parsing(modules, options)
     }
 }
 
 impl<'parser> Parser<'parser> {
     fn start_parsing(
         &mut self,
+        modules: &'parser [Module],
         options: &'parser CompilerOptions,
     ) -> (ParserContext<'parser>, bool) {
-        let mut ctx: ParserContext = ParserContext::new(self.tokens, self.file, options);
+        let mut ctx: ParserContext = ParserContext::new(self.tokens, modules, self.file, options);
 
         declarations::parse_forward(&mut ctx);
 
@@ -123,35 +121,37 @@ impl<'parser> Parser<'parser> {
 impl<'parser> ParserContext<'parser> {
     pub fn new(
         tokens: &'parser [Token],
+        modules: &'parser [Module],
         file: &'parser CompilationUnit,
         options: &'parser CompilerOptions,
     ) -> Self {
         let functions: Functions = Functions::with_capacity(u8::MAX as usize);
         let asm_functions: AssemblerFunctions = AssemblerFunctions::with_capacity(u8::MAX as usize);
 
-        let control_ctx: ParserControlContext = ParserControlContext::new();
+        let control_context: ParserControlContext = ParserControlContext::new();
 
-        let table: SymbolsTable =
-            SymbolsTable::with_functions(functions, asm_functions, options, file);
+        let table: SymbolTable =
+            SymbolTable::with_functions(functions, asm_functions, options, file);
 
-        let type_ctx: ParserTypeContext = ParserTypeContext::default();
+        let type_context: ParserTypeContext = ParserTypeContext::default();
 
         Self {
             tokens,
-
             ast: Vec::with_capacity(u8::MAX as usize),
+            modules,
+
             errors: Vec::with_capacity(u8::MAX as usize),
             bugs: Vec::with_capacity(u8::MAX as usize),
 
-            control_ctx,
-            type_ctx,
+            control_context,
+            type_context,
 
             options,
 
             diagnostician: Diagnostician::new(file, options),
             table,
 
-            current: 0,
+            position: 0,
             scope: 0,
         }
     }
@@ -186,7 +186,7 @@ impl<'parser> ParserContext<'parser> {
 impl<'parser> ParserContext<'parser> {
     #[must_use]
     pub fn peek(&mut self) -> &'parser Token {
-        self.tokens.get(self.current).unwrap_or_else(|| {
+        self.tokens.get(self.position).unwrap_or_else(|| {
             let span: Span = self.previous().get_span();
 
             thrustc_frontend_abort::abort_compilation(
@@ -202,7 +202,7 @@ impl<'parser> ParserContext<'parser> {
 
     #[must_use]
     pub fn previous(&mut self) -> &'parser Token {
-        let index: (usize, bool) = self.current.overflowing_sub(1);
+        let index: (usize, bool) = self.position.overflowing_sub(1);
 
         let is_overflow: bool = index.1;
         let idx: usize = index.0;
@@ -251,7 +251,7 @@ impl<'parser> ParserContext<'parser> {
             return false;
         }
 
-        let next_index: usize = self.current.saturating_add(modifier);
+        let next_index: usize = self.position.saturating_add(modifier);
 
         if next_index >= self.tokens.len() {
             return false;
@@ -262,7 +262,7 @@ impl<'parser> ParserContext<'parser> {
 
     #[must_use]
     pub fn check_ahead(&mut self, target: TokenType, breakers: &[TokenType]) -> bool {
-        let mut last_position: usize = self.current;
+        let mut last_position: usize = self.position;
 
         let has_ahead: bool = loop {
             if last_position >= self.tokens.len() {
@@ -325,7 +325,7 @@ impl<'parser> ParserContext<'parser> {
 
     #[inline]
     pub fn go_back(&mut self) {
-        self.current = self.current.saturating_sub(1);
+        self.position = self.position.saturating_sub(1);
     }
 
     #[inline]
@@ -341,7 +341,7 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn only_advance(&mut self) -> Result<(), CompilationIssue> {
         if !self.is_eof() {
-            self.current = self.current.saturating_add(1);
+            self.position = self.position.saturating_add(1);
             Ok(())
         } else {
             Err(CompilationIssue::Error(
@@ -356,7 +356,7 @@ impl<'parser> ParserContext<'parser> {
     #[inline]
     pub fn advance(&mut self) -> Result<&'parser Token, CompilationIssue> {
         if !self.is_eof() {
-            self.current = self.current.saturating_add(1);
+            self.position = self.position.saturating_add(1);
             Ok(self.previous())
         } else {
             Err(CompilationIssue::Error(
@@ -397,6 +397,11 @@ impl<'parser> ParserContext<'parser> {
 
 impl ParserContext<'_> {
     #[inline]
+    pub fn reset_position(&mut self) {
+        self.position = 0;
+    }
+
+    #[inline]
     pub fn reset_scope(&mut self) {
         self.scope = 0;
     }
@@ -414,18 +419,18 @@ impl ParserContext<'_> {
 
 impl<'parser> ParserContext<'parser> {
     #[inline]
-    pub fn get_symbols(&self) -> &SymbolsTable<'parser> {
+    pub fn get_symbols(&self) -> &SymbolTable<'parser> {
         &self.table
     }
 
     #[inline]
     pub fn get_control_context(&self) -> &ParserControlContext {
-        &self.control_ctx
+        &self.control_context
     }
 
     #[inline]
     pub fn get_type_context(&self) -> &ParserTypeContext {
-        &self.type_ctx
+        &self.type_context
     }
 
     #[inline]
@@ -441,18 +446,18 @@ impl<'parser> ParserContext<'parser> {
 
 impl<'parser> ParserContext<'parser> {
     #[inline]
-    pub fn get_mut_symbols(&mut self) -> &mut SymbolsTable<'parser> {
+    pub fn get_mut_symbols(&mut self) -> &mut SymbolTable<'parser> {
         &mut self.table
     }
 
     #[inline]
     pub fn get_mut_control_context(&mut self) -> &mut ParserControlContext {
-        &mut self.control_ctx
+        &mut self.control_context
     }
 
     #[inline]
     pub fn get_mut_type_context(&mut self) -> &mut ParserTypeContext {
-        &mut self.type_ctx
+        &mut self.type_context
     }
 
     #[inline]

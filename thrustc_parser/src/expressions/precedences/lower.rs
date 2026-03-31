@@ -240,6 +240,8 @@ pub fn lower_precedence<'parser>(
                 enumv::build_enum_value(ctx, name, span)?
             } else if ctx.match_token(TokenType::LParen)? {
                 call::build_call(ctx, name, span)?
+            } else if ctx.match_token(TokenType::ColonColon)? {
+                todo!()
             } else {
                 reference::build_reference(ctx, name, span)?
             }

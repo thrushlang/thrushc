@@ -37,7 +37,7 @@ members = [
     "thrustc_ast_verifier", 
     "thrustc_heap_allocator", 
     "thrustc_cli",
-    "thrustc_utils", 
+    "thrustc_utils", "thrustc_ast_external", "thrustc_parser_table", 
 ]
 
 exclude = [

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_attributes::ThrustAttributes;
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -49,7 +48,7 @@ pub fn parse_constant<'module_parser>(
 
     ctx.advance_until(TokenType::SemiColon)?;
 
-    Ok(Symbol {
+    let symbol: Symbol = Symbol {
         name,
         signature: Signature::Constant {
             kind: r#type,
@@ -57,5 +56,7 @@ pub fn parse_constant<'module_parser>(
             attributes,
         },
         variant: Variant::Constant,
-    })
+    };
+
+    Ok(symbol)
 }

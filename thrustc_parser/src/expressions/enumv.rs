@@ -25,10 +25,9 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{
-    ParserContext,
-    traits::{EnumExtensions, FoundSymbolEitherExtensions},
-};
+use thrustc_parser_table::traits::{EnumExtensions, FoundSymbolEitherExtensions};
+
+use crate::ParserContext;
 
 pub fn build_enum_value<'parser>(
     ctx: &mut ParserContext<'parser>,

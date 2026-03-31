@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     data::{EnumData, EnumDataField, StructureData},
     metadata::{FunctionParameterMetadata, LocalMetadata, StaticMetadata},

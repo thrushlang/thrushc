@@ -30,10 +30,9 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{Type, traits::TypeCodeLocation};
 
-use crate::{
-    ParserContext,
-    traits::{FoundSymbolEitherExtensions, StructSymbolExtensions},
-};
+use thrustc_parser_table::traits::{FoundSymbolEitherExtensions, StructSymbolExtensions};
+
+use crate::ParserContext;
 
 pub fn build_property<'parser>(
     ctx: &mut ParserContext<'parser>,

@@ -17,6 +17,7 @@
 
 */
 
+use thrustc_ast_external::{ExternalSignature, ExternalSymbol};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
@@ -66,12 +67,23 @@ impl AstGetType for Ast<'_> {
             // Function-Related Operations
             Ast::FunctionParameter { kind, .. } => Ok(kind),
             Ast::AssemblerFunctionParameter { kind, .. } => Ok(kind),
-            Ast::Call { kind, .. } => Ok(kind),
             Ast::Return { kind, .. } => Ok(kind),
             Ast::Function { return_type, .. } => Ok(return_type),
             Ast::AssemblerFunction { return_type, .. } => Ok(return_type),
 
             // Expressions & Operators
+            Ast::ExternalExpression { data, .. } => {
+                let ExternalSymbol { signature, .. } = data;
+
+                match signature {
+                    ExternalSignature::Constant { kind, .. } => Ok(kind),
+                    ExternalSignature::CustomType { kind, .. } => Ok(kind),
+                    ExternalSignature::Function { kind, .. } => Ok(kind),
+                    ExternalSignature::Struct { kind, .. } => Ok(kind),
+                    ExternalSignature::Static { kind, .. } => Ok(kind),
+                }
+            }
+            Ast::Call { kind, .. } => Ok(kind),
             Ast::BinaryOp { kind, .. } => Ok(kind),
             Ast::UnaryOp { kind, .. } => Ok(kind),
             Ast::Group { kind, .. } => Ok(kind),
@@ -166,6 +178,17 @@ impl AstGetType for Ast<'_> {
             Ast::EnumValue { kind, .. } => Ok(kind),
 
             // Expressions
+            Ast::ExternalExpression { data, .. } => {
+                let ExternalSymbol { signature, .. } = data;
+
+                match signature {
+                    ExternalSignature::Constant { kind, .. } => Ok(kind),
+                    ExternalSignature::CustomType { kind, .. } => Ok(kind),
+                    ExternalSignature::Function { kind, .. } => Ok(kind),
+                    ExternalSignature::Struct { kind, .. } => Ok(kind),
+                    ExternalSignature::Static { kind, .. } => Ok(kind),
+                }
+            }
             Ast::Call { kind, .. } => Ok(kind),
             Ast::BinaryOp { kind, .. } => Ok(kind),
             Ast::UnaryOp { kind, .. } => Ok(kind),
@@ -253,6 +276,7 @@ impl AstCodeLocation for Ast<'_> {
             Ast::Property { span, .. } => *span,
 
             // Expressions and operators
+            Ast::ExternalExpression { span, .. } => *span,
             Ast::Call { span, .. } => *span,
             Ast::BinaryOp { span, .. } => *span,
             Ast::UnaryOp { span, .. } => *span,

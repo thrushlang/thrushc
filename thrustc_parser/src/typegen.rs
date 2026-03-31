@@ -43,10 +43,11 @@ use thrustc_entities::parser::{
     Struct,
 };
 
-use crate::{
-    ParserContext, attributes, expressions,
-    traits::{FoundSymbolEitherExtensions, FoundSymbolExtensions, StructSymbolExtensions},
+use thrustc_parser_table::traits::{
+    FoundSymbolEitherExtensions, FoundSymbolExtensions, StructSymbolExtensions,
 };
+
+use crate::{ParserContext, attributes, expressions};
 
 pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type, CompilationIssue> {
     match ctx.peek().get_type() {

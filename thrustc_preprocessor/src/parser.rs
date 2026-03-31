@@ -17,7 +17,6 @@
 
 */
 
-
 use std::path::PathBuf;
 
 use thrustc_diagnostician::Diagnostician;
@@ -67,9 +66,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
 impl<'module_parser> ModuleParser<'module_parser> {
     pub fn parse(mut self) -> Result<Module, ()> {
         while !self.is_eof() {
-            if self.start().is_err() {}
-
-            let _ = self.only_advance();
+            let _ = self.start();
         }
 
         {
@@ -98,16 +95,17 @@ impl<'module_parser> ModuleParser<'module_parser> {
     pub fn start(&mut self) -> Result<(), ()> {
         if self.check(TokenType::Import) {
             modparsing::import::parse_import(self)?;
-        }
-
-        if self.check(TokenType::Const) {
+        } else if self.check(TokenType::Const) {
             let symbol: Symbol = modparsing::constant::parse_constant(self)?;
             self.module.add_symbol(symbol);
-        }
-
-        if self.check(TokenType::Type) {
+        } else if self.check(TokenType::Type) {
             let symbol: Symbol = modparsing::customtype::parse_type(self)?;
             self.module.add_symbol(symbol);
+        } else {
+            let _ = self.advance();
+
+            println!("{:?}", self.peek());
+            println!("{}", self.check(TokenType::Type));
         }
 
         Ok(())
@@ -276,7 +274,7 @@ impl ModuleParser<'_> {
     #[inline]
     pub fn only_advance(&mut self) -> Result<(), ()> {
         if !self.is_eof() {
-            self.current += 1;
+            self.current = self.current.saturating_add(1);
             return Ok(());
         }
 
@@ -286,7 +284,7 @@ impl ModuleParser<'_> {
     #[inline]
     pub fn advance(&mut self) -> Result<&Token, ()> {
         if !self.is_eof() {
-            self.current += 1;
+            self.current = self.current.saturating_add(1);
             return Ok(self.previous());
         }
 

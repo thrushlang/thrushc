@@ -39,14 +39,13 @@ use thrustc_typesystem::{
     traits::TypeIsExtensions,
 };
 
-use crate::{
-    ParserContext,
-    traits::{
-        ConstantSymbolExtensions, FoundSymbolEitherExtensions, FoundSymbolExtensions,
-        FunctionExtensions, FunctionParameterSymbolExtensions, LLISymbolExtensions,
-        LocalSymbolExtensions, StaticSymbolExtensions,
-    },
+use thrustc_parser_table::traits::{
+    ConstantSymbolExtensions, FoundSymbolEitherExtensions, FoundSymbolExtensions,
+    FunctionExtensions, FunctionParameterSymbolExtensions, LLISymbolExtensions,
+    LocalSymbolExtensions, StaticSymbolExtensions,
 };
+
+use crate::ParserContext;
 
 pub fn build_reference<'parser>(
     ctx: &mut ParserContext<'parser>,
