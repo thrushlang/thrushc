@@ -17,13 +17,27 @@
 
 */
 
-
-use crate::{Type, traits::DereferenceExtensions};
+use crate::{
+    Type,
+    traits::{DereferenceExtensions, TypeExtensions},
+};
 
 impl DereferenceExtensions for Type {
     fn dereference(&self) -> Type {
         if let Type::Ptr(Some(any), ..) = self {
             return (**any).clone();
+        }
+
+        self.clone()
+    }
+
+    fn dereference_until_value(&self) -> Type {
+        if self.is_value() {
+            return self.clone();
+        }
+
+        if let Type::Ptr(Some(any), ..) = self {
+            return any.dereference_until_value();
         }
 
         self.clone()

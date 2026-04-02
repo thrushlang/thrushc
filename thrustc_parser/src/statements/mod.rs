@@ -34,11 +34,11 @@ use thrustc_ast::Ast;
 use thrustc_errors::CompilationIssue;
 use thrustc_token_type::TokenType;
 
-use crate::{ParserContext, control::ParserSyncPosition, expressions};
+use crate::{ParserContext, control::SynchronizationPosition, expressions};
 
 pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_context()
-        .add_sync_position(ParserSyncPosition::Statement);
+        .add_sync_position(SynchronizationPosition::Statement);
 
     let statement: Result<Ast<'parser>, CompilationIssue> = match &ctx.peek().kind {
         TokenType::LBrace => Ok(block::build_block(ctx)?),

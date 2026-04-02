@@ -318,10 +318,10 @@ pub fn validate<'type_checker>(
                     ));
                 }
 
-                if !ty.is_struct_type() {
+                if !ty.is_struct_type() && !ty.is_ptr_struct_type() {
                     typechecker.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "Expcted a structure type reference.".into(),
+                        "Expected a structure value or pointer to structure value.".into(),
                         None,
                         node.get_span(),
                     ));

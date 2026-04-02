@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 
@@ -105,6 +104,7 @@ pub trait TypeCodeLocation {
 
 pub trait DereferenceExtensions {
     fn dereference(&self) -> Type;
+    fn dereference_until_value(&self) -> Type;
 }
 
 pub trait InfererTypeExtensions {

@@ -27,9 +27,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{
-    ParserContext, attributes, control::ParserPosition, expressions, modificators, typegen,
-};
+use crate::{ParserContext, attributes, control::Position, expressions, modificators, typegen};
 
 pub fn build_global_static<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -116,8 +114,7 @@ pub fn build_global_static<'parser>(
             "Expected '='.".into(),
         )?;
 
-        ctx.get_mut_control_context()
-            .set_position(ParserPosition::Static);
+        ctx.get_mut_control_context().set_position(Position::Static);
 
         let value: Ast = expressions::build_expression(ctx)?;
 

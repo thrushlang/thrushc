@@ -20,7 +20,7 @@
 use thrustc_typesystem::Type;
 
 #[derive(Debug, Clone, Copy, Default)]
-pub enum ParserSyncPosition {
+pub enum SynchronizationPosition {
     Statement,
     Declaration,
     Expression,
@@ -30,7 +30,7 @@ pub enum ParserSyncPosition {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub enum ParserPosition {
+pub enum Position {
     Constant,
     Static,
     Variable,
@@ -42,8 +42,8 @@ pub enum ParserPosition {
 
 #[derive(Debug)]
 pub struct ParserControlContext {
-    position: ParserPosition,
-    synchronous_position: Vec<ParserSyncPosition>,
+    position: Position,
+    synchronous_position: Vec<SynchronizationPosition>,
     expression_depth: u32,
 }
 
@@ -51,7 +51,7 @@ impl ParserControlContext {
     #[inline]
     pub fn new() -> Self {
         Self {
-            position: ParserPosition::NoRelevant,
+            position: Position::NoRelevant,
             synchronous_position: Vec::with_capacity(u8::MAX as usize),
             expression_depth: 0,
         }
@@ -60,17 +60,17 @@ impl ParserControlContext {
 
 impl ParserControlContext {
     #[inline]
-    pub fn set_position(&mut self, position: ParserPosition) {
+    pub fn set_position(&mut self, position: Position) {
         self.position = position;
     }
 
     #[inline]
     pub fn reset_position(&mut self) {
-        self.position = ParserPosition::NoRelevant;
+        self.position = Position::NoRelevant;
     }
 
     #[inline]
-    pub fn add_sync_position(&mut self, other: ParserSyncPosition) {
+    pub fn add_sync_position(&mut self, other: SynchronizationPosition) {
         self.synchronous_position.push(other);
     }
 
@@ -97,7 +97,7 @@ impl ParserControlContext {
 
 impl ParserControlContext {
     #[inline]
-    pub fn get_sync_position(&self) -> Option<&ParserSyncPosition> {
+    pub fn get_sync_position(&self) -> Option<&SynchronizationPosition> {
         self.synchronous_position.last()
     }
 
@@ -107,7 +107,7 @@ impl ParserControlContext {
     }
 
     #[inline]
-    pub fn get_position(&self) -> ParserPosition {
+    pub fn get_position(&self) -> Position {
         self.position
     }
 }
@@ -141,29 +141,29 @@ impl ParserTypeContext {
     }
 }
 
-impl ParserPosition {
+impl Position {
     #[inline]
     pub fn is_constant_position(&self) -> bool {
-        matches!(self, ParserPosition::Constant)
+        matches!(self, Position::Constant)
     }
 
     #[inline]
     pub fn is_static_position(&self) -> bool {
-        matches!(self, ParserPosition::Static)
+        matches!(self, Position::Static)
     }
 
     #[inline]
     pub fn is_variable_position(&self) -> bool {
-        matches!(self, ParserPosition::Variable)
+        matches!(self, Position::Variable)
     }
 
     #[inline]
     pub fn is_expression_position(&self) -> bool {
-        matches!(self, ParserPosition::Expression)
+        matches!(self, Position::Expression)
     }
 
     #[inline]
     pub fn is_irrelevant_position(&self) -> bool {
-        matches!(self, ParserPosition::NoRelevant)
+        matches!(self, Position::NoRelevant)
     }
 }

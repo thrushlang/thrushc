@@ -33,13 +33,13 @@ use thrustc_ast::Ast;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_token_type::TokenType;
 
-use crate::{ParserContext, control::ParserSyncPosition};
+use crate::{ParserContext, control::SynchronizationPosition};
 
 pub fn build_expression<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_context()
-        .add_sync_position(ParserSyncPosition::Expression);
+        .add_sync_position(SynchronizationPosition::Expression);
 
     ctx.enter_expression()?;
 
@@ -61,7 +61,7 @@ pub fn build_expr<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_context()
-        .add_sync_position(ParserSyncPosition::Expression);
+        .add_sync_position(SynchronizationPosition::Expression);
 
     ctx.enter_expression()?;
 

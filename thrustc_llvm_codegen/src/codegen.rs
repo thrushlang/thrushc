@@ -50,7 +50,9 @@ use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
 use thrustc_llvm_builtins::LLVMBuiltin;
 use thrustc_typesystem::Type;
-use thrustc_typesystem::traits::{DereferenceExtensions, TypeIsExtensions, TypeStructExtensions};
+use thrustc_typesystem::traits::{
+    DereferenceExtensions, TypeExtensions, TypeIsExtensions, TypeStructExtensions,
+};
 
 #[derive(Debug)]
 pub struct LLVMCodegen<'a, 'ctx> {
@@ -707,11 +709,11 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .get_mut_expressions_optimizations()
                     .denegate_all_expression_optimizations();
 
-                let value_type: &Type = value.llvm_get_type();
                 let source_type: &Type = source.llvm_get_type();
+                let value_type: &Type = value.llvm_get_type();
 
-                let cast_type: Type = if source_type != value_type {
-                    source_type.dereference()
+                let cast_type: Type = if value_type.is_value() && source_type != value_type {
+                    source_type.dereference_until_value()
                 } else {
                     source_type.clone()
                 };

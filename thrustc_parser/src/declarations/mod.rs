@@ -22,7 +22,7 @@ use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::{ParserContext, control::ParserSyncPosition};
+use crate::{ParserContext, control::SynchronizationPosition};
 
 pub mod asmfn;
 pub mod embedded;
@@ -39,7 +39,7 @@ pub mod intrinsic;
 
 pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_context()
-        .add_sync_position(ParserSyncPosition::Declaration);
+        .add_sync_position(SynchronizationPosition::Declaration);
 
     let declaration: Result<Ast<'parser>, CompilationIssue> = match ctx.peek().get_type() {
         TokenType::Type => Ok(glcstype::build_custom_type(ctx, false)?),
@@ -55,13 +55,13 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         TokenType::Embedded => Ok(embedded::build_embedded(ctx)?),
 
         _ => {
-            let what: &Token = ctx.advance()?;
+            let any: &Token = ctx.advance()?;
 
             Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected a top entity, not a statement and never an expression.".into(),
                 None,
-                what.get_span(),
+                any.get_span(),
             ))
         }
     };

@@ -21,7 +21,7 @@ use thrustc_ast::Ast;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::{ParserContext, control::ParserSyncPosition, statements::block};
+use crate::{ParserContext, control::SynchronizationPosition, statements::block};
 
 pub const SYNC_STATEMENTS: [TokenType; 16] = [
     TokenType::Return,
@@ -62,16 +62,21 @@ impl<'parser> ParserContext<'parser> {
 
         if let Some(position) = self.get_control_context().get_sync_position() {
             match position {
-                ParserSyncPosition::Declaration => self::sync_with_declaration(self),
-                ParserSyncPosition::Statement => self::sync_with_statement(self),
-                ParserSyncPosition::Expression => self::sync_with_expression(self),
-                ParserSyncPosition::NoRelevant => (),
+                SynchronizationPosition::Declaration => self::synchonize_top_level(self),
+                SynchronizationPosition::Statement => self::synchronize_statement(self),
+                SynchronizationPosition::Expression => self::synchonize_expression(self),
+                SynchronizationPosition::NoRelevant => (),
             }
         }
     }
 }
 
-fn sync_with_declaration(ctx: &mut ParserContext) {
+fn synchonize_top_level(ctx: &mut ParserContext) {
+    ctx.get_mut_symbols().finish_parameters();
+    ctx.get_mut_symbols().finish_scopes();
+    ctx.get_mut_symbols().end_scope();
+    ctx.reset_scope();
+
     loop {
         if ctx.is_eof() {
             break;
@@ -80,48 +85,21 @@ fn sync_with_declaration(ctx: &mut ParserContext) {
         let peeked: &Token = ctx.peek();
 
         if SYNC_DECLARATIONS.contains(&peeked.kind) {
-            ctx.get_mut_symbols().finish_parameters();
-            ctx.get_mut_symbols().finish_scopes();
-            ctx.reset_scope();
-
             break;
-        } else {
-            ctx.get_mut_symbols().end_scope();
-            ctx.end_scope();
         }
 
         let _ = ctx.only_advance();
     }
 }
 
-fn sync_with_statement<'parser>(ctx: &mut ParserContext<'parser>) {
+fn synchronize_statement<'parser>(ctx: &mut ParserContext<'parser>) {
     loop {
         if ctx.is_eof() {
             break;
         }
 
         if ctx.is_main_scope() {
-            let peeked: &Token = ctx.peek();
-
-            while !SYNC_DECLARATIONS.contains(&peeked.kind) {
-                let _ = ctx.only_advance();
-            }
-
-            ctx.get_mut_symbols().finish_parameters();
-            ctx.get_mut_symbols().finish_scopes();
-            ctx.reset_scope();
-
-            break;
-        }
-
-        if ctx.check(TokenType::RBrace) {
-            let _ = ctx.only_advance();
-
-            if !ctx.is_main_scope() {
-                ctx.get_mut_symbols().end_scope();
-                ctx.end_scope();
-            }
-
+            self::synchonize_top_level(ctx);
             break;
         }
 
@@ -135,6 +113,10 @@ fn sync_with_statement<'parser>(ctx: &mut ParserContext<'parser>) {
                 let mut continue_first_loop: bool = false;
 
                 while ctx.check_ahead(TokenType::RBrace, &SYNC_DECLARATIONS) {
+                    if ctx.is_eof() {
+                        break;
+                    }
+
                     let second_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
                         block::build_block_without_start(ctx);
 
@@ -160,34 +142,14 @@ fn sync_with_statement<'parser>(ctx: &mut ParserContext<'parser>) {
     }
 }
 
-fn sync_with_expression<'parser>(ctx: &mut ParserContext<'parser>) {
+fn synchonize_expression<'parser>(ctx: &mut ParserContext<'parser>) {
     loop {
         if ctx.is_eof() {
             break;
         }
 
         if ctx.is_main_scope() {
-            let peeked: &Token = ctx.peek();
-
-            while !SYNC_DECLARATIONS.contains(&peeked.kind) {
-                let _ = ctx.only_advance();
-            }
-
-            ctx.get_mut_symbols().finish_parameters();
-            ctx.get_mut_symbols().finish_scopes();
-            ctx.reset_scope();
-
-            break;
-        }
-
-        if ctx.check(TokenType::RBrace) {
-            let _ = ctx.only_advance();
-
-            if !ctx.is_main_scope() {
-                ctx.get_mut_symbols().end_scope();
-                ctx.end_scope();
-            }
-
+            self::synchonize_top_level(ctx);
             break;
         }
 
@@ -201,6 +163,10 @@ fn sync_with_expression<'parser>(ctx: &mut ParserContext<'parser>) {
                 let mut continue_first_loop: bool = false;
 
                 while ctx.check_ahead(TokenType::RBrace, &SYNC_DECLARATIONS) {
+                    if ctx.is_eof() {
+                        break;
+                    }
+
                     let second_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
                         block::build_block_without_start(ctx);
 

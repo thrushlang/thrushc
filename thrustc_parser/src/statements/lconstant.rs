@@ -27,9 +27,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{
-    ParserContext, attributes, control::ParserPosition, expressions, modificators, typegen,
-};
+use crate::{ParserContext, attributes, control::Position, expressions, modificators, typegen};
 
 pub fn build_const<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -76,7 +74,7 @@ pub fn build_const<'parser>(
     )?;
 
     ctx.get_mut_control_context()
-        .set_position(ParserPosition::Constant);
+        .set_position(Position::Constant);
 
     let value: Ast = expressions::build_expression(ctx)?;
 

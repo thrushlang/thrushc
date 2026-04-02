@@ -21,7 +21,8 @@ Automatically:
 ```console
 $ git clone --depth=1 https://github.com/thrustlang/compiler-builder 
 $ cd compiler-builder 
-$ cargo run 
+$ cargo build --release
+$ ./target/release/compiler-builder
 ```
 
 You must first clone the repository and access it locally. 
@@ -41,7 +42,8 @@ Now you need to have Rust installed with a recent version.
 Now you need to compile the compiler with Rust. 
 
 ```console
-$ cargo run -- --help
+$ cargo build --release
+$ ./target/release/thrustc --help
 ```
 
 ## Commands & Flags

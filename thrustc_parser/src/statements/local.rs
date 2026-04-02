@@ -27,9 +27,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{Type, traits::InfererTypeExtensions};
 
-use crate::{
-    ParserContext, attributes, control::ParserPosition, expressions, modificators, typegen,
-};
+use crate::{ParserContext, attributes, control::Position, expressions, modificators, typegen};
 
 pub fn build_local<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -101,7 +99,7 @@ pub fn build_local<'parser>(
         ctx.get_mut_type_context()
             .add_infered_type(local_type.clone());
         ctx.get_mut_control_context()
-            .set_position(ParserPosition::Variable);
+            .set_position(Position::Variable);
 
         let value: Ast = expressions::build_expression(ctx)?;
         let value_type: &Type = value.get_value_type()?;
