@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(clippy::result_unit_err)]
 
 use thrustc_options::{CompilationUnit, CompilerOptions};
@@ -34,7 +33,7 @@ pub mod module;
 mod moduletable;
 mod parser;
 mod preparsing;
-mod signatures;
+pub mod signatures;
 
 #[derive(Debug)]
 pub struct Preprocessor {

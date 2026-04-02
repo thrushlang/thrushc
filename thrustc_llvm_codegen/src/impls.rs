@@ -73,7 +73,7 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::EnumValue { kind, .. } => kind,
 
             // Expressions
-            Ast::ExternalExpression { data, .. } => {
+            Ast::ModuleExpression { data, .. } => {
                 let ExternalSymbol { signature, .. } = data;
 
                 match signature {
@@ -82,6 +82,7 @@ impl AstLLVMGetType for Ast<'_> {
                     ExternalSignature::Function { kind, .. } => kind,
                     ExternalSignature::Struct { kind, .. } => kind,
                     ExternalSignature::Static { kind, .. } => kind,
+                    ExternalSignature::Unavailable { kind, .. } => kind,
                 }
             }
             Ast::Call { kind, .. } => kind,

@@ -1444,7 +1444,7 @@ pub fn set_up_ansi(options: &CompilerOptions) {
 }
 
 #[inline]
-pub fn report_comptime(
+pub fn report_compile_time(
     options: &CompilerOptions,
     start_time: std::time::Instant,
     compile_time: (

@@ -33,9 +33,7 @@ pub enum Variant {
     Function,
     Constant,
     Static,
-
     Struct,
-    Enum,
     CustomType,
 }
 
@@ -43,30 +41,31 @@ pub enum Variant {
 pub enum Signature {
     Function {
         kind: Type,
+        invalid_kind: Type,
         parameters: Vec<(Type, Span)>,
         attributes: ThrustAttributes,
         span: Span,
     },
     Constant {
         kind: Type,
+        invalid_kind: Type,
         attributes: ThrustAttributes,
         span: Span,
     },
     Static {
         kind: Type,
+        invalid_kind: Type,
         attributes: ThrustAttributes,
         span: Span,
     },
     Struct {
         kind: Type,
-        span: Span,
-    },
-    Enum {
-        fields: Vec<(Type, Span)>,
+        invalid_kind: Type,
         span: Span,
     },
     CustomType {
         kind: Type,
+        invalid_kind: Type,
         attributes: ThrustAttributes,
         span: Span,
     },
@@ -80,7 +79,6 @@ impl Signature {
             Signature::Constant { span, .. } => *span,
             Signature::Static { span, .. } => *span,
             Signature::Struct { span, .. } => *span,
-            Signature::Enum { span, .. } => *span,
             Signature::CustomType { span, .. } => *span,
         }
     }

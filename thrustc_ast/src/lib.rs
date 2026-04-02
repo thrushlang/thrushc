@@ -47,7 +47,7 @@ pub mod traits;
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
-pub enum Ast<'ctx> {
+pub enum Ast<'ast> {
     CString {
         bytes: std::vec::Vec<u8>,
         kind: Type,
@@ -106,7 +106,7 @@ pub enum Ast<'ctx> {
 
     // Fixed Array
     FixedArray {
-        items: std::vec::Vec<Ast<'ctx>>,
+        items: std::vec::Vec<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -114,24 +114,24 @@ pub enum Ast<'ctx> {
 
     // Array
     Array {
-        items: std::vec::Vec<Ast<'ctx>>,
+        items: std::vec::Vec<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
 
     Index {
-        source: std::boxed::Box<Ast<'ctx>>,
-        index: std::boxed::Box<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ast>>,
+        index: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
     },
 
     //
     Embedded {
-        name: &'ctx str,
+        name: &'ast str,
         path: std::path::PathBuf,
-        literal: &'ctx str,
+        literal: &'ast str,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -139,8 +139,8 @@ pub enum Ast<'ctx> {
 
     // Structures
     Struct {
-        name: &'ctx str,
-        data: StructureData<'ctx>,
+        name: &'ast str,
+        data: StructureData<'ast>,
         kind: Type,
         span: Span,
         attributes: ThrustAttributes,
@@ -148,14 +148,14 @@ pub enum Ast<'ctx> {
     },
 
     Constructor {
-        name: &'ctx str,
-        data: ConstructorData<'ctx>,
+        name: &'ast str,
+        data: ConstructorData<'ast>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
     Property {
-        source: std::boxed::Box<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ast>>,
         data: PropertyData,
         metadata: PropertyMetadata,
         kind: Type,
@@ -163,23 +163,23 @@ pub enum Ast<'ctx> {
         id: NodeId,
     },
     If {
-        condition: std::boxed::Box<Ast<'ctx>>,
-        then_branch: std::boxed::Box<Ast<'ctx>>,
-        else_if_branch: std::vec::Vec<Ast<'ctx>>,
-        else_branch: Option<std::boxed::Box<Ast<'ctx>>>,
+        condition: std::boxed::Box<Ast<'ast>>,
+        then_branch: std::boxed::Box<Ast<'ast>>,
+        else_if_branch: std::vec::Vec<Ast<'ast>>,
+        else_branch: Option<std::boxed::Box<Ast<'ast>>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
     Elif {
-        condition: std::boxed::Box<Ast<'ctx>>,
-        block: std::boxed::Box<Ast<'ctx>>,
+        condition: std::boxed::Box<Ast<'ast>>,
+        block: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
     Else {
-        block: std::boxed::Box<Ast<'ctx>>,
+        block: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -187,24 +187,24 @@ pub enum Ast<'ctx> {
 
     // Loops
     For {
-        local: std::boxed::Box<Ast<'ctx>>,
-        condition: std::boxed::Box<Ast<'ctx>>,
-        actions: std::boxed::Box<Ast<'ctx>>,
-        block: std::boxed::Box<Ast<'ctx>>,
+        local: std::boxed::Box<Ast<'ast>>,
+        condition: std::boxed::Box<Ast<'ast>>,
+        actions: std::boxed::Box<Ast<'ast>>,
+        block: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
     While {
-        variable: Option<std::boxed::Box<Ast<'ctx>>>,
-        condition: std::boxed::Box<Ast<'ctx>>,
-        block: std::boxed::Box<Ast<'ctx>>,
+        variable: Option<std::boxed::Box<Ast<'ast>>>,
+        condition: std::boxed::Box<Ast<'ast>>,
+        block: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
     Loop {
-        block: std::boxed::Box<Ast<'ctx>>,
+        block: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -234,8 +234,8 @@ pub enum Ast<'ctx> {
 
     // Code block
     Block {
-        nodes: std::vec::Vec<Ast<'ctx>>,
-        post: std::vec::Vec<Ast<'ctx>>,
+        nodes: std::vec::Vec<Ast<'ast>>,
+        post: std::vec::Vec<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -243,7 +243,7 @@ pub enum Ast<'ctx> {
 
     // Scope Post Execution
     Defer {
-        node: std::boxed::Box<Ast<'ctx>>,
+        node: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -258,8 +258,8 @@ pub enum Ast<'ctx> {
 
     // Enums
     Enum {
-        name: &'ctx str,
-        data: EnumData<'ctx>,
+        name: &'ast str,
+        data: EnumData<'ast>,
         attributes: ThrustAttributes,
         kind: Type,
         span: Span,
@@ -267,7 +267,7 @@ pub enum Ast<'ctx> {
     },
     EnumValue {
         name: String,
-        value: std::boxed::Box<Ast<'ctx>>,
+        value: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -275,9 +275,9 @@ pub enum Ast<'ctx> {
 
     // Functions
     Intrinsic {
-        name: &'ctx str,
-        external_name: &'ctx str,
-        parameters: std::vec::Vec<Ast<'ctx>>,
+        name: &'ast str,
+        external_name: &'ast str,
+        parameters: std::vec::Vec<Ast<'ast>>,
         parameters_types: std::vec::Vec<Type>,
         return_type: Type,
         attributes: ThrustAttributes,
@@ -290,9 +290,9 @@ pub enum Ast<'ctx> {
         id: NodeId,
     },
     AssemblerFunction {
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        parameters: std::vec::Vec<Ast<'ctx>>,
+        name: &'ast str,
+        ascii_name: &'ast str,
+        parameters: std::vec::Vec<Ast<'ast>>,
         parameters_types: std::vec::Vec<Type>,
         assembler: String,
         constraints: String,
@@ -302,26 +302,26 @@ pub enum Ast<'ctx> {
         id: NodeId,
     },
     AssemblerFunctionParameter {
-        name: &'ctx str,
+        name: &'ast str,
         kind: Type,
         position: u32,
         span: Span,
         id: NodeId,
     },
     Function {
-        name: &'ctx str,
-        ascii_name: &'ctx str,
-        parameters: std::vec::Vec<Ast<'ctx>>,
+        name: &'ast str,
+        ascii_name: &'ast str,
+        parameters: std::vec::Vec<Ast<'ast>>,
         parameter_types: std::vec::Vec<Type>,
-        body: Option<std::boxed::Box<Ast<'ctx>>>,
+        body: Option<std::boxed::Box<Ast<'ast>>>,
         return_type: Type,
         attributes: ThrustAttributes,
         span: Span,
         id: NodeId,
     },
     FunctionParameter {
-        name: &'ctx str,
-        ascii_name: &'ctx str,
+        name: &'ast str,
+        ascii_name: &'ast str,
         kind: Type,
         position: u32,
         metadata: FunctionParameterMetadata,
@@ -329,7 +329,7 @@ pub enum Ast<'ctx> {
         id: NodeId,
     },
     Return {
-        expression: Option<std::boxed::Box<Ast<'ctx>>>,
+        expression: Option<std::boxed::Box<Ast<'ast>>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -337,10 +337,10 @@ pub enum Ast<'ctx> {
 
     // Static
     Static {
-        name: &'ctx str,
-        ascii_name: &'ctx str,
+        name: &'ast str,
+        ascii_name: &'ast str,
         kind: Type,
-        value: Option<std::boxed::Box<Ast<'ctx>>>,
+        value: Option<std::boxed::Box<Ast<'ast>>>,
         attributes: ThrustAttributes,
         modificators: Modificators,
         metadata: StaticMetadata,
@@ -350,10 +350,10 @@ pub enum Ast<'ctx> {
 
     // Constants
     Const {
-        name: &'ctx str,
-        ascii_name: &'ctx str,
+        name: &'ast str,
+        ascii_name: &'ast str,
         kind: Type,
-        value: std::boxed::Box<Ast<'ctx>>,
+        value: std::boxed::Box<Ast<'ast>>,
         attributes: ThrustAttributes,
         modificators: Modificators,
         metadata: ConstantMetadata,
@@ -363,10 +363,10 @@ pub enum Ast<'ctx> {
 
     // Locals variables
     Local {
-        name: &'ctx str,
-        ascii_name: &'ctx str,
+        name: &'ast str,
+        ascii_name: &'ast str,
         kind: Type,
-        value: Option<std::boxed::Box<Ast<'ctx>>>,
+        value: Option<std::boxed::Box<Ast<'ast>>>,
         attributes: ThrustAttributes,
         modificators: Modificators,
         metadata: LocalMetadata,
@@ -376,7 +376,7 @@ pub enum Ast<'ctx> {
 
     // Reference
     Reference {
-        name: &'ctx str,
+        name: &'ast str,
         kind: Type,
         metadata: ReferenceMetadata,
         span: Span,
@@ -385,30 +385,30 @@ pub enum Ast<'ctx> {
 
     // Mutation
     Mut {
-        source: std::boxed::Box<Ast<'ctx>>,
-        value: std::boxed::Box<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ast>>,
+        value: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
 
     Address {
-        source: std::boxed::Box<Ast<'ctx>>,
-        indexes: std::vec::Vec<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ast>>,
+        indexes: std::vec::Vec<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
 
     Write {
-        source: std::boxed::Box<Ast<'ctx>>,
-        write_value: std::boxed::Box<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ast>>,
+        write_value: std::boxed::Box<Ast<'ast>>,
         write_type: Type,
         span: Span,
         id: NodeId,
     },
     Load {
-        source: std::boxed::Box<Ast<'ctx>>,
+        source: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -416,7 +416,7 @@ pub enum Ast<'ctx> {
 
     // Pointer Manipulation
     Deref {
-        value: std::boxed::Box<Ast<'ctx>>,
+        value: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         modificators: Modificators,
         metadata: DereferenceMetadata,
@@ -426,7 +426,7 @@ pub enum Ast<'ctx> {
 
     // Casts
     As {
-        from: std::boxed::Box<Ast<'ctx>>,
+        from: std::boxed::Box<Ast<'ast>>,
         cast: Type,
         metadata: CastingMetadata,
         span: Span,
@@ -435,30 +435,31 @@ pub enum Ast<'ctx> {
 
     // Expressions
     DirectRef {
-        expr: std::boxed::Box<Ast<'ctx>>,
+        expr: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
 
-    ExternalExpression {
+    ModuleExpression {
         data: ExternalSymbol,
+        values: ModuleExpressionValues<'ast>,
         span: Span,
         id: NodeId,
     },
 
     Call {
-        name: &'ctx str,
-        args: std::vec::Vec<Ast<'ctx>>,
+        name: &'ast str,
+        args: std::vec::Vec<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
     },
 
     IndirectCall {
-        function: std::boxed::Box<Ast<'ctx>>,
+        function: std::boxed::Box<Ast<'ast>>,
         function_type: Type,
-        args: std::vec::Vec<Ast<'ctx>>,
+        args: std::vec::Vec<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -467,7 +468,7 @@ pub enum Ast<'ctx> {
     AsmValue {
         assembler: String,
         constraints: String,
-        args: std::vec::Vec<Ast<'ctx>>,
+        args: std::vec::Vec<Ast<'ast>>,
         kind: Type,
         attributes: ThrustAttributes,
         span: Span,
@@ -475,9 +476,9 @@ pub enum Ast<'ctx> {
     },
 
     BinaryOp {
-        left: std::boxed::Box<Ast<'ctx>>,
+        left: std::boxed::Box<Ast<'ast>>,
         operator: TokenType,
-        right: std::boxed::Box<Ast<'ctx>>,
+        right: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -486,14 +487,14 @@ pub enum Ast<'ctx> {
     UnaryOp {
         operator: TokenType,
         kind: Type,
-        node: std::boxed::Box<Ast<'ctx>>,
+        node: std::boxed::Box<Ast<'ast>>,
         is_pre: bool,
         span: Span,
         id: NodeId,
     },
 
     Group {
-        node: std::boxed::Box<Ast<'ctx>>,
+        node: std::boxed::Box<Ast<'ast>>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -501,7 +502,7 @@ pub enum Ast<'ctx> {
 
     // Builtins
     Builtin {
-        builtin: ThrustBuiltin<'ctx>,
+        builtin: ThrustBuiltin<'ast>,
         kind: Type,
         span: Span,
         id: NodeId,
@@ -535,9 +536,9 @@ pub enum Ast<'ctx> {
     },
 }
 
-impl<'ctx> Ast<'ctx> {
+impl<'ast> Ast<'ast> {
     #[inline]
-    pub fn new_float(kind: Type, value: f64, signed: bool, span: Span) -> Ast<'ctx> {
+    pub fn new_float(kind: Type, value: f64, signed: bool, span: Span) -> Ast<'ast> {
         Ast::Float {
             kind,
             value,
@@ -548,7 +549,7 @@ impl<'ctx> Ast<'ctx> {
     }
 
     #[inline]
-    pub fn new_integer(kind: Type, value: u64, signed: bool, span: Span) -> Ast<'ctx> {
+    pub fn new_integer(kind: Type, value: u64, signed: bool, span: Span) -> Ast<'ast> {
         Ast::Integer {
             kind,
             value,
@@ -559,7 +560,7 @@ impl<'ctx> Ast<'ctx> {
     }
 
     #[inline]
-    pub fn new_boolean(kind: Type, value: u64, span: Span) -> Ast<'ctx> {
+    pub fn new_boolean(kind: Type, value: u64, span: Span) -> Ast<'ast> {
         Ast::Boolean {
             kind,
             value,
@@ -569,7 +570,7 @@ impl<'ctx> Ast<'ctx> {
     }
 
     #[inline]
-    pub fn new_char(kind: Type, byte: u64, span: Span) -> Ast<'ctx> {
+    pub fn new_char(kind: Type, byte: u64, span: Span) -> Ast<'ast> {
         Ast::Char {
             kind,
             byte,
@@ -579,7 +580,7 @@ impl<'ctx> Ast<'ctx> {
     }
 
     #[inline]
-    pub fn new_cstring(bytes: Vec<u8>, kind: Type, span: Span) -> Ast<'ctx> {
+    pub fn new_cstring(bytes: Vec<u8>, kind: Type, span: Span) -> Ast<'ast> {
         Ast::CString {
             bytes,
             kind,
@@ -589,7 +590,7 @@ impl<'ctx> Ast<'ctx> {
     }
 
     #[inline]
-    pub fn new_cnstring(bytes: Vec<u8>, kind: Type, span: Span) -> Ast<'ctx> {
+    pub fn new_cnstring(bytes: Vec<u8>, kind: Type, span: Span) -> Ast<'ast> {
         Ast::CNString {
             bytes,
             kind,
@@ -599,7 +600,7 @@ impl<'ctx> Ast<'ctx> {
     }
 
     #[inline]
-    pub fn new_nullptr(span: Span) -> Ast<'ctx> {
+    pub fn new_nullptr(span: Span) -> Ast<'ast> {
         Ast::NullPtr {
             span,
             kind: Type::Ptr(None, span),
@@ -607,13 +608,25 @@ impl<'ctx> Ast<'ctx> {
     }
 
     #[inline]
-    pub fn invalid_ast(span: Span) -> Ast<'ctx> {
+    pub fn invalid_ast(span: Span) -> Ast<'ast> {
         Ast::Invalid {
             kind: Type::Void(span),
             span,
             id: NodeId::new(),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum ModuleExpressionValues<'ast> {
+    Call {
+        arguments: Vec<Ast<'ast>>,
+        span: Span,
+    },
+    Reference {
+        name: String,
+        span: Span,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]

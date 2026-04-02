@@ -17,6 +17,11 @@
 
 */
 
+#[cfg(not(target_pointer_width = "64"))]
+compile_error!("This compiler requires a 64-bit target.");
+#[rustversion::before(1.85)]
+compile_error!("This compiler requires Rust 1.85 or newer.");
+
 #[global_allocator]
 static GLOBAL: thrustc_heap_allocator::ThrustCompilerHeapAllocator =
     thrustc_heap_allocator::ThrustCompilerHeapAllocator;
@@ -40,5 +45,5 @@ fn main() -> ! {
         std::time::Duration,
     ) = ThrustCompiler::new(options.get_files(), options).compile();
 
-    thrustc_cli::report_comptime(options, start_time, compile_time)
+    thrustc_cli::report_compile_time(options, start_time, compile_time)
 }

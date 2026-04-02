@@ -9,6 +9,7 @@ rust-version.workspace = true
 default-run = "thrustc_entrypoint"
 
 [dependencies]
+rustversion = "1.0.22"
 ahash = "0.8.11"
 colored = "3.0.0"
 

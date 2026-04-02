@@ -72,7 +72,7 @@ impl AstGetType for Ast<'_> {
             Ast::AssemblerFunction { return_type, .. } => Ok(return_type),
 
             // Expressions & Operators
-            Ast::ExternalExpression { data, .. } => {
+            Ast::ModuleExpression { data, .. } => {
                 let ExternalSymbol { signature, .. } = data;
 
                 match signature {
@@ -81,6 +81,7 @@ impl AstGetType for Ast<'_> {
                     ExternalSignature::Function { kind, .. } => Ok(kind),
                     ExternalSignature::Struct { kind, .. } => Ok(kind),
                     ExternalSignature::Static { kind, .. } => Ok(kind),
+                    ExternalSignature::Unavailable { kind, .. } => Ok(kind),
                 }
             }
             Ast::Call { kind, .. } => Ok(kind),
@@ -178,7 +179,7 @@ impl AstGetType for Ast<'_> {
             Ast::EnumValue { kind, .. } => Ok(kind),
 
             // Expressions
-            Ast::ExternalExpression { data, .. } => {
+            Ast::ModuleExpression { data, .. } => {
                 let ExternalSymbol { signature, .. } = data;
 
                 match signature {
@@ -187,6 +188,7 @@ impl AstGetType for Ast<'_> {
                     ExternalSignature::Function { kind, .. } => Ok(kind),
                     ExternalSignature::Struct { kind, .. } => Ok(kind),
                     ExternalSignature::Static { kind, .. } => Ok(kind),
+                    ExternalSignature::Unavailable { kind, .. } => Ok(kind),
                 }
             }
             Ast::Call { kind, .. } => Ok(kind),
@@ -276,7 +278,7 @@ impl AstCodeLocation for Ast<'_> {
             Ast::Property { span, .. } => *span,
 
             // Expressions and operators
-            Ast::ExternalExpression { span, .. } => *span,
+            Ast::ModuleExpression { span, .. } => *span,
             Ast::Call { span, .. } => *span,
             Ast::BinaryOp { span, .. } => *span,
             Ast::UnaryOp { span, .. } => *span,

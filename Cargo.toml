@@ -5,6 +5,8 @@ members = [
     "thrustc_ast",
     "thrustc_lexer",
     "thrustc_parser",
+    "thrustc_parser_table",
+    "thrustc_parser_external_table", 
     "thrustc_typesystem", 
     "thrustc_span", 
     "thrustc_diagnostician", 
@@ -36,8 +38,9 @@ members = [
     "thrustc_preprocessor_type_resolver", 
     "thrustc_ast_verifier", 
     "thrustc_heap_allocator", 
+    "thrustc_ast_external", 
     "thrustc_cli",
-    "thrustc_utils", "thrustc_ast_external", "thrustc_parser_table", 
+    "thrustc_utils",
 ]
 
 exclude = [

@@ -139,13 +139,13 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
     ) {
         cleaner::auto_clean(self.get_options());
 
-        let mut interrumped: bool = false;
+        let mut disrupted: bool = false;
 
-        self.unready.iter().for_each(|file| {
-            interrumped = self.compile_file_with_llvm_aot(file).is_err();
-        });
+        for file in self.unready.iter() {
+            disrupted = self.compile_file_with_llvm_aot(file).is_err();
+        }
 
-        if interrumped
+        if disrupted
             || self.get_options().get_was_printed()
             || self.get_options().get_was_emited()
             || self.get_compiled_files().is_empty()
@@ -219,8 +219,6 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
                 file_time,
             );
         })?;
-
-        println!("{:?}", modules);
 
         let parser: (ParserContext, bool) = Parser::parse(&tokens, modules, file, self.options);
 
@@ -393,8 +391,6 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         )
         .optimize();
 
-        println!("{:?}", backend_time.elapsed());
-
         self.update_thrushc_backend_time(backend_time.elapsed());
 
         if print::llvm_after_optimization(self, &llvm_module, &target_machine, file, file_time)? {
@@ -442,14 +438,14 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         let context: Context = Context::create();
 
-        let mut interrumped: bool = false;
+        let mut disrupted: bool = false;
         let mut modules: Vec<Module> = Vec::with_capacity(u8::MAX as usize);
 
-        self.unready.iter().for_each(|file| {
+        for file in self.unready.iter() {
             let compiled_file: Result<either::Either<MemoryBuffer, ()>, ()> =
                 self.compile_file_with_llvm_jit(file);
 
-            interrumped = compiled_file.is_err();
+            disrupted = compiled_file.is_err();
 
             if let Some(module) = compiled_file
                 .ok()
@@ -458,9 +454,9 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             {
                 modules.push(module)
             }
-        });
+        }
 
-        if interrumped
+        if disrupted
             || self.get_options().get_was_printed()
             || self.get_options().get_was_emited()
             || modules.is_empty()
