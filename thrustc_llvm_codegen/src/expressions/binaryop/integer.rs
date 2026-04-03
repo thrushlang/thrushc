@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(unnecessary_transmutes)]
 #![allow(clippy::incompatible_msrv)]
 
@@ -25,10 +24,13 @@ use crate::abort;
 use crate::cast;
 use crate::codegen;
 use crate::context::LLVMCodeGenContext;
+use crate::memory;
 use crate::predicates;
 use crate::traits::AstLLVMGetType;
 use crate::typegeneration;
 
+use thrustc_ast::Ast;
+use thrustc_ast::traits::AstStandardExtensions;
 use thrustc_entities::BinaryOperation;
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
@@ -43,7 +45,178 @@ use inkwell::values::PointerValue;
 use thrustc_typesystem::traits::TypeExtensions;
 use thrustc_typesystem::traits::TypeIsExtensions;
 
-fn int_operation<'ctx>(
+fn compile_int_operation<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    lhs: &'ctx Ast,
+    rhs: &'ctx Ast,
+    cast_type: Option<&Type>,
+    signatures: (bool, bool, &Type, &Type),
+    operator: &TokenType,
+    span: Span,
+) -> BasicValueEnum<'ctx> {
+    let llvm_builder: &Builder = context.get_llvm_builder();
+
+    match operator {
+        TokenType::PlusEq => {
+            if lhs.is_reference() {
+                let reference: BasicValueEnum<'_> =
+                    codegen::compile_as_ptr(context, lhs, cast_type);
+
+                if reference.is_pointer_value() {
+                    let ptr: PointerValue<'_> = reference.into_pointer_value();
+
+                    let old_value: IntValue<'_> =
+                        codegen::compile(context, lhs, cast_type).into_int_value();
+                    let value: IntValue<'_> =
+                        codegen::compile(context, rhs, cast_type).into_int_value();
+
+                    let new_value: BasicValueEnum<'_> = llvm_builder
+                        .build_int_nsw_add(old_value, value, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '+' operation!",
+                                span,
+                                std::path::PathBuf::from(file!()),
+                                line!(),
+                            );
+                        })
+                        .into();
+
+                    memory::store_anon(context, ptr, new_value, span);
+
+                    new_value
+                } else {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to compile '+=' operation!",
+                        span,
+                        std::path::PathBuf::from(file!()),
+                        line!(),
+                    )
+                }
+            } else {
+                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast_type);
+                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast_type);
+
+                let old_value: IntValue<'_> = lhs.into_int_value();
+                let value: IntValue<'_> = rhs.into_int_value();
+
+                llvm_builder
+                    .build_int_nsw_add(old_value, value, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile '+' operation!",
+                            span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into()
+            }
+        }
+
+        TokenType::MinusEq => {
+            if lhs.is_reference() {
+                let reference: BasicValueEnum<'_> =
+                    codegen::compile_as_ptr(context, lhs, cast_type);
+
+                if reference.is_pointer_value() {
+                    let ptr: PointerValue<'_> = reference.into_pointer_value();
+
+                    let old_value: IntValue<'_> =
+                        codegen::compile(context, lhs, cast_type).into_int_value();
+                    let value: IntValue<'_> =
+                        codegen::compile(context, rhs, cast_type).into_int_value();
+
+                    let new_value: BasicValueEnum<'_> = llvm_builder
+                        .build_int_nsw_sub(old_value, value, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '-' operation!",
+                                span,
+                                std::path::PathBuf::from(file!()),
+                                line!(),
+                            );
+                        })
+                        .into();
+
+                    memory::store_anon(context, ptr, new_value, span);
+
+                    new_value
+                } else {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to compile '-=' operation!",
+                        span,
+                        std::path::PathBuf::from(file!()),
+                        line!(),
+                    )
+                }
+            } else {
+                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast_type);
+                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast_type);
+
+                let old_value: IntValue<'_> = lhs.into_int_value();
+                let value: IntValue<'_> = rhs.into_int_value();
+
+                llvm_builder
+                    .build_int_nsw_sub(old_value, value, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile '-' operation!",
+                            span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into()
+            }
+        }
+
+        _ => {
+            if let TokenType::Plus
+            | TokenType::Slash
+            | TokenType::Minus
+            | TokenType::Star
+            | TokenType::Arith
+            | TokenType::BangEq
+            | TokenType::EqEq
+            | TokenType::LessEq
+            | TokenType::Less
+            | TokenType::Greater
+            | TokenType::GreaterEq
+            | TokenType::LShift
+            | TokenType::RShift
+            | TokenType::And
+            | TokenType::Or
+            | TokenType::Xor
+            | TokenType::Bor
+            | TokenType::BAnd = operator
+            {
+                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast_type);
+                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast_type);
+
+                return self::compile_int_value_operation(
+                    context, lhs, rhs, signatures, operator, span,
+                );
+            }
+
+            abort::abort_codegen(
+                context,
+                "Failed to compile integer binary operation!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            );
+        }
+    }
+}
+
+fn compile_int_value_operation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     lhs: BasicValueEnum<'ctx>,
     rhs: BasicValueEnum<'ctx>,
@@ -332,6 +505,8 @@ pub fn compile<'ctx>(
         | TokenType::Minus
         | TokenType::Star
         | TokenType::Arith
+        | TokenType::PlusEq
+        | TokenType::MinusEq
         | TokenType::BangEq
         | TokenType::EqEq
         | TokenType::LessEq
@@ -350,22 +525,21 @@ pub fn compile<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let lhs: BasicValueEnum = codegen::compile(context, binary.0, cast);
-        let rhs: BasicValueEnum = codegen::compile(context, binary.2, cast);
+        let lhs: &Ast<'_> = binary.0;
+        let rhs: &Ast<'_> = binary.2;
 
         let lhs_type: &Type = binary.0.llvm_get_type();
         let rhs_type: &Type = binary.2.llvm_get_type();
 
-        return self::int_operation(
+        let lhs_is_signed: bool = lhs_type.is_signed_integer_type();
+        let rhs_is_signed: bool = rhs_type.is_signed_integer_type();
+
+        return self::compile_int_operation(
             context,
             lhs,
             rhs,
-            (
-                lhs_type.is_signed_integer_type(),
-                rhs_type.is_signed_integer_type(),
-                lhs_type,
-                rhs_type,
-            ),
+            cast,
+            (lhs_is_signed, rhs_is_signed, lhs_type, rhs_type),
             operator,
             span,
         );
@@ -380,7 +554,7 @@ pub fn compile<'ctx>(
     );
 }
 
-fn const_int_operation<'ctx>(
+fn compile_const_int_value_operation<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     lhs: BasicValueEnum<'ctx>,
     rhs: BasicValueEnum<'ctx>,
@@ -395,8 +569,8 @@ fn const_int_operation<'ctx>(
         let (lhs, rhs) = cast::const_integer_together(lhs, rhs, signatures);
 
         return match operator {
-            TokenType::Plus => lhs.const_nsw_add(rhs).into(),
-            TokenType::Minus => lhs.const_nsw_sub(rhs).into(),
+            TokenType::Plus | TokenType::PlusEq => lhs.const_nsw_add(rhs).into(),
+            TokenType::Minus | TokenType::MinusEq => lhs.const_nsw_sub(rhs).into(),
             TokenType::Star => lhs.const_nsw_mul(rhs).into(),
             TokenType::Slash => {
                 if signatures.0 || signatures.1 {
@@ -875,6 +1049,8 @@ pub fn compile_const<'ctx>(
         | TokenType::Minus
         | TokenType::Star
         | TokenType::Arith
+        | TokenType::PlusEq
+        | TokenType::MinusEq
         | TokenType::BangEq
         | TokenType::EqEq
         | TokenType::LessEq
@@ -899,7 +1075,7 @@ pub fn compile_const<'ctx>(
         let lhs_type: &Type = binary.0.llvm_get_type();
         let rhs_type: &Type = binary.2.llvm_get_type();
 
-        return self::const_int_operation(
+        return self::compile_const_int_value_operation(
             context,
             lhs,
             rhs,

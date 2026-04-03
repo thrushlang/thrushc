@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::PointerValue;
 use inkwell::{builder::Builder, values::BasicValueEnum};
@@ -43,9 +42,17 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let source_type: &Type = source.llvm_get_type();
 
-    if (source.is_allocated() && source_type.is_struct_type())
-        || source_type.is_ptr_composite_type()
-    {
+    let is_allocated: bool = source.is_allocated_value().unwrap_or_else(|_| {
+        abort::abort_codegen(
+            context,
+            "Failed to determinate if the value is in memory!",
+            source.get_span(),
+            std::path::PathBuf::from(file!()),
+            line!(),
+        )
+    });
+
+    if (is_allocated && source_type.is_struct_type()) || source_type.is_ptr_composite_type() {
         self::compile_gep_property(context, source, data)
     } else {
         self::compile_extract_property(context, source, data)

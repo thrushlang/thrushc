@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     builitins::ThrustBuiltin,
@@ -79,7 +78,7 @@ pub fn validate<'analyzer>(
         Ast::Index { source, index, .. } => {
             let source_type: &Type = source.get_any_type()?;
 
-            if source.is_reference() && !source.is_allocated() {
+            if source.is_reference() && !source.is_allocated_value()? {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0007,
                     "An reference with memory address was expected. Try to allocate it.".into(),
@@ -137,7 +136,7 @@ pub fn validate<'analyzer>(
         Ast::DirectRef { expr, span, .. } => {
             let expr_type: &Type = expr.get_value_type()?;
 
-            if expr.is_reference() && !expr.is_allocated() {
+            if expr.is_reference() && !expr.is_allocated_value()? {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0007,
                     "An reference with memory address was expected. Try to allocate it.".into(),

@@ -36,9 +36,8 @@ use crate::{
         AstCodeBlockEntensions, AstConstantExtensions, AstConstructorDataExtensions,
         AstDeclarationExtensions, AstEnumFieldsDataExtensions, AstExpressionExtensions,
         AstExpressionOperationExtensions, AstGetType, AstMemoryExtensions,
-        AstPropertyDataExtensions, AstPropertyDataFieldExtensions, AstScopeExtensions,
-        AstStandardExtensions, AstStatementExtensions, AstStructFieldsDataExtensions,
-        AstStructureDataExtensions,
+        AstPropertyDataExtensions, AstPropertyDataFieldExtensions, AstStandardExtensions,
+        AstStatementExtensions, AstStructFieldsDataExtensions, AstStructureDataExtensions,
     },
 };
 
@@ -295,16 +294,6 @@ impl AstCodeBlockEntensions for Ast<'_> {
 
 impl AstMemoryExtensions for Ast<'_> {
     #[inline]
-    fn is_allocated(&self) -> bool {
-        match self {
-            Ast::Reference { metadata, .. } => metadata.is_allocated(),
-            Ast::Property { metadata, .. } => metadata.is_allocated(),
-
-            _ => false,
-        }
-    }
-
-    #[inline]
     fn is_allocated_value(&self) -> Result<bool, CompilationIssue> {
         match self {
             Ast::Reference { metadata, .. } => Ok(metadata.is_allocated()),
@@ -317,6 +306,8 @@ impl AstMemoryExtensions for Ast<'_> {
 
 impl AstConstantExtensions for Ast<'_> {
     fn is_constant_value(&self) -> bool {
+        const BINARY_CONSTANT_OPERATIONS: &[TokenType] = &[];
+
         match self {
             Ast::Integer { .. }
             | Ast::Float { .. }
@@ -348,25 +339,6 @@ impl AstConstantExtensions for Ast<'_> {
 
             _ => false,
         }
-    }
-}
-
-impl AstScopeExtensions for Ast<'_> {
-    #[inline]
-    fn is_compatible_with_main_scope(&self) -> bool {
-        matches!(
-            self,
-            Ast::CustomType { .. }
-                | Ast::Struct { .. }
-                | Ast::Enum { .. }
-                | Ast::Intrinsic { .. }
-                | Ast::Function { .. }
-                | Ast::AssemblerFunction { .. }
-                | Ast::GlobalAssembler { .. }
-                | Ast::Const { .. }
-                | Ast::Static { .. }
-                | Ast::Import { .. }
-        )
     }
 }
 

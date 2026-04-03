@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
@@ -36,6 +35,8 @@ pub fn term_precedence<'parser>(
 
     while ctx.match_token(TokenType::Plus)?
         || ctx.match_token(TokenType::Minus)?
+        || ctx.match_token(TokenType::PlusEq)?
+        || ctx.match_token(TokenType::MinusEq)?
         || ctx.match_token(TokenType::Arith)?
         || ctx.match_token(TokenType::LShift)?
         || ctx.match_token(TokenType::RShift)?

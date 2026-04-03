@@ -371,7 +371,7 @@ impl<'analyzer> Analyzer<'analyzer> {
             Ast::Mut { source, value, .. } => {
                 let source_type: &Type = source.get_value_type()?;
 
-                if source.is_reference() && !source.is_allocated() {
+                if source.is_reference() && !source.is_allocated_value()? {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0007,
                         "An reference with memory address was expected. Try to allocate it.".into(),

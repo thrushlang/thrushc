@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 
@@ -36,7 +35,9 @@ pub fn validate_binary(
         | TokenType::Star
         | TokenType::Slash
         | TokenType::Minus
-        | TokenType::Plus => self::validate_binary_arithmetic(op, a, b, span),
+        | TokenType::MinusEq
+        | TokenType::Plus
+        | TokenType::PlusEq => self::validate_binary_arithmetic(op, a, b, span),
         TokenType::Xor => self::validate_xor(op, a, b, span),
         TokenType::Bor => self::validate_bor(op, a, b, span),
         TokenType::BAnd => self::validate_band(op, a, b, span),
@@ -351,7 +352,7 @@ fn validate_binary_arithmetic(
             Type::F32(..) | Type::F64(..) | Type::F128(..),
             Type::F32(..) | Type::F64(..) | Type::F128(..),
         ) => Ok(()),
-        (Type::Ptr(..), Type::Ptr(..)) if a == b => Ok(()),
+        (Type::Ptr(..), Type::Ptr(..)) if a == b && *op == TokenType::Minus => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,

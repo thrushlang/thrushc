@@ -39,7 +39,7 @@ pub fn build_property<'parser>(
     source: Ast<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let base_type: &Type = source.get_value_type()?;
-    let metadata: PropertyMetadata = PropertyMetadata::new(source.is_allocated());
+    let metadata: PropertyMetadata = PropertyMetadata::new(source.is_allocated_value()?);
 
     let mut property_names: Vec<&str> = Vec::with_capacity(u8::MAX as usize);
 
@@ -134,14 +134,14 @@ fn decompose<'parser>(
 
         let Some((index, (_, field_type, ..))) = field else {
             return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0001,
-                format!("Expected a property, got '{}'.", property_name),
+                CompilationIssueCode::E0028,
+                format!("'{}' not found", property_name),
                 None,
                 span,
             ));
         };
 
-        let adjusted_inner_type: Type = if is_parent_ptr || source.is_allocated() {
+        let adjusted_inner_type: Type = if is_parent_ptr || source.is_allocated_value()? {
             Type::Ptr(Some(field_type.clone().into()), field_type.get_span())
         } else {
             field_type.clone()
@@ -169,7 +169,7 @@ fn decompose<'parser>(
 
         {
             for (base_subtype, ..) in nested_indices.iter_mut() {
-                *base_subtype = if is_parent_ptr || source.is_allocated() {
+                *base_subtype = if is_parent_ptr || source.is_allocated_value()? {
                     Type::Ptr(Some(base_subtype.clone().into()), base_subtype.get_span())
                 } else {
                     base_subtype.clone()
@@ -179,7 +179,7 @@ fn decompose<'parser>(
 
         indices.append(&mut nested_indices);
 
-        let adjusted_inner_type: Type = if is_parent_ptr || source.is_allocated() {
+        let adjusted_inner_type: Type = if is_parent_ptr || source.is_allocated_value()? {
             Type::Ptr(
                 Some(field_inner_type.clone().into()),
                 field_inner_type.get_span(),
@@ -193,8 +193,8 @@ fn decompose<'parser>(
 
     if position < property_names.len() {
         return Err(CompilationIssue::Error(
-            CompilationIssueCode::E0001,
-            format!("Property '{}' isn't a structure.", property_name),
+            CompilationIssueCode::E0028,
+            format!("'{}' not found", property_name),
             None,
             span,
         ));

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_mir::{atomicord::ThrustAtomicOrdering, threadmode::ThrustThreadMode};
 
 #[cfg(feature = "fuzz")]

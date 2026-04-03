@@ -39,12 +39,11 @@ pub fn cast_precedence<'parser>(
 
     if ctx.match_token(TokenType::As)? {
         let span: Span = ctx.previous().get_span();
-        let expression_type: &Type = expression.get_value_type()?;
 
         let cast: Type = typegeneration::build_type(ctx, false)?;
 
         let is_constant: bool = expression.is_constant_value();
-        let is_allocated: bool = expression.is_allocated() || expression_type.is_ptr_type();
+        let is_allocated: bool = expression.is_allocated_value()?;
 
         expression = Ast::As {
             from: expression.into(),

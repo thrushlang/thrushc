@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
@@ -78,16 +77,11 @@ pub trait AstCodeBlockEntensions {
 }
 
 pub trait AstMemoryExtensions {
-    fn is_allocated(&self) -> bool;
     fn is_allocated_value(&self) -> Result<bool, CompilationIssue>;
 }
 
 pub trait AstConstantExtensions {
     fn is_constant_value(&self) -> bool;
-}
-
-pub trait AstScopeExtensions {
-    fn is_compatible_with_main_scope(&self) -> bool;
 }
 
 pub trait AstStructureDataExtensions<'ast> {

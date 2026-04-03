@@ -235,6 +235,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -256,6 +258,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -277,6 +281,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -298,6 +304,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -319,6 +327,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -340,6 +350,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -361,6 +373,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -382,6 +396,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -403,6 +419,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -424,6 +442,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -445,6 +465,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -463,7 +485,9 @@ pub fn check_types(
                 | TokenType::Star
                 | TokenType::Arith
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq,
             )
             | None,
         ) => Ok(()),
@@ -478,7 +502,9 @@ pub fn check_types(
                 | TokenType::Star
                 | TokenType::Arith
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq,
             )
             | None,
         ) => Ok(()),
@@ -493,7 +519,9 @@ pub fn check_types(
                 | TokenType::Star
                 | TokenType::Arith
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq,
             )
             | None,
         ) => Ok(()),
@@ -510,7 +538,9 @@ pub fn check_types(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq,
             )
             | None,
         ) => Ok(()),
@@ -527,7 +557,9 @@ pub fn check_types(
                 | TokenType::LShift
                 | TokenType::RShift
                 | TokenType::PlusPlus
-                | TokenType::MinusMinus,
+                | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq,
             )
             | None,
         ) => Ok(()),
@@ -545,6 +577,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -566,6 +600,8 @@ pub fn check_types(
                 | TokenType::PlusPlus
                 | TokenType::Arith
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -587,6 +623,8 @@ pub fn check_types(
                 | TokenType::Arith
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
@@ -608,6 +646,8 @@ pub fn check_types(
                 | TokenType::RShift
                 | TokenType::PlusPlus
                 | TokenType::MinusMinus
+                | TokenType::MinusEq
+                | TokenType::PlusEq
                 | TokenType::Xor
                 | TokenType::Bor
                 | TokenType::Not
