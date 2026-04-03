@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, data::EnumData};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -26,7 +25,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, attributes, expressions, typegen};
+use crate::{ParserContext, attributes, expressions, typegeneration};
 
 pub fn build_enum<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -72,7 +71,7 @@ pub fn build_enum<'parser>(
                 "Expected ':'.".into(),
             )?;
 
-            let field_type: Type = typegen::build_type(ctx, false)?;
+            let field_type: Type = typegeneration::build_type(ctx, false)?;
 
             ctx.consume(
                 TokenType::Eq,

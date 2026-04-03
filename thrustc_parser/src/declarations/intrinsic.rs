@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_entities::parser::IntrinsicParametersTypes;
@@ -27,7 +26,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, attributes, typegen};
+use crate::{ParserContext, attributes, typegeneration};
 
 pub fn build_compiler_intrinsic<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -97,7 +96,7 @@ pub fn build_compiler_intrinsic<'parser>(
             "Expected ':'.".into(),
         )?;
 
-        let kind: Type = typegen::build_type(ctx, false)?;
+        let kind: Type = typegeneration::build_type(ctx, false)?;
 
         parameters_types.push(kind.clone());
 
@@ -124,7 +123,7 @@ pub fn build_compiler_intrinsic<'parser>(
         "Expected ')'.".into(),
     )?;
 
-    let return_type: Type = typegen::build_type(ctx, false)?;
+    let return_type: Type = typegeneration::build_type(ctx, false)?;
 
     let attributes: ThrustAttributes =
         attributes::build_compiler_attributes(ctx, &[TokenType::SemiColon])?;

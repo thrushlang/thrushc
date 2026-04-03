@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_errors::CompilationIssue;
 use thrustc_token_type::TokenType;
 
@@ -178,6 +177,7 @@ lazy_static! {
         keywords.insert("write", TokenType::Write);
         keywords.insert("fixed", TokenType::Fixed);
         keywords.insert("ref", TokenType::DirectRef);
+        keywords.insert("mut", TokenType::Mut);
         keywords.insert("static", TokenType::Static);
         keywords.insert("unreachable", TokenType::Unreachable);
         keywords.insert("intrinsic", TokenType::Intrinsic);

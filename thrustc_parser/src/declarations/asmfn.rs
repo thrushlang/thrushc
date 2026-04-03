@@ -29,7 +29,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, attributes, expressions, typegen};
+use crate::{ParserContext, attributes, expressions, typegeneration};
 
 pub fn build_assembler_function<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -77,7 +77,7 @@ pub fn build_assembler_function<'parser>(
         let parameter_name: &str = parameter_name_tk.get_lexeme();
         let parameter_span: Span = parameter_name_tk.get_span();
 
-        let parameter_type: Type = typegen::build_type(ctx, false)?;
+        let parameter_type: Type = typegeneration::build_type(ctx, false)?;
 
         parameters_types.push(parameter_type.clone());
 
@@ -121,7 +121,7 @@ pub fn build_assembler_function<'parser>(
 
         Type::Void(span)
     } else {
-        typegen::build_type(ctx, false)?
+        typegeneration::build_type(ctx, false)?
     };
 
     let attributes: ThrustAttributes =

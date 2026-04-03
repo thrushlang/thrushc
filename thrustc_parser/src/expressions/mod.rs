@@ -31,9 +31,10 @@ pub mod reference;
 
 use thrustc_ast::Ast;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
+use thrustc_parser_context::{SynchronizationPosition, traits::ControlContextExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::{ParserContext, control::SynchronizationPosition};
+use crate::ParserContext;
 
 pub fn build_expression<'parser>(
     ctx: &mut ParserContext<'parser>,

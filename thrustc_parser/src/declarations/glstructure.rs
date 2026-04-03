@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, data::StructureData, traits::AstStructFieldsDataExtensions};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -28,7 +27,7 @@ use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
 
 use thrustc_ast::traits::AstStructureDataExtensions;
 
-use crate::{ParserContext, attributes, modificators, typegen};
+use crate::{ParserContext, attributes, modificators, typegeneration};
 
 pub fn build_structure<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -84,7 +83,7 @@ pub fn build_structure<'parser>(
                 "Expected ':'.".into(),
             )?;
 
-            let field_type: Type = typegen::build_type(ctx, false)?;
+            let field_type: Type = typegeneration::build_type(ctx, false)?;
 
             data.1
                 .push((field_name, field_type, field_position, field_span));

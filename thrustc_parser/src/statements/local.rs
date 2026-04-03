@@ -22,12 +22,16 @@ use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::atomicord::ThrustAtomicOrdering;
 use thrustc_modificators::{Modificators, traits::ModificatorsExtensions};
+use thrustc_parser_context::{
+    Position,
+    traits::{ControlContextExtensions, TypeContextExtensions},
+};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{Type, traits::InfererTypeExtensions};
 
-use crate::{ParserContext, attributes, control::Position, expressions, modificators, typegen};
+use crate::{ParserContext, attributes, expressions, modificators, typegeneration};
 
 pub fn build_local<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -59,7 +63,7 @@ pub fn build_local<'parser>(
         "Expected ':'.".into(),
     )?;
 
-    let mut local_type: Type = typegen::build_type(ctx, false)?;
+    let mut local_type: Type = typegeneration::build_type(ctx, false)?;
 
     let attributes: ThrustAttributes =
         attributes::build_compiler_attributes(ctx, &[TokenType::SemiColon, TokenType::Eq])?;

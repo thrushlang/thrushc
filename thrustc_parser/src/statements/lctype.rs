@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -26,7 +25,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, attributes, typegen};
+use crate::{ParserContext, attributes, typegeneration};
 
 pub fn build_custom_type<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -55,7 +54,7 @@ pub fn build_custom_type<'parser>(
     let attributes: ThrustAttributes =
         attributes::build_compiler_attributes(ctx, &[TokenType::LBrace])?;
 
-    let custom_type: Type = typegen::build_type(ctx, false)?;
+    let custom_type: Type = typegeneration::build_type(ctx, false)?;
 
     ctx.consume(
         TokenType::SemiColon,

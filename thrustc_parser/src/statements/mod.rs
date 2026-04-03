@@ -32,9 +32,10 @@ pub mod terminator;
 
 use thrustc_ast::Ast;
 use thrustc_errors::CompilationIssue;
+use thrustc_parser_context::{SynchronizationPosition, traits::ControlContextExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::{ParserContext, control::SynchronizationPosition, expressions};
+use crate::{ParserContext, expressions};
 
 pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_context()

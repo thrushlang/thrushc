@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::values::FunctionValue;
 
 use thrustc_span::Span;

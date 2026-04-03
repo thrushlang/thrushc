@@ -394,15 +394,17 @@ impl<'analyzer> Analyzer<'analyzer> {
                     ));
                 }
 
-                if source.is_reference() {
-                    if let Ast::Reference { metadata, .. } = &**source {
-                        if metadata.is_static_ref() && !metadata.is_mutable() {
-                            self.add_error(CompilationIssue::Error(
-                                CompilationIssueCode::E0038,
-                                "It missed the mutatability marker. Add 'mut' keyword before the name.".into(),
-                                None,
-                                source.get_span(),
-                            ));
+                {
+                    if source.is_reference() {
+                        if let Ast::Reference { metadata, .. } = &**source {
+                            if metadata.is_static_ref() && !metadata.is_mutable() {
+                                self.add_error(CompilationIssue::Error(
+                                    CompilationIssueCode::E0038,
+                                    "It is missing mutability; you should mark it as mutable using 'mut.'".into(),
+                                    None,
+                                    source.get_span(),
+                                ));
+                            }
                         }
                     }
                 }

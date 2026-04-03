@@ -24,7 +24,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, expressions, typegen};
+use crate::{ParserContext, expressions, typegeneration};
 
 pub fn build_builtin<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -73,7 +73,7 @@ pub fn build_halloc<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx, true)?;
+    let of: Type = typegeneration::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -271,7 +271,7 @@ pub fn build_alignof<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx, true)?;
+    let of: Type = typegeneration::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -304,7 +304,7 @@ pub fn build_sizeof<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx, true)?;
+    let of: Type = typegeneration::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -337,7 +337,7 @@ pub fn build_bit_size_of<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx, true)?;
+    let of: Type = typegeneration::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -370,7 +370,7 @@ pub fn build_abi_size_of<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx, true)?;
+    let of: Type = typegeneration::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -403,7 +403,7 @@ pub fn build_abi_align_of<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let of: Type = typegen::build_type(ctx, true)?;
+    let of: Type = typegeneration::build_type(ctx, true)?;
 
     ctx.consume(
         TokenType::RParen,

@@ -152,7 +152,7 @@ pub enum CompilationIssueCode {
     E0035, // Import Error
     E0036, // Too many parameters
     E0037, // Too many depth,
-    E0038, // Missing mutability marker
+    E0038, // Not Mutable
 
     W0001, // Irrelevant Attribute
     W0002, // Unknown Call Convention
@@ -276,7 +276,7 @@ impl CompilationIssueCode {
                 format!("TOO DEEP - {}", "E0037".bright_red())
             }
             CompilationIssueCode::E0038 => {
-                format!("MISSING MUTABILITY MARKER - {}", "E0038".bright_red())
+                format!("NOT MUTABLE - {}", "E0038".bright_red())
             }
             CompilationIssueCode::W0001 => {
                 format!("IRRELEVANT ATTRIBUTE - {}", "W0001".bright_yellow())

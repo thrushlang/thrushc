@@ -17,7 +17,6 @@
 
 */
 
-
 use crate::{
     Type,
     traits::{TypeCodeLocation, TypeExtensions, TypeIsExtensions},
@@ -149,7 +148,7 @@ impl TypeIsExtensions for Type {
     }
 
     #[inline(always)]
-    fn is_unresolvedd_type(&self) -> bool {
+    fn is_unresolved_type(&self) -> bool {
         matches!(self, Type::Unresolved { .. })
     }
 }

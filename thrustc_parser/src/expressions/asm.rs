@@ -28,7 +28,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, attributes, expressions, typegen};
+use crate::{ParserContext, attributes, expressions, typegeneration};
 
 pub fn build_asm_code_block<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -43,7 +43,7 @@ pub fn build_asm_code_block<'parser>(
 
     let mut args: Vec<Ast> = Vec::with_capacity(10);
 
-    let asm_type: Type = typegen::build_type(ctx, false)?;
+    let asm_type: Type = typegeneration::build_type(ctx, false)?;
 
     let attributes: ThrustAttributes =
         attributes::build_compiler_attributes(ctx, &[TokenType::LParen, TokenType::LBrace])?;

@@ -17,7 +17,6 @@
 
 */
 
-
 use std::path::PathBuf;
 
 use inkwell::builder::Builder;
@@ -132,15 +131,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         let return_type: &Type = function.get_return_type();
         let parameter_types: Vec<Type> = function.get_parameters_types();
         let span: Span = function.get_span();
-        let line: u32 = u32::try_from(span.get_line()).unwrap_or_else(|_| {
-            abort::abort_codegen(
-                context,
-                "Failed to parse the code location!",
-                span,
-                PathBuf::from(file!()),
-                line!(),
-            )
-        });
+        let line: u32 = span.get_line();
 
         let llvm_return_type: Option<BasicTypeEnum<'_>> = if !return_type.is_void_type() {
             Some(typegeneration::compile_from(context, return_type))
@@ -207,25 +198,8 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
 
         llvm_builder.unset_current_debug_location();
 
-        let line: u32 = u32::try_from(span.get_line()).unwrap_or_else(|_| {
-            abort::abort_codegen(
-                context,
-                "Failed to parse the code location!",
-                span,
-                PathBuf::from(file!()),
-                line!(),
-            )
-        });
-
-        let column: u32 = u32::try_from(span.get_span_start()).unwrap_or_else(|_| {
-            abort::abort_codegen(
-                context,
-                "Failed to parse the code location!",
-                span,
-                PathBuf::from(file!()),
-                line!(),
-            )
-        });
+        let line: u32 = span.get_line();
+        let column: u32 = span.get_span_start();
 
         let debug_loc: DILocation<'_> = self.get_builder().create_debug_location(
             llvm_context,
@@ -239,26 +213,9 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         llvm_builder.set_current_debug_location(debug_loc);
     }
 
-    pub fn add_dbg_block(&mut self, context: &mut LLVMCodeGenContext<'_, 'ctx>, span: Span) {
-        let line: u32 = u32::try_from(span.get_line()).unwrap_or_else(|_| {
-            abort::abort_codegen(
-                context,
-                "Failed to parse the code location!",
-                span,
-                PathBuf::from(file!()),
-                line!(),
-            )
-        });
-
-        let column: u32 = u32::try_from(span.get_span_start()).unwrap_or_else(|_| {
-            abort::abort_codegen(
-                context,
-                "Failed to parse the code location!",
-                span,
-                PathBuf::from(file!()),
-                line!(),
-            )
-        });
+    pub fn add_dbg_block(&mut self, span: Span) {
+        let line: u32 = span.get_line();
+        let column: u32 = span.get_span_start();
 
         let parent_scope: DIScope = self.get_scope();
 

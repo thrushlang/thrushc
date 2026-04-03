@@ -710,13 +710,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .denegate_all_expression_optimizations();
 
                 let source_type: &Type = source.llvm_get_type();
-                let value_type: &Type = value.llvm_get_type();
-
-                let cast_type: Type = if value_type.is_value() && source_type != value_type {
-                    source_type.dereference_until_value()
-                } else {
-                    source_type.clone()
-                };
+                let cast_type: Type = source_type.dereference_until_value();
 
                 let ptr: BasicValueEnum = self::compile_as_ptr(self.context, source, None);
                 let value: BasicValueEnum = codegen::compile(self.context, value, Some(&cast_type));

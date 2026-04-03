@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, metadata::FunctionParameterMetadata};
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_entities::parser::FunctionParametersTypes;
@@ -27,7 +26,7 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
 use thrustc_typesystem::{Type, traits::TypeIsExtensions};
 
-use crate::{ParserContext, attributes, statements::block, typegen};
+use crate::{ParserContext, attributes, statements::block, typegeneration};
 
 pub fn build_function<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -82,7 +81,7 @@ pub fn build_function<'parser>(
             "Expected ':'.".into(),
         )?;
 
-        let kind: Type = typegen::build_type(ctx, false)?;
+        let kind: Type = typegeneration::build_type(ctx, false)?;
         let metadata: FunctionParameterMetadata =
             FunctionParameterMetadata::new(kind.is_ptr_like_type());
 
@@ -130,7 +129,7 @@ pub fn build_function<'parser>(
 
         Type::Void(span)
     } else {
-        typegen::build_type(ctx, false)?
+        typegeneration::build_type(ctx, false)?
     };
 
     let attributes: ThrustAttributes =

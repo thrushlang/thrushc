@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_span::Span;
 
 use crate::{
@@ -56,6 +55,7 @@ impl InfererTypeExtensions for Type {
         }
     }
 
+    #[inline(always)]
     fn has_inferer_inner_type(&self) -> bool {
         matches!(
             self,
@@ -66,6 +66,7 @@ impl InfererTypeExtensions for Type {
         )
     }
 
+    #[inline(always)]
     fn is_inferer_inner_type_valid(&self) -> bool {
         if let Type::Array {
             infered_type: Some((infered_type, 0 | 1)),
@@ -78,6 +79,7 @@ impl InfererTypeExtensions for Type {
         false
     }
 
+    #[inline(always)]
     fn is_inferer_inner_type_is_not_array_decay(&self) -> bool {
         if let Type::Array {
             infered_type: Some((_, 0..=1)),
@@ -90,6 +92,7 @@ impl InfererTypeExtensions for Type {
         false
     }
 
+    #[inline(always)]
     fn get_inferer_inner_type(&self) -> Type {
         match self {
             Type::Array {

@@ -32,12 +32,12 @@ impl DereferenceExtensions for Type {
     }
 
     fn dereference_until_value(&self) -> Type {
-        if self.is_value() {
-            return self.clone();
-        }
-
         if let Type::Ptr(Some(any), ..) = self {
             return any.dereference_until_value();
+        }
+
+        if self.is_value() {
+            return self.clone();
         }
 
         self.clone()

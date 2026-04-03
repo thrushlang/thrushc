@@ -114,15 +114,13 @@ impl<'symbol> TypeCheckerSymbolsTable<'symbol> {
 impl TypeCheckerSymbolsTable<'_> {
     #[inline]
     pub fn begin_scope(&mut self) {
-        self.locals.push(HashMap::with_capacity(255));
-
-        self.scope += 1;
+        self.locals.push(HashMap::with_capacity(u8::MAX as usize));
+        self.scope = self.scope.saturating_add(1);
     }
 
     #[inline]
     pub fn end_scope(&mut self) {
         self.locals.pop();
-
-        self.scope -= 1;
+        self.scope = self.scope.saturating_sub(1);
     }
 }

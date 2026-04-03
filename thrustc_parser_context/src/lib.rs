@@ -19,6 +19,10 @@
 
 use thrustc_typesystem::Type;
 
+use crate::traits::{ControlContextExtensions, PositionExtensions, TypeContextExtensions};
+
+pub mod traits;
+
 #[derive(Debug, Clone, Copy, Default)]
 pub enum SynchronizationPosition {
     Statement,
@@ -41,13 +45,13 @@ pub enum Position {
 }
 
 #[derive(Debug)]
-pub struct ParserControlContext {
+pub struct ControlContext {
     position: Position,
     synchronous_position: Vec<SynchronizationPosition>,
     expression_depth: u32,
 }
 
-impl ParserControlContext {
+impl ControlContext {
     #[inline]
     pub fn new() -> Self {
         Self {
@@ -58,112 +62,116 @@ impl ParserControlContext {
     }
 }
 
-impl ParserControlContext {
+impl ControlContextExtensions for ControlContext {
     #[inline]
-    pub fn set_position(&mut self, position: Position) {
+    fn set_position(&mut self, position: Position) {
         self.position = position;
     }
 
     #[inline]
-    pub fn reset_position(&mut self) {
+    fn reset_position(&mut self) {
         self.position = Position::NoRelevant;
     }
 
     #[inline]
-    pub fn add_sync_position(&mut self, other: SynchronizationPosition) {
+    fn add_sync_position(&mut self, other: SynchronizationPosition) {
         self.synchronous_position.push(other);
     }
 
     #[inline]
-    pub fn pop_sync_position(&mut self) {
+    fn pop_sync_position(&mut self) {
         self.synchronous_position.pop();
     }
 
     #[inline]
-    pub fn reset_sync_position(&mut self) {
+    fn reset_sync_position(&mut self) {
         self.synchronous_position.clear();
     }
 
     #[inline]
-    pub fn increase_expression_depth(&mut self) {
+    fn increase_expression_depth(&mut self) {
         self.expression_depth = self.expression_depth.saturating_add(1);
     }
 
     #[inline]
-    pub fn decrease_expression_depth(&mut self) {
+    fn decrease_expression_depth(&mut self) {
         self.expression_depth = self.expression_depth.saturating_sub(1);
     }
-}
 
-impl ParserControlContext {
     #[inline]
-    pub fn get_sync_position(&self) -> Option<&SynchronizationPosition> {
+    fn get_sync_position(&self) -> Option<&SynchronizationPosition> {
         self.synchronous_position.last()
     }
 
     #[inline]
-    pub fn get_expression_depth(&self) -> u32 {
+    fn get_expression_depth(&self) -> u32 {
         self.expression_depth
     }
 
     #[inline]
-    pub fn get_position(&self) -> Position {
+    fn get_position(&self) -> Position {
         self.position
     }
 }
 
 #[derive(Debug, Default)]
-pub struct ParserTypeContext {
+pub struct TypeContext {
     infered_types: Vec<Type>,
 }
 
-impl ParserTypeContext {
-    #[inline]
-    pub fn get_infered_type(&self) -> Option<Type> {
-        self.infered_types.last().cloned()
+impl TypeContext {
+    pub fn new() -> Self {
+        Self {
+            infered_types: Vec::with_capacity(u8::MAX as usize),
+        }
     }
 }
 
-impl ParserTypeContext {
+impl TypeContextExtensions for TypeContext {
     #[inline]
-    pub fn add_infered_type(&mut self, t: Type) {
+    fn get_infered_type(&self) -> Option<Type> {
+        self.infered_types.last().cloned()
+    }
+
+    #[inline]
+    fn add_infered_type(&mut self, t: Type) {
         self.infered_types.push(t);
     }
 
     #[inline]
-    pub fn pop_infered_type(&mut self) {
+    fn pop_infered_type(&mut self) {
         self.infered_types.pop();
     }
 
     #[inline]
-    pub fn reset_infered_types(&mut self) {
+    fn reset_infered_types(&mut self) {
         self.infered_types.clear();
     }
 }
 
-impl Position {
+impl PositionExtensions for Position {
     #[inline]
-    pub fn is_constant_position(&self) -> bool {
+    fn is_constant_position(&self) -> bool {
         matches!(self, Position::Constant)
     }
 
     #[inline]
-    pub fn is_static_position(&self) -> bool {
+    fn is_static_position(&self) -> bool {
         matches!(self, Position::Static)
     }
 
     #[inline]
-    pub fn is_variable_position(&self) -> bool {
+    fn is_variable_position(&self) -> bool {
         matches!(self, Position::Variable)
     }
 
     #[inline]
-    pub fn is_expression_position(&self) -> bool {
+    fn is_expression_position(&self) -> bool {
         matches!(self, Position::Expression)
     }
 
     #[inline]
-    pub fn is_irrelevant_position(&self) -> bool {
+    fn is_irrelevant_position(&self) -> bool {
         matches!(self, Position::NoRelevant)
     }
 }

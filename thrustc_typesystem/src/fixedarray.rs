@@ -17,11 +17,10 @@
 
 */
 
-
 use crate::{Type, traits::TypeFixedArrayEntensions};
 
 impl TypeFixedArrayEntensions for Type {
-    #[inline]
+    #[inline(always)]
     fn get_fixed_array_base_type(&self) -> Type {
         if let Type::FixedArray(inner, ..) = self {
             return *(*inner).clone();
@@ -38,7 +37,7 @@ impl TypeFixedArrayEntensions for Type {
         self.clone()
     }
 
-    #[inline]
+    #[inline(always)]
     fn get_fixed_array_type_herarchy(&self) -> u8 {
         match self {
             Type::Bool(..) => 1,

@@ -28,7 +28,7 @@ use thrustc_options::{CompilationUnit, CompilerOptions};
 use thrustc_span::Span;
 use thrustc_typesystem::{
     Type,
-    traits::{TypeCodeLocation, TypeIsExtensions, VoidTypeExtensions},
+    traits::{DereferenceExtensions, TypeCodeLocation, TypeIsExtensions, VoidTypeExtensions},
 };
 
 use crate::{
@@ -657,20 +657,20 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 let metadata: TypeCheckerNodeMetadata =
                     TypeCheckerNodeMetadata::new(value.is_literal_value());
 
-                let value_type: &Type = value.get_value_type()?;
                 let source_type: &Type = source.get_value_type()?;
+                let value_type: &Type = value.get_value_type()?;
 
-                if !source_type.is_ptr_type() {
-                    let lhs_type: &Type = source_type;
-                    let rhs_type: &Type = value_type;
+                {
+                    let lhs_type: Type = source_type.dereference_until_value();
+                    let rhs_type: Type = value_type.dereference_until_value();
 
                     {
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
                         checking::check_types(
-                            lhs_type,
-                            rhs_type,
+                            &lhs_type,
+                            &rhs_type,
                             Some(value),
                             None,
                             metadata,

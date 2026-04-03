@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast, NodeId,
     metadata::CastingMetadata,
@@ -29,7 +28,7 @@ use thrustc_token::traits::TokenExtensions;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{Type, traits::TypeIsExtensions};
 
-use crate::{ParserContext, expressions::precedences, typegen};
+use crate::{ParserContext, expressions::precedences, typegeneration};
 
 pub fn cast_precedence<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -42,7 +41,7 @@ pub fn cast_precedence<'parser>(
         let span: Span = ctx.previous().get_span();
         let expression_type: &Type = expression.get_value_type()?;
 
-        let cast: Type = typegen::build_type(ctx, false)?;
+        let cast: Type = typegeneration::build_type(ctx, false)?;
 
         let is_constant: bool = expression.is_constant_value();
         let is_allocated: bool = expression.is_allocated() || expression_type.is_ptr_type();

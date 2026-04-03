@@ -10,6 +10,7 @@ rust-version.workspace = true
 ahash = "0.8.11"
 either = "1.15.0"
 
+thrustc_parser_context = { path = "../thrustc_parser_context" }
 thrustc_parser_table = { path = "../thrustc_parser_table" }
 thrustc_preprocessor = { path = "../thrustc_preprocessor" }
 thrustc_entities = { path = "../thrustc_entities" }

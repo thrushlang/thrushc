@@ -18,10 +18,11 @@
 */
 
 use thrustc_ast::Ast;
+use thrustc_parser_context::{SynchronizationPosition, traits::ControlContextExtensions};
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::{ParserContext, control::SynchronizationPosition, statements::block};
+use crate::{ParserContext, statements::block};
 
 pub const SYNC_STATEMENTS: [TokenType; 16] = [
     TokenType::Return,

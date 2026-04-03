@@ -19,10 +19,11 @@
 
 use thrustc_ast::Ast;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
+use thrustc_parser_context::{SynchronizationPosition, traits::ControlContextExtensions};
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::{ParserContext, control::SynchronizationPosition};
+use crate::ParserContext;
 
 pub mod asmfn;
 pub mod embedded;

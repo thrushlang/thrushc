@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(clippy::too_many_arguments)]
 
 use inkwell::basic_block::BasicBlock;
@@ -420,7 +419,7 @@ impl<'ctx> LLVMCodeGenContext<'_, 'ctx> {
         let mut dbg_opt: Option<LLVMDebugContext<'_, '_>> = self.dbg_context.take();
 
         if let Some(ref mut dbg) = dbg_opt {
-            dbg.add_dbg_block(self, span);
+            dbg.add_dbg_block(span);
         }
 
         self.dbg_context = dbg_opt;

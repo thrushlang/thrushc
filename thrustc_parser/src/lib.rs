@@ -23,6 +23,7 @@ use thrustc_entities::parser::{AssemblerFunctions, Functions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition};
 use thrustc_logging::LoggingType;
 use thrustc_options::{CompilationUnit, CompilerOptions};
+use thrustc_parser_context::{ControlContext, TypeContext, traits::ControlContextExtensions};
 use thrustc_parser_table::SymbolTable;
 use thrustc_preprocessor::module::Module;
 use thrustc_span::Span;
@@ -30,18 +31,15 @@ use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::control::{ParserControlContext, ParserTypeContext};
-
 mod attributes;
 mod builtins;
-mod control;
 mod declarations;
 mod expressions;
 mod modificators;
 mod reinterpret;
 mod statements;
 mod synchronize;
-mod typegen;
+mod typegeneration;
 
 #[derive(Debug)]
 pub struct ParserContext<'parser> {
@@ -52,8 +50,8 @@ pub struct ParserContext<'parser> {
     errors: Vec<CompilationIssue>,
     bugs: Vec<CompilationIssue>,
 
-    control_context: ParserControlContext,
-    type_context: ParserTypeContext,
+    control_context: ControlContext,
+    type_context: TypeContext,
 
     options: &'parser CompilerOptions,
 
@@ -128,12 +126,12 @@ impl<'parser> ParserContext<'parser> {
         let functions: Functions = Functions::with_capacity(u8::MAX as usize);
         let asm_functions: AssemblerFunctions = AssemblerFunctions::with_capacity(u8::MAX as usize);
 
-        let control_context: ParserControlContext = ParserControlContext::new();
+        let control_context: ControlContext = ControlContext::new();
 
         let table: SymbolTable =
             SymbolTable::with_functions(functions, asm_functions, options, file);
 
-        let type_context: ParserTypeContext = ParserTypeContext::default();
+        let type_context: TypeContext = TypeContext::new();
 
         Self {
             tokens,
@@ -371,7 +369,7 @@ impl<'parser> ParserContext<'parser> {
 
 impl<'parser> ParserContext<'parser> {
     pub fn enter_expression(&mut self) -> Result<(), CompilationIssue> {
-        let control: &mut ParserControlContext = self.get_mut_control_context();
+        let control: &mut ControlContext = self.get_mut_control_context();
 
         control.increase_expression_depth();
 
@@ -424,12 +422,12 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn get_control_context(&self) -> &ParserControlContext {
+    pub fn get_control_context(&self) -> &ControlContext {
         &self.control_context
     }
 
     #[inline]
-    pub fn get_type_context(&self) -> &ParserTypeContext {
+    pub fn get_type_context(&self) -> &TypeContext {
         &self.type_context
     }
 
@@ -451,12 +449,12 @@ impl<'parser> ParserContext<'parser> {
     }
 
     #[inline]
-    pub fn get_mut_control_context(&mut self) -> &mut ParserControlContext {
+    pub fn get_mut_control_context(&mut self) -> &mut ControlContext {
         &mut self.control_context
     }
 
     #[inline]
-    pub fn get_mut_type_context(&mut self) -> &mut ParserTypeContext {
+    pub fn get_mut_type_context(&mut self) -> &mut TypeContext {
         &mut self.type_context
     }
 

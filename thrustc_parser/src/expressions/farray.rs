@@ -19,6 +19,7 @@
 
 use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
+use thrustc_parser_context::traits::TypeContextExtensions;
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
