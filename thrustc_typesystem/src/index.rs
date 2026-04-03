@@ -17,10 +17,9 @@
 
 */
 
-
 use crate::{
     Type,
-    traits::{IndexExtensions, TypeExtensions, TypeIsExtensions},
+    traits::{IndexExtensions, TypeExtensions, TypePointerExtensions},
 };
 
 impl IndexExtensions for Type {

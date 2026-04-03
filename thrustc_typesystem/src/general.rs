@@ -75,14 +75,6 @@ impl TypeIsExtensions for Type {
     }
 
     #[inline(always)]
-    fn is_ptr_like_type(&self) -> bool {
-        matches!(
-            self,
-            Type::Ptr(..) | Type::Addr(..) | Type::Array { .. } | Type::Fn(..)
-        )
-    }
-
-    #[inline(always)]
     fn is_address_type(&self) -> bool {
         matches!(self, Type::Addr(..))
     }

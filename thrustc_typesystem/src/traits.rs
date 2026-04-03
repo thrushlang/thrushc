@@ -32,7 +32,6 @@ pub trait TypeIsExtensions {
     fn is_array_type(&self) -> bool;
     fn is_float_type(&self) -> bool;
     fn is_ptr_type(&self) -> bool;
-    fn is_ptr_like_type(&self) -> bool;
     fn is_address_type(&self) -> bool;
     fn is_const_type(&self) -> bool;
     fn is_function_reference_type(&self) -> bool;
@@ -71,12 +70,14 @@ pub trait TypeArrayEntensions {
 }
 
 pub trait TypePointerExtensions {
+    fn is_ptr_like_type(&self) -> bool;
     fn is_ptr_composite_type(&self) -> bool;
     fn is_ptr_aggregate_value_like_type(&self) -> bool;
     fn is_ptr_aggregate_like_type(&self) -> bool;
     fn is_ptr_indexable_like_type(&self) -> bool;
     fn is_ptr_value_like_type(&self) -> bool;
     fn is_typed_ptr_type(&self) -> bool;
+    fn is_flat_ptr_type(&self) -> bool;
 
     fn is_ptr_struct_type(&self) -> bool;
     fn is_ptr_fixed_array_type(&self) -> bool;

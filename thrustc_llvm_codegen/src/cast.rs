@@ -29,6 +29,7 @@ use inkwell::values::FloatValue;
 use inkwell::values::IntValue;
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
+use thrustc_typesystem::traits::TypePointerExtensions;
 
 use crate::abort;
 use crate::codegen;

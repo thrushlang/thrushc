@@ -26,7 +26,7 @@ use thrustc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition
 use thrustc_span::Span;
 use thrustc_typesystem::{
     Type,
-    traits::{TypeExtensions, TypeIsExtensions},
+    traits::{TypeExtensions, TypePointerExtensions},
 };
 
 use crate::Analyzer;

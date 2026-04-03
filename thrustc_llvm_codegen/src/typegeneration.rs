@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::debug_info::AsDIScope;
@@ -34,6 +33,7 @@ use thrustc_typesystem::Type;
 use thrustc_typesystem::traits::InfererTypeExtensions;
 use thrustc_typesystem::traits::TypeCodeLocation;
 use thrustc_typesystem::traits::TypeIsExtensions;
+use thrustc_typesystem::traits::TypePointerExtensions;
 
 use std::path::PathBuf;
 

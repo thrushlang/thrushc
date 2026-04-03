@@ -17,7 +17,6 @@
 
 */
 
-
 use std::path::PathBuf;
 
 use inkwell::AddressSpace;
@@ -35,7 +34,7 @@ use thrustc_ast::metadata::LLVMLocalMetadata;
 use thrustc_ast::metadata::LLVMStaticMetadata;
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
-use thrustc_typesystem::traits::TypeIsExtensions;
+use thrustc_typesystem::traits::TypePointerExtensions;
 
 use crate::abort;
 use crate::atomic;

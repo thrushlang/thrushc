@@ -28,7 +28,10 @@ use thrustc_options::{CompilationUnit, CompilerOptions};
 use thrustc_span::Span;
 use thrustc_typesystem::{
     Type,
-    traits::{DereferenceExtensions, TypeCodeLocation, TypeIsExtensions, VoidTypeExtensions},
+    traits::{
+        DereferenceExtensions, TypeCodeLocation, TypeIsExtensions, TypePointerExtensions,
+        VoidTypeExtensions,
+    },
 };
 
 use crate::{
@@ -381,9 +384,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     TypeCheckerNodeMetadata::new(local_value.is_literal_value());
 
                 let local_value_type: &Type = local_value.get_value_type()?;
-                let is_ptr_type: bool = local_value_type.is_ptr_like_type();
+                let is_flat_ptr_type: bool = local_value_type.is_flat_ptr_type();
 
-                if is_ptr_type {
+                if is_flat_ptr_type {
                     let fixed_type: Type = Type::Ptr(
                         Some(local_value_type.clone().into()),
                         local_value_type.get_span(),

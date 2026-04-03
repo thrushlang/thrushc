@@ -23,7 +23,7 @@ use thrustc_token_type::TokenType;
 use thrustc_typesystem::{
     Type,
     modificators::StructureTypeModificator,
-    traits::{TypeIsExtensions, TypeStructExtensions},
+    traits::{TypeIsExtensions, TypePointerExtensions, TypeStructExtensions},
 };
 
 use crate::{

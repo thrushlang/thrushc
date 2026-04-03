@@ -17,13 +17,25 @@
 
 */
 
-
 use crate::{
     Type,
     traits::{TypeIsExtensions, TypePointerExtensions},
 };
 
 impl TypePointerExtensions for Type {
+    #[inline]
+    fn is_ptr_like_type(&self) -> bool {
+        matches!(
+            self,
+            Type::Ptr(..) | Type::Addr(..) | Type::Array { .. } | Type::Fn(..)
+        )
+    }
+
+    #[inline]
+    fn is_flat_ptr_type(&self) -> bool {
+        matches!(self, Type::Ptr(..) | Type::Fn(..))
+    }
+
     #[inline]
     fn is_ptr_composite_type(&self) -> bool {
         self.is_ptr_struct_type()

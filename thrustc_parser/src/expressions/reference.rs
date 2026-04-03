@@ -36,7 +36,7 @@ use thrustc_typesystem::{
         FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
         LLVMFunctionReferenceTypeModificator,
     },
-    traits::TypeIsExtensions,
+    traits::{TypeIsExtensions, TypePointerExtensions},
 };
 
 use thrustc_parser_table::traits::{

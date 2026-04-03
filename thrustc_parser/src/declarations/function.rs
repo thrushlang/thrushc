@@ -24,7 +24,10 @@ use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
-use thrustc_typesystem::{Type, traits::TypeIsExtensions};
+use thrustc_typesystem::{
+    Type,
+    traits::{TypeIsExtensions, TypePointerExtensions},
+};
 
 use crate::{ParserContext, attributes, statements::block, typegeneration};
 

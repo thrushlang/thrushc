@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
 use thrustc_entities::UnaryOperation;
@@ -25,6 +24,7 @@ use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 use thrustc_typesystem::traits::TypeIsExtensions;
+use thrustc_typesystem::traits::TypePointerExtensions;
 
 use crate::abort;
 use crate::cast;
