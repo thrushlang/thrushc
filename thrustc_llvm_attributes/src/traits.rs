@@ -17,7 +17,6 @@
 
 */
 
-
 use crate::{LLVMAttribute, LLVMAttributeComparator};
 
 pub trait LLVMAttributesExtensions {
@@ -42,5 +41,5 @@ pub trait LLVMAttributesExtensions {
 }
 
 pub trait LLVMAttributeComparatorExtensions {
-    fn as_attr_cmp(&self) -> LLVMAttributeComparator;
+    fn as_llvm_attribute_cmp(&self) -> LLVMAttributeComparator;
 }

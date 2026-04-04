@@ -6,7 +6,7 @@
  * binary search, and prints whether it was found and at which index.
  * 
  * Usage: ./program <number>
- */
+*/
 
 fn atoi(str: const array[char]) s32 @public @arbitraryArgs @extern("atoi") @convention("C");
 fn print(fmt: const array[char]) s32 @public @arbitraryArgs @extern("printf") @convention("C");

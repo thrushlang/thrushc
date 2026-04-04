@@ -152,7 +152,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         let from_type: &Type = expr.get_value_type()?;
 
                         let metadata: TypeCheckerNodeMetadata =
-                            TypeCheckerNodeMetadata::new(expr.is_literal_value());
+                            TypeCheckerNodeMetadata::new(expr.is_totaly_literal_value());
 
                         {
                             let control_context: &mut TypeCheckerControlContext =
@@ -187,7 +187,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 };
 
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(value.is_literal_value());
+                    TypeCheckerNodeMetadata::new(value.is_totaly_literal_value());
 
                 let value_type: &Type = value.get_value_type()?;
 
@@ -218,7 +218,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ..
             } => {
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(value.is_literal_value());
+                    TypeCheckerNodeMetadata::new(value.is_totaly_literal_value());
 
                 let from_type: &Type = value.get_value_type()?;
 
@@ -263,7 +263,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         let from_type: &Type = expr.get_value_type()?;
 
                         let metadata: TypeCheckerNodeMetadata =
-                            TypeCheckerNodeMetadata::new(expr.is_literal_value());
+                            TypeCheckerNodeMetadata::new(expr.is_totaly_literal_value());
 
                         {
                             let control_context: &mut TypeCheckerControlContext =
@@ -298,7 +298,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 };
 
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(value.is_literal_value());
+                    TypeCheckerNodeMetadata::new(value.is_totaly_literal_value());
 
                 let value_type: &Type = value.get_value_type()?;
 
@@ -329,7 +329,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ..
             } => {
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(value.is_literal_value());
+                    TypeCheckerNodeMetadata::new(value.is_totaly_literal_value());
 
                 let from_type: &Type = value.get_value_type()?;
 
@@ -383,13 +383,14 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 };
 
                 let type_metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(local_value.is_literal_value());
+                    TypeCheckerNodeMetadata::new(local_value.is_totaly_literal_value());
 
                 let local_value_type: &Type = local_value.get_value_type()?;
-                let is_ptr_reference: bool =
-                    local_value_type.is_ptr_like_type() && local_value.is_reference();
+                let is_ptr_type: bool = local_value_type.is_ptr_like_type()
+                    && local_value.is_reference()
+                    || local_value_type.is_ptr_like_type() && !local_value.is_literal_value();
 
-                if is_ptr_reference {
+                if is_ptr_type {
                     let allocated_ptr_type: Type = Type::Ptr(
                         Some(local_value_type.clone().into()),
                         local_value_type.get_span(),
@@ -467,7 +468,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 self.analyze_expr(condition)?;
 
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(condition.is_literal_value());
+                    TypeCheckerNodeMetadata::new(condition.is_totaly_literal_value());
 
                 let span: Span = condition.get_span();
 
@@ -508,7 +509,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 self.analyze_expr(condition)?;
 
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(condition.is_literal_value());
+                    TypeCheckerNodeMetadata::new(condition.is_totaly_literal_value());
 
                 let span: Span = condition.get_span();
 
@@ -549,7 +550,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 self.analyze_stmt(local)?;
 
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(condition.is_literal_value());
+                    TypeCheckerNodeMetadata::new(condition.is_totaly_literal_value());
 
                 let span: Span = condition.get_span();
 
@@ -583,7 +584,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 ..
             } => {
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(condition.is_literal_value());
+                    TypeCheckerNodeMetadata::new(condition.is_totaly_literal_value());
 
                 let span: Span = condition.get_span();
 
@@ -625,7 +626,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 };
 
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(expr.is_literal_value());
+                    TypeCheckerNodeMetadata::new(expr.is_totaly_literal_value());
 
                 let Some((return_type, function_loc)) =
                     self.get_type_context().get_current_function_type()
@@ -661,7 +662,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
             }
             Ast::Mut { source, value, .. } => {
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(value.is_literal_value());
+                    TypeCheckerNodeMetadata::new(value.is_totaly_literal_value());
 
                 let source_type: &Type = source.get_value_type()?;
                 let value_type: &Type = value.get_value_type()?;

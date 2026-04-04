@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
     metadata::{ConstantMetadata, FunctionParameterMetadata, LocalMetadata, StaticMetadata},
@@ -32,96 +31,103 @@ pub mod linter;
 pub mod parser;
 pub mod typechecker;
 
-pub type BinaryOperation<'ctx> = (&'ctx Ast<'ctx>, &'ctx TokenType, &'ctx Ast<'ctx>, Span);
-pub type UnaryOperation<'ctx> = (&'ctx TokenType, &'ctx Type, &'ctx Ast<'ctx>);
+pub type BinaryOperation<'entity> = (
+    &'entity Ast<'entity>,
+    &'entity TokenType,
+    &'entity Ast<'entity>,
+    Span,
+);
+pub type UnaryOperation<'entity> = (&'entity TokenType, &'entity Type, &'entity Ast<'entity>);
 
-pub type GlobalStatic<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    Option<&'ctx Ast<'ctx>>,
-    &'ctx ThrustAttributes,
+pub type GlobalStatic<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity Type,
+    Option<&'entity Ast<'entity>>,
+    &'entity ThrustAttributes,
     StaticMetadata,
     Span,
 );
 
-pub type LocalStatic<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    Option<&'ctx Ast<'ctx>>,
+pub type LocalStatic<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity Type,
+    Option<&'entity Ast<'entity>>,
+    &'entity ThrustAttributes,
     StaticMetadata,
     Span,
 );
 
-pub type GlobalConstant<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    &'ctx Ast<'ctx>,
-    &'ctx ThrustAttributes,
+pub type GlobalConstant<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity Type,
+    &'entity Ast<'entity>,
+    &'entity ThrustAttributes,
     ConstantMetadata,
     Span,
 );
 
-pub type LocalConstant<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    &'ctx Ast<'ctx>,
+pub type LocalConstant<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity Type,
+    &'entity Ast<'entity>,
+    &'entity ThrustAttributes,
     ConstantMetadata,
     Span,
 );
 
-pub type FunctionParameter<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
+pub type FunctionParameter<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity Type,
     u32,
     Span,
     FunctionParameterMetadata,
 );
 
-pub type LocalVariable<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    Option<&'ctx Ast<'ctx>>,
-    &'ctx ThrustAttributes,
+pub type LocalVariable<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity Type,
+    Option<&'entity Ast<'entity>>,
+    &'entity ThrustAttributes,
     LocalMetadata,
     Span,
 );
 
-pub type Function<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    &'ctx [Ast<'ctx>],
-    &'ctx [Type],
-    Option<&'ctx Ast<'ctx>>,
-    &'ctx ThrustAttributes,
+pub type Function<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity Type,
+    &'entity [Ast<'entity>],
+    &'entity [Type],
+    Option<&'entity Ast<'entity>>,
+    &'entity ThrustAttributes,
     Span,
 );
 
-pub type AssemblerFunction<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    &'ctx [Ast<'ctx>],
-    &'ctx [Type],
-    &'ctx ThrustAttributes,
+pub type AssemblerFunction<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity str,
+    &'entity str,
+    &'entity Type,
+    &'entity [Ast<'entity>],
+    &'entity [Type],
+    &'entity ThrustAttributes,
     Span,
 );
 
-pub type Intrinsic<'ctx> = (
-    &'ctx str,
-    &'ctx str,
-    &'ctx Type,
-    &'ctx [Ast<'ctx>],
-    &'ctx [Type],
-    &'ctx ThrustAttributes,
+pub type Intrinsic<'entity> = (
+    &'entity str,
+    &'entity str,
+    &'entity Type,
+    &'entity [Ast<'entity>],
+    &'entity [Type],
+    &'entity ThrustAttributes,
     Span,
 );
 
@@ -242,11 +248,20 @@ pub fn local_static_from_ast<'entity>(ast: &'entity Ast) -> LocalStatic<'entity>
         kind,
         value,
         metadata,
+        attributes,
         span,
         ..
     } = ast
     {
-        return (name, ascii_name, kind, value.as_deref(), *metadata, *span);
+        return (
+            name,
+            ascii_name,
+            kind,
+            value.as_deref(),
+            attributes,
+            *metadata,
+            *span,
+        );
     }
 
     unreachable!()
@@ -280,10 +295,13 @@ pub fn local_constant_from_ast<'entity>(ast: &'entity Ast) -> LocalConstant<'ent
         value,
         metadata,
         span,
+        attributes,
         ..
     } = ast
     {
-        return (name, ascii_name, kind, &**value, *metadata, *span);
+        return (
+            name, ascii_name, kind, &**value, attributes, *metadata, *span,
+        );
     }
 
     unreachable!()

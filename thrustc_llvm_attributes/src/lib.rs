@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::module::Linkage;
 
 use thrustc_attributes::{ThrustAttribute, ThrustAttributes};
@@ -47,6 +46,7 @@ pub enum LLVMAttribute<'ctx> {
     PreciseFloats,
     NoUnwind,
     OptFuzzing,
+    Align(u64),
     Pure,
     Thunk,
 
@@ -171,6 +171,7 @@ pub enum LLVMAttributeComparator {
     PreciseFloats,
     NoUnwind,
     OptFuzzing,
+    Align,
     Linkage,
     Pure,
     Thunk,
@@ -190,39 +191,38 @@ pub enum LLVMAttributeComparator {
 }
 
 #[inline]
-pub fn into_llvm_attribute(attribute: &ThrustAttribute) -> Option<LLVMAttribute<'_>> {
+pub fn into_llvm_attribute(attribute: &ThrustAttribute) -> LLVMAttribute<'_> {
     match attribute {
-        ThrustAttribute::Extern(external_name, ..) => Some(LLVMAttribute::Extern(external_name)),
-        ThrustAttribute::Linkage(linkage, ..) => {
-            Some(LLVMAttribute::Linkage(linkage.get_llvm_linkage()))
-        }
-        ThrustAttribute::Convention(name, ..) => Some(LLVMAttribute::Convention(
+        ThrustAttribute::Extern(external_name, ..) => LLVMAttribute::Extern(external_name),
+        ThrustAttribute::Linkage(linkage, ..) => LLVMAttribute::Linkage(linkage.get_llvm_linkage()),
+        ThrustAttribute::Convention(name, ..) => LLVMAttribute::Convention(
             thrustc_llvm_callconventions::get_call_convention(name.as_bytes()),
-        )),
-        ThrustAttribute::Public(..) => Some(LLVMAttribute::Public),
-        ThrustAttribute::Ignore(..) => Some(LLVMAttribute::Ignore),
-        ThrustAttribute::Hot(..) => Some(LLVMAttribute::Hot),
-        ThrustAttribute::NoInline(..) => Some(LLVMAttribute::NoInline),
-        ThrustAttribute::InlineHint(..) => Some(LLVMAttribute::InlineHint),
-        ThrustAttribute::MinSize(..) => Some(LLVMAttribute::MinSize),
-        ThrustAttribute::AlwaysInline(..) => Some(LLVMAttribute::AlwaysInline),
-        ThrustAttribute::SafeStack(..) => Some(LLVMAttribute::SafeStack),
-        ThrustAttribute::StrongStack(..) => Some(LLVMAttribute::StrongStack),
-        ThrustAttribute::WeakStack(..) => Some(LLVMAttribute::WeakStack),
-        ThrustAttribute::PreciseFloats(..) => Some(LLVMAttribute::PreciseFloats),
-        ThrustAttribute::AsmThrow(..) => Some(LLVMAttribute::AsmThrow),
-        ThrustAttribute::AsmSyntax(syntax, ..) => Some(LLVMAttribute::AsmSyntax(syntax)),
-        ThrustAttribute::AsmSideEffects(..) => Some(LLVMAttribute::AsmSideEffects),
-        ThrustAttribute::AsmAlignStack(..) => Some(LLVMAttribute::AsmAlignStack),
-        ThrustAttribute::Stack(..) => Some(LLVMAttribute::Stack),
-        ThrustAttribute::Heap(..) => Some(LLVMAttribute::Heap),
-        ThrustAttribute::Packed(..) => Some(LLVMAttribute::Packed),
-        ThrustAttribute::NoUnwind(..) => Some(LLVMAttribute::NoUnwind),
-        ThrustAttribute::OptFuzzing(..) => Some(LLVMAttribute::OptFuzzing),
-        ThrustAttribute::Pure(..) => Some(LLVMAttribute::Pure),
-        ThrustAttribute::Thunk(..) => Some(LLVMAttribute::Thunk),
-        ThrustAttribute::Constructor(..) => Some(LLVMAttribute::Constructor),
-        ThrustAttribute::Destructor(..) => Some(LLVMAttribute::Destructor),
+        ),
+        ThrustAttribute::Public(..) => LLVMAttribute::Public,
+        ThrustAttribute::Ignore(..) => LLVMAttribute::Ignore,
+        ThrustAttribute::Hot(..) => LLVMAttribute::Hot,
+        ThrustAttribute::NoInline(..) => LLVMAttribute::NoInline,
+        ThrustAttribute::InlineHint(..) => LLVMAttribute::InlineHint,
+        ThrustAttribute::MinSize(..) => LLVMAttribute::MinSize,
+        ThrustAttribute::AlwaysInline(..) => LLVMAttribute::AlwaysInline,
+        ThrustAttribute::SafeStack(..) => LLVMAttribute::SafeStack,
+        ThrustAttribute::StrongStack(..) => LLVMAttribute::StrongStack,
+        ThrustAttribute::WeakStack(..) => LLVMAttribute::WeakStack,
+        ThrustAttribute::PreciseFloats(..) => LLVMAttribute::PreciseFloats,
+        ThrustAttribute::AsmThrow(..) => LLVMAttribute::AsmThrow,
+        ThrustAttribute::AsmSyntax(syntax, ..) => LLVMAttribute::AsmSyntax(syntax),
+        ThrustAttribute::AsmSideEffects(..) => LLVMAttribute::AsmSideEffects,
+        ThrustAttribute::AsmAlignStack(..) => LLVMAttribute::AsmAlignStack,
+        ThrustAttribute::Stack(..) => LLVMAttribute::Stack,
+        ThrustAttribute::Heap(..) => LLVMAttribute::Heap,
+        ThrustAttribute::Packed(..) => LLVMAttribute::Packed,
+        ThrustAttribute::NoUnwind(..) => LLVMAttribute::NoUnwind,
+        ThrustAttribute::OptFuzzing(..) => LLVMAttribute::OptFuzzing,
+        ThrustAttribute::Align(align, ..) => LLVMAttribute::Align(*align),
+        ThrustAttribute::Pure(..) => LLVMAttribute::Pure,
+        ThrustAttribute::Thunk(..) => LLVMAttribute::Thunk,
+        ThrustAttribute::Constructor(..) => LLVMAttribute::Constructor,
+        ThrustAttribute::Destructor(..) => LLVMAttribute::Destructor,
     }
 }
 
@@ -230,9 +230,7 @@ pub fn into_llvm_attributes(thrust_attributes: &ThrustAttributes) -> Vec<LLVMAtt
     let mut llvm_attributes: Vec<LLVMAttribute<'_>> = Vec::with_capacity(thrust_attributes.len());
 
     for attribute in thrust_attributes.iter() {
-        if let Some(llvm_attribute) = self::into_llvm_attribute(attribute) {
-            llvm_attributes.push(llvm_attribute);
-        }
+        llvm_attributes.push(self::into_llvm_attribute(attribute));
     }
 
     llvm_attributes

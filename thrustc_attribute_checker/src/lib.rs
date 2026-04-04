@@ -524,12 +524,14 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ThrustAttributeComparator::Public,
             ThrustAttributeComparator::Extern,
             ThrustAttributeComparator::Linkage,
+            ThrustAttributeComparator::Align,
         ];
 
         const VALID_CONSTANT_ATTRIBUTES: &[ThrustAttributeComparator] = &[
             ThrustAttributeComparator::Public,
             ThrustAttributeComparator::Extern,
             ThrustAttributeComparator::Linkage,
+            ThrustAttributeComparator::Align,
         ];
 
         const VALID_ENUM_ATTRIBUTES: &[ThrustAttributeComparator] =
@@ -540,8 +542,10 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             ThrustAttributeComparator::Packed,
         ];
 
-        const VALID_LOCAL_ATTRIBUTES: &[ThrustAttributeComparator] =
-            &[ThrustAttributeComparator::Heap];
+        const VALID_LOCAL_ATTRIBUTES: &[ThrustAttributeComparator] = &[
+            ThrustAttributeComparator::Heap,
+            ThrustAttributeComparator::Align,
+        ];
 
         match applicant {
             AttributeCheckerAttributeApplicant::Function { .. } => {

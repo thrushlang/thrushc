@@ -156,7 +156,7 @@ pub fn validate<'type_checker>(
 
             for node in items.iter() {
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(node.is_literal_value());
+                    TypeCheckerNodeMetadata::new(node.is_totaly_literal_value());
                 let item_type: &Type = node.get_value_type()?;
                 let base_type: Type = kind.get_fixed_array_base_type();
 
@@ -206,7 +206,7 @@ pub fn validate<'type_checker>(
 
             for node in items.iter() {
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(node.is_literal_value());
+                    TypeCheckerNodeMetadata::new(node.is_totaly_literal_value());
                 let item_type: &Type = node.get_value_type()?;
                 let base_type: Type = kind.get_array_base_type();
                 let span: Span = node.get_span();
@@ -337,7 +337,7 @@ pub fn validate<'type_checker>(
                 let from_type: &Type = expr.get_value_type()?;
 
                 let metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(expr.is_literal_value());
+                    TypeCheckerNodeMetadata::new(expr.is_totaly_literal_value());
 
                 {
                     let control_context: &mut TypeCheckerControlContext =

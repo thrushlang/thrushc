@@ -47,6 +47,7 @@ impl std::fmt::Display for ThrustAttribute {
             ThrustAttribute::AsmAlignStack(..) => write!(f, "@asmAlignStack"),
             ThrustAttribute::Packed(..) => write!(f, "@packed"),
             ThrustAttribute::OptFuzzing(..) => write!(f, "@optFuzzing"),
+            ThrustAttribute::Align(align, ..) => write!(f, "@align({})", align),
             ThrustAttribute::Pure(..) => write!(f, "@pure"),
             ThrustAttribute::Thunk(..) => write!(f, "@thunk"),
             ThrustAttribute::Constructor(..) => write!(f, "@constructor"),

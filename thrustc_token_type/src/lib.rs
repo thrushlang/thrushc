@@ -17,7 +17,6 @@
 
 */
 
-
 pub mod impls;
 pub mod traits;
 
@@ -93,6 +92,7 @@ pub enum TokenType {
     AsmThrow,
     AsmSideEffects,
     OptFuzzing,
+    Align,
     Linkage,
     Pure,
     Thunk,

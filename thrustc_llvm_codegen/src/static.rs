@@ -105,6 +105,7 @@ pub fn allocate_local_constant<'ctx>(
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     value: BasicValueEnum<'ctx>,
+    attributes: LLVMAttributes<'ctx>,
     metadata: ConstantMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
@@ -115,6 +116,9 @@ pub fn allocate_local_constant<'ctx>(
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
+
+    AttributeBuilder::new(attributes, LLVMAttributeApplicant::Global(global))
+        .add_global_attributes();
 
     self::set_global_common(
         &global,
@@ -177,6 +181,7 @@ pub fn allocate_local_static<'ctx>(
     name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
     value: Option<BasicValueEnum<'ctx>>,
+    attributes: LLVMAttributes<'ctx>,
     metadata: StaticMetadata,
 ) -> PointerValue<'ctx> {
     let llvm_module: &Module = context.get_llvm_module();
@@ -188,6 +193,9 @@ pub fn allocate_local_static<'ctx>(
 
     let global: GlobalValue =
         llvm_module.add_global(llvm_type, Some(AddressSpace::default()), &name);
+
+    AttributeBuilder::new(attributes, LLVMAttributeApplicant::Global(global))
+        .add_global_attributes();
 
     if value.is_none() {
         global.set_initializer(&llvm_type.const_zero());

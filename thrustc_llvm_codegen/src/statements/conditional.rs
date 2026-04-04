@@ -249,6 +249,11 @@ fn short_circuit_comparison<'ctx>(
 ) {
     let llvm_builder: &Builder<'_> = codegen.get_context().get_llvm_builder();
 
+    if let Ast::Group { node, .. } = condition {
+        self::short_circuit_comparison(codegen, node, target_body, target_exit, llvm_function);
+        return;
+    }
+
     if let Ast::BinaryOp {
         left,
         right,
@@ -293,10 +298,6 @@ fn short_circuit_comparison<'ctx>(
 
             return;
         }
-    }
-
-    if let Ast::Group { node, .. } = condition {
-        self::short_circuit_comparison(codegen, node, target_body, target_exit, llvm_function);
     }
 
     let comparison: IntValue<'_> = codegen::compile(

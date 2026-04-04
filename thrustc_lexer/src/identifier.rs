@@ -59,6 +59,7 @@ lazy_static! {
         attributes.insert("@asmThrowErrors", TokenType::AsmThrow);
         attributes.insert("@asmSideEffects", TokenType::AsmSideEffects);
 
+        attributes.insert("@align", TokenType::Align);
         attributes.insert("@optFuzzing", TokenType::OptFuzzing);
         attributes.insert("@noUnwind", TokenType::NoUnwind);
         attributes.insert("@packed", TokenType::Packed);
@@ -68,7 +69,7 @@ lazy_static! {
         attributes.insert("@extern", TokenType::Extern);
         attributes.insert("@arbitraryArgs", TokenType::Ignore);
         attributes.insert("@hot", TokenType::Hot);
-        attributes.insert("@minsize", TokenType::MinSize);
+        attributes.insert("@minSize", TokenType::MinSize);
         attributes.insert("@alwaysInline", TokenType::AlwaysInline);
         attributes.insert("@noInline", TokenType::NoInline);
         attributes.insert("@inline", TokenType::InlineHint);

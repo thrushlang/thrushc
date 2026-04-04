@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::module::Linkage;
 
 use crate::{
@@ -98,7 +97,7 @@ impl LLVMAttributesExtensions for LLVMAttributes<'_> {
 
     #[inline]
     fn get_attr(&self, cmp: LLVMAttributeComparator) -> Option<LLVMAttribute<'_>> {
-        if let Some(attr_found) = self.iter().find(|attr| attr.as_attr_cmp() == cmp) {
+        if let Some(attr_found) = self.iter().find(|attr| attr.as_llvm_attribute_cmp() == cmp) {
             return Some(*attr_found);
         }
 
@@ -107,7 +106,7 @@ impl LLVMAttributesExtensions for LLVMAttributes<'_> {
 }
 
 impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
-    fn as_attr_cmp(&self) -> LLVMAttributeComparator {
+    fn as_llvm_attribute_cmp(&self) -> LLVMAttributeComparator {
         match self {
             LLVMAttribute::Extern(..) => LLVMAttributeComparator::Extern,
             LLVMAttribute::Linkage(..) => LLVMAttributeComparator::Linkage,
@@ -132,6 +131,7 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
             LLVMAttribute::Packed => LLVMAttributeComparator::Packed,
             LLVMAttribute::NoUnwind => LLVMAttributeComparator::NoUnwind,
             LLVMAttribute::OptFuzzing => LLVMAttributeComparator::OptFuzzing,
+            LLVMAttribute::Align(..) => LLVMAttributeComparator::Align,
             LLVMAttribute::Pure => LLVMAttributeComparator::Pure,
             LLVMAttribute::Thunk => LLVMAttributeComparator::Thunk,
             LLVMAttribute::Constructor => LLVMAttributeComparator::Constructor,
@@ -143,8 +143,8 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
 impl std::fmt::Display for LLVMAttribute<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LLVMAttribute::AlwaysInline => write!(f, "@alwaysinline"),
-            LLVMAttribute::NoInline => write!(f, "@noinline"),
+            LLVMAttribute::AlwaysInline => write!(f, "@alwaysInline"),
+            LLVMAttribute::NoInline => write!(f, "@noInline"),
             LLVMAttribute::InlineHint => write!(f, "@inline"),
             LLVMAttribute::Extern(name, ..) => write!(f, "@extern({})", name),
             LLVMAttribute::Linkage(linkage, ..) => {
@@ -176,20 +176,21 @@ impl std::fmt::Display for LLVMAttribute<'_> {
             LLVMAttribute::Stack => write!(f, "@stack"),
             LLVMAttribute::Heap => write!(f, "@heap"),
             LLVMAttribute::Public => write!(f, "@public"),
-            LLVMAttribute::StrongStack => write!(f, "@strongstack"),
-            LLVMAttribute::WeakStack => write!(f, "@weakstack"),
-            LLVMAttribute::SafeStack => write!(f, "@safestack"),
-            LLVMAttribute::PreciseFloats => write!(f, "@precisefp"),
-            LLVMAttribute::MinSize => write!(f, "@minsize"),
+            LLVMAttribute::StrongStack => write!(f, "@strongStack"),
+            LLVMAttribute::WeakStack => write!(f, "@weakStack"),
+            LLVMAttribute::SafeStack => write!(f, "@safeStack"),
+            LLVMAttribute::PreciseFloats => write!(f, "@preciseFloatingPoint"),
+            LLVMAttribute::MinSize => write!(f, "@minSize"),
             LLVMAttribute::Hot => write!(f, "@hot"),
             LLVMAttribute::Ignore => write!(f, "@ignore"),
-            LLVMAttribute::NoUnwind => write!(f, "@nounwind"),
-            LLVMAttribute::AsmThrow => write!(f, "@asmthrow"),
-            LLVMAttribute::AsmSyntax(..) => write!(f, "@asmsyntax"),
-            LLVMAttribute::AsmSideEffects => write!(f, "@asmeffects"),
-            LLVMAttribute::AsmAlignStack => write!(f, "@asmalingstack"),
+            LLVMAttribute::NoUnwind => write!(f, "@noUnwind"),
+            LLVMAttribute::AsmThrow => write!(f, "@asmThrow"),
+            LLVMAttribute::AsmSyntax(..) => write!(f, "@asmSyntax"),
+            LLVMAttribute::AsmSideEffects => write!(f, "@asmEffects"),
+            LLVMAttribute::AsmAlignStack => write!(f, "@asmAlignStack"),
             LLVMAttribute::Packed => write!(f, "@packed"),
-            LLVMAttribute::OptFuzzing => write!(f, "@optfuzzing"),
+            LLVMAttribute::OptFuzzing => write!(f, "@optFuzzing"),
+            LLVMAttribute::Align(align) => write!(f, "@align({})", align),
             LLVMAttribute::Pure => write!(f, "@pure"),
             LLVMAttribute::Thunk => write!(f, "@thunk"),
             LLVMAttribute::Constructor => write!(f, "@constructor"),

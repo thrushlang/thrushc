@@ -50,9 +50,7 @@ use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
 use thrustc_llvm_builtins::LLVMBuiltin;
 use thrustc_typesystem::Type;
-use thrustc_typesystem::traits::{
-    DereferenceExtensions, TypeExtensions, TypeIsExtensions, TypeStructExtensions,
-};
+use thrustc_typesystem::traits::{DereferenceExtensions, TypeIsExtensions, TypeStructExtensions};
 
 #[derive(Debug)]
 pub struct LLVMCodegen<'a, 'ctx> {
@@ -418,6 +416,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let metadata: LocalMetadata = localvar.5;
                     let span: Span = localvar.6;
 
+                    let llvm_attributes: Vec<thrustc_llvm_attributes::LLVMAttribute<'_>> =
+                        thrustc_llvm_attributes::into_llvm_attributes(attributes);
+
+                    let symbol_attributes: memory::SymbolAttributes =
+                        memory::into_symbol_attributes(&llvm_attributes);
+
                     let ptr: PointerValue = stack::local_variable(
                         self.get_mut_context(),
                         ascii_name,
@@ -426,8 +430,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         span,
                     );
 
-                    let symbol: SymbolAllocated =
-                        SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata(), span);
+                    let symbol: SymbolAllocated = SymbolAllocated::new_local(
+                        ptr,
+                        kind,
+                        metadata.get_llvm_metadata(),
+                        symbol_attributes,
+                        span,
+                    );
 
                     self.context.add_local_variable(name, symbol);
                 } else {
@@ -443,6 +452,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let metadata: LocalMetadata = localvar.5;
                     let span: Span = localvar.6;
 
+                    let llvm_attributes: Vec<thrustc_llvm_attributes::LLVMAttribute<'_>> =
+                        thrustc_llvm_attributes::into_llvm_attributes(attributes);
+
+                    let symbol_attributes: memory::SymbolAttributes =
+                        memory::into_symbol_attributes(&llvm_attributes);
+
                     let ptr: PointerValue = stack::local_variable(
                         self.get_mut_context(),
                         ascii_name,
@@ -451,8 +466,13 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         span,
                     );
 
-                    let symbol: SymbolAllocated =
-                        SymbolAllocated::new_local(ptr, kind, metadata.get_llvm_metadata(), span);
+                    let symbol: SymbolAllocated = SymbolAllocated::new_local(
+                        ptr,
+                        kind,
+                        metadata.get_llvm_metadata(),
+                        symbol_attributes,
+                        span,
+                    );
 
                     self.context.add_local_variable(name, symbol);
 
@@ -490,8 +510,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 let ascii_name: &str = constant.1;
                 let kind: &Type = constant.2;
                 let value: &Ast = constant.3;
-                let metadata: ConstantMetadata = constant.4;
-                let span: Span = constant.5;
+                let attributes: &ThrustAttributes = constant.4;
+                let metadata: ConstantMetadata = constant.5;
+                let span: Span = constant.6;
+
+                let llvm_attributes: LLVMAttributes =
+                    thrustc_llvm_attributes::into_llvm_attributes(attributes);
 
                 let llvm_type: BasicTypeEnum =
                     typegeneration::compile_from(self.get_mut_context(), kind);
@@ -507,6 +531,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     ascii_name,
                     llvm_type,
                     value,
+                    llvm_attributes,
                     metadata,
                 );
 
@@ -536,8 +561,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 let kind: &Type = static_.2;
                 let value: Option<&Ast> = static_.3;
-                let metadata: StaticMetadata = static_.4;
-                let span: Span = static_.5;
+                let attributes: &ThrustAttributes = static_.4;
+                let metadata: StaticMetadata = static_.5;
+                let span: Span = static_.6;
+
+                let llvm_attributes: LLVMAttributes =
+                    thrustc_llvm_attributes::into_llvm_attributes(attributes);
 
                 if let Some(value) = value {
                     let llvm_type: BasicTypeEnum =
@@ -554,6 +583,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         ascii_name,
                         llvm_type,
                         Some(value),
+                        llvm_attributes,
                         metadata,
                     );
 
@@ -575,6 +605,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         ascii_name,
                         llvm_type,
                         None,
+                        llvm_attributes,
                         metadata,
                     );
 

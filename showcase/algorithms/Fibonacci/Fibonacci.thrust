@@ -1,0 +1,58 @@
+/* 
+ * Fibonacci - Algorithm
+ * 
+ * This program computes the nth Fibonacci number iteratively.
+ * It takes a number n as a command-line argument and prints
+ * the nth Fibonacci number (starting with fib(0) = 0, fib(1) = 1).
+ * 
+ * Usage: ./fibonacci <n>
+*/
+
+fn atoi(str: const array[char]) s32 @public @arbitraryArgs @extern("atoi") @convention("C");
+fn print(fmt: const array[char]) s32 @public @arbitraryArgs @extern("printf") @convention("C");
+
+fn fibonacci(n: s32) s32 @public {
+    if n <= 0 {
+        return 0;
+    }
+    if n == 1 {
+        return 1;
+    }
+
+    local a: s32 = 0; 
+    local b: s32 = 1;  
+    local i: s32 = 2;
+    local result: s32 = 0;
+
+    while i <= n {
+        result = a + b;
+        a = b;
+        b = result;
+        i++;
+    }
+
+    return result;
+}
+
+fn main(argc: s32, argv: ptr[array[char]]) s32 @public {
+
+    if argc < 2 {
+        print("Usage: ./fibonacci <n>\n");
+        return 1;
+    }
+
+    local n: s32 = atoi(
+        (deref (argv[1] as ptr[ptr[char]])) as const array[char]
+    );
+
+    if n < 0 {
+        print("Please enter a non-negative number\n");
+        return 1;
+    }
+
+    local result: s32 = fibonacci(n);
+
+    print("fib(%d) = %d\n", n, result);
+
+    return 0;
+}

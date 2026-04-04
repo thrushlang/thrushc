@@ -32,6 +32,8 @@ use thrustc_ast::metadata::LLVMConstantMetadata;
 use thrustc_ast::metadata::LLVMDereferenceMetadata;
 use thrustc_ast::metadata::LLVMLocalMetadata;
 use thrustc_ast::metadata::LLVMStaticMetadata;
+use thrustc_llvm_attributes::LLVMAttribute;
+use thrustc_llvm_attributes::LLVMAttributes;
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
 use thrustc_typesystem::traits::TypePointerExtensions;
@@ -48,6 +50,7 @@ pub enum SymbolAllocated<'ctx> {
         ptr: PointerValue<'ctx>,
         kind: &'ctx Type,
         metadata: LLVMLocalMetadata,
+        attributes: SymbolAttributes,
         span: Span,
     },
     Static {
@@ -119,12 +122,14 @@ impl<'ctx> SymbolAllocated<'ctx> {
         ptr: PointerValue<'ctx>,
         kind: &'ctx Type,
         metadata: LLVMLocalMetadata,
+        attributes: SymbolAttributes,
         span: Span,
     ) -> Self {
         Self::Local {
             ptr,
             kind,
             metadata,
+            attributes,
             span,
         }
     }
@@ -181,7 +186,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         context.mark_dbg_location(self.get_span());
 
-        if let Self::Local { ptr, metadata, .. } = self {
+        if let Self::Local {
+            ptr,
+            metadata,
+            attributes,
+            ..
+        } = self
+        {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
                 if let Some(instr) = loaded_value.as_instruction_value() {
                     atomic::configure_atomic_modificators(
@@ -192,7 +203,15 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         },
                     );
 
-                    let _ = instr.set_alignment(alignment);
+                    if attributes.has_explicit_memory_alignment() {
+                        if let Some(alignment) = attributes.get_explicit_memory_alignment() {
+                            let _ = instr.set_alignment(alignment.try_into().unwrap_or(u32::MAX));
+                        } else {
+                            let _ = instr.set_alignment(alignment);
+                        }
+                    } else {
+                        let _ = instr.set_alignment(alignment);
+                    }
                 }
 
                 return loaded_value;
@@ -584,4 +603,51 @@ pub fn gep_anon<'ctx>(
             line!(),
         );
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SymbolAttributes {
+    align: Option<u64>,
+}
+
+impl SymbolAttributes {
+    #[inline]
+    pub fn new() -> Self {
+        Self { align: None }
+    }
+}
+
+impl SymbolAttributes {
+    #[inline]
+    pub fn set_explicit_memory_alignment(&mut self, value: u64) {
+        self.align = Some(value)
+    }
+}
+
+impl SymbolAttributes {
+    #[inline]
+    pub fn get_explicit_memory_alignment(&self) -> Option<u64> {
+        self.align
+    }
+}
+
+impl SymbolAttributes {
+    #[inline]
+    pub fn has_explicit_memory_alignment(&self) -> bool {
+        self.align.is_some()
+    }
+}
+
+pub fn into_symbol_attributes(llvm_attributes: &LLVMAttributes) -> SymbolAttributes {
+    let mut attributes: SymbolAttributes = SymbolAttributes::new();
+
+    {
+        for attribute in llvm_attributes.iter() {
+            if let LLVMAttribute::Align(value, ..) = *attribute {
+                attributes.set_explicit_memory_alignment(value);
+            }
+        }
+    }
+
+    attributes
 }

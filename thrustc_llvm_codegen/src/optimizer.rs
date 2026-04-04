@@ -1726,7 +1726,7 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     pub fn run(&mut self) {
         let ordered_functions: Vec<FunctionValue<'_>> =
             utils::get_functions_by_ordered_calls(self.module.get_functions().collect());
-
+    
         {
             for function in ordered_functions.iter() {
                 self.visit_function_once(*function);
@@ -1737,6 +1737,8 @@ impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMParameterOptimizer<'a, 'ctx> {
     fn visit_function_once(&mut self, function: FunctionValue<'ctx>) {
+
+
         if function.get_first_basic_block().is_none() {
             return;
         }

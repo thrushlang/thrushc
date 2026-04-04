@@ -96,7 +96,7 @@ pub fn validate<'type_checker>(
         for (target_type, expr) in parameter_types.iter().zip(args.iter()) {
             let from_type: &Type = expr.get_value_type()?;
             let expr_metadata: TypeCheckerNodeMetadata =
-                TypeCheckerNodeMetadata::new(expr.is_literal_value());
+                TypeCheckerNodeMetadata::new(expr.is_totaly_literal_value());
 
             {
                 let control_context: &mut TypeCheckerControlContext =

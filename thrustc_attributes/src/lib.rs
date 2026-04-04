@@ -55,6 +55,7 @@ pub enum ThrustAttribute {
     PreciseFloats(Span),
     NoUnwind(Span),
     OptFuzzing(Span),
+    Align(u64, Span),
     Pure(Span),
     Thunk(Span),
 
@@ -93,6 +94,7 @@ pub enum ThrustAttributeComparator {
     PreciseFloats,
     NoUnwind,
     OptFuzzing,
+    Align,
     Pure,
     Thunk,
 
@@ -200,6 +202,11 @@ impl ThrustAttribute {
     pub fn is_destructor_attribute(&self) -> bool {
         matches!(self, ThrustAttribute::Destructor(..))
     }
+
+    #[inline]
+    pub fn is_align_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::Align(..))
+    }
 }
 
 impl ThrustAttribute {
@@ -229,6 +236,7 @@ impl ThrustAttribute {
             ThrustAttribute::Packed(span) => *span,
             ThrustAttribute::NoUnwind(span) => *span,
             ThrustAttribute::OptFuzzing(span) => *span,
+            ThrustAttribute::Align(_, span) => *span,
             ThrustAttribute::Pure(span) => *span,
             ThrustAttribute::Thunk(span) => *span,
             ThrustAttribute::Constructor(span) => *span,
@@ -267,6 +275,10 @@ pub fn as_attribute(token_type: TokenType, span: Span) -> Option<ThrustAttribute
 }
 
 impl ThrustAttributesExtensions for ThrustAttributes {
+    fn has_align_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_align_attribute())
+    }
+
     #[inline]
     fn has_linkage_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_linkage_attribute())
@@ -398,6 +410,7 @@ impl ThrustAttributeComparatorExtensions for ThrustAttribute {
             ThrustAttribute::Packed(..) => ThrustAttributeComparator::Packed,
             ThrustAttribute::NoUnwind(..) => ThrustAttributeComparator::NoUnwind,
             ThrustAttribute::OptFuzzing(..) => ThrustAttributeComparator::OptFuzzing,
+            ThrustAttribute::Align(..) => ThrustAttributeComparator::Align,
             ThrustAttribute::Pure(..) => ThrustAttributeComparator::Pure,
             ThrustAttribute::Thunk(..) => ThrustAttributeComparator::Thunk,
             ThrustAttribute::Constructor(..) => ThrustAttributeComparator::Constructor,

@@ -17,9 +17,10 @@
 
 */
 
-
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::PointerValue;
+use thrustc_attributes::traits::ThrustAttributesExtensions;
+use thrustc_attributes::{ThrustAttribute, ThrustAttributes};
 use thrustc_span::Span;
 
 use std::path::PathBuf;
@@ -32,6 +33,7 @@ pub fn try_alloc_at_heap<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
     ascii_name: &str,
+    attributes: &ThrustAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
     context.mark_dbg_location(span);
@@ -40,6 +42,16 @@ pub fn try_alloc_at_heap<'ctx>(
         .get_llvm_builder()
         .build_malloc(llvm_type, ascii_name)
     {
+        if let Some(align_attr) =
+            attributes.get_attr(thrustc_attributes::ThrustAttributeComparator::Align)
+        {
+            if let Some(instruction) = ptr.as_instruction() {
+                if let ThrustAttribute::Align(value, ..) = align_attr {
+                    let _ = instruction.set_alignment(value.try_into().unwrap_or(u32::MAX));
+                }
+            }
+        }
+
         return ptr;
     }
 

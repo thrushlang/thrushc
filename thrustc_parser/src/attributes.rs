@@ -17,7 +17,7 @@
 
 */
 
-
+use thrustc_ast::{Ast, traits::AstCodeLocation};
 use thrustc_attributes::{ThrustAttribute, ThrustAttributes, linkage::ThrustLinkage};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -25,7 +25,7 @@ use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
 
-use crate::ParserContext;
+use crate::{ParserContext, expressions};
 
 pub fn build_compiler_attributes<'parser>(
     ctx: &mut ParserContext<'parser>,
@@ -83,7 +83,7 @@ pub fn build_compiler_attributes<'parser>(
                 ctx.consume(
                     TokenType::Public,
                     CompilationIssueCode::E0001,
-                    "Expected '@public' as attribute.".into(),
+                    "Expected '@public' attribute.".into(),
                 )?;
 
                 attributes.push(ThrustAttribute::Public(span));
@@ -102,6 +102,19 @@ pub fn build_compiler_attributes<'parser>(
                 ))
             }
 
+            TokenType::Align => {
+                ctx.consume(
+                    TokenType::Align,
+                    CompilationIssueCode::E0001,
+                    "Expected '@align' prologue for an attribute.".into(),
+                )?;
+
+                attributes.push(ThrustAttribute::Align(
+                    self::build_align_attribute(ctx)?,
+                    span,
+                ))
+            }
+
             tk_type if tk_type.is_attribute() => {
                 if let Some(compiler_attribute) = thrustc_attributes::as_attribute(tk_type, span) {
                     attributes.push(compiler_attribute);
@@ -116,6 +129,40 @@ pub fn build_compiler_attributes<'parser>(
     }
 
     Ok(attributes)
+}
+
+fn build_align_attribute<'parser>(
+    ctx: &mut ParserContext<'parser>,
+) -> Result<u64, CompilationIssue> {
+    ctx.consume(
+        TokenType::LParen,
+        CompilationIssueCode::E0001,
+        "Expected '('.".into(),
+    )?;
+
+    let expr: Ast<'_> = expressions::build_expr(ctx)?;
+
+    ctx.consume(
+        TokenType::RParen,
+        CompilationIssueCode::E0001,
+        "Expected ')'.".into(),
+    )?;
+
+    if let Ast::Integer {
+        value,
+        signed: false,
+        ..
+    } = expr
+    {
+        Ok(value)
+    } else {
+        Err(CompilationIssue::Error(
+            CompilationIssueCode::E0028,
+            "Expected literal unsigned integer.".into(),
+            None,
+            expr.get_span(),
+        ))
+    }
 }
 
 fn build_linkage_attribute<'parser>(

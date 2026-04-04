@@ -20,13 +20,13 @@
 use thrustc_ast::{
     Ast, NodeId,
     metadata::CastingMetadata,
-    traits::{AstConstantExtensions, AstGetType, AstMemoryExtensions},
+    traits::{AstConstantExtensions, AstMemoryExtensions},
 };
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
 use thrustc_token::traits::TokenExtensions;
 use thrustc_token_type::TokenType;
-use thrustc_typesystem::{Type, traits::TypeIsExtensions};
+use thrustc_typesystem::Type;
 
 use crate::{ParserContext, expressions::precedences, typegeneration};
 

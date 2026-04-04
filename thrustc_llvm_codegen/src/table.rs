@@ -17,7 +17,6 @@
 
 */
 
-
 use ahash::AHashMap as HashMap;
 
 use crate::{
@@ -49,12 +48,12 @@ impl LLVMSymbolsTable<'_> {
     #[inline]
     pub fn new() -> Self {
         Self {
-            functions: HashMap::with_capacity(1000),
-            global_statics: HashMap::with_capacity(1000),
-            local_statics: Vec::with_capacity(255),
-            global_constants: HashMap::with_capacity(1000),
-            local_constants: Vec::with_capacity(255),
-            locals: Vec::with_capacity(255),
+            functions: HashMap::with_capacity(u8::MAX as usize),
+            global_statics: HashMap::with_capacity(u8::MAX as usize),
+            local_statics: Vec::with_capacity(u8::MAX as usize),
+            global_constants: HashMap::with_capacity(u8::MAX as usize),
+            local_constants: Vec::with_capacity(u8::MAX as usize),
+            locals: Vec::with_capacity(u8::MAX as usize),
 
             parameters: HashMap::with_capacity(15),
 

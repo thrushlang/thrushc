@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_span::Span;
 
 use crate::{ThrustAttribute, ThrustAttributeComparator};
@@ -32,6 +31,7 @@ pub trait ThrustAttributesExtensions {
     fn has_noinline_attr(&self) -> bool;
     fn has_minsize_attr(&self) -> bool;
     fn has_inlinealways_attr(&self) -> bool;
+    fn has_align_attribute(&self) -> bool;
 
     fn has_heap_attr(&self) -> bool;
 

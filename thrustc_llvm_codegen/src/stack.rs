@@ -19,8 +19,8 @@
 
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::PointerValue;
-use thrustc_attributes::ThrustAttributes;
 use thrustc_attributes::traits::ThrustAttributesExtensions;
+use thrustc_attributes::{ThrustAttribute, ThrustAttributes};
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
 
@@ -42,9 +42,9 @@ pub fn local_variable<'ctx>(
     context.mark_dbg_location(span);
 
     if attributes.has_heap_attr() {
-        heap::try_alloc_at_heap(context, llvm_type, &name, span)
+        heap::try_alloc_at_heap(context, llvm_type, &name, attributes, span)
     } else {
-        self::try_alloc_at_stack(context, llvm_type, &name, span)
+        self::try_alloc_at_stack(context, llvm_type, &name, attributes, span)
     }
 }
 
@@ -53,12 +53,23 @@ fn try_alloc_at_stack<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     llvm_type: BasicTypeEnum<'ctx>,
     ascii_name: &str,
+    attributes: &ThrustAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
     if let Ok(ptr) = context
         .get_llvm_builder()
         .build_alloca(llvm_type, ascii_name)
     {
+        if let Some(align_attr) =
+            attributes.get_attr(thrustc_attributes::ThrustAttributeComparator::Align)
+        {
+            if let Some(instruction) = ptr.as_instruction() {
+                if let ThrustAttribute::Align(value, ..) = align_attr {
+                    let _ = instruction.set_alignment(value.try_into().unwrap_or(u32::MAX));
+                }
+            }
+        }
+
         return ptr;
     }
 

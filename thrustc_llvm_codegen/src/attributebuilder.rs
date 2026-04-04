@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::attributes::Attribute;
 use inkwell::attributes::AttributeLoc;
 use inkwell::context::Context;
@@ -210,11 +209,17 @@ impl<'ctx> AttributeBuilder<'ctx> {
 
     pub fn add_global_attributes(&self) {
         if let LLVMAttributeApplicant::Global(global) = self.attribute_applicant {
-            self.attributes.iter().for_each(|attr| {
-                if let LLVMAttribute::Linkage(linkage) = attr {
-                    global.set_linkage(*linkage);
+            {
+                for attribute in self.attributes.iter() {
+                    if let LLVMAttribute::Linkage(linkage) = attribute {
+                        global.set_linkage(*linkage);
+                    }
+
+                    if let LLVMAttribute::Align(value, ..) = attribute {
+                        let _ = global.set_alignment((*value).try_into().unwrap_or(u32::MAX));
+                    }
                 }
-            });
+            }
         }
     }
 }

@@ -1,0 +1,98 @@
+/* 
+ * Merge Sort - Algorithm
+ * 
+ * This program implements bottom-up Merge Sort on a fixed array of 10 integers.
+ * It sorts the array in ascending order and prints the original and sorted array.
+ * 
+ * Usage: ./mergesort
+*/
+
+fn print(fmt: const array[char]) s32 @public @arbitraryArgs @extern("printf") @convention("C");
+
+fn merge(arr: ptr[array[s32; 10]], temp: ptr[array[s32; 10]], left: s32, mid: s32, right: s32) {
+
+    local i: s32 = left;
+    local j: s32 = mid + 1;
+    local k: s32 = left;
+
+    while i <= mid && j <= right {
+        if (deref arr[i]) <= (deref arr[j]) {
+            temp[k] = deref arr[i];
+            i++;
+        } else {
+            temp[k] = deref arr[j];
+            j++;
+        }
+
+        k++;
+    }
+
+    while i <= mid {
+        temp[k] = deref arr[i];
+        i = i++;
+        k = k++;
+    }
+
+    while j <= right {
+        temp[k] = deref arr[j];
+        j++;
+        k++;
+    }
+
+    local p: s32 = left;
+
+    while p <= right {
+        arr[p] = deref temp[p];
+        p++;
+    }
+}
+
+fn merge_sort(arr: ptr[array[s32; 10]], temp: ptr[array[s32; 10]], n: s32) {
+
+    local width: s32 = 1;
+    local i: s32 = 0;
+
+    while width < n {
+        i = 0;
+
+        while i < n - width {
+            local left: s32 = i;
+            local mid: s32 = i + width - 1;
+            local right: s32 = i + 2 * width - 1;
+
+            if right >= n {
+                right = n - 1;
+            }
+
+            merge(arr, temp, left, mid, right);
+
+            i = i + 2 * width;
+        }
+
+        width = width * 2;
+    }
+}
+
+fn print_array(arr: ptr[array[s32; 10]], n: s32) {
+    for local i: s32 = 0; i < n; i++; {
+        print("%d ", deref arr[i]);
+    }
+
+    print("\n");
+}
+
+fn main() s32 @public {
+
+    local arr: array[s32; 10] = fixed[64, 34, 25, 12, 22, 11, 90, 88, 45, 67];
+    local temp: array[s32; 10] = fixed[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; 
+
+    print("Original array: ");
+    print_array(ref arr, 10);
+
+    merge_sort(ref arr, ref temp, 10);
+
+    print("Sorted array:   ");
+    print_array(ref arr, 10);
+
+    return 0;
+}

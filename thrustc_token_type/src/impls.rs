@@ -17,7 +17,6 @@
 
 */
 
-
 use crate::{
     TokenType,
     traits::{TokenTypeAttributesExtensions, TokenTypeBuiltinExtensions, TokenTypeExtensions},
@@ -316,6 +315,7 @@ impl std::fmt::Display for TokenType {
 
             // Attributes
             TokenType::Linkage => write!(f, "@linkage"),
+            TokenType::Align => write!(f, "@align"),
             TokenType::OptFuzzing => write!(f, "@optFuzzing"),
             TokenType::NoUnwind => write!(f, "@noUnwind"),
             TokenType::Packed => write!(f, "@packed"),
@@ -330,8 +330,6 @@ impl std::fmt::Display for TokenType {
             TokenType::Extern => write!(f, "@extern"),
             TokenType::Hot => write!(f, "@hot"),
             TokenType::Ignore => write!(f, "@arbitraryArgs"),
-            TokenType::Import => write!(f, "import"),
-            TokenType::ImportC => write!(f, "importC"),
             TokenType::InlineHint => write!(f, "@inline"),
             TokenType::MinSize => write!(f, "@minSize"),
             TokenType::NoInline => write!(f, "@noInline"),
@@ -407,6 +405,10 @@ impl std::fmt::Display for TokenType {
             TokenType::AbiSizeOf => write!(f, "abiSizeOf"),
             TokenType::BitSizeOf => write!(f, "bitSizeOf"),
             TokenType::AbiAlignOf => write!(f, "abiAlignOf"),
+
+            // Import
+            TokenType::Import => write!(f, "import"),
+            TokenType::ImportC => write!(f, "importC"),
         }
     }
 }
