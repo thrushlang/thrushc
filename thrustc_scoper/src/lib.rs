@@ -48,7 +48,7 @@ impl<'scoper> Scoper<'scoper> {
         Self {
             ast,
             context: ScoperContext::new(),
-            errors: Vec::with_capacity(100),
+            errors: Vec::with_capacity(u8::MAX as usize),
             diagnostician: Diagnostician::new(file, options),
         }
     }
@@ -81,7 +81,7 @@ impl<'scoper> Scoper<'scoper> {
 
 impl<'scoper> Scoper<'scoper> {
     fn analyze_global_node(&mut self, node: &Ast) {
-        if !node.is_declaration() {
+        if !node.is_declaration_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "This expression, statement, or declaration should not be in the main scope. It should be in a local scope. Reposition it.".into(),
@@ -102,7 +102,7 @@ impl<'scoper> Scoper<'scoper> {
     }
 
     fn analyze_local_node(&mut self, node: &Ast) {
-        if node.is_function() {
+        if node.is_function_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "This function should not be in a local scope. It should be in the main scope. Reposition it.".into(),
@@ -120,7 +120,7 @@ impl<'scoper> Scoper<'scoper> {
             ));
         }
 
-        if node.is_custom_type() {
+        if node.is_type_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "This type should not be in a local scope. It should be in the main scope. Reposition it.".into(),
@@ -129,7 +129,7 @@ impl<'scoper> Scoper<'scoper> {
             ));
         }
 
-        if node.is_global_asm() {
+        if node.is_global_asm_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "This global module assembler should not be in a local scope. It should be in the main scope. Reposition it.".into(),
@@ -138,7 +138,7 @@ impl<'scoper> Scoper<'scoper> {
             ));
         }
 
-        if node.is_enum() {
+        if node.is_enum_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "This enumeration should not be in a local scope. It should be in the main scope. Reposition it.".into(),
@@ -147,7 +147,7 @@ impl<'scoper> Scoper<'scoper> {
             ));
         }
 
-        if node.is_import() {
+        if node.is_import_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "This module import should not be in a local scope. It should be in the main scope. Reposition it.".into(),
@@ -156,7 +156,7 @@ impl<'scoper> Scoper<'scoper> {
             ));
         }
 
-        if node.is_intrinsic() {
+        if node.is_intrinsic_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "This compiler intrinsic should not be in a local scope. It should be in the main scope. Reposition it.".into(),

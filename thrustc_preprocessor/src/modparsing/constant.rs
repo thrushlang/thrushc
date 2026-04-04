@@ -24,7 +24,7 @@ use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
 use crate::{
-    modparsing::{attributes, typegen},
+    modparsing::{attributes, typegeneration},
     parser::ModuleParser,
     signatures::{Signature, Symbol, Variant},
 };
@@ -40,7 +40,7 @@ pub fn parse_constant<'module_parser>(
 
     ctx.consume(TokenType::Colon)?;
 
-    let r#type: Type = typegen::build_type(ctx)?;
+    let r#type: Type = typegeneration::build_type(ctx)?;
 
     let attributes: ThrustAttributes = attributes::build_attributes(ctx, &[TokenType::Eq])?;
 

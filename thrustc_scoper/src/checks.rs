@@ -37,7 +37,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     let unreacheable_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
-        .filter(|(_, stmt)| stmt.is_unreacheable())
+        .filter(|(_, stmt)| stmt.is_unreacheable_keyword())
         .collect();
 
     if unreacheable_positions.len() > 1 {
@@ -54,7 +54,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     let return_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
-        .filter(|(_, stmt)| stmt.is_terminator())
+        .filter(|(_, stmt)| stmt.is_terminator_keyword())
         .collect();
 
     if return_positions.len() > 1 {
@@ -71,7 +71,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     let break_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
-        .filter(|(_, stmt)| stmt.is_break())
+        .filter(|(_, stmt)| stmt.is_break_keyword())
         .collect();
 
     if break_positions.len() > 1 {
@@ -88,7 +88,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     let breakall_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
-        .filter(|(_, stmt)| stmt.is_breakall())
+        .filter(|(_, stmt)| stmt.is_breakall_keyword())
         .collect();
 
     if breakall_positions.len() > 1 {
@@ -105,7 +105,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     let continue_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
-        .filter(|(_, stmt)| stmt.is_continue())
+        .filter(|(_, stmt)| stmt.is_continue_keyword())
         .collect();
 
     if continue_positions.len() > 1 {
@@ -122,7 +122,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
     let continueall_positions: Vec<(usize, &Ast)> = nodes
         .iter()
         .enumerate()
-        .filter(|(_, stmt)| stmt.is_continueall())
+        .filter(|(_, stmt)| stmt.is_continueall_keyword())
         .collect();
 
     if continueall_positions.len() > 1 {
@@ -149,7 +149,12 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
     }
 
     let Some((terminator_idx, _)) = nodes.iter().enumerate().find(|(_, stmt)| {
-        stmt.is_terminator() || stmt.is_unreacheable() || stmt.is_break() || stmt.is_continue()
+        stmt.is_terminator_keyword()
+            || stmt.is_unreacheable_keyword()
+            || stmt.is_break_keyword()
+            || stmt.is_breakall_keyword()
+            || stmt.is_continue_keyword()
+            || stmt.is_continueall_keyword()
     }) else {
         return;
     };
@@ -182,12 +187,12 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                 {
                     if let Ast::Block { nodes, .. } = then_branch.as_ref() {
                         is_if_unreacheable = nodes.iter().any(|stmt| {
-                            stmt.is_terminator()
-                                || stmt.is_unreacheable()
-                                || stmt.is_break()
-                                || stmt.is_breakall()
-                                || stmt.is_continue()
-                                || stmt.is_continueall()
+                            stmt.is_terminator_keyword()
+                                || stmt.is_unreacheable_keyword()
+                                || stmt.is_break_keyword()
+                                || stmt.is_breakall_keyword()
+                                || stmt.is_continue_keyword()
+                                || stmt.is_continueall_keyword()
                         });
                     }
                 }
@@ -197,12 +202,12 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                         if let Ast::Elif { block, .. } = node {
                             if let Ast::Block { nodes, .. } = &**block {
                                 is_else_if_unreacheable = nodes.iter().any(|stmt| {
-                                    stmt.is_terminator()
-                                        || stmt.is_unreacheable()
-                                        || stmt.is_break()
-                                        || stmt.is_breakall()
-                                        || stmt.is_continue()
-                                        || stmt.is_continueall()
+                                    stmt.is_terminator_keyword()
+                                        || stmt.is_unreacheable_keyword()
+                                        || stmt.is_break_keyword()
+                                        || stmt.is_breakall_keyword()
+                                        || stmt.is_continue_keyword()
+                                        || stmt.is_continueall_keyword()
                                 });
                             }
                         }
@@ -214,12 +219,12 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
                         if let Ast::Else { block, .. } = &**otherwise {
                             if let Ast::Block { nodes, .. } = block.as_ref() {
                                 is_else_unreacheable = nodes.iter().any(|stmt| {
-                                    stmt.is_terminator()
-                                        || stmt.is_unreacheable()
-                                        || stmt.is_break()
-                                        || stmt.is_breakall()
-                                        || stmt.is_continue()
-                                        || stmt.is_continueall()
+                                    stmt.is_terminator_keyword()
+                                        || stmt.is_unreacheable_keyword()
+                                        || stmt.is_break_keyword()
+                                        || stmt.is_breakall_keyword()
+                                        || stmt.is_continue_keyword()
+                                        || stmt.is_continueall_keyword()
                                 });
                             }
                         }

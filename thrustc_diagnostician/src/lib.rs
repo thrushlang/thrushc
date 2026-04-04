@@ -17,13 +17,12 @@
 
 */
 
-
 pub mod config;
 pub mod diagnostic;
 pub mod errors;
 mod impls;
-mod position;
-mod printers;
+pub mod position;
+pub mod printers;
 mod traits;
 
 use thrustc_errors::CompilationIssue;

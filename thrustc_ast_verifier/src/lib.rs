@@ -327,7 +327,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
 
 impl<'ast_verifier> AstVerifier<'ast_verifier> {
     pub fn expected_statement(&mut self, node: &Ast<'_>) {
-        if !node.is_statement() {
+        if !node.is_statement_keyword() {
             self.add_error(CompilationIssue::Error(
                 thrustc_errors::CompilationIssueCode::E0001,
                 "Expected a statement, not a declaration, and never a top entity.".into(),
@@ -338,7 +338,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
     }
 
     pub fn expected_statement_or_loose_expression(&mut self, node: &Ast<'_>) {
-        if !node.is_statement() && !node.is_expression() {
+        if !node.is_statement_keyword() && !node.is_expression() {
             self.add_error(CompilationIssue::Error(
                 thrustc_errors::CompilationIssueCode::E0001,
                 "Expected a statement or a expression, and never a top entity.".into(),

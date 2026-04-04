@@ -252,7 +252,7 @@ pub fn build_reference<'parser>(
                                 operator,
                                 node: reference.into(),
                                 kind: local_type,
-                                is_pre: false,
+                                before: false,
                                 span,
                                 id: NodeId::new(),
                             };

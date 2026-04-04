@@ -488,7 +488,7 @@ pub enum Ast<'ast> {
         operator: TokenType,
         kind: Type,
         node: std::boxed::Box<Ast<'ast>>,
-        is_pre: bool,
+        before: bool,
         span: Span,
         id: NodeId,
     },

@@ -107,7 +107,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if let Some(span) = attributes.match_attr(ThrustAttributeComparator::Extern) {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "External functions cannot have a body. Remove it.".into(),
+                            "FFI external functions cannot have a body. Remove it.".into(),
                             None,
                             span,
                         ));
@@ -117,7 +117,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if body.is_none() && !attributes.has_extern_attribute() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0011,
-                        "A function without body always need the external attribute. Add the '@extern' attribute.".into(),
+                        "A FFI function without body always need the external attribute. Add the '@extern(\"externalName\")' attribute.".into(),
                         None,
                         *span,
                     ));
@@ -761,7 +761,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::Ignore) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0013,
-                    "The @arbitraryArgs attribute requires the symbol to be annotated with @extern(\"something\").".into(),
+                    "The @arbitraryArgs attribute requires a FFI symbol. Missing the external FFI attribute '@extern(\"externalName\")'.".into(),
                     None,
                     span,
                 ));
@@ -772,7 +772,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::InlineHint) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "The attribute is not valid. Use either '@alwaysInline' or '@inline' attribute.".into(),
+                    "Use either '@alwaysInline' or '@inline' attribute.".into(),
                     None,
                     span,
                 ));
@@ -783,8 +783,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::NoInline) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "The attribute is not valid. Use either '@noInline' or '@inline' attribute."
-                        .into(),
+                    "Use either '@noInline' or '@inline' attribute.".into(),
                     None,
                     span,
                 ));
@@ -795,7 +794,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::NoInline) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "The attribute is not valid. Use either '@alwaysInline' or '@inline' attribute.".into(),
+                    "Use either '@alwaysInline' or '@inline' attribute.".into(),
                     None,
                     span,
                 ));
@@ -809,11 +808,13 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
         let mut storage: HashSet<ThrustAttributeComparator> = HashSet::with_capacity(20);
         let mut repeated_attrs: ThrustAttributes = Vec::with_capacity(20);
 
-        attributes.iter().for_each(|attr| {
-            if !storage.insert(attr.as_attr_cmp()) {
-                repeated_attrs.push(attr.clone());
+        {
+            for attribute in attributes.iter() {
+                if !storage.insert(attribute.as_attr_cmp()) {
+                    repeated_attrs.push(attribute.clone());
+                }
             }
-        });
+        }
 
         repeated_attrs
     }

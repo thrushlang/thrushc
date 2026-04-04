@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
@@ -48,7 +47,7 @@ pub fn unary_precedence<'parser>(
             operator,
             node: expr.into(),
             kind: Type::Bool(span),
-            is_pre: false,
+            before: false,
             span,
             id: NodeId::new(),
         });
@@ -70,7 +69,7 @@ pub fn unary_precedence<'parser>(
             operator,
             node: expr.clone().into(),
             kind,
-            is_pre: false,
+            before: false,
             span,
             id: NodeId::new(),
         });
@@ -90,7 +89,7 @@ pub fn unary_precedence<'parser>(
             operator,
             node: expr.clone().into(),
             kind: expr_type.clone(),
-            is_pre: false,
+            before: false,
             span,
             id: NodeId::new(),
         });
@@ -108,7 +107,7 @@ pub fn unary_precedence<'parser>(
             operator,
             node: expr.clone().into(),
             kind: expr_type.clone(),
-            is_pre: true,
+            before: true,
             span,
             id: NodeId::new(),
         };
@@ -130,7 +129,7 @@ pub fn unary_precedence<'parser>(
             operator,
             node: expr.clone().into(),
             kind: expr_type.clone(),
-            is_pre: true,
+            before: true,
             span,
             id: NodeId::new(),
         };

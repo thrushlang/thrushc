@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, traits::AstStandardExtensions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -47,7 +46,7 @@ pub fn build_block<'parser>(
     while !ctx.match_token(TokenType::RBrace)? {
         let statement: Ast<'_> = statements::parse(ctx)?;
 
-        if statement.is_post_execution_at_scope() {
+        if statement.is_defer_keyword() {
             post.push(statement);
         } else {
             nodes.push(statement);
@@ -78,7 +77,7 @@ pub fn build_block_without_start<'parser>(
     while !ctx.check(TokenType::RBrace) {
         let statement: Ast<'_> = statements::parse(ctx)?;
 
-        if statement.is_post_execution_at_scope() {
+        if statement.is_defer_keyword() {
             post.push(statement);
         } else {
             nodes.push(statement);

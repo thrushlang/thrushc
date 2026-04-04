@@ -24,7 +24,7 @@ use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
 use crate::{
-    modparsing::{attributes, typegen},
+    modparsing::{attributes, typegeneration},
     parser::ModuleParser,
     signatures::{Signature, Symbol, Variant},
 };
@@ -40,7 +40,7 @@ pub fn parse_type<'module_parser>(ctx: &mut ModuleParser<'module_parser>) -> Res
 
     ctx.consume(TokenType::Eq)?;
 
-    let r#type: Type = typegen::build_type(ctx)?;
+    let r#type: Type = typegeneration::build_type(ctx)?;
 
     ctx.consume(TokenType::SemiColon)?;
 

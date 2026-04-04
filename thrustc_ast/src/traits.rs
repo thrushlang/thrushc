@@ -34,41 +34,49 @@ pub trait AstCodeLocation {
 }
 
 pub trait AstStatementExtensions {
-    fn is_statement(&self) -> bool;
+    fn is_statement_keyword(&self) -> bool;
 }
 
 pub trait AstDeclarationExtensions {
-    fn is_declaration(&self) -> bool;
+    fn is_declaration_keyword(&self) -> bool;
 }
 
 pub trait AstExpressionExtensions {
     fn is_expression(&self) -> bool;
+    fn is_binary_operation(&self) -> bool;
+    fn is_unary_operation(&self) -> bool;
+    fn is_unary_before_operation(&self) -> bool;
+
+    fn get_binary_operator(&self) -> Option<TokenType>;
 }
 
 pub trait AstStandardExtensions {
-    fn is_literal_value(&self) -> bool;
     fn is_reference(&self) -> bool;
-    fn is_unreacheable(&self) -> bool;
-    fn is_import(&self) -> bool;
-    fn is_function(&self) -> bool;
-    fn is_intrinsic(&self) -> bool;
+    fn is_unreacheable_keyword(&self) -> bool;
+    fn is_import_keyword(&self) -> bool;
+    fn is_function_keyword(&self) -> bool;
+    fn is_intrinsic_keyword(&self) -> bool;
     fn is_asm_function(&self) -> bool;
-    fn is_global_asm(&self) -> bool;
-    fn is_struct(&self) -> bool;
-    fn is_enum(&self) -> bool;
+    fn is_global_asm_keyword(&self) -> bool;
+    fn is_struct_keyword(&self) -> bool;
+    fn is_enum_keyword(&self) -> bool;
     fn is_cstring(&self) -> bool;
     fn is_cnstring(&self) -> bool;
-    fn is_constant(&self) -> bool;
-    fn is_static(&self) -> bool;
+    fn is_constant_keyword(&self) -> bool;
+    fn is_static_keyword(&self) -> bool;
     fn is_integer(&self) -> bool;
-    fn is_terminator(&self) -> bool;
-    fn is_custom_type(&self) -> bool;
-    fn is_break(&self) -> bool;
-    fn is_breakall(&self) -> bool;
-    fn is_continue(&self) -> bool;
-    fn is_continueall(&self) -> bool;
-    fn is_conditional(&self) -> bool;
-    fn is_post_execution_at_scope(&self) -> bool;
+    fn is_terminator_keyword(&self) -> bool;
+    fn is_type_keyword(&self) -> bool;
+    fn is_break_keyword(&self) -> bool;
+    fn is_breakall_keyword(&self) -> bool;
+    fn is_continue_keyword(&self) -> bool;
+    fn is_continueall_keyword(&self) -> bool;
+    fn is_conditional_keyword(&self) -> bool;
+    fn is_defer_keyword(&self) -> bool;
+}
+
+pub trait AstLiteralExtensions {
+    fn is_literal_value(&self) -> bool;
 }
 
 pub trait AstCodeBlockEntensions {
@@ -97,13 +105,6 @@ pub trait AstPropertyDataFieldExtensions {
     fn get_base_type(&self) -> Type;
     fn get_property_type(&self) -> Type;
     fn get_index(&self) -> u32;
-}
-
-pub trait AstExpressionOperationExtensions {
-    fn is_binary_operation(&self) -> bool;
-    fn get_binary_operator(&self) -> Option<TokenType>;
-    fn is_unary_operation(&self) -> bool;
-    fn is_unary_preeval_operation(&self) -> bool;
 }
 
 pub trait AstEnumFieldsDataExtensions<'a> {

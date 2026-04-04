@@ -23,63 +23,38 @@ use thrustc_token_type::TokenType;
 use thrustc_typesystem::{
     Type,
     modificators::StructureTypeModificator,
-    traits::{TypeIsExtensions, TypePointerExtensions, TypeStructExtensions},
+    traits::{TypePointerExtensions, TypeStructExtensions},
 };
 
 use crate::{
     Ast,
-    builitins::ThrustBuiltin,
     data::{
         ConstructorData, EnumData, EnumDataField, PropertyData, PropertyDataField, StructureData,
     },
     traits::{
-        AstCodeBlockEntensions, AstConstantExtensions, AstConstructorDataExtensions,
-        AstDeclarationExtensions, AstEnumFieldsDataExtensions, AstExpressionExtensions,
-        AstExpressionOperationExtensions, AstGetType, AstMemoryExtensions,
+        AstCodeBlockEntensions, AstConstructorDataExtensions, AstDeclarationExtensions,
+        AstEnumFieldsDataExtensions, AstExpressionExtensions, AstGetType, AstMemoryExtensions,
         AstPropertyDataExtensions, AstPropertyDataFieldExtensions, AstStandardExtensions,
         AstStatementExtensions, AstStructFieldsDataExtensions, AstStructureDataExtensions,
     },
 };
 
+mod constant;
+mod literal;
+
 impl AstStandardExtensions for Ast<'_> {
-    #[inline]
-    fn is_literal_value(&self) -> bool {
-        match self {
-            Ast::Integer { .. }
-            | Ast::Float { .. }
-            | Ast::Boolean { .. }
-            | Ast::Char { .. }
-            | Ast::CString { .. }
-            | Ast::CNString { .. }
-            | Ast::NullPtr { .. } => true,
-
-            Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_literal_value()),
-            Ast::Array { items, .. } => items.iter().all(|item| item.is_literal_value()),
-
-            Ast::EnumValue { value, .. } => value.is_literal_value(),
-
-            Ast::Group { node, .. } => node.is_literal_value(),
-            Ast::BinaryOp { left, right, .. } => {
-                left.is_literal_value() && right.is_literal_value()
-            }
-            Ast::UnaryOp { node, .. } => node.is_literal_value(),
-
-            _ => false,
-        }
-    }
-
     #[inline]
     fn is_reference(&self) -> bool {
         matches!(self, Ast::Reference { .. })
     }
 
     #[inline]
-    fn is_function(&self) -> bool {
+    fn is_function_keyword(&self) -> bool {
         matches!(self, Ast::Function { .. })
     }
 
     #[inline]
-    fn is_intrinsic(&self) -> bool {
+    fn is_intrinsic_keyword(&self) -> bool {
         matches!(self, Ast::Intrinsic { .. })
     }
 
@@ -89,12 +64,12 @@ impl AstStandardExtensions for Ast<'_> {
     }
 
     #[inline]
-    fn is_struct(&self) -> bool {
+    fn is_struct_keyword(&self) -> bool {
         matches!(self, Ast::Struct { .. })
     }
 
     #[inline]
-    fn is_enum(&self) -> bool {
+    fn is_enum_keyword(&self) -> bool {
         matches!(self, Ast::Enum { .. })
     }
 
@@ -109,12 +84,12 @@ impl AstStandardExtensions for Ast<'_> {
     }
 
     #[inline]
-    fn is_constant(&self) -> bool {
+    fn is_constant_keyword(&self) -> bool {
         matches!(self, Ast::Const { .. })
     }
 
     #[inline]
-    fn is_static(&self) -> bool {
+    fn is_static_keyword(&self) -> bool {
         matches!(self, Ast::Static { .. })
     }
 
@@ -124,63 +99,63 @@ impl AstStandardExtensions for Ast<'_> {
     }
 
     #[inline]
-    fn is_terminator(&self) -> bool {
+    fn is_terminator_keyword(&self) -> bool {
         matches!(self, Ast::Return { .. })
     }
 
     #[inline]
-    fn is_unreacheable(&self) -> bool {
+    fn is_unreacheable_keyword(&self) -> bool {
         matches!(self, Ast::Unreachable { .. })
     }
 
     #[inline]
-    fn is_break(&self) -> bool {
+    fn is_break_keyword(&self) -> bool {
         matches!(self, Ast::Break { .. })
     }
 
     #[inline]
-    fn is_breakall(&self) -> bool {
+    fn is_breakall_keyword(&self) -> bool {
         matches!(self, Ast::BreakAll { .. })
     }
 
     #[inline]
-    fn is_continue(&self) -> bool {
+    fn is_continue_keyword(&self) -> bool {
         matches!(self, Ast::Continue { .. })
     }
 
     #[inline]
-    fn is_continueall(&self) -> bool {
+    fn is_continueall_keyword(&self) -> bool {
         matches!(self, Ast::ContinueAll { .. })
     }
 
     #[inline]
-    fn is_custom_type(&self) -> bool {
+    fn is_type_keyword(&self) -> bool {
         matches!(self, Ast::CustomType { .. })
     }
 
     #[inline]
-    fn is_global_asm(&self) -> bool {
+    fn is_global_asm_keyword(&self) -> bool {
         matches!(self, Ast::GlobalAssembler { .. })
     }
 
     #[inline]
-    fn is_import(&self) -> bool {
+    fn is_import_keyword(&self) -> bool {
         matches!(self, Ast::Import { .. })
     }
 
     #[inline]
-    fn is_conditional(&self) -> bool {
+    fn is_conditional_keyword(&self) -> bool {
         matches!(self, Ast::If { .. } | Ast::Elif { .. } | Ast::Else { .. })
     }
 
     #[inline]
-    fn is_post_execution_at_scope(&self) -> bool {
+    fn is_defer_keyword(&self) -> bool {
         matches!(self, Ast::Defer { .. })
     }
 }
 
 impl AstStatementExtensions for Ast<'_> {
-    fn is_statement(&self) -> bool {
+    fn is_statement_keyword(&self) -> bool {
         matches!(
             self,
             Ast::Block { .. }
@@ -205,7 +180,7 @@ impl AstStatementExtensions for Ast<'_> {
 }
 
 impl AstDeclarationExtensions for Ast<'_> {
-    fn is_declaration(&self) -> bool {
+    fn is_declaration_keyword(&self) -> bool {
         matches!(
             self,
             Ast::CustomType { .. }
@@ -224,8 +199,33 @@ impl AstDeclarationExtensions for Ast<'_> {
 }
 
 impl AstExpressionExtensions for Ast<'_> {
+    #[inline]
     fn is_expression(&self) -> bool {
-        !self.is_declaration() && !self.is_statement()
+        !self.is_declaration_keyword() && !self.is_statement_keyword()
+    }
+
+    #[inline]
+    fn is_binary_operation(&self) -> bool {
+        matches!(self, Ast::BinaryOp { .. })
+    }
+
+    #[inline]
+    fn is_unary_operation(&self) -> bool {
+        matches!(self, Ast::UnaryOp { .. })
+    }
+
+    #[inline]
+    fn is_unary_before_operation(&self) -> bool {
+        matches!(self, Ast::UnaryOp { before: true, .. })
+    }
+
+    #[inline]
+    fn get_binary_operator(&self) -> Option<TokenType> {
+        if let Ast::BinaryOp { operator, .. } = self {
+            return Some(*operator);
+        }
+
+        None
     }
 }
 
@@ -247,7 +247,7 @@ impl AstCodeBlockEntensions for Ast<'_> {
 
         {
             for node in nodes.iter() {
-                if node.is_terminator() {
+                if node.is_terminator_keyword() {
                     return true;
                 }
 
@@ -304,70 +304,6 @@ impl AstMemoryExtensions for Ast<'_> {
     }
 }
 
-impl AstConstantExtensions for Ast<'_> {
-    fn is_constant_value(&self) -> bool {
-        const BINARY_CONSTANT_OPERATIONS: &[TokenType] = &[];
-
-        match self {
-            Ast::Integer { .. }
-            | Ast::Float { .. }
-            | Ast::Boolean { .. }
-            | Ast::Char { .. }
-            | Ast::CNString { .. }
-            | Ast::CString { .. }
-            | Ast::NullPtr { .. }
-            | Self::Builtin {
-                builtin:
-                    ThrustBuiltin::AlignOf { .. }
-                    | ThrustBuiltin::SizeOf { .. }
-                    | ThrustBuiltin::AbiSizeOf { .. }
-                    | ThrustBuiltin::AbiAlignOf { .. }
-                    | ThrustBuiltin::BitSizeOf { .. },
-                ..
-            } => true,
-            Ast::EnumValue { value, .. } => value.is_constant_value(),
-            Ast::DirectRef { expr, .. } => expr.is_constant_value(),
-            Ast::Group { node, .. } => node.is_constant_value(),
-            Ast::BinaryOp { left, right, .. } => {
-                left.is_constant_value() && right.is_constant_value()
-            }
-            Ast::UnaryOp { node, .. } => node.is_constant_value(),
-            Ast::Reference { metadata, .. } => metadata.is_constant_ref(),
-            Ast::As { metadata, .. } => metadata.is_constant(),
-            Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_constant_value()),
-            Ast::Constructor { data, .. } => data.iter().all(|arg| arg.1.is_constant_value()),
-
-            _ => false,
-        }
-    }
-}
-
-impl AstExpressionOperationExtensions for Ast<'_> {
-    #[inline]
-    fn is_binary_operation(&self) -> bool {
-        matches!(self, Ast::BinaryOp { .. })
-    }
-
-    #[inline]
-    fn get_binary_operator(&self) -> Option<TokenType> {
-        if let Ast::BinaryOp { operator, .. } = self {
-            return Some(*operator);
-        }
-
-        None
-    }
-
-    #[inline]
-    fn is_unary_operation(&self) -> bool {
-        matches!(self, Ast::UnaryOp { .. })
-    }
-
-    #[inline]
-    fn is_unary_preeval_operation(&self) -> bool {
-        matches!(self, Ast::UnaryOp { is_pre: true, .. })
-    }
-}
-
 impl AstPropertyDataExtensions for PropertyData {
     #[inline]
     fn get_first_property(&self) -> Option<&crate::data::PropertyDataField> {
@@ -401,6 +337,7 @@ impl AstConstructorDataExtensions for ConstructorData<'_> {
 }
 
 impl<'a> AstStructureDataExtensions<'a> for StructureData<'a> {
+    #[inline]
     fn new(
         name: &'a str,
         modificator: thrustc_typesystem::modificators::StructureTypeModificator,
@@ -414,6 +351,7 @@ impl<'a> AstStructureDataExtensions<'a> for StructureData<'a> {
         )
     }
 
+    #[inline]
     fn get_fields(&self) -> &crate::data::StructureDataFields<'_> {
         &self.1
     }
@@ -439,18 +377,6 @@ impl AstStructFieldsDataExtensions for StructureData<'_> {
 impl<'a> AstEnumFieldsDataExtensions<'a> for EnumData<'a> {
     fn get_field(&self, name: &str) -> Option<EnumDataField<'a>> {
         self.iter().find(|enum_field| enum_field.0 == name).cloned()
-    }
-}
-
-impl std::cmp::PartialEq for Ast<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Ast::Integer { .. }, Ast::Integer { .. })
-            | (Ast::Float { .. }, Ast::Float { .. })
-            | (Ast::CString { .. }, Ast::CString { .. })
-            | (Ast::CNString { .. }, Ast::CNString { .. }) => true,
-            (left, right) => std::mem::discriminant(left) == std::mem::discriminant(right),
-        }
     }
 }
 

@@ -138,20 +138,20 @@ pub(crate) fn generate<'a>(
     let lines: Vec<&str> = code.lines().collect();
     let line_idx: usize = position.get_line().saturating_sub(1);
 
-    let code_line: &str = lines.get(line_idx)?.trim_start();
+    let code_line: &str = lines
+        .get(line_idx)?
+        .trim_start_matches(" ")
+        .trim_start_matches("\t")
+        .trim_start_matches("\r")
+        .trim_start_matches("\n");
+
     let code_before_trim: usize = lines.get(line_idx)?.len();
     let trim_difference: usize = code_before_trim.saturating_sub(code_line.len());
 
     let line: usize = position.get_line();
 
-    let start: usize = position
-        .get_start()
-        .saturating_sub(trim_difference)
-        .saturating_sub(1);
-    let end: usize = position
-        .get_end()
-        .saturating_sub(trim_difference)
-        .saturating_sub(1);
+    let start: usize = position.get_start().saturating_sub(trim_difference);
+    let end: usize = position.get_end().saturating_sub(trim_difference);
 
     if start > end || end > code_line.len() {
         return None;
@@ -177,7 +177,7 @@ pub(crate) fn generate<'a>(
 
     signaler.push_str(&format!("{:>4} │ ", ""));
 
-    for i in 0..code_line.len() {
+    for i in 0..code_line.chars().count() {
         if i >= start && i < end {
             signaler.push_str(&logging_type.text_with_color("^").to_string());
         } else {

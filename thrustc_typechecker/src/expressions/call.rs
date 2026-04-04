@@ -19,7 +19,7 @@
 
 use thrustc_ast::{
     Ast,
-    traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
+    traits::{AstCodeLocation, AstGetType, AstLiteralExtensions},
 };
 use thrustc_attributes::traits::ThrustAttributesExtensions;
 use thrustc_entities::typechecker::TypeCheckerFunction;

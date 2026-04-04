@@ -19,7 +19,7 @@
 
 use thrustc_ast::{
     Ast,
-    traits::{AstCodeLocation, AstGetType, AstStandardExtensions},
+    traits::{AstCodeLocation, AstGetType, AstLiteralExtensions, AstStandardExtensions},
 };
 
 use thrustc_diagnostician::Diagnostician;
@@ -59,7 +59,9 @@ pub struct TypeChecker<'type_checker> {
 
     control_context: TypeCheckerControlContext,
     type_context: TypeCheckerTypeContext<'type_checker>,
+
     table: TypeCheckerSymbolsTable<'type_checker>,
+
     diagnostician: Diagnostician,
 }
 
@@ -384,11 +386,11 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     TypeCheckerNodeMetadata::new(local_value.is_literal_value());
 
                 let local_value_type: &Type = local_value.get_value_type()?;
-                let is_reference_ptr: bool =
+                let is_ptr_reference: bool =
                     local_value_type.is_ptr_like_type() && local_value.is_reference();
 
-                if is_reference_ptr {
-                    let fixed_type: Type = Type::Ptr(
+                if is_ptr_reference {
+                    let allocated_ptr_type: Type = Type::Ptr(
                         Some(local_value_type.clone().into()),
                         local_value_type.get_span(),
                     );
@@ -399,7 +401,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                         checking::check_types(
                             local_type,
-                            &fixed_type,
+                            &allocated_ptr_type,
                             Some(local_value),
                             None,
                             type_metadata,
@@ -665,16 +667,16 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 let value_type: &Type = value.get_value_type()?;
 
                 {
-                    let lhs_type: Type = source_type.dereference_until_value();
-                    let rhs_type: Type = value_type.dereference_until_value();
+                    let lhs_pure_type: Type = source_type.dereference_until_value();
+                    let rhs_pure_type: Type = value_type.dereference_until_value();
 
                     {
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
                         checking::check_types(
-                            &lhs_type,
-                            &rhs_type,
+                            &lhs_pure_type,
+                            &rhs_pure_type,
                             Some(value),
                             None,
                             metadata,
