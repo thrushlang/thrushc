@@ -24,15 +24,16 @@ pub mod defer;
 pub mod lconstant;
 pub mod lctype;
 pub mod lenum;
-pub mod local;
 pub mod loops;
 pub mod lstatic;
 pub mod lstructure;
 pub mod terminator;
+pub mod var;
 
 use thrustc_ast::Ast;
 use thrustc_errors::CompilationIssue;
 use thrustc_parser_context::{SynchronizationPosition, traits::ControlContextExtensions};
+use thrustc_token::traits::TokenExtensions;
 use thrustc_token_type::TokenType;
 
 use crate::{ParserContext, expressions};
@@ -41,7 +42,7 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
     ctx.get_mut_control_context()
         .add_sync_position(SynchronizationPosition::Statement);
 
-    let statement: Result<Ast<'parser>, CompilationIssue> = match &ctx.peek().kind {
+    let statement: Result<Ast<'parser>, CompilationIssue> = match &ctx.peek().get_type() {
         TokenType::LBrace => Ok(block::build_block(ctx)?),
         TokenType::Return => Ok(terminator::build_return(ctx)?),
         TokenType::Static => Ok(lstatic::build_static(ctx)?),
@@ -49,7 +50,7 @@ pub fn parse<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, 
         TokenType::Struct => Ok(lstructure::build_structure(ctx)?),
         TokenType::Type => Ok(lctype::build_custom_type(ctx)?),
         TokenType::Enum => Ok(lenum::build_enum(ctx)?),
-        TokenType::Local => Ok(local::build_local(ctx)?),
+        TokenType::Var => Ok(var::build_var(ctx)?),
         TokenType::If => Ok(conditional::build_conditional(ctx)?),
         TokenType::For => Ok(loops::build_for_loop(ctx)?),
         TokenType::While => Ok(loops::build_while_loop(ctx)?),

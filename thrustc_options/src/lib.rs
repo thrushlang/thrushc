@@ -381,7 +381,7 @@ impl CompilerOptions {
     }
 
     #[inline]
-    pub fn get_llvm_backend_options(&self) -> &LLVMBackend {
+    pub fn get_llvm_backend(&self) -> &LLVMBackend {
         &self.llvm_backend
     }
 
@@ -517,7 +517,7 @@ impl CompilerOptions {
 
 impl CompilerOptions {
     #[inline]
-    pub fn get_mut_llvm_backend_options(&mut self) -> &mut LLVMBackend {
+    pub fn get_mut_llvm_backend(&mut self) -> &mut LLVMBackend {
         &mut self.llvm_backend
     }
 

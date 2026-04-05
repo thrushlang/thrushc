@@ -278,7 +278,7 @@ impl<'analyzer> Analyzer<'analyzer> {
 
                 Ok(())
             }
-            Ast::Local {
+            Ast::Var {
                 value, metadata, ..
             } => {
                 if let Some(value) = value {

@@ -88,7 +88,7 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
         file: &CompilationUnit,
     ) -> Self {
         let dbg_context: Option<LLVMDebugContext> = if options
-            .get_llvm_backend_options()
+            .get_llvm_backend()
             .get_debug_config()
             .is_debug_mode()
         {

@@ -20,6 +20,8 @@
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
 use thrustc_entities::UnaryOperation;
+use thrustc_options::CompilerOptions;
+use thrustc_options::backends::llvm::LLVMBackend;
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
@@ -113,18 +115,49 @@ fn compile_increment_decrement_ref<'ctx>(
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
-
     let symbol: SymbolAllocated = context.get_table().get_symbol(name);
 
     match kind {
         kind if kind.is_integer_type() => {
-            let int: IntValue = symbol.load(context).into_int_value();
+            let old_value: IntValue = symbol.load(context).into_int_value();
+            let modifier: IntValue = old_value.get_type().const_int(1, false);
+            let is_signed: bool = kind.is_signed_integer_type();
 
-            let modifier: IntValue = int.get_type().const_int(1, false);
+            let options: &CompilerOptions = context.get_compiler_options();
+            let llvm_backend: &LLVMBackend = options.get_llvm_backend();
 
             let result: BasicValueEnum = match operator {
-                TokenType::PlusPlus => llvm_builder
-                    .build_int_nsw_add(int, modifier, "")
+                TokenType::PlusPlus if is_signed && !llvm_backend.has_disable_safe_math() => {
+                    llvm_builder
+                        .build_int_nsw_add(old_value, modifier, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '++' operation!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        })
+                        .into()
+                }
+                TokenType::PlusPlus if !is_signed && !llvm_backend.has_disable_safe_math() => {
+                    llvm_builder
+                        .build_int_nuw_add(old_value, modifier, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '++' operation!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        })
+                        .into()
+                }
+
+                TokenType::PlusPlus if !llvm_backend.has_disable_safe_math() => llvm_builder
+                    .build_int_add(old_value, modifier, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -136,8 +169,36 @@ fn compile_increment_decrement_ref<'ctx>(
                     })
                     .into(),
 
-                TokenType::MinusMinus => llvm_builder
-                    .build_int_nsw_sub(int, modifier, "")
+                TokenType::MinusMinus if is_signed && !llvm_backend.has_disable_safe_math() => {
+                    llvm_builder
+                        .build_int_nsw_sub(old_value, modifier, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '--' operation!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        })
+                        .into()
+                }
+                TokenType::MinusMinus if !is_signed && !llvm_backend.has_disable_safe_math() => {
+                    llvm_builder
+                        .build_int_nuw_sub(old_value, modifier, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '--' operation!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        })
+                        .into()
+                }
+                TokenType::MinusMinus if llvm_backend.has_disable_safe_math() => llvm_builder
+                    .build_int_sub(old_value, modifier, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -165,15 +226,14 @@ fn compile_increment_decrement_ref<'ctx>(
             result
         }
         _ => {
-            let float: FloatValue = symbol.load(context).into_float_value();
-
+            let old_value: FloatValue = symbol.load(context).into_float_value();
             let modifier: FloatValue = typegeneration::compile_from(context, kind)
                 .into_float_type()
                 .const_float(1.0);
 
             let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
-                    .build_float_add(float, modifier, "")
+                    .build_float_add(old_value, modifier, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -185,7 +245,7 @@ fn compile_increment_decrement_ref<'ctx>(
                     })
                     .into(),
                 TokenType::MinusMinus => llvm_builder
-                    .build_float_sub(float, modifier, "")
+                    .build_float_sub(old_value, modifier, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -230,13 +290,44 @@ fn compile_increment_decrement<'ctx>(
 
     match kind {
         kind if kind.is_integer_type() => {
-            let int: IntValue = value.into_int_value();
+            let old_value: IntValue = value.into_int_value();
+            let modifier: IntValue = old_value.get_type().const_int(1, false);
+            let is_signed: bool = kind.is_signed_integer_type();
 
-            let modifier: IntValue = int.get_type().const_int(1, false);
+            let options: &CompilerOptions = context.get_compiler_options();
+            let llvm_backend: &LLVMBackend = options.get_llvm_backend();
 
             let result: BasicValueEnum = match operator {
-                TokenType::PlusPlus => llvm_builder
-                    .build_int_nsw_add(int, modifier, "")
+                TokenType::PlusPlus if is_signed && !llvm_backend.has_disable_safe_math() => {
+                    llvm_builder
+                        .build_int_nsw_add(old_value, modifier, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '++' operation!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        })
+                        .into()
+                }
+                TokenType::PlusPlus if !is_signed && !llvm_backend.has_disable_safe_math() => {
+                    llvm_builder
+                        .build_int_nuw_add(old_value, modifier, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '++' operation!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        })
+                        .into()
+                }
+                TokenType::PlusPlus if llvm_backend.has_disable_safe_math() => llvm_builder
+                    .build_int_add(old_value, modifier, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -248,8 +339,36 @@ fn compile_increment_decrement<'ctx>(
                     })
                     .into(),
 
-                TokenType::MinusMinus => llvm_builder
-                    .build_int_nsw_sub(int, modifier, "")
+                TokenType::MinusMinus if is_signed && !llvm_backend.has_disable_safe_math() => {
+                    llvm_builder
+                        .build_int_nsw_sub(old_value, modifier, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '--' operation!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        })
+                        .into()
+                }
+                TokenType::MinusMinus if !is_signed && !llvm_backend.has_disable_safe_math() => {
+                    llvm_builder
+                        .build_int_nuw_sub(old_value, modifier, "")
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to compile '--' operation!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            )
+                        })
+                        .into()
+                }
+                TokenType::MinusMinus if llvm_backend.has_disable_safe_math() => llvm_builder
+                    .build_int_sub(old_value, modifier, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -273,13 +392,12 @@ fn compile_increment_decrement<'ctx>(
             cast::try_cast(context, cast_type, kind, result, span)
         }
         _ => {
-            let float: FloatValue = value.into_float_value();
-
-            let modifier: FloatValue = float.get_type().const_float(1.0);
+            let old_value: FloatValue = value.into_float_value();
+            let modifier: FloatValue = old_value.get_type().const_float(1.0);
 
             let result: BasicValueEnum = match operator {
                 TokenType::PlusPlus => llvm_builder
-                    .build_float_add(float, modifier, "")
+                    .build_float_add(old_value, modifier, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -292,7 +410,7 @@ fn compile_increment_decrement<'ctx>(
                     .into(),
 
                 TokenType::MinusMinus => llvm_builder
-                    .build_float_sub(float, modifier, "")
+                    .build_float_sub(old_value, modifier, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,

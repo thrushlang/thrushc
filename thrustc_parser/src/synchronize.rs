@@ -31,7 +31,7 @@ pub const SYNC_STATEMENTS: [TokenType; 16] = [
     TokenType::Struct,
     TokenType::Type,
     TokenType::Enum,
-    TokenType::Local,
+    TokenType::Var,
     TokenType::If,
     TokenType::For,
     TokenType::While,

@@ -135,7 +135,7 @@ impl<'linter> Linter<'linter> {
 
     fn analyze_stmt(&mut self, node: &'linter Ast) {
         match node {
-            Ast::Local {
+            Ast::Var {
                 name,
                 value,
                 span,

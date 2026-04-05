@@ -155,7 +155,7 @@ pub enum TokenType {
     Elif,
     Or,
     Return,
-    Local,
+    Var,
     Const,
     While,
     Loop,

@@ -362,7 +362,7 @@ pub enum Ast<'ast> {
     },
 
     // Locals variables
-    Local {
+    Var {
         name: &'ast str,
         ascii_name: &'ast str,
         kind: Type,

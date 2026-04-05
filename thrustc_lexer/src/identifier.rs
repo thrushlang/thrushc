@@ -142,7 +142,7 @@ lazy_static! {
         let mut keywords: HashMap<&'static str, TokenType> =
             HashMap::with_capacity(u8::MAX as usize);
 
-        keywords.insert("local", TokenType::Local);
+        keywords.insert("var", TokenType::Var);
         keywords.insert("fn", TokenType::Fn);
         keywords.insert("if", TokenType::If);
         keywords.insert("elif", TokenType::Elif);

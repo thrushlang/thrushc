@@ -399,22 +399,22 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     pub fn codegen_variables(&mut self, node: &'ctx Ast) {
         match node {
-            Ast::Local { metadata, .. } => {
+            Ast::Var { metadata, .. } => {
                 self.context
                     .get_mut_expressions_optimizations()
                     .denegate_all_expression_optimizations();
 
                 if metadata.is_undefined() {
-                    let localvar: LocalVariable = thrustc_entities::local_variable_from_ast(node);
+                    let var: LocalVariable = thrustc_entities::local_variable_from_ast(node);
 
-                    let name: &str = localvar.0;
-                    let ascii_name: &str = localvar.1;
+                    let name: &str = var.0;
+                    let ascii_name: &str = var.1;
 
-                    let kind: &Type = localvar.2;
+                    let kind: &Type = var.2;
 
-                    let attributes: &ThrustAttributes = localvar.4;
-                    let metadata: LocalMetadata = localvar.5;
-                    let span: Span = localvar.6;
+                    let attributes: &ThrustAttributes = var.4;
+                    let metadata: LocalMetadata = var.5;
+                    let span: Span = var.6;
 
                     let llvm_attributes: Vec<thrustc_llvm_attributes::LLVMAttribute<'_>> =
                         thrustc_llvm_attributes::into_llvm_attributes(attributes);
@@ -440,17 +440,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                     self.context.add_local_variable(name, symbol);
                 } else {
-                    let localvar: LocalVariable = thrustc_entities::local_variable_from_ast(node);
+                    let var: LocalVariable = thrustc_entities::local_variable_from_ast(node);
 
-                    let name: &str = localvar.0;
-                    let ascii_name: &str = localvar.1;
+                    let name: &str = var.0;
+                    let ascii_name: &str = var.1;
 
-                    let kind: &Type = localvar.2;
-                    let value: Option<&Ast> = localvar.3;
+                    let kind: &Type = var.2;
+                    let value: Option<&Ast> = var.3;
 
-                    let attributes: &ThrustAttributes = localvar.4;
-                    let metadata: LocalMetadata = localvar.5;
-                    let span: Span = localvar.6;
+                    let attributes: &ThrustAttributes = var.4;
+                    let metadata: LocalMetadata = var.5;
+                    let span: Span = var.6;
 
                     let llvm_attributes: Vec<thrustc_llvm_attributes::LLVMAttribute<'_>> =
                         thrustc_llvm_attributes::into_llvm_attributes(attributes);
@@ -631,7 +631,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 expression, span, ..
             } => {
                 let compiler_options: &CompilerOptions = self.get_context().get_compiler_options();
-                let llvm_backend: &LLVMBackend = compiler_options.get_llvm_backend_options();
+                let llvm_backend: &LLVMBackend = compiler_options.get_llvm_backend();
 
                 if llvm_backend.needs_stack_protector() {
                     function::emit_stack_protector_epilogue(self.context, *span);

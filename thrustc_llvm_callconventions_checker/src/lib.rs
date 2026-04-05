@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_attributes::{
     ThrustAttribute, ThrustAttributeComparator, ThrustAttributes,
@@ -95,7 +94,7 @@ impl LLVMCallConventionsChecker<'_> {
     ) {
         let llvm_attributes: LLVMAttributes =
             thrustc_llvm_attributes::into_llvm_attributes(attributes);
-        let llvm_backend: &LLVMBackend = self.get_compiler_options().get_llvm_backend_options();
+        let llvm_backend: &LLVMBackend = self.get_compiler_options().get_llvm_backend();
 
         let triple: (String, String, String, String) =
             llvm_backend.get_target().dissamble_target_triple();

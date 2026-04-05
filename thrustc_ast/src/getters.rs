@@ -49,7 +49,7 @@ impl AstGetType for Ast<'_> {
             Ast::Static { kind, .. } => Ok(kind),
 
             // Variables & mutation
-            Ast::Local { kind, .. } => Ok(kind),
+            Ast::Var { kind, .. } => Ok(kind),
             Ast::Mut { kind, .. } => Ok(kind),
 
             // Reference
@@ -157,7 +157,7 @@ impl AstGetType for Ast<'_> {
             Ast::NullPtr { kind, .. } => Ok(kind),
 
             // Variables and references
-            Ast::Local { kind, .. } => Ok(kind),
+            Ast::Var { kind, .. } => Ok(kind),
             Ast::Mut { kind, .. } => Ok(kind),
             Ast::Reference { kind, .. } => Ok(kind),
             Ast::DirectRef { kind, .. } => Ok(kind),
@@ -247,7 +247,7 @@ impl AstCodeLocation for Ast<'_> {
             Ast::Static { span, .. } => *span,
 
             // Variables and declarations
-            Ast::Local { span, .. } => *span,
+            Ast::Var { span, .. } => *span,
             Ast::Const { span, .. } => *span,
             Ast::FunctionParameter { span, .. } => *span,
             Ast::AssemblerFunctionParameter { span, .. } => *span,

@@ -377,30 +377,6 @@ pub fn show_help() -> ! {
     thrustc_logging::write(
         thrustc_logging::OutputIn::Stderr,
         &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "--disable-all-sanitizers"
-                .custom_color((141, 141, 142))
-                .bold(),
-            "Disable all sanitizers that may be enabled.",
-        ),
-    );
-
-    thrustc_logging::write(
-        thrustc_logging::OutputIn::Stderr,
-        &format!(
-            "{} {} {}\n",
-            "•".bold(),
-            "--disable-all-cpu-features"
-                .custom_color((141, 141, 142))
-                .bold(),
-            "Disable the all CPU features. that may be enabled.",
-        ),
-    );
-
-    thrustc_logging::write(
-        thrustc_logging::OutputIn::Stderr,
-        &format!(
             "{} {} {} {}\n",
             "•".bold(),
             "--no-sanitize".custom_color((141, 141, 142)).bold(),
@@ -500,7 +476,7 @@ pub fn show_help() -> ! {
 
     thrustc_logging::write(
         thrustc_logging::OutputIn::Stderr,
-        "\nOmission compiler flags:\n\n",
+        "\nDisable compiler flags:\n\n",
     );
 
     thrustc_logging::write(
@@ -508,7 +484,9 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "--omit-frame-pointer".custom_color((141, 141, 142)).bold(),
+            "--disable-frame-pointer"
+                .custom_color((141, 141, 142))
+                .bold(),
             "Regardless of the optimization level, it omits the emission of the frame pointer.",
         ),
     );
@@ -518,7 +496,7 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "--omit-uwtable".custom_color((141, 141, 142)).bold(),
+            "--disable-uwtable".custom_color((141, 141, 142)).bold(),
             "It omits the unwind table required for exception handling and stack tracing.",
         ),
     );
@@ -528,7 +506,7 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "--omit-direct-access-external-data"
+            "--disable-direct-access-external-data"
                 .custom_color((141, 141, 142))
                 .bold(),
             "It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT).",
@@ -540,7 +518,7 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "--omit-rtlib-got".custom_color((141, 141, 142)).bold(),
+            "--disable-rtlib-got".custom_color((141, 141, 142)).bold(),
             "It omits the runtime library dependency on the Global Offset Table (GOT), essential when generating non-Position Independent Code (PIC) with ARM.",
         ),
     );
@@ -550,7 +528,7 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "--omit-safe-trapping-math"
+            "--disable-safe-trapping-math"
                 .custom_color((141, 141, 142))
                 .bold(),
             "It allow trapping math operations that can cause exceptions. Useful for floating-point operations.",
@@ -562,8 +540,44 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "--omit-default-opt".custom_color((141, 141, 142)).bold(),
+            "--disable-safe-math".custom_color((141, 141, 142)).bold(),
+            "Disable safe math for integer operations (allows overflow and undefined behavior).",
+        ),
+    );
+
+    thrustc_logging::write(
+        thrustc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--disable-default-optimization"
+                .custom_color((141, 141, 142))
+                .bold(),
             "It omits default optimization that occurs even without specified optimization.",
+        ),
+    );
+
+    thrustc_logging::write(
+        thrustc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--disable-all-sanitizers"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Disable all sanitizers that may be enabled.",
+        ),
+    );
+
+    thrustc_logging::write(
+        thrustc_logging::OutputIn::Stderr,
+        &format!(
+            "{} {} {}\n",
+            "•".bold(),
+            "--disable-all-cpu-features"
+                .custom_color((141, 141, 142))
+                .bold(),
+            "Disable the all CPU features. that may be enabled.",
         ),
     );
 
@@ -599,7 +613,7 @@ pub fn show_help() -> ! {
         &format!(
             "{} {} {}\n",
             "•".bold(),
-            "--debug-gcc-commands".custom_color((141, 141, 142)).bold(),
+            "--debug-gcc-command".custom_color((141, 141, 142)).bold(),
             "Displays the generated command for GCC in the phase of linking."
         ),
     );

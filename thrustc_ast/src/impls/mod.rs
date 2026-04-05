@@ -170,7 +170,7 @@ impl AstStatementExtensions for Ast<'_> {
                 | Ast::BreakAll { .. }
                 | Ast::Continue { .. }
                 | Ast::ContinueAll { .. }
-                | Ast::Local { .. }
+                | Ast::Var { .. }
                 | Ast::Struct { .. }
                 | Ast::Const { .. }
                 | Ast::Static { .. }

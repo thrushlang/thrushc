@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -27,7 +26,7 @@ use thrustc_typesystem::Type;
 
 use crate::{
     ParserContext, expressions,
-    statements::{self, block, local},
+    statements::{self, block, var},
 };
 
 pub fn build_for_loop<'parser>(
@@ -69,7 +68,7 @@ pub fn build_for_loop<'parser>(
         ctx.get_mut_symbols().begin_scope();
         ctx.begin_scope();
 
-        let local: Ast = local::build_local(ctx)?;
+        let local: Ast = var::build_var(ctx)?;
         let condition: Ast = expressions::build_expression(ctx)?;
         let actions: Ast = expressions::build_expression(ctx)?;
 
@@ -129,11 +128,11 @@ pub fn build_while_loop<'parser>(
 
     let span: Span = while_tk.get_span();
 
-    if ctx.check(TokenType::Local) {
+    if ctx.check(TokenType::Var) {
         ctx.get_mut_symbols().begin_scope();
         ctx.begin_scope();
 
-        let local: Ast<'_> = local::build_local(ctx)?;
+        let local: Ast<'_> = var::build_var(ctx)?;
 
         ctx.consume(
             TokenType::Colon,
@@ -166,11 +165,11 @@ pub fn build_while_loop<'parser>(
             found_rparen = found_rparen.saturating_add(1);
         }
 
-        if ctx.check(TokenType::Local) {
+        if ctx.check(TokenType::Var) {
             ctx.get_mut_symbols().begin_scope();
             ctx.begin_scope();
 
-            let local: Ast<'_> = local::build_local(ctx)?;
+            let local: Ast<'_> = var::build_var(ctx)?;
 
             ctx.consume(
                 TokenType::Colon,

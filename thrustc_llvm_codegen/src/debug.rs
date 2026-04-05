@@ -74,12 +74,12 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         let is_optimized: bool = LLVMOptimizer::is_optimizable(options);
 
         let split_debug_inlining: bool = options
-            .get_llvm_backend_options()
+            .get_llvm_backend()
             .get_debug_config()
             .need_split_debug_inlining();
 
         let debug_info_for_profiling: bool = options
-            .get_llvm_backend_options()
+            .get_llvm_backend()
             .get_debug_config()
             .need_debug_info_for_profiling();
 

@@ -360,7 +360,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 Ok(())
             }
-            Ast::Local {
+            Ast::Var {
                 name,
                 kind: local_type,
                 value,

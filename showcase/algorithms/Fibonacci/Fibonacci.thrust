@@ -19,10 +19,10 @@ fn fibonacci(n: s32) s32 @public {
         return 1;
     }
 
-    local a: s32 = 0; 
-    local b: s32 = 1;  
-    local i: s32 = 2;
-    local result: s32 = 0;
+    var a: s32 = 0; 
+    var b: s32 = 1;  
+    var i: s32 = 2;
+    var result: s32 = 0;
 
     while i <= n {
         result = a + b;
@@ -41,7 +41,7 @@ fn main(argc: s32, argv: ptr[array[char]]) s32 @public {
         return 1;
     }
 
-    local n: s32 = atoi(
+    var n: s32 = atoi(
         (deref (argv[1] as ptr[ptr[char]])) as const array[char]
     );
 
@@ -50,7 +50,7 @@ fn main(argc: s32, argv: ptr[array[char]]) s32 @public {
         return 1;
     }
 
-    local result: s32 = fibonacci(n);
+    var result: s32 = fibonacci(n);
 
     print("fib(%d) = %d\n", n, result);
 

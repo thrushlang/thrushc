@@ -12,9 +12,9 @@ fn atoi(str: const array[char]) s32 @public @arbitraryArgs @extern("atoi") @conv
 fn print(fmt: const array[char]) s32 @public @arbitraryArgs @extern("printf") @convention("C");
 
 fn binary_search(arr: ptr[array[s32; 10]], target: s32) s32 @public {
-    local low: s32  = 0;
-    local high: s32 = 9;
-    local mid: s32  = 0;
+    var low: s32  = 0;
+    var high: s32 = 9;
+    var mid: s32  = 0;
 
     while low <= high {
         mid = (low + high) / 2;
@@ -35,13 +35,13 @@ fn binary_search(arr: ptr[array[s32; 10]], target: s32) s32 @public {
 
 fn main(argc: s32, argv: ptr[array[char]]) s32 @public {
 
-    local arr: array[s32; 10] = fixed[1, 3, 7, 12, 19, 25, 34, 41, 55, 78];
+    var arr: array[s32; 10] = fixed[1, 3, 7, 12, 19, 25, 34, 41, 55, 78];
 
-    local target: s32 = atoi(
+    var target: s32 = atoi(
         (deref (argv[1] as ptr[ptr[char]])) as const array[char]
     );
 
-    local result: s32 = binary_search(ref arr, target);
+    var result: s32 = binary_search(ref arr, target);
 
     if result >= 0 {
         print("Found %d at index %d\n", target, result);

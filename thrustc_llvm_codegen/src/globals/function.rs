@@ -141,7 +141,7 @@ pub fn compile_down<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
     if codegen
         .get_context()
         .get_compiler_options()
-        .get_llvm_backend_options()
+        .get_llvm_backend()
         .needs_stack_protector()
     {
         let stackprotector_ptr: PointerValue<'_> =

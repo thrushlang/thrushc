@@ -51,7 +51,7 @@ impl AstLLVMGetType for Ast<'_> {
             Ast::Static { kind, .. } => kind,
 
             // Variables and references
-            Ast::Local { kind, .. } => kind,
+            Ast::Var { kind, .. } => kind,
             Ast::Mut { kind, .. } => kind,
             Ast::Reference { kind, .. } => kind,
             Ast::DirectRef { kind, .. } => kind,

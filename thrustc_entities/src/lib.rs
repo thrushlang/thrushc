@@ -308,7 +308,7 @@ pub fn local_constant_from_ast<'entity>(ast: &'entity Ast) -> LocalConstant<'ent
 }
 
 pub fn local_variable_from_ast<'entity>(ast: &'entity Ast) -> LocalVariable<'entity> {
-    if let Ast::Local {
+    if let Ast::Var {
         name,
         ascii_name,
         kind,

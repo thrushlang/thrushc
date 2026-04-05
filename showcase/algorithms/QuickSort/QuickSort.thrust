@@ -9,16 +9,16 @@ fn print(fmt: const array[char]) s32 @public @arbitraryArgs @extern("printf");
 
 
 fn swap(arr: ptr[array[u32; 10]], i: s32, j: s32) {
-    local temp: u32 = deref arr[i];
+    var temp: u32 = deref arr[i];
     arr[i] = deref arr[j];  
     arr[j] = temp;                
 }
 
 fn partition(arr: ptr[array[u32; 10]], low: s32, high: s32) s32 {
-    local pivot: u32 = deref arr[high]; 
-    local i: s32 = low - 1;              
+    var pivot: u32 = deref arr[high]; 
+    var i: s32 = low - 1;              
     
-    for local j: s32 = low; j < high; j++; { 
+    for var j: s32 = low; j < high; j++; { 
         if (deref(arr[j])) <= pivot {    
             i++;                               
             swap(arr, i, j);                
@@ -31,7 +31,7 @@ fn partition(arr: ptr[array[u32; 10]], low: s32, high: s32) s32 {
 
 fn quickSort(arr: ptr[array[u32; 10]], low: s32, high: s32) {
     if low < high {
-        local pi: s32 = partition(arr, low, high); 
+        var pi: s32 = partition(arr, low, high); 
         
         quickSort(arr, low, pi - 1);          
         quickSort(arr, pi + 1, high);         
@@ -39,7 +39,7 @@ fn quickSort(arr: ptr[array[u32; 10]], low: s32, high: s32) {
 }
 
 fn printArray(arr: ptr[array[u32; 10]], size: u32) {
-    for local idx: u32 = 0; idx < size; idx++; {
+    for var idx: u32 = 0; idx < size; idx++; {
         print("%d ", deref arr[idx]);  
     }
 
@@ -48,7 +48,7 @@ fn printArray(arr: ptr[array[u32; 10]], size: u32) {
 
 fn main() s32 @public {
 
-    local unsorted_array: array[u32; 10] = fixed[64, 34, 25, 12, 22, 11, 54, 9, 10, 90]; 
+    var unsorted_array: array[u32; 10] = fixed[64, 34, 25, 12, 22, 11, 54, 9, 10, 90]; 
 
     print("Original array: ");     
     printArray(ref unsorted_array, 10);        

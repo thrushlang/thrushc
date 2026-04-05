@@ -33,13 +33,13 @@ use thrustc_typesystem::{Type, traits::InfererTypeExtensions};
 
 use crate::{ParserContext, attributes, expressions, modificators, typegeneration};
 
-pub fn build_local<'parser>(
+pub fn build_var<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
-        TokenType::Local,
+        TokenType::Var,
         CompilationIssueCode::E0001,
-        "Expected 'local' keyword.".into(),
+        "Expected 'var' keyword.".into(),
     )?;
 
     let modificators: Modificators =
@@ -75,7 +75,7 @@ pub fn build_local<'parser>(
             ctx.get_mut_symbols()
                 .new_local(name, (local_type.clone(), metadata, span), span)?;
 
-            let local: Ast = Ast::Local {
+            let local: Ast = Ast::Var {
                 name,
                 ascii_name,
                 kind: local_type,
@@ -117,7 +117,7 @@ pub fn build_local<'parser>(
             ctx.get_mut_symbols()
                 .new_local(name, (local_type.clone(), metadata, span), span)?;
 
-            let local: Ast = Ast::Local {
+            let local: Ast = Ast::Var {
                 name,
                 ascii_name,
                 kind: local_type,

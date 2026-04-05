@@ -17,7 +17,6 @@
 
 */
 
-
 use colored::Colorize;
 
 use inkwell::targets::TargetTriple;
@@ -207,7 +206,7 @@ impl GCCLinker<'_> {
 }
 
 pub fn link_with_clang(compiler: &mut ThrustCompiler) {
-    let llvm_backend: &LLVMBackend = compiler.get_options().get_llvm_backend_options();
+    let llvm_backend: &LLVMBackend = compiler.get_options().get_llvm_backend();
 
     let linking_compiler_config: &LinkingCompilersConfiguration =
         compiler.get_options().get_linking_compilers_configuration();

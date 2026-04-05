@@ -107,7 +107,7 @@ impl ThrustCompiler<'_> {
         if self.get_options().llvm() {
             Target::initialize_all(&InitializationConfig::default());
 
-            if self.get_options().get_llvm_backend_options().is_full_jit() {
+            if self.get_options().get_llvm_backend().is_full_jit() {
                 return self.compile_jit_llvm();
             } else {
                 return self.compile_aot_llvm();
@@ -183,7 +183,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         starter::archive_compilation_unit(file);
 
-        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
+        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend();
         let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
         let Ok(tokens) = Lexer::lex(file, self.options) else {
@@ -472,7 +472,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         modules.reverse();
 
         if let Some(module) = modules.first() {
-            let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
+            let llvm_backend: &LLVMBackend = self.options.get_llvm_backend();
             let config: &JITConfiguration = llvm_backend.get_jit_config();
             let opt_level: OptimizationLevel = llvm_backend.get_optimization().to_llvm_opt();
 
@@ -523,7 +523,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         starter::archive_compilation_unit(file);
 
-        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend_options();
+        let llvm_backend: &LLVMBackend = self.options.get_llvm_backend();
         let build_dir: &std::path::PathBuf = self.options.get_build_dir();
 
         let Ok(tokens) = Lexer::lex(file, self.options) else {

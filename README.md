@@ -98,8 +98,6 @@ Compiler flags:
 • --symbol-linkage-strategy [any|exact|large|samesize|noduplicates] Configure the symbol linkage merge strategy.
 • --stack-protector It built a stack state guard that battles memory hacks and prevents memory corruptions.
 • --sanitizer [address|hwaddress|memory|thread|memtag] Enable the specified sanitizer. Adds runtime checks for bugs like memory errors, data races and others, with potential performance overhead.
-• --disable-all-sanitizers Disable all sanitizers that may be enabled.
-• --disable-all-cpu-features Disable the all CPU features. that may be enabled.
 • --no-sanitize [bounds;coverage] Modifies certain code emissions for the selected sanitizer.
 • --opt-passes [-p{passname,passname}] Pass a list of custom optimization passes. For more information, see: 'https://releases.llvm.org/17.0.1/docs/CommandGuide/opt.html#cmdoption-opt-passname'.
 • --modificator-passes [loopvectorization;loopunroll;loopinterleaving;loopsimplifyvectorization;mergefunctions;callgraphprofile;forgetallscevinloopunroll;licmmssaaccpromcap=0;licmmssaoptcap=0;] Pass a list of custom modificator optimization passes.
@@ -110,20 +108,23 @@ Compiler flags:
 • --ios-version [17.4.0] Specify the iOS SDK version.
 • --enable-ansi-color It allows ANSI color formatting in compiler diagnostics.
 
-Omission compiler flags:
+Disable compiler flags:
 
-• --omit-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
-• --omit-uwtable It omits the unwind table required for exception handling and stack tracing.
-• --omit-direct-access-external-data It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT).
-• --omit-rtlib-got It omits the runtime library dependency on the Global Offset Table (GOT), essential when generating non-Position Independent Code (PIC) with ARM.
-• --omit-safe-trapping-math It allow trapping math operations that can cause exceptions. Useful for floating-point operations.
-• --omit-default-opt It omits default optimization that occurs even without specified optimization.
+• --disable-frame-pointer Regardless of the optimization level, it omits the emission of the frame pointer.
+• --disable-uwtable It omits the unwind table required for exception handling and stack tracing.
+• --disable-direct-access-external-data It omits direct access to external data references, forcing all external data loads to be performed indirectly via the Global Offset Table (GOT).
+• --disable-rtlib-got It omits the runtime library dependency on the Global Offset Table (GOT), essential when generating non-Position Independent Code (PIC) with ARM.
+• --disable-safe-trapping-math It allow trapping math operations that can cause exceptions. Useful for floating-point operations.
+• --disable-safe-math Disable safe math for integer operations (allows overflow and undefined behavior).
+• --disable-default-optimization It omits default optimization that occurs even without specified optimization.
+• --disable-all-sanitizers Disable all sanitizers that may be enabled.
+• --disable-all-cpu-features Disable the all CPU features. that may be enabled.
 
 Other compiler flags:
 
 • --copy-output-to-clipboard Copy the total printable output of the compiler into the operating system clipboard. It only works using '-print' compiler flag.
 • --debug-clang-command Displays the generated command for Clang in the phase of linking.
-• --debug-gcc-commands Displays the generated command for GCC in the phase of linking.
+• --debug-gcc-command Displays the generated command for GCC in the phase of linking.
 • --export-compiler-errors Export compiler error diagnostics to files.
 • --export-compiler-warnings Export compiler warning diagnostics to files.
 • --export-diagnostics-path [diagnostics/] Specify the path where diagnostic files will be exported.

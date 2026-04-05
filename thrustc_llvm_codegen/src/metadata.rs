@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::attributes::Attribute;
 use inkwell::attributes::AttributeLoc;
 use inkwell::targets::CodeModel;
@@ -63,7 +62,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
 
     fn setup_target_specific_metadata_or_attributes(&self) {
         let options: &CompilerOptions = self.get_context().get_compiler_options();
-        let llvm_backend: &LLVMBackend = options.get_llvm_backend_options();
+        let llvm_backend: &LLVMBackend = options.get_llvm_backend();
 
         {
             let features: &str = llvm_backend.get_target_cpu().get_cpu_features();
@@ -114,7 +113,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
 
     fn setup_llvm_module_flags(&self) {
         let options: &CompilerOptions = self.get_context().get_compiler_options();
-        let llvm_backend: &LLVMBackend = options.get_llvm_backend_options();
+        let llvm_backend: &LLVMBackend = options.get_llvm_backend();
 
         let lvl_max: BasicMetadataValueEnum = self
             .get_context()

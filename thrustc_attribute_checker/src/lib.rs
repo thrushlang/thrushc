@@ -207,7 +207,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     *span,
                 );
             }
-            Ast::Local {
+            Ast::Var {
                 attributes, span, ..
             } => {
                 self.analyze_attrs(attributes, AttributeCheckerAttributeApplicant::Local, *span);

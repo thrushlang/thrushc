@@ -283,11 +283,11 @@ impl LLVMOptimizer<'_, '_> {
     pub fn is_optimizable(options: &CompilerOptions) -> bool {
         (!options.omit_default_optimizations()
             && options
-                .get_llvm_backend_options()
+                .get_llvm_backend()
                 .get_optimization()
                 .is_none_opt())
             || options
-                .get_llvm_backend_options()
+                .get_llvm_backend()
                 .get_optimization()
                 .is_high_opt()
     }

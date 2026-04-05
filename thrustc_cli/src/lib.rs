@@ -157,7 +157,7 @@ impl CommandLine {
 
 impl CommandLine {
     fn validate(&mut self) {
-        if !self.get_options().get_llvm_backend_options().is_full_jit() {
+        if !self.get_options().get_llvm_backend().is_full_jit() {
             self.get_mut_options()
                 .get_mut_linking_compilers_configuration()
                 .comprobate_status();
@@ -246,9 +246,7 @@ impl CommandLine {
                 self.advance();
                 self.validate_llvm_required(arg);
 
-                self.get_mut_options()
-                    .get_mut_llvm_backend_options()
-                    .set_jit(true);
+                self.get_mut_options().get_mut_llvm_backend().set_jit(true);
             }
 
             "-jit-libc" => {
@@ -265,7 +263,7 @@ impl CommandLine {
                 }
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_jit_config()
                     .set_libc_path(libc);
 
@@ -287,7 +285,7 @@ impl CommandLine {
                 }
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_jit_config()
                     .add_library(library);
 
@@ -302,7 +300,7 @@ impl CommandLine {
                 let entrypoint: Vec<u8> = self.peek().as_bytes().to_vec();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_jit_config()
                     .set_entry(entrypoint);
 
@@ -369,7 +367,7 @@ impl CommandLine {
                 let target: String = self.peek().to_string();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target()
                     .set_arch(target);
 
@@ -383,7 +381,7 @@ impl CommandLine {
                 let target_triple: String = self.peek().to_string();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target()
                     .set_target_triple(target_triple);
 
@@ -397,7 +395,7 @@ impl CommandLine {
                 let name: String = self.peek().to_string();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target_cpu()
                     .set_cpu_name(name);
 
@@ -411,7 +409,7 @@ impl CommandLine {
                 let features: String = self.peek().to_string();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target_cpu()
                     .set_processador_features(features);
 
@@ -426,7 +424,7 @@ impl CommandLine {
                 let features_to_replace: Vec<&str> = features.split(";").collect();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target_cpu()
                     .add_cpu_features(features_to_replace);
 
@@ -441,7 +439,7 @@ impl CommandLine {
                 let features_to_replace: Vec<&str> = features.split(";").collect();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target_cpu()
                     .remove_cpu_features(features_to_replace);
 
@@ -455,7 +453,7 @@ impl CommandLine {
                 let opt: ThrustOptimization = self.parse_optimization_level(self.peek());
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_optimization(opt);
 
                 self.advance();
@@ -488,7 +486,7 @@ impl CommandLine {
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_debug_config()
                     .set_debug_mode();
             }
@@ -498,7 +496,7 @@ impl CommandLine {
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_debug_config()
                     .set_split_debug_inlining();
             }
@@ -508,7 +506,7 @@ impl CommandLine {
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_debug_config()
                     .set_debug_for_profiling();
             }
@@ -520,7 +518,7 @@ impl CommandLine {
                 let dwarf_v: DwarfVersion = self.parse_dwarf_version(self.peek());
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_debug_config()
                     .set_dwarf_version(dwarf_v);
 
@@ -533,22 +531,12 @@ impl CommandLine {
                 self.validate_aot_is_enable(arg);
             }
 
-            "--disable-all-cpu-features" => {
-                self.advance();
-                self.validate_llvm_required(arg);
-
-                self.get_mut_options()
-                    .get_mut_llvm_backend_options()
-                    .get_mut_target_cpu()
-                    .disable_cpu_all_features();
-            }
-
             "--stack-protector" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_stack_protector();
             }
 
@@ -560,7 +548,7 @@ impl CommandLine {
                     self.parse_symbol_linkage_strategy(self.peek());
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_symbol_linkage_strategy(strategy);
 
                 self.advance();
@@ -573,7 +561,7 @@ impl CommandLine {
                     self.parse_denormal_floating_point_behavior(self.peek());
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_denormal_fp_behavior(behavior);
 
                 self.advance();
@@ -588,7 +576,7 @@ impl CommandLine {
                 ) = self.parse_denormal_floating_point_behavior_32_bit_floating_point(self.peek());
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_denormal_fp_32_bits_behavior(behavior);
 
                 self.advance();
@@ -601,7 +589,7 @@ impl CommandLine {
                 let sanitizer: Sanitizer = self.parse_sanitizer(self.peek());
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_sanitizer(sanitizer);
 
                 self.advance();
@@ -617,7 +605,7 @@ impl CommandLine {
 
                 match self
                     .get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_sanitizer()
                 {
                     Sanitizer::Address(config) => {
@@ -649,15 +637,6 @@ impl CommandLine {
                 self.advance();
             }
 
-            "--disable-all-sanitizers" => {
-                self.advance();
-                self.validate_llvm_required(arg);
-
-                self.get_mut_options()
-                    .get_mut_llvm_backend_options()
-                    .set_disable_all_sanitizers();
-            }
-
             "--macos-version" => {
                 self.advance();
                 self.validate_llvm_required(arg);
@@ -669,7 +648,7 @@ impl CommandLine {
                 }
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target()
                     .set_macos_version(version);
 
@@ -687,7 +666,7 @@ impl CommandLine {
                 }
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target()
                     .set_ios_version(version);
 
@@ -701,59 +680,87 @@ impl CommandLine {
                 let target_triple: String = self.peek().to_string();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_target()
                     .set_target_triple_darwin_variant(target_triple);
 
                 self.advance();
             }
 
-            "--omit-frame-pointer" => {
+            "--disable-all-cpu-features" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
+                    .get_mut_target_cpu()
+                    .disable_cpu_all_features();
+            }
+
+            "--disable-all-sanitizers" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend()
+                    .set_disable_all_sanitizers();
+            }
+
+            "--disable-frame-pointer" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend()
                     .set_omit_frame_pointer();
             }
 
-            "--omit-uwtable" => {
+            "--disable-uwtable" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_omit_uwtable();
             }
 
-            "--omit-direct-access-external-data" => {
+            "--disable-direct-access-external-data" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_omit_direct_access_external_data();
             }
 
-            "--omit-rtlib-got" => {
+            "--disable-rtlib-got" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_omit_rtlibusegot();
             }
 
-            "--omit-safe-trapping-math" => {
+            "--disable-safe-trapping-math" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_omit_trapping_math();
             }
 
-            "--omit-default-opt" => {
+            "--disable-safe-math" => {
+                self.advance();
+                self.validate_llvm_required(arg);
+
+                self.get_mut_options()
+                    .get_mut_llvm_backend()
+                    .set_disable_safe_math();
+            }
+
+            "--disable-default-optimization" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
@@ -767,7 +774,7 @@ impl CommandLine {
                 let reloc_mode: ThrustRelocMode = self.parse_reloc_mode(self.peek());
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_reloc_mode(reloc_mode);
 
                 self.advance();
@@ -779,7 +786,7 @@ impl CommandLine {
                 let code_model: ThrustCodeModel = self.parse_code_model(self.peek());
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_code_model(code_model);
 
                 self.advance();
@@ -792,7 +799,7 @@ impl CommandLine {
                 let extra_opt_passes: String = self.peek().to_string();
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_opt_passes(extra_opt_passes);
 
                 self.advance();
@@ -807,7 +814,7 @@ impl CommandLine {
                     LLVMModificatorPasses::into_llvm_modificator_passes(raw_modificator_passes);
 
                 self.get_mut_options()
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .set_modificator_passes(modificator_passes);
 
                 self.advance();
@@ -821,7 +828,7 @@ impl CommandLine {
                 self.get_mut_options().set_copy_output_to_clipboard();
             }
 
-            "--debug-clang-commands" => {
+            "--debug-clang-command" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
@@ -830,7 +837,7 @@ impl CommandLine {
                     .set_debug_clang_commands(true);
             }
 
-            "--debug-gcc-commands" => {
+            "--debug-gcc-command" => {
                 self.advance();
                 self.validate_llvm_required(arg);
 
@@ -929,7 +936,7 @@ impl CommandLine {
                 self.advance();
                 llvm::info::print_specific_cpu_support(
                     self.get_options()
-                        .get_llvm_backend_options()
+                        .get_llvm_backend()
                         .get_target()
                         .get_arch(),
                 );
@@ -1023,9 +1030,9 @@ impl CommandLine {
 
     fn handle_unknown_argument(&mut self, arg: &str) {
         if self.position.at_external() {
-            if self.options.get_llvm_backend_options().is_full_jit() {
+            if self.options.get_llvm_backend().is_full_jit() {
                 self.options
-                    .get_mut_llvm_backend_options()
+                    .get_mut_llvm_backend()
                     .get_mut_jit_config()
                     .add_argument(arg.to_string());
 
@@ -1312,7 +1319,7 @@ impl CommandLine {
     }
 
     fn validate_jit_required(&self, arg: &str) {
-        if !self.options.get_llvm_backend_options().is_full_jit() {
+        if !self.options.get_llvm_backend().is_full_jit() {
             self.report_error(&format!(
                 "Can't use '{}' without '-jit' flag previously.",
                 arg
@@ -1321,7 +1328,7 @@ impl CommandLine {
     }
 
     fn validate_aot_is_enable(&self, arg: &str) {
-        if self.options.get_llvm_backend_options().is_full_jit() {
+        if self.options.get_llvm_backend().is_full_jit() {
             self.report_error(&format!(
                 "Can't use '{}' if the '-jit' flag was enabled previously.",
                 arg
@@ -1359,12 +1366,7 @@ impl CommandLine {
     }
 
     fn validate_sanitizer_required(&self, arg: &str) {
-        if !self
-            .options
-            .get_llvm_backend_options()
-            .get_sanitizer()
-            .is_none()
-        {
+        if !self.options.get_llvm_backend().get_sanitizer().is_none() {
             self.report_error(&format!(
                 "Can't use '{}' without '--satinizer' flag previously.",
                 arg

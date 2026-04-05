@@ -17,7 +17,6 @@
 
 */
 
-
 pub mod cpu;
 pub mod debug;
 pub mod info;
@@ -65,6 +64,7 @@ pub struct LLVMBackend {
     omit_trapping_math: bool,
 
     disable_all_sanitizers: bool,
+    disable_safe_math: bool,
 
     needs_jit: bool,
     jit_config: JITConfiguration,
@@ -121,6 +121,7 @@ impl LLVMBackend {
             omit_trapping_math: false,
 
             disable_all_sanitizers: false,
+            disable_safe_math: false,
 
             needs_jit: false,
             jit_config: JITConfiguration::new(),
@@ -239,6 +240,11 @@ impl LLVMBackend {
     #[inline]
     pub fn is_full_jit(&self) -> bool {
         self.needs_jit
+    }
+
+    #[inline]
+    pub fn has_disable_safe_math(&self) -> bool {
+        self.disable_safe_math
     }
 }
 
@@ -362,6 +368,11 @@ impl LLVMBackend {
     #[inline]
     pub fn set_stack_protector(&mut self) {
         self.stack_protector = true;
+    }
+
+    #[inline]
+    pub fn set_disable_safe_math(&mut self) {
+        self.disable_safe_math = true;
     }
 }
 
