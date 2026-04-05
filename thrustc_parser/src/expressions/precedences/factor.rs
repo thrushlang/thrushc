@@ -17,20 +17,19 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
-use thrustc_typesystem::Type;
+use thrustc_typesystem::{Type, traits::PrecedenceTypeExtensions};
 
 use crate::{ParserContext, expressions::precedences};
 
 pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.enter_expression()?;
 
-    let mut expression: Ast = precedences::mutation::equal_precedence(ctx)?;
+    let mut left: Ast = precedences::mutation::equal_precedence(ctx)?;
 
     while ctx.match_token(TokenType::Slash)? || ctx.match_token(TokenType::Star)? {
         let operator_tk: &Token = ctx.previous();
@@ -39,13 +38,16 @@ pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>,
 
         let right: Ast = precedences::mutation::equal_precedence(ctx)?;
 
-        let left_type: &Type = expression.get_value_type()?;
+        let left_type: &Type = left.get_value_type()?;
+        let right_type: &Type = right.get_value_type()?;
 
-        expression = Ast::BinaryOp {
-            left: expression.clone().into(),
+        let kind: Type = left_type.get_factor_precedence_type(right_type);
+
+        left = Ast::BinaryOp {
+            left: left.clone().into(),
             operator,
             right: right.into(),
-            kind: left_type.clone(),
+            kind,
             span,
             id: NodeId::new(),
         };
@@ -53,5 +55,5 @@ pub fn factor<'parser>(ctx: &mut ParserContext<'parser>) -> Result<Ast<'parser>,
 
     ctx.leave_expression();
 
-    Ok(expression)
+    Ok(left)
 }

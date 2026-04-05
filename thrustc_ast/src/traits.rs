@@ -78,6 +78,7 @@ pub trait AstStandardExtensions {
 pub trait AstLiteralExtensions {
     fn is_totaly_literal_value(&self) -> bool;
     fn is_literal_value(&self) -> bool;
+    fn is_literal_ptr_value(&self) -> bool;
 }
 
 pub trait AstCodeBlockEntensions {

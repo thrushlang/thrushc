@@ -41,6 +41,8 @@ pub trait TypeIsExtensions {
     fn is_lesseq_unsigned32bit_integer(&self) -> bool;
     fn is_integer_type(&self) -> bool;
     fn is_unresolved_type(&self) -> bool;
+
+    fn get_type_herarchy(&self) -> u8;
 }
 
 pub trait FunctionReferenceExtensions {
@@ -122,4 +124,5 @@ pub trait VoidTypeExtensions {
 
 pub trait PrecedenceTypeExtensions {
     fn get_term_precedence_type(&self, other: &Type, operator: TokenType) -> Type;
+    fn get_factor_precedence_type(&self, other: &Type) -> Type;
 }

@@ -35,7 +35,7 @@ impl IndexExtensions for Type {
                 ..
             } => infered_type.get_type_with_depth(depth),
             Type::Array { base_type, .. } => base_type.get_type_with_depth(depth - 1),
-            Type::Const(inner_type, ..) => inner_type.get_type_with_depth(depth - 1),
+            Type::Const(inner_type, ..) => inner_type.get_type_with_depth(depth),
             Type::Ptr(Some(inner_type), ..) if !inner_type.is_ptr_like_type() => {
                 inner_type.get_type_with_depth(depth)
             }

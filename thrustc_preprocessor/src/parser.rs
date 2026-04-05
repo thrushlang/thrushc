@@ -103,9 +103,6 @@ impl<'module_parser> ModuleParser<'module_parser> {
             self.module.add_symbol(symbol);
         } else {
             let _ = self.advance();
-
-            println!("{:?}", self.peek());
-            println!("{}", self.check(TokenType::Type));
         }
 
         Ok(())

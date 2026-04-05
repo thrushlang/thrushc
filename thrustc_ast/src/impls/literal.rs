@@ -42,4 +42,8 @@ impl AstLiteralExtensions for Ast<'_> {
                 | Ast::FixedArray { .. }
         )
     }
+
+    fn is_literal_ptr_value(&self) -> bool {
+        matches!(self, |Ast::CString { .. }| Ast::CNString { .. })
+    }
 }

@@ -1,0 +1,72 @@
+/* 
+ * Heap Sort - Algorithm
+ * 
+ * This program implements Heap Sort on a fixed array of 10 unsigned integers.
+ * It sorts the array in ascending order and prints the original and sorted array.
+*/
+
+fn print(fmt: const array[char]) s32 @public @arbitraryArgs @extern("printf") @convention("C");
+
+fn swap(arr: ptr[array[u32; 10]], i: s32, j: s32) {
+    var temp: u32 = deref arr[i];
+    arr[i] = deref arr[j];
+    arr[j] = temp;
+}
+
+fn heapify(arr: ptr[array[u32; 10]], n: s32, i: s32) {
+    var largest: s32 = i;
+    var left: s32 = 2 * i + 1;
+    var right: s32 = 2 * i + 2;
+
+    if left < n && (deref arr[left]) > (deref arr[largest]) {
+        largest = left;
+    }
+
+    if right < n && (deref arr[right]) > (deref arr[largest]) {
+        largest = right;
+    }
+
+    if largest != i {
+        swap(arr, i, largest);
+        heapify(arr, n, largest);   
+    }
+}
+
+fn heap_sort(arr: ptr[array[u32; 10]], n: s32) {
+    var i: s32 = n / 2 - 1;
+
+    while i >= 0 {
+        heapify(arr, n, i);
+        i = i - 1;
+    }
+
+    i = n - 1;
+    while i > 0 {
+        swap(arr, 0, i);        
+        heapify(arr, i, 0);     
+        i = i--;
+    }
+}
+
+fn print_array(arr: ptr[array[u32; 10]], size: u32) {
+    for var idx: u32 = 0; idx < size; idx++; {
+        print("%d ", deref arr[idx]);
+    }
+    
+    print("\n");
+}
+
+fn main() s32 @public {
+
+    var unsorted_array: array[u32; 10] = fixed[64, 34, 25, 12, 22, 11, 54, 9, 10, 90];
+
+    print("Original array: ");
+    print_array(ref unsorted_array, 10);
+
+    heap_sort(ref unsorted_array, 10);
+
+    print("Sorted array:   ");
+    print_array(ref unsorted_array, 10);
+
+    return 0;
+}

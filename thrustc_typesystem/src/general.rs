@@ -143,6 +143,48 @@ impl TypeIsExtensions for Type {
     fn is_unresolved_type(&self) -> bool {
         matches!(self, Type::Unresolved { .. })
     }
+
+    #[inline(always)]
+    fn get_type_herarchy(&self) -> u8 {
+        match self {
+            Type::Bool(..) => 1,
+            Type::Char(..) => 2,
+
+            Type::U8(..) => 3,
+            Type::U16(..) => 4,
+            Type::U32(..) => 5,
+            Type::U64(..) => 6,
+            Type::U128(..) => 7,
+            Type::USize(..) => 8,
+
+            Type::S8(..) => 9,
+            Type::S16(..) => 10,
+            Type::S32(..) => 11,
+            Type::S64(..) => 12,
+            Type::SSize(..) => 13,
+
+            Type::F32(..) => 15,
+            Type::F64(..) => 16,
+            Type::F128(..) => 17,
+            Type::FX8680(..) => 18,
+            Type::FPPC128(..) => 19,
+
+            Type::Const(subtype, ..) => subtype.get_type_herarchy(),
+
+            Type::Addr(..) => 20,
+            Type::Ptr(Some(subtype), ..) => subtype.get_type_herarchy(),
+            Type::Ptr(None, ..) => 21,
+
+            Type::Fn(..) => 22,
+
+            Type::Array { .. } => 23,
+            Type::FixedArray(..) => 24,
+            Type::Struct(..) => 25,
+
+            Type::Void(..) => 26,
+            Type::Unresolved { .. } => 27,
+        }
+    }
 }
 
 impl TypeExtensions for Type {

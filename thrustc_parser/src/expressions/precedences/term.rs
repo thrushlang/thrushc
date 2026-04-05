@@ -31,7 +31,7 @@ pub fn term_precedence<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.enter_expression()?;
 
-    let mut expression: Ast = precedences::factor::factor(ctx)?;
+    let mut left: Ast = precedences::factor::factor(ctx)?;
 
     while ctx.match_token(TokenType::Plus)?
         || ctx.match_token(TokenType::Minus)?
@@ -50,13 +50,13 @@ pub fn term_precedence<'parser>(
 
         let right: Ast = precedences::factor::factor(ctx)?;
 
-        let left_type: &Type = expression.get_value_type()?;
+        let left_type: &Type = left.get_value_type()?;
         let right_type: &Type = right.get_value_type()?;
 
         let kind: Type = left_type.get_term_precedence_type(right_type, operator);
 
-        expression = Ast::BinaryOp {
-            left: expression.clone().into(),
+        left = Ast::BinaryOp {
+            left: left.clone().into(),
             operator,
             right: right.into(),
             kind,
@@ -67,5 +67,5 @@ pub fn term_precedence<'parser>(
 
     ctx.leave_expression();
 
-    Ok(expression)
+    Ok(left)
 }

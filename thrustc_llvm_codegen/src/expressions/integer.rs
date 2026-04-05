@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::{context::Context, values::IntValue};
 use thrustc_span::Span;
 use thrustc_typesystem::Type;

@@ -119,6 +119,7 @@ pub fn integer_together<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     left: IntValue<'ctx>,
     right: IntValue<'ctx>,
+    signatures: (bool, bool),
     span: Span,
 ) -> (IntValue<'ctx>, IntValue<'ctx>) {
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -129,32 +130,60 @@ pub fn integer_together<'ctx>(
         .cmp(&right.get_type().get_bit_width())
     {
         std::cmp::Ordering::Greater => {
-            let new_right: IntValue = llvm_builder
-                .build_int_cast_sign_flag(right, left.get_type(), false, "")
-                .unwrap_or_else(|_| {
-                    abort::abort_codegen(
-                        context,
-                        "Failed to cast integers together!",
-                        span,
-                        std::path::PathBuf::from(file!()),
-                        line!(),
-                    )
-                });
+            let new_right: IntValue = if signatures.0 || signatures.1 {
+                llvm_builder
+                    .build_int_cast_sign_flag(right, left.get_type(), true, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to cast integers together!",
+                            span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
+            } else {
+                llvm_builder
+                    .build_int_cast(right, left.get_type(), "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to cast integers together!",
+                            span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
+            };
 
             (left, new_right)
         }
         std::cmp::Ordering::Less => {
-            let new_left: IntValue = llvm_builder
-                .build_int_cast_sign_flag(left, right.get_type(), false, "")
-                .unwrap_or_else(|_| {
-                    abort::abort_codegen(
-                        context,
-                        "Failed to cast integers together!",
-                        span,
-                        std::path::PathBuf::from(file!()),
-                        line!(),
-                    )
-                });
+            let new_left: IntValue = if signatures.0 || signatures.1 {
+                llvm_builder
+                    .build_int_cast_sign_flag(left, right.get_type(), true, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to cast integers together!",
+                            span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
+            } else {
+                llvm_builder
+                    .build_int_cast(left, right.get_type(), "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to cast integers together!",
+                            span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
+            };
 
             (new_left, right)
         }
@@ -279,25 +308,49 @@ pub fn integer<'ctx>(
         return None;
     }
 
-    Some(
-        llvm_builder
-            .build_int_cast_sign_flag(
-                from.into_int_value(),
-                typegeneration::compile_from(context, target_type).into_int_type(),
-                from_type.is_signed_integer_type(),
-                "",
-            )
-            .unwrap_or_else(|_| {
-                abort::abort_codegen(
-                    context,
-                    "Failed to cast integer!",
-                    span,
-                    std::path::PathBuf::from(file!()),
-                    line!(),
+    let is_signed: bool =
+        target_type.is_signed_integer_type() || from_type.is_signed_integer_type();
+
+    if is_signed {
+        Some(
+            llvm_builder
+                .build_int_cast_sign_flag(
+                    from.into_int_value(),
+                    typegeneration::compile_from(context, target_type).into_int_type(),
+                    true,
+                    "",
                 )
-            })
-            .into(),
-    )
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to cast integer!",
+                        span,
+                        std::path::PathBuf::from(file!()),
+                        line!(),
+                    )
+                })
+                .into(),
+        )
+    } else {
+        Some(
+            llvm_builder
+                .build_int_cast(
+                    from.into_int_value(),
+                    typegeneration::compile_from(context, target_type).into_int_type(),
+                    "",
+                )
+                .unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to cast integer!",
+                        span,
+                        std::path::PathBuf::from(file!()),
+                        line!(),
+                    )
+                })
+                .into(),
+        )
+    }
 }
 
 /* ######################################################################

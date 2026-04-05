@@ -335,7 +335,9 @@ fn compile_int_value_operation<'ctx>(
         let lhs: IntValue = lhs.into_int_value();
         let rhs: IntValue = rhs.into_int_value();
 
-        let (lhs, rhs) = cast::integer_together(context, lhs, rhs, span);
+        let signatures: (bool, bool) = (signatures.0, signatures.1);
+
+        let (lhs, rhs) = cast::integer_together(context, lhs, rhs, signatures, span);
 
         let options: &CompilerOptions = context.get_compiler_options();
         let llvm_backend: &LLVMBackend = options.get_llvm_backend();

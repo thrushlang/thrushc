@@ -17,7 +17,6 @@
 
 */
 
-
 use crate::abort;
 use crate::cast;
 use crate::codegen;
@@ -50,8 +49,13 @@ pub fn bool_operation<'ctx>(
     let (lhs_signed, rhs_signed) = signatures;
 
     if lhs.is_int_value() && rhs.is_int_value() {
-        let (lhs, rhs) =
-            cast::integer_together(context, lhs.into_int_value(), rhs.into_int_value(), span);
+        let (lhs, rhs) = cast::integer_together(
+            context,
+            lhs.into_int_value(),
+            rhs.into_int_value(),
+            signatures,
+            span,
+        );
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder

@@ -1,0 +1,82 @@
+/* 
+ * Simple HTTP Server
+ * 
+ * Minimal HTTP server in Thrust listening on port 8080
+*/
+
+fn printf(fmt: const array[char]) s32 @public @arbitraryArgs @extern("printf") @convention("C");
+fn perror(msg: const array[char]) void @public @arbitraryArgs @extern("perror") @convention("C");
+
+fn socket(domain: s32, type_: s32, protocol: s32) s32 @public @extern("socket") @convention("C");
+fn bind(sockfd: s32, addr_: ptr, addrlen: u32) s32 @public @extern("bind") @convention("C");
+fn listen(sockfd: s32, backlog: s32) s32 @public @extern("listen") @convention("C");
+fn accept(sockfd: s32, addr_: ptr, addrlen: ptr[u32]) s32 @public @extern("accept") @convention("C");
+fn read(fd: s32, buf: ptr, count: u32) s32 @public @extern("read") @convention("C");
+fn writef(fd: s32, buf: ptr, count: u32) s32 @public @extern("write") @convention("C");
+fn close(fd: s32) s32 @public @extern("close") @convention("C");
+fn htons(hostshort: u16) u16 @public @extern("htons") @convention("C");
+
+const AF_INET: s32 = 2;
+const SOCK_STREAM: s32 = 1;
+const INADDR_ANY: u32 = 0;
+
+struct sockaddr_in {
+    sin_family: u16,
+    sin_port: u16,
+    sin_addr: u32,
+    sin_zero: array[u8; 8],
+}
+
+fn main() s32 @public {
+    var server_fd: s32;
+    var new_socket: s32;
+    var net_address: sockaddr_in;
+    var addrlen: u32 = sizeOf(sockaddr_in) as u32;
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if server_fd == -1 {
+        perror("socket failed");
+        return 1;
+    }
+
+    net_address.sin_family = AF_INET as u16;
+    net_address.sin_port = 0x901F;       
+    net_address.sin_addr = INADDR_ANY;
+
+    if bind(server_fd, (ref net_address) as ptr, addrlen) < 0 {
+        perror("bind failed");
+        close(server_fd);
+        return 1;
+    }
+
+    if listen(server_fd, 3) < 0 {
+        perror("listen failed");
+        close(server_fd);
+        return 1;
+    }
+
+    printf("HTTP Server running on http://127.0.0.1:8080\n");
+    printf("Press Ctrl+C to stop...\n\n");
+
+    while true {
+        new_socket = accept(server_fd, (ref net_address) as ptr, ref addrlen);
+
+        if new_socket < 0 {
+            perror("accept failed");
+            continue;
+        }
+
+        var buffer: array[u8; 1024];
+        read(new_socket, (ref buffer) as ptr, 1024);
+
+        var response: ptr[array[char]] = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<html><head><title>Thrust Server</title></head><body><h1>¡Hola desde Thrust!</h1><p>Servidor funcionando correctamente.</p></body></html>";
+        var response_length: usize = sizeOf(deref response) / sizeOf(deref (deref response)[0]);
+
+        writef(new_socket, (deref response) as ptr, response_length as u32);
+        close(new_socket);
+    }
+
+    close(server_fd);
+    return 0;
+}

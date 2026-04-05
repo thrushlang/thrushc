@@ -228,7 +228,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                     checking::check_types(
                         target_type,
-                        &Type::Const(from_type.clone().into(), from_type.get_span()),
+                        from_type,
                         Some(value),
                         None,
                         metadata,
@@ -333,19 +333,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                 let from_type: &Type = value.get_value_type()?;
 
-                let fixed_from_type: &Type = if !from_type.is_const_type() {
-                    &Type::Const(from_type.clone().into(), from_type.get_span())
-                } else {
-                    from_type
-                };
-
                 {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
                     checking::check_types(
                         target_type,
-                        fixed_from_type,
+                        from_type,
                         Some(value),
                         None,
                         metadata,
@@ -386,9 +380,13 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     TypeCheckerNodeMetadata::new(local_value.is_totaly_literal_value());
 
                 let local_value_type: &Type = local_value.get_value_type()?;
+
+                let is_literal_ptr_value: bool = local_value.is_literal_ptr_value();
+
                 let is_ptr_type: bool = local_value_type.is_ptr_like_type()
                     && local_value.is_reference()
-                    || local_value_type.is_ptr_like_type() && !local_value.is_literal_value();
+                    || local_value_type.is_ptr_like_type()
+                        && (!local_value.is_literal_value() || is_literal_ptr_value);
 
                 if is_ptr_type {
                     let allocated_ptr_type: Type = Type::Ptr(

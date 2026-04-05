@@ -17,6 +17,8 @@
 
 */
 
+#![allow(clippy::if_same_then_else)]
+
 use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_parser_context::traits::{ControlContextExtensions, PositionExtensions};
@@ -110,48 +112,6 @@ pub fn lower_precedence<'parser>(
                 .get_position()
                 .is_expression_position();
 
-            {
-                if at_variable_position {
-                    cstring_type = Type::Array {
-                        base_type: Type::Char(span).into(),
-                        infered_type: None,
-                        span,
-                    };
-                }
-
-                if at_static_position {
-                    cstring_type = Type::Array {
-                        base_type: Type::Char(span).into(),
-                        infered_type: None,
-                        span,
-                    };
-                }
-
-                if at_constant_position {
-                    cstring_type = Type::Const(
-                        Type::Array {
-                            base_type: Type::Char(span).into(),
-                            infered_type: None,
-                            span,
-                        }
-                        .into(),
-                        span,
-                    );
-                }
-
-                if at_expression_position {
-                    cstring_type = Type::Const(
-                        Type::Array {
-                            base_type: Type::Char(span).into(),
-                            infered_type: None,
-                            span,
-                        }
-                        .into(),
-                        span,
-                    );
-                }
-            }
-
             let source: &[u8] = content.as_bytes();
 
             let mut processed: Vec<u8> = Vec::with_capacity(source.len());
@@ -184,6 +144,55 @@ pub fn lower_precedence<'parser>(
                     }
 
                     idx = idx.saturating_add(1);
+                }
+            }
+
+            let fixed_array_type: Type = Type::FixedArray(
+                Type::Char(span).into(),
+                processed
+                    .len()
+                    .saturating_add(1)
+                    .try_into()
+                    .unwrap_or(u32::MAX),
+                span,
+            );
+
+            let infered_type: Option<(std::boxed::Box<Type>, usize)> =
+                Some((fixed_array_type.into(), 0));
+
+            {
+                if at_variable_position {
+                    cstring_type = Type::Array {
+                        base_type: Type::Char(span).into(),
+                        infered_type,
+                        span,
+                    };
+                } else if at_static_position {
+                    cstring_type = Type::Array {
+                        base_type: Type::Char(span).into(),
+                        infered_type,
+                        span,
+                    };
+                } else if at_constant_position {
+                    cstring_type = Type::Const(
+                        Type::Array {
+                            base_type: Type::Char(span).into(),
+                            infered_type,
+                            span,
+                        }
+                        .into(),
+                        span,
+                    );
+                } else if at_expression_position {
+                    cstring_type = Type::Const(
+                        Type::Array {
+                            base_type: Type::Char(span).into(),
+                            infered_type,
+                            span,
+                        }
+                        .into(),
+                        span,
+                    );
                 }
             }
 

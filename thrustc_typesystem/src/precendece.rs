@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_token_type::TokenType;
 
 use crate::{
@@ -29,6 +28,26 @@ impl PrecedenceTypeExtensions for Type {
     fn get_term_precedence_type(&self, other: &Type, operator: TokenType) -> Type {
         if self.is_ptr_type() && other.is_ptr_type() && operator == TokenType::Minus {
             return Type::SSize(self.get_span());
+        }
+
+        if self.get_type_herarchy() >= other.get_type_herarchy() {
+            return self.clone();
+        }
+
+        if other.get_type_herarchy() >= self.get_type_herarchy() {
+            return other.clone();
+        }
+
+        self.clone()
+    }
+
+    fn get_factor_precedence_type(&self, other: &Type) -> Type {
+        if self.get_type_herarchy() >= other.get_type_herarchy() {
+            return self.clone();
+        }
+
+        if other.get_type_herarchy() >= self.get_type_herarchy() {
+            return other.clone();
         }
 
         self.clone()

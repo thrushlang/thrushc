@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
@@ -32,7 +31,7 @@ pub fn cmp_precedence<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.enter_expression()?;
 
-    let mut expression: Ast = precedences::term::term_precedence(ctx)?;
+    let mut left: Ast = precedences::term::term_precedence(ctx)?;
 
     if ctx.match_token(TokenType::Greater)?
         || ctx.match_token(TokenType::GreaterEq)?
@@ -46,8 +45,8 @@ pub fn cmp_precedence<'parser>(
 
         let right: Ast = precedences::term::term_precedence(ctx)?;
 
-        expression = Ast::BinaryOp {
-            left: expression.into(),
+        left = Ast::BinaryOp {
+            left: left.into(),
             operator,
             right: right.into(),
             kind: Type::Bool(span),
@@ -58,5 +57,5 @@ pub fn cmp_precedence<'parser>(
 
     ctx.leave_expression();
 
-    Ok(expression)
+    Ok(left)
 }

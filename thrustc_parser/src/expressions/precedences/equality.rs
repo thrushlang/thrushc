@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
@@ -32,7 +31,7 @@ pub fn equality_precedence<'parser>(
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.enter_expression()?;
 
-    let mut expression: Ast = precedences::cmp::cmp_precedence(ctx)?;
+    let mut left: Ast = precedences::cmp::cmp_precedence(ctx)?;
 
     if ctx.match_token(TokenType::BangEq)? || ctx.match_token(TokenType::EqEq)? {
         let operator_tk: &Token = ctx.previous();
@@ -41,8 +40,8 @@ pub fn equality_precedence<'parser>(
 
         let right: Ast = precedences::cmp::cmp_precedence(ctx)?;
 
-        expression = Ast::BinaryOp {
-            left: expression.into(),
+        left = Ast::BinaryOp {
+            left: left.into(),
             operator,
             right: right.into(),
             kind: Type::Bool(span),
@@ -53,5 +52,5 @@ pub fn equality_precedence<'parser>(
 
     ctx.leave_expression();
 
-    Ok(expression)
+    Ok(left)
 }

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
@@ -91,52 +90,66 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
         }
     }
 
-    let hexadecimal: bool = lexeme.strip_prefix("0x").is_some();
-    let octal: bool = lexeme.strip_prefix("0o").is_some();
-    let binary: bool = lexeme.strip_prefix("0b").is_some();
+    let hexadecimal = lexeme.strip_prefix("0x").is_some();
+    let octal = lexeme.strip_prefix("0o").is_some();
+    let binary = lexeme.strip_prefix("0b").is_some();
 
-    let (radix, prefix, base) = if hexadecimal {
-        (16, "0x", "hexadecimal")
+    let (radix, prefix) = if hexadecimal {
+        (16, "0x")
     } else if octal {
-        (8, "0o", "octal")
+        (8, "0o")
     } else if binary {
-        (2, "0b", "binary")
+        (2, "0b")
     } else {
-        (10, "", "decimal")
+        (10, "")
+    };
+
+    let cleaned: String = if radix != 10 {
+        lexeme
+            .strip_prefix(prefix)
+            .unwrap_or(lexeme)
+            .replace('_', "")
+    } else {
+        lexeme.replace('_', "")
     };
 
     if radix != 10 {
-        let cleaned: String = lexeme
-            .strip_prefix(prefix)
-            .unwrap_or(lexeme)
-            .replace('_', "");
+        if let Ok(n) = usize::from_str_radix(&cleaned, radix) {
+            return match_unsigned(n, span);
+        }
 
-        isize::from_str_radix(&cleaned, radix)
-            .map(|n| match_signed(n, span))
-            .unwrap_or_else(|_| {
-                usize::from_str_radix(&cleaned, radix)
-                    .map(|n| match_unsigned(n, span))
-                    .unwrap_or_else(|_| {
-                        Err(CompilationIssue::Error(
-                            CompilationIssueCode::E0001,
-                            format!("Integer invalid numeric '{}' format.", base),
-                            None,
-                            span,
-                        ))
-                    })
-            })
+        if let Ok(n) = isize::from_str_radix(&cleaned, radix) {
+            return match_signed(n, span);
+        }
+
+        Err(CompilationIssue::Error(
+            CompilationIssueCode::E0001,
+            format!(
+                "Invalid {} integer literal",
+                if hexadecimal {
+                    "hexadecimal"
+                } else if octal {
+                    "octal"
+                } else {
+                    "binary"
+                }
+            ),
+            None,
+            span,
+        ))
     } else {
-        lexeme
-            .parse::<usize>()
-            .map(|n| match_unsigned(n, span))
-            .or_else(|_| lexeme.parse::<isize>().map(|n| match_signed(n, span)))
-            .unwrap_or_else(|_| {
-                Err(CompilationIssue::Error(
-                    CompilationIssueCode::E0001,
-                    "Literal is too large to be represented in a integer type.".into(),
-                    None,
-                    span,
-                ))
-            })
+        if let Ok(n) = lexeme.parse::<usize>() {
+            return match_unsigned(n, span);
+        }
+        if let Ok(n) = lexeme.parse::<isize>() {
+            return match_signed(n, span);
+        }
+
+        Err(CompilationIssue::Error(
+            CompilationIssueCode::E0001,
+            "Literal is too large to be represented in a integer type.".into(),
+            None,
+            span,
+        ))
     }
 }

@@ -25,6 +25,10 @@ use crate::{
 impl TypePointerExtensions for Type {
     #[inline]
     fn is_ptr_like_type(&self) -> bool {
+        if let Type::Const(subtype, ..) = self {
+            return subtype.is_ptr_like_type();
+        }
+
         matches!(
             self,
             Type::Ptr(..) | Type::Addr(..) | Type::Array { .. } | Type::Fn(..)

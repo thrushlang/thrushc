@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::{
     builder::Builder,
     types::{BasicType, BasicTypeEnum},
@@ -191,14 +190,14 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::U32(span), alignment, span)
         }
         LLVMBuiltin::SizeOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::compile_type_for_size_of(context, of);
 
             let sizeof_value: BasicValueEnum = llvm_type
                 .size_of()
                 .unwrap_or_else(|| {
                     abort::abort_codegen(
                         context,
-                        "Failed to compile 'sizeof' builtin!",
+                        "Failed to compile 'sizeOf' builtin!",
                         span,
                         std::path::PathBuf::from(file!()),
                         line!(),

@@ -17,8 +17,6 @@
 
 */
 
-use std::path::PathBuf;
-
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::debug_info::AsDIScope;
@@ -46,7 +44,6 @@ use thrustc_span::Span;
 use thrustc_typesystem::Type;
 use thrustc_typesystem::traits::TypeIsExtensions;
 
-use crate::abort;
 use crate::context::LLVMCodeGenContext;
 use crate::optimizer::LLVMOptimizer;
 use crate::traits::LLVMDBGFunctionExtensions;

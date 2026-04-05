@@ -37,6 +37,7 @@ pub fn local_variable<'ctx>(
     span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, kind);
+
     let name: String = format!("local.{}", ascii_name);
 
     context.mark_dbg_location(span);
