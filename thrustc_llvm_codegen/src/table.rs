@@ -49,12 +49,13 @@ impl LLVMSymbolsTable<'_> {
     pub fn new() -> Self {
         Self {
             functions: HashMap::with_capacity(u8::MAX as usize),
+
+            global_constants: HashMap::with_capacity(u8::MAX as usize),
             global_statics: HashMap::with_capacity(u8::MAX as usize),
             local_statics: Vec::with_capacity(u8::MAX as usize),
-            global_constants: HashMap::with_capacity(u8::MAX as usize),
             local_constants: Vec::with_capacity(u8::MAX as usize),
-            locals: Vec::with_capacity(u8::MAX as usize),
 
+            locals: Vec::with_capacity(u8::MAX as usize),
             parameters: HashMap::with_capacity(15),
 
             scope: 0,
@@ -181,11 +182,13 @@ impl<'ctx> LLVMSymbolsTable<'ctx> {
 
 impl LLVMSymbolsTable<'_> {
     pub fn begin_scope(&mut self) {
-        self.local_statics.push(HashMap::with_capacity(255));
-        self.local_constants.push(HashMap::with_capacity(255));
-        self.locals.push(HashMap::with_capacity(255));
+        self.local_statics
+            .push(HashMap::with_capacity(u8::MAX as usize));
+        self.local_constants
+            .push(HashMap::with_capacity(u8::MAX as usize));
+        self.locals.push(HashMap::with_capacity(u8::MAX as usize));
 
-        self.scope += 1;
+        self.scope = self.scope.saturating_add(1);
     }
 
     pub fn end_scope(&mut self) {
@@ -193,7 +196,7 @@ impl LLVMSymbolsTable<'_> {
         self.local_constants.pop();
         self.locals.pop();
 
-        self.scope -= 1;
+        self.scope = self.scope.saturating_sub(1);
 
         if self.scope == 0 {
             self.parameters.clear();

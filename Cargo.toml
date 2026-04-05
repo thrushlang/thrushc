@@ -30,7 +30,6 @@ members = [
     "thrustc_llvm_codegen", 
     "thrustc_llvm_attributes", 
     "thrustc_llvm_callconventions", 
-    "thrustc_llvm_builtins", 
     "thrustc_attribute_checker", 
     "thrustc_llvm_intrinsic_checker", 
     "thrustc_llvm_callconventions_checker", 
@@ -41,7 +40,7 @@ members = [
     "thrustc_heap_allocator", 
     "thrustc_ast_external", 
     "thrustc_cli",
-    "thrustc_utils", 
+    "thrustc_utils",  
 ]
 
 exclude = [

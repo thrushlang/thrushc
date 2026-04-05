@@ -277,7 +277,12 @@ pub fn compile_float_value_operation<'ctx>(
             .into(),
 
         op if op.is_logical_operator() => llvm_builder
-            .build_float_compare(predicates::float(context, operator, span), lhs, rhs, "")
+            .build_float_compare(
+                predicates::get_float_predicate(context, operator, span),
+                lhs,
+                rhs,
+                "",
+            )
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
@@ -418,7 +423,10 @@ pub fn compile_const_float_value_operation<'ctx>(
         }
 
         op if op.is_logical_operator() => lhs
-            .const_compare(predicates::float(context, operator, span), rhs)
+            .const_compare(
+                predicates::get_float_predicate(context, operator, span),
+                rhs,
+            )
             .into(),
 
         _ => {

@@ -588,7 +588,13 @@ fn compile_int_value_operation<'ctx>(
 
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(
-                    predicates::integer(context, operator, signatures.0, signatures.1, span),
+                    predicates::get_integer_predicate(
+                        context,
+                        operator,
+                        signatures.0,
+                        signatures.1,
+                        span,
+                    ),
                     lhs,
                     rhs,
                     "",
@@ -1153,7 +1159,13 @@ fn compile_const_int_value_operation<'ctx>(
 
             op if op.is_logical_operator() => lhs
                 .const_int_compare(
-                    predicates::integer(context, operator, signatures.0, signatures.1, span),
+                    predicates::get_integer_predicate(
+                        context,
+                        operator,
+                        signatures.0,
+                        signatures.1,
+                        span,
+                    ),
                     rhs,
                 )
                 .into(),

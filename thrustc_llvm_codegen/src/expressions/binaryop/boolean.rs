@@ -60,7 +60,9 @@ pub fn bool_operation<'ctx>(
         return match operator {
             op if op.is_logical_operator() => llvm_builder
                 .build_int_compare(
-                    predicates::integer(context, operator, lhs_signed, rhs_signed, span),
+                    predicates::get_integer_predicate(
+                        context, operator, lhs_signed, rhs_signed, span,
+                    ),
                     lhs,
                     rhs,
                     "",
@@ -126,7 +128,12 @@ pub fn bool_operation<'ctx>(
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder
-                .build_float_compare(predicates::float(context, operator, span), lhs, rhs, "")
+                .build_float_compare(
+                    predicates::get_float_predicate(context, operator, span),
+                    lhs,
+                    rhs,
+                    "",
+                )
                 .unwrap_or_else(|_| {
                     abort::abort_codegen(
                         context,
@@ -151,7 +158,12 @@ pub fn bool_operation<'ctx>(
 
         return match operator {
             op if op.is_logical_operator() => llvm_builder
-                .build_int_compare(predicates::pointer(context, operator, span), lhs, rhs, "")
+                .build_int_compare(
+                    predicates::get_pointer_predicate(context, operator, span),
+                    lhs,
+                    rhs,
+                    "",
+                )
                 .unwrap_or_else(|_| {
                     abort::abort_codegen(
                         context,
@@ -250,7 +262,9 @@ pub fn const_bool_operation<'ctx>(
         return match operator {
             op if op.is_logical_operator() => lhs
                 .const_int_compare(
-                    predicates::integer(context, operator, lhs_signed, rhs_signed, span),
+                    predicates::get_integer_predicate(
+                        context, operator, lhs_signed, rhs_signed, span,
+                    ),
                     rhs,
                 )
                 .into(),
@@ -329,7 +343,10 @@ pub fn const_bool_operation<'ctx>(
 
         return match operator {
             op if op.is_logical_operator() => lhs
-                .const_compare(predicates::float(context, operator, span), rhs)
+                .const_compare(
+                    predicates::get_float_predicate(context, operator, span),
+                    rhs,
+                )
                 .into(),
             _ => abort::abort_codegen(
                 context,

@@ -40,7 +40,7 @@ use crate::{
     table::TypeCheckerSymbolsTable,
 };
 
-mod checking;
+mod check;
 mod context;
 mod expressions;
 mod globals;
@@ -158,7 +158,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                             let control_context: &mut TypeCheckerControlContext =
                                 self.get_mut_control_context();
 
-                            checking::check_types(
+                            check::check_type_together(
                                 target_type,
                                 from_type,
                                 Some(expr),
@@ -195,7 +195,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         static_type,
                         value_type,
                         Some(value),
@@ -226,7 +226,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         target_type,
                         from_type,
                         Some(value),
@@ -269,7 +269,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                             let control_context: &mut TypeCheckerControlContext =
                                 self.get_mut_control_context();
 
-                            checking::check_types(
+                            check::check_type_together(
                                 target_type,
                                 from_type,
                                 Some(expr),
@@ -306,7 +306,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         static_type,
                         value_type,
                         Some(value),
@@ -337,7 +337,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         target_type,
                         from_type,
                         Some(value),
@@ -398,7 +398,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
-                        checking::check_types(
+                        check::check_type_together(
                             local_type,
                             &allocated_ptr_type,
                             Some(local_value),
@@ -415,7 +415,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
-                        checking::check_types(
+                        check::check_type_together(
                             local_type,
                             local_value_type,
                             Some(local_value),
@@ -474,7 +474,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         &Type::Bool(span),
                         condition.get_value_type()?,
                         Some(condition),
@@ -515,7 +515,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         &Type::Bool(condition.get_span()),
                         condition.get_value_type()?,
                         Some(condition),
@@ -556,7 +556,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         &Type::Bool(span),
                         condition.get_value_type()?,
                         Some(condition),
@@ -590,7 +590,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         &Type::Bool(span),
                         condition.get_value_type()?,
                         Some(condition),
@@ -641,7 +641,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         return_type,
                         expr.get_value_type()?,
                         Some(expr),
@@ -673,7 +673,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
-                        checking::check_types(
+                        check::check_type_together(
                             &lhs_pure_type,
                             &rhs_pure_type,
                             Some(value),

@@ -26,10 +26,10 @@ use thrustc_typesystem::Type;
 
 use crate::{context::TypeCheckerControlContext, metadata::TypeCheckerNodeMetadata};
 
-pub fn check_types(
-    lhs: &Type,
-    rhs: &Type,
-    expr: Option<&Ast>,
+pub fn check_type_together(
+    target: &Type,
+    provided: &Type,
+    node: Option<&Ast>,
     operator: Option<&TokenType>,
     metadata: TypeCheckerNodeMetadata,
     span: Span,
@@ -49,20 +49,20 @@ pub fn check_types(
 
     let error: CompilationIssue = CompilationIssue::Error(
         CompilationIssueCode::E0020,
-        format!("Expected '{}' type, got '{}' type.", lhs, rhs),
+        format!("Expected '{}' type, got '{}' type.", target, provided),
         None,
         span,
     );
 
     if let Some(Ast::BinaryOp {
         operator,
-        kind: expression_type,
+        kind: nodeession_type,
         ..
-    }) = expr
+    }) = node
     {
-        return self::check_types(
-            lhs,
-            expression_type,
+        return self::check_type_together(
+            target,
+            nodeession_type,
             None,
             Some(operator),
             metadata,
@@ -73,13 +73,13 @@ pub fn check_types(
 
     if let Some(Ast::UnaryOp {
         operator,
-        kind: expression_type,
+        kind: nodeession_type,
         ..
-    }) = expr
+    }) = node
     {
-        return self::check_types(
-            lhs,
-            expression_type,
+        return self::check_type_together(
+            target,
+            nodeession_type,
             None,
             Some(operator),
             metadata,
@@ -90,13 +90,13 @@ pub fn check_types(
 
     if let Some(Ast::Group {
         node,
-        kind: expression_type,
+        kind: nodeession_type,
         ..
-    }) = expr
+    }) = node
     {
-        return self::check_types(
-            lhs,
-            expression_type,
+        return self::check_type_together(
+            target,
+            nodeession_type,
             Some(node),
             None,
             metadata,
@@ -105,11 +105,11 @@ pub fn check_types(
         );
     }
 
-    match (lhs, rhs, operator) {
+    match (target, provided, operator) {
         (Type::Char(..), Type::Char(..), None) => Ok(()),
 
-        (Type::Struct(_, lhs, mod1, ..), Type::Struct(_, rhs, mod2, ..), None) => {
-            if lhs.len() != rhs.len() {
+        (Type::Struct(_, target, mod1, ..), Type::Struct(_, provided, mod2, ..), None) => {
+            if target.len() != provided.len() {
                 return Err(error);
             }
 
@@ -126,8 +126,16 @@ pub fn check_types(
             }
 
             {
-                for (lhs, rhs) in lhs.iter().zip(rhs) {
-                    self::check_types(lhs, rhs, None, None, metadata, span, control_context)?;
+                for (target, provided) in target.iter().zip(provided) {
+                    self::check_type_together(
+                        target,
+                        provided,
+                        None,
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
                 }
             }
 
@@ -136,8 +144,8 @@ pub fn check_types(
 
         (Type::Addr(..), Type::Addr(..), None) => Ok(()),
 
-        (Type::Fn(lhs, ret1, mod1, ..), Type::Fn(rhs, ret2, mod2, ..), None) => {
-            if lhs.len() != rhs.len() {
+        (Type::Fn(target, ret1, mod1, ..), Type::Fn(provided, ret2, mod2, ..), None) => {
+            if target.len() != provided.len() {
                 return Err(error);
             }
 
@@ -158,33 +166,82 @@ pub fn check_types(
             }
 
             {
-                for (lhs, rhs) in lhs.iter().zip(rhs) {
-                    self::check_types(lhs, rhs, None, None, metadata, span, control_context)?;
+                for (target, provided) in target.iter().zip(provided) {
+                    self::check_type_together(
+                        target,
+                        provided,
+                        None,
+                        None,
+                        metadata,
+                        span,
+                        control_context,
+                    )?;
                 }
             }
 
             Ok(())
         }
 
-        (Type::Const(lhs, ..), Type::Const(rhs, ..), None) => {
-            self::check_types(lhs, rhs, None, None, metadata, span, control_context)
-        }
+        (Type::Const(target, ..), Type::Const(provided, ..), None) => self::check_type_together(
+            target,
+            provided,
+            None,
+            None,
+            metadata,
+            span,
+            control_context,
+        ),
 
-        (Type::Const(lhs, ..), rhs, None) => {
-            self::check_types(lhs, rhs, None, None, metadata, span, control_context)
-        }
+        (Type::Const(target, ..), provided, None) => self::check_type_together(
+            target,
+            provided,
+            None,
+            None,
+            metadata,
+            span,
+            control_context,
+        ),
 
-        (Type::FixedArray(lhs, lhs_size, ..), Type::FixedArray(rhs, rhs_size, ..), None) => {
-            if lhs_size == rhs_size {
-                self::check_types(lhs, rhs, None, None, metadata, span, control_context)?;
+        (
+            Type::FixedArray(target, target_size, ..),
+            Type::FixedArray(provided, provided_size, ..),
+            None,
+        ) => {
+            if target_size == provided_size {
+                self::check_type_together(
+                    target,
+                    provided,
+                    None,
+                    None,
+                    metadata,
+                    span,
+                    control_context,
+                )?;
                 return Ok(());
             }
 
             Err(error)
         }
 
-        (Type::Array { base_type: lhs, .. }, Type::Array { base_type: rhs, .. }, None) => {
-            self::check_types(lhs, rhs, None, None, metadata, span, control_context)?;
+        (
+            Type::Array {
+                base_type: target, ..
+            },
+            Type::Array {
+                base_type: provided,
+                ..
+            },
+            None,
+        ) => {
+            self::check_type_together(
+                target,
+                provided,
+                None,
+                None,
+                metadata,
+                span,
+                control_context,
+            )?;
             Ok(())
         }
 
@@ -195,11 +252,19 @@ pub fn check_types(
         ) => Ok(()),
 
         (
-            Type::Ptr(Some(lhs), ..),
-            Type::Ptr(Some(rhs), ..),
+            Type::Ptr(Some(target), ..),
+            Type::Ptr(Some(provided), ..),
             Some(TokenType::EqEq | TokenType::BangEq) | None,
         ) => {
-            self::check_types(lhs, rhs, expr, operator, metadata, span, control_context)?;
+            self::check_type_together(
+                target,
+                provided,
+                node,
+                operator,
+                metadata,
+                span,
+                control_context,
+            )?;
             Ok(())
         }
 
@@ -677,7 +742,7 @@ pub fn check_type_cast(
     if control_context.get_type_cast_depth() >= thrustc_constants::COMPILER_TOO_MANY_TYPE_DEPTH {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0037,
-            "Too many type depth, the expression exceeds type checking bounds!".into(),
+            "Too many type depth, the nodeession exceeds type checking bounds!".into(),
             None,
             *span,
         ));

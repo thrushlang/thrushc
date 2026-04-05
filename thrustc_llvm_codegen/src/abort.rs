@@ -17,13 +17,12 @@
 
 */
 
-
 use thrustc_diagnostician::Diagnostician;
 use thrustc_errors::{CompilationIssue, CompilationPosition};
 use thrustc_logging::LoggingType;
 use thrustc_span::Span;
 
-use crate::{context::LLVMCodeGenContext, debug::LLVMDebugContext};
+use crate::{context::LLVMCodeGenContext, debug_context::LLVMDebugContext};
 
 pub fn abort_codegen<'ctx>(
     context: &mut LLVMCodeGenContext<'ctx, '_>,

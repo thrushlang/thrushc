@@ -35,9 +35,10 @@ use thrustc_options::backends::llvm::LLVMBackend;
 use thrustc_span::Span;
 
 use crate::anchor::PointerAnchor;
+use crate::builtins::LLVMBuiltin;
 use crate::context::LLVMCodeGenContext;
+use crate::declarations::{asmfunction, function, intrinsic};
 use crate::expressions::unaryop;
-use crate::globals::{asmfunction, function, intrinsic};
 use crate::memory::SymbolAllocated;
 use crate::metadata::LLVMMetadata;
 use crate::statements::{conditional, forloop, infloop, whileloop};
@@ -48,7 +49,6 @@ use crate::{
 
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
-use thrustc_llvm_builtins::LLVMBuiltin;
 use thrustc_typesystem::Type;
 use thrustc_typesystem::traits::{DereferenceExtensions, TypeIsExtensions, TypeStructExtensions};
 
@@ -769,9 +769,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 builtin: thrust_builtin,
                 ..
             } => {
-                let llvm_builtin: LLVMBuiltin =
-                    thrustc_llvm_builtins::into_llvm_builtin(thrust_builtin);
-
+                let llvm_builtin: LLVMBuiltin = builtins::into_llvm_builtin(thrust_builtin);
                 builtins::compile(self.context, llvm_builtin, None);
             }
 
@@ -1020,8 +1018,7 @@ pub fn compile<'ctx>(
             builtin: thrust_builtin,
             ..
         } => {
-            let llvm_builtin: LLVMBuiltin =
-                thrustc_llvm_builtins::into_llvm_builtin(thrust_builtin);
+            let llvm_builtin: LLVMBuiltin = builtins::into_llvm_builtin(thrust_builtin);
 
             builtins::compile(context, llvm_builtin, cast_type)
         }
@@ -1191,7 +1188,7 @@ pub fn compile_constant<'ctx>(
 
         // Builtins
         Ast::Builtin { builtin, .. } => {
-            let llvm_builtin: LLVMBuiltin<'_> = thrustc_llvm_builtins::into_llvm_builtin(builtin);
+            let llvm_builtin: LLVMBuiltin<'_> = builtins::into_llvm_builtin(builtin);
             builtins::compile(context, llvm_builtin, Some(cast_type))
         }
 

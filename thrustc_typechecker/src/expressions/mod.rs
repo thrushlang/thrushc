@@ -33,7 +33,7 @@ use thrustc_typesystem::{
 };
 
 use crate::{
-    TypeChecker, checking, context::TypeCheckerControlContext, metadata::TypeCheckerNodeMetadata,
+    TypeChecker, check, context::TypeCheckerControlContext, metadata::TypeCheckerNodeMetadata,
     operations,
 };
 
@@ -166,7 +166,7 @@ pub fn validate<'type_checker>(
                     let control_context: &mut TypeCheckerControlContext =
                         typechecker.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         &base_type,
                         item_type,
                         Some(node),
@@ -224,7 +224,7 @@ pub fn validate<'type_checker>(
                     let control_context: &mut TypeCheckerControlContext =
                         typechecker.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         &base_type,
                         item_type,
                         Some(node),
@@ -343,7 +343,7 @@ pub fn validate<'type_checker>(
                     let control_context: &mut TypeCheckerControlContext =
                         typechecker.get_mut_control_context();
 
-                    checking::check_types(
+                    check::check_type_together(
                         target_type,
                         from_type,
                         Some(expr),
@@ -480,7 +480,7 @@ pub fn validate<'type_checker>(
             let control_context: &mut TypeCheckerControlContext =
                 typechecker.get_mut_control_context();
 
-            checking::check_type_cast(cast_type, from_type, metadata, span, control_context)?;
+            check::check_type_cast(cast_type, from_type, metadata, span, control_context)?;
 
             control_context.reset_type_cast_depth();
 

@@ -39,7 +39,7 @@ use std::path::PathBuf;
 
 use crate::abort;
 use crate::context::LLVMCodeGenContext;
-use crate::debug::LLVMDebugContext;
+use crate::debug_context::LLVMDebugContext;
 
 #[inline]
 pub fn compile_as_function_type<'ctx>(

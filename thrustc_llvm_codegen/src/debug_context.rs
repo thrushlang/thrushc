@@ -103,9 +103,9 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             unit: dicompileunit,
             target_machine,
             diagnostician: Diagnostician::new(unit, options),
-            subprograms: Vec::with_capacity(100),
-            lexical_blocks: Vec::with_capacity(100),
-            debug_locations: Vec::with_capacity(100),
+            subprograms: Vec::with_capacity(u8::MAX as usize),
+            lexical_blocks: Vec::with_capacity(u8::MAX as usize),
+            debug_locations: Vec::with_capacity(u8::MAX as usize),
         }
     }
 }

@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::FloatPredicate;
 use inkwell::IntPredicate;
 
@@ -29,7 +28,7 @@ use crate::context::LLVMCodeGenContext;
 
 #[must_use]
 #[inline]
-pub fn integer(
+pub fn get_integer_predicate(
     context: &mut LLVMCodeGenContext<'_, '_>,
     operator: &TokenType,
     lhs_signed: bool,
@@ -69,7 +68,7 @@ pub fn integer(
 
 #[must_use]
 #[inline]
-pub fn pointer(
+pub fn get_pointer_predicate(
     context: &mut LLVMCodeGenContext<'_, '_>,
     operator: &TokenType,
     span: Span,
@@ -90,7 +89,7 @@ pub fn pointer(
 
 #[must_use]
 #[inline]
-pub fn float(
+pub fn get_float_predicate(
     context: &mut LLVMCodeGenContext<'_, '_>,
     operator: &TokenType,
     span: Span,

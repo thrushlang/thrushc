@@ -27,8 +27,8 @@ use inkwell::targets::TargetData;
 use inkwell::targets::TargetMachine;
 use inkwell::targets::TargetTriple;
 use inkwell::values::BasicValueEnum;
-
 use inkwell::values::PointerValue;
+
 use thrustc_diagnostician::Diagnostician;
 use thrustc_options::CompilationUnit;
 use thrustc_options::CompilerOptions;
@@ -37,8 +37,8 @@ use thrustc_typesystem::Type;
 
 use crate::abort;
 use crate::anchor::PointerAnchor;
-use crate::brancher::LLVMLoopContext;
-use crate::debug::LLVMDebugContext;
+use crate::branch_context::LLVMLoopContext;
+use crate::debug_context::LLVMDebugContext;
 use crate::memory::SymbolAllocated;
 use crate::memory::SymbolToAllocate;
 use crate::optimizer::LLVMExpressionOptimization;

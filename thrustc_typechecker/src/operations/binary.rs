@@ -25,34 +25,42 @@ use thrustc_typesystem::{Type, traits::TypeIsExtensions};
 
 #[inline]
 pub fn validate_binary(
-    op: &TokenType,
-    a: &Type,
-    b: &Type,
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    match op {
+    match *operator {
         TokenType::Arith
         | TokenType::Star
         | TokenType::Slash
         | TokenType::Minus
         | TokenType::MinusEq
         | TokenType::Plus
-        | TokenType::PlusEq => self::validate_binary_arithmetic(op, a, b, span),
-        TokenType::Xor => self::validate_xor(op, a, b, span),
-        TokenType::Bor => self::validate_bor(op, a, b, span),
-        TokenType::BAnd => self::validate_band(op, a, b, span),
-        TokenType::BangEq | TokenType::EqEq => self::validate_binary_equality(op, a, b, span),
-        TokenType::LessEq | TokenType::Less | TokenType::GreaterEq | TokenType::Greater => {
-            self::validate_binary_comparasion(op, a, b, span)
+        | TokenType::PlusEq => {
+            self::validate_binary_arithmetic_expression(operator, left, right, span)
         }
-        TokenType::LShift | TokenType::RShift => self::validate_binary_shift(op, a, b, span),
-        TokenType::And | TokenType::Or => self::validate_binary_gate(op, a, b, span),
+        TokenType::Xor => self::validate_xor_expression(operator, left, right, span),
+        TokenType::Bor => self::validate_bor_expression(operator, left, right, span),
+        TokenType::BAnd => self::validate_band_expression(operator, left, right, span),
+        TokenType::BangEq | TokenType::EqEq => {
+            self::validate_binary_equality_expression(operator, left, right, span)
+        }
+        TokenType::LessEq | TokenType::Less | TokenType::GreaterEq | TokenType::Greater => {
+            self::validate_binary_comparasion_expression(operator, left, right, span)
+        }
+        TokenType::LShift | TokenType::RShift => {
+            self::validate_binary_shift_expression(operator, left, right, span)
+        }
+        TokenType::And | TokenType::Or => {
+            self::validate_binary_gate_expression(operator, left, right, span)
+        }
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0031,
             format!(
-                "'{}{}' isn't a valid arithmetic or logical operation.",
-                op, a
+                "'{}{}{}' isn't a valid arithmetic or logical operation.",
+                right, operator, left
             ),
             None,
             span,
@@ -61,121 +69,148 @@ pub fn validate_binary(
 }
 
 #[inline]
-fn validate_band(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
-    match (a, b) {
-        (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-        ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
-
-        _ => Err(CompilationIssue::Error(
-            CompilationIssueCode::E0030,
-            format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
-            None,
-            span,
-        )),
-    }
-}
-
-#[inline]
-fn validate_bor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
-    match (a, b) {
-        (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-        ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
-
-        _ => Err(CompilationIssue::Error(
-            CompilationIssueCode::E0030,
-            format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
-            None,
-            span,
-        )),
-    }
-}
-
-#[inline]
-fn validate_xor(op: &TokenType, a: &Type, b: &Type, span: Span) -> Result<(), CompilationIssue> {
-    match (a, b) {
-        (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..),
-        ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
-
-        _ => Err(CompilationIssue::Error(
-            CompilationIssueCode::E0030,
-            format!("'{} {} {}' isn't a valid bit operation.", a, op, b),
-            None,
-            span,
-        )),
-    }
-}
-
-#[inline]
-fn validate_binary_gate(
-    op: &TokenType,
-    a: &Type,
-    b: &Type,
+fn validate_band_expression(
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    match (a, b) {
+    match (left, right) {
+        (
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+        ) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
+
+        _ => Err(CompilationIssue::Error(
+            CompilationIssueCode::E0030,
+            format!(
+                "'{} {} {}' isn't a valid bit operation.",
+                left, operator, right
+            ),
+            None,
+            span,
+        )),
+    }
+}
+
+#[inline]
+fn validate_bor_expression(
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
+    span: Span,
+) -> Result<(), CompilationIssue> {
+    match (left, right) {
+        (
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..)
+            | Type::U128(..),
+        ) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
+
+        _ => Err(CompilationIssue::Error(
+            CompilationIssueCode::E0030,
+            format!(
+                "'{} {} {}' isn't a valid bit operation.",
+                left, operator, right
+            ),
+            None,
+            span,
+        )),
+    }
+}
+
+#[inline]
+fn validate_xor_expression(
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
+    span: Span,
+) -> Result<(), CompilationIssue> {
+    match (left, right) {
+        (
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..),
+            Type::S8(..)
+            | Type::S16(..)
+            | Type::S32(..)
+            | Type::S64(..)
+            | Type::U8(..)
+            | Type::U16(..)
+            | Type::U32(..)
+            | Type::U64(..),
+        ) => Ok(()),
+        (Type::SSize(..), Type::SSize(..)) => Ok(()),
+        (Type::USize(..), Type::USize(..)) => Ok(()),
+
+        _ => Err(CompilationIssue::Error(
+            CompilationIssueCode::E0030,
+            format!(
+                "'{} {} {}' isn't a valid bit operation.",
+                left, operator, right
+            ),
+            None,
+            span,
+        )),
+    }
+}
+
+#[inline]
+fn validate_binary_gate_expression(
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
+    span: Span,
+) -> Result<(), CompilationIssue> {
+    match (left, right) {
         (Type::Bool(..), Type::Bool(..)) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
-            format!("'{} {} {}' isn't a valid logical operation.", a, op, b),
+            format!(
+                "'{} {} {}' isn't a valid logical operation.",
+                right, operator, left
+            ),
             None,
             span,
         )),
@@ -183,13 +218,13 @@ fn validate_binary_gate(
 }
 
 #[inline]
-fn validate_binary_shift(
-    op: &TokenType,
-    a: &Type,
-    b: &Type,
+fn validate_binary_shift_expression(
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    match (a, b) {
+    match (left, right) {
         (
             Type::S8(..)
             | Type::S16(..)
@@ -215,7 +250,10 @@ fn validate_binary_shift(
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
-            format!("'{} {} {}' isn't a valid arithmetic operation.", a, op, b),
+            format!(
+                "'{} {} {}' isn't a valid arithmetic operation.",
+                left, operator, right
+            ),
             None,
             span,
         )),
@@ -223,13 +261,13 @@ fn validate_binary_shift(
 }
 
 #[inline]
-fn validate_binary_comparasion(
-    op: &TokenType,
-    a: &Type,
-    b: &Type,
+fn validate_binary_comparasion_expression(
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    match (a, b) {
+    match (left, right) {
         (
             Type::S8(..)
             | Type::S16(..)
@@ -261,7 +299,10 @@ fn validate_binary_comparasion(
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
-            format!("'{} {} {}' isn't a valid relational operation.", a, op, b),
+            format!(
+                "'{} {} {}' isn't a valid relational operation.",
+                left, operator, right
+            ),
             None,
             span,
         )),
@@ -269,13 +310,13 @@ fn validate_binary_comparasion(
 }
 
 #[inline]
-fn validate_binary_equality(
-    op: &TokenType,
-    a: &Type,
-    b: &Type,
+fn validate_binary_equality_expression(
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    match (a, b) {
+    match (left, right) {
         (
             Type::S8(..)
             | Type::S16(..)
@@ -307,11 +348,14 @@ fn validate_binary_equality(
         (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
         (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
 
-        _ if a.is_ptr_type() && b.is_ptr_type() => Ok(()),
+        _ if left.is_ptr_type() && right.is_ptr_type() => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
-            format!("'{} {} {}' isn't a valid relational operation.", a, op, b),
+            format!(
+                "'{} {} {}' isn't a valid relational operation.",
+                left, operator, right
+            ),
             None,
             span,
         )),
@@ -319,13 +363,13 @@ fn validate_binary_equality(
 }
 
 #[inline]
-fn validate_binary_arithmetic(
-    op: &TokenType,
-    a: &Type,
-    b: &Type,
+fn validate_binary_arithmetic_expression(
+    operator: &TokenType,
+    left: &Type,
+    right: &Type,
     span: Span,
 ) -> Result<(), CompilationIssue> {
-    match (a, b) {
+    match (left, right) {
         (
             Type::S8(..)
             | Type::S16(..)
@@ -352,11 +396,14 @@ fn validate_binary_arithmetic(
             Type::F32(..) | Type::F64(..) | Type::F128(..),
             Type::F32(..) | Type::F64(..) | Type::F128(..),
         ) => Ok(()),
-        (Type::Ptr(..), Type::Ptr(..)) if a == b && *op == TokenType::Minus => Ok(()),
+        (Type::Ptr(..), Type::Ptr(..)) if left == right && *operator == TokenType::Minus => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
-            format!("'{} {} {}' isn't a valid arithmetic operation.", a, op, b),
+            format!(
+                "'{} {} {}' isn't a valid arithmetic operation.",
+                left, operator, right
+            ),
             None,
             span,
         )),

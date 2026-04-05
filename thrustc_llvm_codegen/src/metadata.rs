@@ -31,7 +31,7 @@ use thrustc_options::CompilerOptions;
 use thrustc_options::backends::llvm::LLVMBackend;
 
 use crate::context::LLVMCodeGenContext;
-use crate::targettriple::LLVMTargetTriple;
+use crate::target_triple::LLVMTargetTriple;
 
 #[derive(Debug)]
 pub struct LLVMMetadata<'a, 'ctx> {
