@@ -761,7 +761,10 @@ pub fn check_type_cast(
             | Type::U128(..)
             | Type::USize(..)
             | Type::SSize(..)
-            | Type::Char(..),
+            | Type::Char(..)
+            | Type::F32(..)
+            | Type::F64(..)
+            | Type::F128(..),
             Type::S8(..)
             | Type::S16(..)
             | Type::S32(..)
@@ -773,12 +776,10 @@ pub fn check_type_cast(
             | Type::U128(..)
             | Type::USize(..)
             | Type::SSize(..)
-            | Type::Char(..),
-        ) => Ok(()),
-
-        (
-            Type::F32(..) | Type::F64(..) | Type::F128(..),
-            Type::F32(..) | Type::F64(..) | Type::F128(..),
+            | Type::Char(..)
+            | Type::F32(..)
+            | Type::F64(..)
+            | Type::F128(..),
         ) => Ok(()),
 
         (Type::FX8680(..), Type::FX8680(..)) => Ok(()),

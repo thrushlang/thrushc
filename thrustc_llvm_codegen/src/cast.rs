@@ -492,23 +492,7 @@ pub fn compile<'ctx>(
         (_, to) if to.is_numeric_type() => {
             let value: BasicValueEnum = codegen::compile(context, expr, None);
             let cast: BasicTypeEnum = typegeneration::compile_from(context, target_type);
-
-            if self::is_same_bit_size(context, from_type, target_type) {
-                return llvm_builder
-                    .build_bit_cast(value, cast, "")
-                    .unwrap_or_else(|_| {
-                        abort::abort_codegen(
-                            context,
-                            &format!(
-                                "Failed to cast '{}' type to '{}' type.",
-                                from_type, target_type
-                            ),
-                            expr.get_span(),
-                            std::path::PathBuf::from(file!()),
-                            line!(),
-                        );
-                    });
-            }
+            let is_signed: bool = from_type.is_signed_integer_type();
 
             if value.is_int_value() && cast.is_int_type() {
                 return llvm_builder
@@ -528,7 +512,7 @@ pub fn compile<'ctx>(
                     .into();
             }
 
-            if value.is_float_value() && target_type.is_float_type() {
+            if value.is_float_value() && cast.is_float_type() {
                 return llvm_builder
                     .build_float_cast(value.into_float_value(), cast.into_float_type(), "")
                     .unwrap_or_else(|_| {
@@ -544,6 +528,67 @@ pub fn compile<'ctx>(
                         );
                     })
                     .into();
+            }
+
+            if value.is_int_value() && cast.is_float_type() {
+                if is_signed {
+                    return llvm_builder
+                        .build_signed_int_to_float(
+                            value.into_int_value(),
+                            cast.into_float_type(),
+                            "",
+                        )
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                &format!(
+                                    "Failed to cast '{}' type to '{}' type.",
+                                    from_type, target_type
+                                ),
+                                expr.get_span(),
+                                std::path::PathBuf::from(file!()),
+                                line!(),
+                            );
+                        })
+                        .into();
+                } else {
+                    return llvm_builder
+                        .build_unsigned_int_to_float(
+                            value.into_int_value(),
+                            cast.into_float_type(),
+                            "",
+                        )
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                &format!(
+                                    "Failed to cast '{}' type to '{}' type.",
+                                    from_type, target_type
+                                ),
+                                expr.get_span(),
+                                std::path::PathBuf::from(file!()),
+                                line!(),
+                            );
+                        })
+                        .into();
+                }
+            }
+
+            if self::is_same_bit_size(context, from_type, target_type) {
+                return llvm_builder
+                    .build_bit_cast(value, cast, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        );
+                    });
             }
         }
 

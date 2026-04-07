@@ -14,7 +14,7 @@ The frontend uses a **handwritten recursive descent parser**. The backend perfor
 
 - **`thrustc_core`**  
   Central driver of the compiler. Manages the compilation pipeline, emitters, printers (AST, LLVM IR, tokens, assembler), and lifecycle stages (starter, cleaner, finisher).
-- **`thrustc_entrypoint`**  
+- **`thrustc`**  
   Main binary entry point. Handles command-line arguments and orchestrates the entire compilation process.
 - **`thrustc_options`**  
   Compiler configuration and command-line options (backends, optimization levels, debug information, linkage, target settings, etc.).

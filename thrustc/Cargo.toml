@@ -1,12 +1,12 @@
 [package]
-name = "thrustc_entrypoint"
+name = "thrustc"
 description.workspace = true
 edition.workspace = true
 license.workspace = true
 version.workspace = true
 rust-version.workspace = true
 
-default-run = "thrustc_entrypoint"
+default-run = "thrustc"
 
 [dependencies]
 rustversion = "1.0.22"

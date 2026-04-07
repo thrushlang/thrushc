@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "thrustc_entrypoint",
+    "thrustc",
     "thrustc_core",
     "thrustc_ast",
     "thrustc_lexer",
