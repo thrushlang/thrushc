@@ -26,7 +26,7 @@ use crate::Lexer;
 
 #[inline]
 pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), CompilationIssue> {
-    let span: Span = Span::new(lexer.peek_span());
+    let span: Span = Span::new(lexer.span());
     let dot_count: usize = lexeme.bytes().filter(|&b| b == b'.').count();
 
     if dot_count > 1 {
@@ -63,7 +63,7 @@ const U32_MAX: usize = 4294967295;
 
 #[inline]
 pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), CompilationIssue> {
-    let span: Span = Span::new(lexer.peek_span());
+    let span: Span = Span::new(lexer.span());
 
     if let Some(rest) = lexeme.strip_prefix("0x") {
         return self::check_integer_radix_format(rest, 16, span);
@@ -175,7 +175,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
                 CompilationIssueCode::E0001,
                 "Integer hexadecimal prefix '0x' cannot be repeated.".into(),
                 None,
-                Span::new(lexer.peek_span()),
+                Span::new(lexer.span()),
             ));
         }
 
@@ -186,7 +186,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
                 CompilationIssueCode::E0001,
                 "Integer binary prefix '0b' cannot be repeated.".into(),
                 None,
-                Span::new(lexer.peek_span()),
+                Span::new(lexer.span()),
             ));
         }
 
@@ -197,7 +197,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
                 CompilationIssueCode::E0001,
                 "Integer octal prefix '0o' cannot be repeated.".into(),
                 None,
-                Span::new(lexer.peek_span()),
+                Span::new(lexer.span()),
             ));
         }
 
@@ -233,7 +233,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
     lexer.end_span();
 
-    let span: Span = Span::new(lexer.peek_span());
+    let span: Span = Span::new(lexer.span());
 
     let lexeme: String = lexer.lexeme();
 

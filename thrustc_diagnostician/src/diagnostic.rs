@@ -25,15 +25,15 @@ use thrustc_span::Span;
 use crate::{Notificator, position::CodePosition};
 
 #[derive(Debug)]
-pub struct Diagnostic<'a> {
-    code: &'a str,
+pub struct Diagnostic {
+    code: String,
     signaler: String,
     span: Span,
 }
 
-impl<'a> Diagnostic<'a> {
+impl Diagnostic {
     #[inline]
-    pub fn new(code: &'a str, signaler: String, span: Span) -> Self {
+    pub fn new(code: String, signaler: String, span: Span) -> Self {
         Self {
             code,
             signaler,
@@ -42,10 +42,10 @@ impl<'a> Diagnostic<'a> {
     }
 }
 
-impl<'a> Diagnostic<'a> {
+impl Diagnostic {
     #[inline]
     pub fn get_code(&self) -> &str {
-        self.code
+        &self.code
     }
 
     #[inline]
@@ -60,13 +60,13 @@ impl<'a> Diagnostic<'a> {
 }
 
 #[inline]
-pub(crate) fn build<'a>(
-    code: &'a str,
+pub(crate) fn build(
+    code: &str,
     span: Span,
-    message: &'a str,
+    message: &str,
     notificator: Notificator,
     logging_type: LoggingType,
-) -> Diagnostic<'a> {
+) -> Diagnostic {
     let code_position: CodePosition = CodePosition::new(
         span.get_line().try_into().unwrap_or(usize::MAX),
         span.get_span_start().try_into().unwrap_or(usize::MAX),
@@ -77,12 +77,12 @@ pub(crate) fn build<'a>(
         .unwrap_or_else(|| self::generate_basic(code, span, message, notificator))
 }
 
-pub(crate) fn generate_basic<'a>(
-    code: &'a str,
+pub(crate) fn generate_basic(
+    code: &str,
     span: Span,
-    message: &'a str,
+    message: &str,
     notificator: Notificator,
-) -> Diagnostic<'a> {
+) -> Diagnostic {
     let lines: Vec<&str> = code.lines().collect();
     let line_idx: usize = span.line.saturating_sub(1).try_into().unwrap();
 
@@ -125,85 +125,86 @@ pub(crate) fn generate_basic<'a>(
 
     signaler.push('\n');
 
-    Diagnostic::new(code_line, signaler, span)
+    Diagnostic::new(code_line.to_string(), signaler, span)
 }
+use term_size::dimensions;
 
-pub(crate) fn generate<'a>(
-    code: &'a str,
+pub(crate) fn generate(
+    code: &str,
     position: CodePosition,
-    message: &'a str,
+    message: &str,
     notificator: Notificator,
     logging_type: LoggingType,
-) -> Option<Diagnostic<'a>> {
+) -> Option<Diagnostic> {
     let lines: Vec<&str> = code.lines().collect();
     let line_idx: usize = position.get_line().saturating_sub(1);
 
-    let code_line: &str = lines
-        .get(line_idx)?
-        .trim_start_matches(" ")
-        .trim_start_matches("\t")
-        .trim_start_matches("\r")
-        .trim_start_matches("\n");
+    let original_line: &str = lines.get(line_idx)?;
 
-    let code_before_trim: usize = lines.get(line_idx)?.len();
-    let trim_difference: usize = code_before_trim.saturating_sub(code_line.len());
+    let terminal_width: usize = dimensions().map(|(w, _h)| w).unwrap_or(100);
+    let max_display_len: usize = terminal_width.saturating_sub(40).min(140);
 
-    let line: usize = position.get_line();
+    let trimmed_line: &str = original_line.trim_start_matches(|c: char| c.is_whitespace());
+    let trim_len: usize = original_line.chars().count() - trimmed_line.chars().count();
 
-    let start: usize = position.get_start().saturating_sub(trim_difference);
-    let end: usize = position.get_end().saturating_sub(trim_difference);
+    let display_line_chars: Vec<char> = trimmed_line.chars().collect();
+    let display_chars_len: usize = display_line_chars.len().min(max_display_len);
+    let display_line_str: String = display_line_chars[..display_chars_len].iter().collect();
+    let display_line: &str = &display_line_str;
 
-    if start > end || end > code_line.len() {
-        return None;
-    }
+    let start: usize = position.get_start().saturating_sub(trim_len);
+    let end: usize = position.get_end().saturating_sub(trim_len);
 
-    let mut signaler: String = String::with_capacity(u8::MAX as usize);
+    let visible_start: usize = start.min(display_chars_len);
+    let visible_end: usize = end.min(display_chars_len);
+
+    let line_num: usize = position.get_line();
+
+    let mut signaler: String = String::new();
 
     if line_idx > 0 {
-        if let Some(prev_line) = lines.get(line_idx.saturating_sub(1)) {
-            signaler.push_str(&format!(
-                "{:>4} │ {}\n",
-                line.saturating_sub(1),
-                prev_line.bright_black()
-            ));
+        if let Some(prev) = lines.get(line_idx - 1) {
+            signaler.push_str(&format!("{:>4} │ {}\n", line_num - 1, prev.bright_black()));
         }
     }
 
     signaler.push_str(&format!(
         "{:>4} │ {}\n",
-        line,
-        code_line.bright_white().bold()
+        line_num,
+        display_line.bright_white().bold()
     ));
 
     signaler.push_str(&format!("{:>4} │ ", ""));
 
-    for i in 0..code_line.chars().count() {
-        if i >= start && i < end {
-            signaler.push_str(&logging_type.text_with_color("^").to_string());
-        } else {
-            signaler.push(' ');
-        }
+    for _ in 0..visible_start {
+        signaler.push(' ');
     }
 
-    signaler.push_str(&format!("{}{}\n", notificator, message.bright_yellow()));
+    let caret_len: usize = if visible_end > visible_start {
+        (visible_end - visible_start).max(1)
+    } else {
+        1
+    };
 
-    if let Some(next_line) = lines.get(line_idx.saturating_add(1)) {
-        signaler.push_str(&format!(
-            "{:>4} │ {}\n",
-            line.saturating_add(1),
-            next_line.bright_black()
-        ));
+    for _ in 0..caret_len {
+        signaler.push_str(&logging_type.text_with_color("^").to_string());
+    }
+
+    signaler.push_str(&format!(" {}{}\n", notificator, message.bright_yellow()));
+
+    if let Some(next) = lines.get(line_idx + 1) {
+        signaler.push_str(&format!("{:>4} │ {}\n", line_num + 1, next.bright_black()));
     }
 
     signaler.push('\n');
 
-    let span: Span = Span::new((
-        position.get_line().try_into().unwrap_or(u32::MAX),
+    let span = Span::new((
+        line_num.try_into().unwrap_or(u32::MAX),
         (
             position.get_start().try_into().unwrap_or(u32::MAX),
             position.get_end().try_into().unwrap_or(u32::MAX),
         ),
     ));
 
-    Some(Diagnostic::new(code_line, signaler, span))
+    Some(Diagnostic::new(display_line.to_string(), signaler, span))
 }

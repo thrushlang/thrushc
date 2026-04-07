@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
@@ -53,7 +52,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             } else if lexer.is_eof() {
                 lexer.end_span();
 
-                let span: Span = Span::new(lexer.peek_span());
+                let span: Span = Span::new(lexer.span());
 
                 return Err(CompilationIssue::Error(
                     CompilationIssueCode::E0001,
@@ -100,9 +99,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         ' ' => {}
 
         '\n' => {
-            lexer.start_column = 1;
-            lexer.end_column = 1;
-
+            lexer.column = 0;
             lexer.line = lexer.line.saturating_add(1)
         }
 
@@ -118,7 +115,7 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
         _ => {
             lexer.end_span();
 
-            let span: Span = Span::new(lexer.peek_span());
+            let span: Span = Span::new(lexer.span());
 
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,

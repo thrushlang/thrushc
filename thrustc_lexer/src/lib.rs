@@ -42,8 +42,7 @@ pub struct Lexer {
     errors: Vec<CompilationIssue>,
     code: Vec<char>,
 
-    start_column: usize,
-    end_column: usize,
+    column: usize,
     start: usize,
     current: usize,
     line: usize,
@@ -60,8 +59,7 @@ impl Lexer {
             tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
             errors: Vec::with_capacity(u8::MAX as usize),
             code,
-            start_column: 0,
-            end_column: 0,
+            column: 0,
             start: 0,
             current: 0,
             line: 1,
@@ -81,8 +79,7 @@ impl Lexer {
             tokens: Vec::with_capacity(PREALLOCATED_TOKENS_CAPACITY),
             errors: Vec::with_capacity(u8::MAX as usize),
             code,
-            start_column: 0,
-            end_column: 0,
+            column: 0,
             start: 0,
             current: 0,
             line: 1,
@@ -117,7 +114,7 @@ impl Lexer {
             lexeme: String::default(),
             ascii: String::default(),
             kind: TokenType::Eof,
-            span: Span::new(self.peek_span()),
+            span: Span::new(self.span()),
         });
 
         Ok(std::mem::take(&mut self.tokens))
@@ -141,7 +138,7 @@ impl Lexer {
             lexeme: String::default(),
             ascii: String::default(),
             kind: TokenType::Eof,
-            span: Span::new(self.peek_span()),
+            span: Span::new(self.span()),
         });
 
         Ok(std::mem::take(&mut self.tokens))
@@ -152,7 +149,7 @@ impl Lexer {
     pub fn make(&mut self, kind: TokenType) {
         self.end_span();
 
-        let span: Span = Span::new(self.peek_span());
+        let span: Span = Span::new(self.span());
 
         let lexeme: String = self.lexeme();
 
@@ -176,8 +173,7 @@ impl Lexer {
     pub fn char_match(&mut self, char: char) -> bool {
         if !self.is_eof() && self.code[self.current] == char {
             self.current = self.current.saturating_add(1);
-            self.start_column = self.start_column.saturating_add(1);
-            self.end_column = self.end_column.saturating_add(1);
+            self.column = self.column.saturating_add(1);
 
             return true;
         }
@@ -193,8 +189,7 @@ impl Lexer {
             let ch: char = self.code[self.current];
 
             self.current = self.current.saturating_add(1);
-            self.start_column = self.start_column.saturating_add(1);
-            self.end_column = self.end_column.saturating_add(1);
+            self.column = self.column.saturating_add(1);
 
             ch
         }
@@ -203,8 +198,7 @@ impl Lexer {
     #[inline]
     pub fn advance_only(&mut self) {
         self.current = self.current.saturating_add(1);
-        self.start_column = self.start_column.saturating_add(1);
-        self.end_column = self.end_column.saturating_add(1);
+        self.column = self.column.saturating_add(1);
     }
 
     #[inline]
@@ -313,23 +307,25 @@ impl Lexer {
 
 impl Lexer {
     #[inline]
-    pub fn peek_span(&self) -> (u32, (u32, u32)) {
-        (u32::try_from(self.line).unwrap_or_else(|_| {
-            thrustc_logging::print_critical_error(LoggingType::Error, "The current line is too large to be represented as valid compiler span. Aborting compilation.")
-        }), (u32::try_from(self.span.0).unwrap_or_else(|_| {
-            thrustc_logging::print_critical_error(LoggingType::Error, "The current first span marker is too large to be represented as valid compiler span. Aborting compilation.")
-        }), u32::try_from(self.span.1).unwrap_or_else(|_| {
-            thrustc_logging::print_critical_error(LoggingType::Error, "The current last span marker is too large to be represented as valid compiler span. Aborting compilation.")
-        })))
+    pub fn span(&self) -> (u32, (u32, u32)) {
+        (
+            u32::try_from(self.line).unwrap_or(u32::MAX),
+            (
+                u32::try_from(self.span.0).unwrap_or(u32::MAX),
+                u32::try_from(self.span.1).unwrap_or(u32::MAX),
+            ),
+        )
     }
+}
 
+impl Lexer {
     #[inline]
     pub fn start_span(&mut self) {
-        self.span.0 = self.start_column;
+        self.span.0 = self.column;
     }
 
     #[inline]
     pub fn end_span(&mut self) {
-        self.span.1 = self.end_column;
+        self.span.1 = self.column;
     }
 }

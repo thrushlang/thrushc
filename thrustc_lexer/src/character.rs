@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::Token;
@@ -29,7 +28,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
     let char: char = match lexer.advance() {
         '\\' => {
             lexer.end_span();
-            let span: Span = Span::new(lexer.peek_span());
+            let span: Span = Span::new(lexer.span());
 
             self::handle_char_scape_sequence(lexer, span)?
         }
@@ -39,7 +38,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
     lexer.end_span();
 
-    let span: Span = Span::new(lexer.peek_span());
+    let span: Span = Span::new(lexer.span());
 
     lexer.advance_only();
 

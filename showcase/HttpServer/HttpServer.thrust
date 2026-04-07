@@ -9,7 +9,7 @@ fn perror(msg: const array[char]) void @public @arbitraryArgs @extern("perror") 
 
 fn socket(domain: s32, type_: s32, protocol: s32) s32 @public @extern("socket") @convention("C");
 fn bind(sockfd: s32, addr_: ptr, addrlen: u32) s32 @public @extern("bind") @convention("C");
-fn listen(sockfd: s32, backlog: s32) s32 @public @extern("listen") @convention("C");
+fn listen(sockfd: s32, addr_: s32) s32 @public @extern("listen") @convention("C");
 fn accept(sockfd: s32, addr_: ptr, addrlen: ptr[u32]) s32 @public @extern("accept") @convention("C");
 fn read(fd: s32, buf: ptr, count: u32) s32 @public @extern("read") @convention("C");
 fn writef(fd: s32, buf: ptr, count: u32) s32 @public @extern("write") @convention("C");

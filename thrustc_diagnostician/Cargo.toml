@@ -8,6 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 colored = "3.0.0"
+term_size = "0.3.2"
 
 thrustc_options = { path = "../thrustc_options" }
 thrustc_logging = { path = "../thrustc_logging" }

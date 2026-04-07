@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::Token;
@@ -45,7 +44,7 @@ pub fn lex(lexer: &mut Lexer, null_terminated: bool) -> Result<(), CompilationIs
 
     lexer.end_span();
 
-    let span: Span = Span::new(lexer.peek_span());
+    let span: Span = Span::new(lexer.span());
 
     if !null_terminated && content.chars().any(|ch| ch == '\0') {
         return Err(CompilationIssue::Error(
@@ -78,7 +77,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
     if lexer.is_eof() {
         lexer.end_span();
 
-        let span: Span = Span::new(lexer.peek_span());
+        let span: Span = Span::new(lexer.span());
 
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
@@ -102,7 +101,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
         _ => {
             lexer.end_span();
 
-            let span: Span = Span::new(lexer.peek_span());
+            let span: Span = Span::new(lexer.span());
 
             Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
