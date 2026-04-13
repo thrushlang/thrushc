@@ -48,7 +48,6 @@ mod stack;
 mod statements;
 mod r#static;
 mod table;
-mod target_triple;
 mod traits;
 mod typegeneration;
 mod types;

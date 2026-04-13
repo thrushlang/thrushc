@@ -30,8 +30,9 @@ use inkwell::values::MetadataValue;
 use thrustc_options::CompilerOptions;
 use thrustc_options::backends::llvm::LLVMBackend;
 
+use thrustc_llvm_target_triple::LLVMTargetTriple;
+
 use crate::context::LLVMCodeGenContext;
-use crate::target_triple::LLVMTargetTriple;
 
 #[derive(Debug)]
 pub struct LLVMMetadata<'a, 'ctx> {

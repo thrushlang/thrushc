@@ -40,7 +40,7 @@ members = [
     "thrustc_heap_allocator", 
     "thrustc_ast_external", 
     "thrustc_cli",
-    "thrustc_utils",  
+    "thrustc_utils", "thrustc_layout", "thrustc_llvm_target_triple",  
 ]
 
 exclude = [

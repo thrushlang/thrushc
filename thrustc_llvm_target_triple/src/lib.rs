@@ -245,7 +245,7 @@ impl LLVMTargetTriple {
     }
 
     #[inline]
-    fn is_os_darwin(&self) -> bool {
+    pub fn is_os_darwin(&self) -> bool {
         // https://llvm.org/doxygen/Triple_8cpp_source.html
         // https://github.com/llvm/llvm-project/blob/648193e1619f7af68230f6eddc526af542446cd8/llvm/include/llvm/TargetParser/Triple.h#L804
 
@@ -268,7 +268,64 @@ impl LLVMTargetTriple {
             || self.os.contains("xros")
     }
 
-    fn get_normalized(&self) -> String {
+    #[inline]
+    pub fn is_x86_64(&self) -> bool {
+        matches!(self.arch.as_str(), "x86_64" | "amd64")
+    }
+
+    #[inline]
+    pub fn is_aarch64(&self) -> bool {
+        matches!(
+            self.arch.as_str(),
+            "aarch64" | "arm64" | "aarch64_32" | "aarch64_be"
+        )
+    }
+
+    #[inline]
+    pub fn is_riscv64(&self) -> bool {
+        matches!(self.arch.as_str(), "riscv64" | "riscv64be")
+    }
+
+    #[inline]
+    pub fn is_ppc64(&self) -> bool {
+        matches!(self.arch.as_str(), "ppc64" | "ppc64le" | "powerpc64le")
+    }
+
+    #[inline]
+    pub fn is_mips64(&self) -> bool {
+        matches!(self.arch.as_str(), "mips64" | "mips64el")
+    }
+
+    #[inline]
+    pub fn is_systemz(&self) -> bool {
+        matches!(self.arch.as_str(), "systemz" | "s390x")
+    }
+
+    #[inline]
+    pub fn is_loongarch64(&self) -> bool {
+        self.arch == "loongarch64"
+    }
+
+    #[inline]
+    pub fn is_wasm64(&self) -> bool {
+        self.arch == "wasm64" || self.arch.starts_with("wasm64")
+    }
+
+    #[inline]
+    pub fn is_64_bit(&self) -> bool {
+        self.is_x86_64()
+            || self.is_aarch64()
+            || self.is_wasm64()
+            || self.is_riscv64()
+            || self.is_ppc64()
+            || self.is_mips64()
+            || self.is_systemz()
+            || self.is_loongarch64()
+            || self.arch.contains("64")
+    }
+
+    #[inline]
+    pub fn get_normalized(&self) -> String {
         format!("{}-{}-{}-{}", self.arch, self.vendor, self.os, self.abi)
     }
 }

@@ -51,7 +51,8 @@ use thrustc_options::backends::llvm::Sanitizer;
 use thrustc_options::backends::llvm::SymbolLinkageMergeStrategy;
 use thrustc_options::backends::llvm::passes::LLVMModificatorPasses;
 
-use crate::target_triple::LLVMTargetTriple;
+use thrustc_llvm_target_triple::LLVMTargetTriple;
+
 use crate::utils;
 
 #[derive(Debug)]

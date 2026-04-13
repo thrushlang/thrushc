@@ -268,7 +268,7 @@ pub fn compile<'ctx>(
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
-                    "Failed to compile 'halloc' builtin!",
+                    "Failed to compile 'malloc' builtin!",
                     span,
                     std::path::PathBuf::from(file!()),
                     line!(),
@@ -321,11 +321,13 @@ pub fn compile<'ctx>(
         }
         LLVMBuiltin::BitSizeOf { of, span } => {
             let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
-            let bit_size: u64 = context.get_target_data().get_bit_size(&llvm_type);
+            let bit_size_bits: u64 = context.get_target_data().get_bit_size(&llvm_type);
+            let bit_size_bytes: u64 = bit_size_bits.saturating_div(8);
+
             let size: BasicValueEnum = context
                 .get_llvm_context()
                 .i64_type()
-                .const_int(bit_size, false)
+                .const_int(bit_size_bytes, false)
                 .into();
 
             cast::try_cast(context, cast_type, &Type::U64(span), size, span)
