@@ -17,9 +17,8 @@
 
 */
 
-
 use thrustc_span::Span;
-use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
+use thrustc_typesystem::{Type, type_modificators::StructureTypeModificator};
 
 use crate::Ast;
 

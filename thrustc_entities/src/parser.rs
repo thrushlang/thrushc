@@ -17,14 +17,13 @@
 
 */
 
-
 use thrustc_ast::{
     data::EnumData,
     metadata::{FunctionParameterMetadata, LocalMetadata, StaticMetadata},
 };
 use thrustc_attributes::ThrustAttributes;
 use thrustc_span::Span;
-use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
+use thrustc_typesystem::{Type, type_modificators::StructureTypeModificator};
 
 use ahash::AHashMap as HashMap;
 

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_span::Span;
 
 use crate::{Type, traits::TypeCodeLocation};

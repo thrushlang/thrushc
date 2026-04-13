@@ -30,7 +30,7 @@ use thrustc_entities::parser::{
 use thrustc_errors::{CompilationIssue, CompilationPosition};
 use thrustc_span::Span;
 use thrustc_typesystem::{
-    Type, modificators::StructureTypeModificator, traits::TypeStructExtensions,
+    Type, traits::TypeStructExtensions, type_modificators::StructureTypeModificator,
 };
 
 use crate::traits::{

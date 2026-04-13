@@ -23,7 +23,7 @@ use thrustc_ast::{
 };
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
-use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
+use thrustc_typesystem::{Type, type_modificators::StructureTypeModificator};
 
 pub trait FoundSymbolExtensions {
     fn is_custom_type(&self) -> bool;

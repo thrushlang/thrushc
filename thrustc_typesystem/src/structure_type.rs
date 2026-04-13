@@ -17,10 +17,9 @@
 
 */
 
-
 use thrustc_span::Span;
 
-use crate::{Type, modificators::StructureTypeModificator, traits::TypeStructExtensions};
+use crate::{Type, traits::TypeStructExtensions, type_modificators::StructureTypeModificator};
 
 impl TypeStructExtensions for Type {
     #[inline]

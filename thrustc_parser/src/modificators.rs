@@ -17,10 +17,9 @@
 
 */
 
-
 use thrustc_attributes::ThrustAttributes;
 
-use thrustc_typesystem::modificators::{
+use thrustc_typesystem::type_modificators::{
     GCCStructureTypeModificator, LLVMStructureTypeModificator, StructureTypeModificator,
 };
 

@@ -21,7 +21,7 @@ use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 
 use crate::Type;
-use crate::modificators::StructureTypeModificator;
+use crate::type_modificators::StructureTypeModificator;
 
 pub trait TypeIsExtensions {
     fn is_char_type(&self) -> bool;
@@ -56,6 +56,7 @@ pub trait IndexExtensions {
 pub trait TypeExtensions {
     fn get_type_with_depth(&self, base_depth: usize) -> &Type;
     fn get_type_ref(&self) -> Type;
+
     fn is_value(&self) -> bool;
     fn is_const_value(&self) -> bool;
 }

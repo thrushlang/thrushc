@@ -16,7 +16,8 @@ members = [
     "thrustc_options",
     "thrustc_mir", 
     "thrustc_token", 
-    "thrustc_attributes", 
+    "thrustc_attributes",
+    "thrustc_attribute_checker",  
     "thrustc_typechecker", 
     "thrustc_scoper", 
     "thrustc_analyzer", 
@@ -29,8 +30,8 @@ members = [
     "thrustc_preprocessor",
     "thrustc_llvm_codegen", 
     "thrustc_llvm_attributes", 
-    "thrustc_llvm_callconventions", 
-    "thrustc_attribute_checker", 
+    "thrustc_llvm_callconventions",
+    "thrustc_llvm_target_triple",
     "thrustc_llvm_intrinsic_checker", 
     "thrustc_llvm_callconventions_checker", 
     "thrustc_modificators", 
@@ -40,7 +41,7 @@ members = [
     "thrustc_heap_allocator", 
     "thrustc_ast_external", 
     "thrustc_cli",
-    "thrustc_utils", "thrustc_layout", "thrustc_llvm_target_triple",  
+    "thrustc_utils", 
 ]
 
 exclude = [

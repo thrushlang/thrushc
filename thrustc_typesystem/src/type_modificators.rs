@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(dead_code)]
 
 use std::fmt::Display;
@@ -26,7 +25,7 @@ use std::fmt::Display;
 use arbitrary::Arbitrary;
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default)]
 pub struct FunctionReferenceTypeModificator {
     llvm: LLVMFunctionReferenceTypeModificator,
     gcc: GCCFunctionReferenceTypeModificator,
@@ -55,7 +54,7 @@ impl FunctionReferenceTypeModificator {
 }
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default)]
 pub struct LLVMFunctionReferenceTypeModificator {
     ignore_args: bool,
 }
@@ -73,7 +72,7 @@ impl LLVMFunctionReferenceTypeModificator {
 }
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default)]
 pub struct GCCFunctionReferenceTypeModificator {}
 
 impl GCCFunctionReferenceTypeModificator {
@@ -84,7 +83,7 @@ impl GCCFunctionReferenceTypeModificator {
 }
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default)]
 pub struct StructureTypeModificator {
     llvm: LLVMStructureTypeModificator,
     gcc: GCCStructureTypeModificator,
@@ -108,7 +107,7 @@ impl StructureTypeModificator {
 }
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default)]
 pub struct GCCStructureTypeModificator {}
 
 impl GCCStructureTypeModificator {
@@ -119,7 +118,7 @@ impl GCCStructureTypeModificator {
 }
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default)]
 pub struct LLVMStructureTypeModificator {
     packed: bool,
 }

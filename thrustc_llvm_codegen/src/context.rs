@@ -30,10 +30,12 @@ use inkwell::values::BasicValueEnum;
 use inkwell::values::PointerValue;
 
 use thrustc_diagnostician::Diagnostician;
+use thrustc_llvm_target_triple::LLVMTargetTriple;
 use thrustc_options::CompilationUnit;
 use thrustc_options::CompilerOptions;
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
+use thrustc_typesystem::type_layout::TargetInfo;
 
 use crate::abort;
 use crate::anchor::PointerAnchor;
@@ -54,6 +56,7 @@ pub struct LLVMCodeGenContext<'a, 'ctx> {
     module: &'a Module<'ctx>,
     context: &'ctx Context,
     builder: &'ctx Builder<'ctx>,
+    target_info: TargetInfo,
     target_data: TargetData,
     target_triple: TargetTriple,
     target_machine: &'a TargetMachine,
@@ -97,10 +100,13 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             None
         };
 
+        let target_info: TargetInfo = TargetInfo::new(LLVMTargetTriple::new(&target_triple));
+
         Self {
             module,
             context,
             builder,
+            target_info,
             target_data,
             target_triple,
             target_machine,
@@ -300,6 +306,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     }
 
     #[inline]
+    pub fn get_target_info(&self) -> &TargetInfo {
+        &self.target_info
+    }
+
+    #[inline]
     pub fn get_target_data(&self) -> &TargetData {
         &self.target_data
     }
@@ -385,6 +396,11 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
     #[inline]
     pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
         &mut self.diagnostician
+    }
+
+    #[inline]
+    pub fn get_mut_target_info(&mut self) -> &mut TargetInfo {
+        &mut self.target_info
     }
 
     #[inline]

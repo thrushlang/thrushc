@@ -19,7 +19,7 @@
 
 use inkwell::{
     builder::Builder,
-    types::{BasicType, BasicTypeEnum},
+    types::BasicTypeEnum,
     values::{BasicValueEnum, IntValue, PointerValue},
 };
 use thrustc_ast::traits::AstCodeLocation;
@@ -291,19 +291,20 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::U32(span), alignment, span)
         }
         LLVMBuiltin::SizeOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegeneration::generate_type_for_size_of(context, of);
+            let type_layout_result: either::Either<
+                thrustc_typesystem::type_layout::TypeLayout,
+                thrustc_typesystem::type_layout::StructTypeLayout,
+            > = context.get_mut_target_info().get_type_layout(of);
 
-            let sizeof_value: BasicValueEnum = llvm_type
-                .size_of()
-                .unwrap_or_else(|| {
-                    abort::abort_codegen(
-                        context,
-                        "Failed to compile 'sizeOf' builtin!",
-                        span,
-                        std::path::PathBuf::from(file!()),
-                        line!(),
-                    )
-                })
+            let size_of: u32 = match type_layout_result {
+                either::Either::Left(t) => t.into_layout().sizeof,
+                either::Either::Right(t) => t.into_layout().sizeof,
+            };
+
+            let sizeof_value: BasicValueEnum = context
+                .get_llvm_context()
+                .i32_type()
+                .const_int(size_of.into(), false)
                 .into();
 
             cast::try_cast(context, cast_type, &Type::USize(span), sizeof_value, span)

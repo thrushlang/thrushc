@@ -32,11 +32,11 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{
     Type,
-    modificators::{
+    traits::{TypeIsExtensions, TypePointerExtensions},
+    type_modificators::{
         FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
         LLVMFunctionReferenceTypeModificator,
     },
-    traits::{TypeIsExtensions, TypePointerExtensions},
 };
 
 use thrustc_parser_table::traits::{

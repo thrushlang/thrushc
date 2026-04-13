@@ -13,20 +13,18 @@ main:
 	subq	$48, %rsp
 	movq	%fs:40, %rax
 	movq	%rax, -8(%rbp)
-	xorl	%eax, %eax
-	addq	$16, %rax
-	movl	%eax, -28(%rbp)
-	movl	.Lglobal.constant.MFXeQmXAF_INET(%rip), %edi
-	movl	.Lglobal.constant.rMtPubFzULiSOCK_STREAM(%rip), %esi
+	movl	$16, -28(%rbp)
+	movl	.Lglobal.constant.eWGsGEENtJAF_INET, %edi
+	movl	.Lglobal.constant.DyStUVcTSOCK_STREAM, %esi
 	xorl	%edx, %edx
 	callq	socket@PLT
 	movl	%eax, -32(%rbp)
 	cmpl	$-1, -32(%rbp)
 	je	.LBB0_2
-	movl	.Lglobal.constant.MFXeQmXAF_INET(%rip), %eax
+	movl	.Lglobal.constant.eWGsGEENtJAF_INET, %eax
 	movw	%ax, -24(%rbp)
 	movw	$-28641, -22(%rbp)
-	movl	.Lglobal.constant.aGYRkZCGINADDR_ANY(%rip), %eax
+	movl	.Lglobal.constant.NqOgTINADDR_ANY, %eax
 	movl	%eax, -20(%rbp)
 	movl	-32(%rbp), %edi
 	movl	-28(%rbp), %edx
@@ -36,7 +34,7 @@ main:
 	jl	.LBB0_5
 	jmp	.LBB0_4
 .LBB0_2:
-	leaq	.LstrAUpaivVSWrFV(%rip), %rdi
+	movl	$.LstrKsduhuhCWe, %edi
 	xorl	%eax, %eax
 	callq	perror@PLT
 	movq	%fs:40, %rax
@@ -57,7 +55,7 @@ main:
 	jl	.LBB0_8
 	jmp	.LBB0_7
 .LBB0_5:
-	leaq	.LstrVuPTLuWEl(%rip), %rdi
+	movl	$.LstrVfPvxcqAHpS, %edi
 	xorl	%eax, %eax
 	callq	perror@PLT
 	movl	-32(%rbp), %edi
@@ -73,15 +71,15 @@ main:
 	retq
 .LBB0_7:
 	.cfi_def_cfa %rbp, 16
-	leaq	.LstrpcWFJfMCW(%rip), %rdi
+	movabsq	$.LstrvidXw, %rdi
 	movb	$0, %al
 	callq	printf@PLT
-	leaq	.LstrftNoexeKaOYu(%rip), %rdi
+	movabsq	$.LstrYDzQScET, %rdi
 	movb	$0, %al
 	callq	printf@PLT
 	jmp	.LBB0_10
 .LBB0_8:
-	leaq	.LstrsiuosKBTMocf(%rip), %rdi
+	movl	$.LstrcIudy, %edi
 	xorl	%eax, %eax
 	callq	perror@PLT
 	movl	-32(%rbp), %edi
@@ -109,7 +107,7 @@ main:
 	movl	%eax, -36(%rbp)
 	cmpl	$0, -36(%rbp)
 	jge	.LBB0_13
-	leaq	.LstrdYwFCnNSEpL(%rip), %rdi
+	movabsq	$.LstrADDUnaFh, %rdi
 	movb	$0, %al
 	callq	perror@PLT
 	jmp	.LBB0_10
@@ -124,22 +122,11 @@ main:
 	movq	%rax, %rcx
 	addq	$-16, %rcx
 	movq	%rcx, %rsp
-	leaq	.LstrMUbnsuXjQ(%rip), %rdx
-	movq	%rdx, -16(%rax)
+	movq	$.LstraohTtOT, -16(%rax)
 	movq	%rsp, %rax
 	addq	$-16, %rax
-	movq	%rax, -48(%rbp)
 	movq	%rax, %rsp
-	xorl	%eax, %eax
-	movl	%eax, %esi
-	movq	%rsi, %rax
-	addq	$217, %rax
-	addq	$1, %rsi
-	xorl	%edx, %edx
-	divq	%rsi
-	movq	%rax, %rdx
-	movq	-48(%rbp), %rax
-	movq	%rdx, (%rax)
+	movl	$180, (%rax)
 	movl	-36(%rbp), %edi
 	movq	(%rcx), %rsi
 	movq	(%rax), %rax
@@ -167,60 +154,60 @@ main:
 	.size	main, .Lfunc_end0-main
 	.cfi_endproc
 
-	.type	.Lglobal.constant.aGYRkZCGINADDR_ANY,@object
+	.type	.Lglobal.constant.NqOgTINADDR_ANY,@object
 	.section	.rodata.cst4,"aM",@progbits,4
 	.p2align	2, 0x0
-.Lglobal.constant.aGYRkZCGINADDR_ANY:
+.Lglobal.constant.NqOgTINADDR_ANY:
 	.long	0
-	.size	.Lglobal.constant.aGYRkZCGINADDR_ANY, 4
+	.size	.Lglobal.constant.NqOgTINADDR_ANY, 4
 
-	.type	.Lglobal.constant.rMtPubFzULiSOCK_STREAM,@object
+	.type	.Lglobal.constant.DyStUVcTSOCK_STREAM,@object
 	.p2align	2, 0x0
-.Lglobal.constant.rMtPubFzULiSOCK_STREAM:
+.Lglobal.constant.DyStUVcTSOCK_STREAM:
 	.long	1
-	.size	.Lglobal.constant.rMtPubFzULiSOCK_STREAM, 4
+	.size	.Lglobal.constant.DyStUVcTSOCK_STREAM, 4
 
-	.type	.Lglobal.constant.MFXeQmXAF_INET,@object
+	.type	.Lglobal.constant.eWGsGEENtJAF_INET,@object
 	.p2align	2, 0x0
-.Lglobal.constant.MFXeQmXAF_INET:
+.Lglobal.constant.eWGsGEENtJAF_INET:
 	.long	2
-	.size	.Lglobal.constant.MFXeQmXAF_INET, 4
+	.size	.Lglobal.constant.eWGsGEENtJAF_INET, 4
 
-	.type	.LstrAUpaivVSWrFV,@object
+	.type	.LstrKsduhuhCWe,@object
 	.section	.rodata,"a",@progbits
-.LstrAUpaivVSWrFV:
+.LstrKsduhuhCWe:
 	.asciz	"socket failed"
-	.size	.LstrAUpaivVSWrFV, 14
+	.size	.LstrKsduhuhCWe, 14
 
-	.type	.LstrVuPTLuWEl,@object
-.LstrVuPTLuWEl:
+	.type	.LstrVfPvxcqAHpS,@object
+.LstrVfPvxcqAHpS:
 	.asciz	"bind failed"
-	.size	.LstrVuPTLuWEl, 12
+	.size	.LstrVfPvxcqAHpS, 12
 
-	.type	.LstrsiuosKBTMocf,@object
-.LstrsiuosKBTMocf:
+	.type	.LstrcIudy,@object
+.LstrcIudy:
 	.asciz	"listen failed"
-	.size	.LstrsiuosKBTMocf, 14
+	.size	.LstrcIudy, 14
 
-	.type	.LstrpcWFJfMCW,@object
-.LstrpcWFJfMCW:
+	.type	.LstrvidXw,@object
+.LstrvidXw:
 	.asciz	"HTTP Server running on http://127.0.0.1:8080\n"
-	.size	.LstrpcWFJfMCW, 46
+	.size	.LstrvidXw, 46
 
-	.type	.LstrftNoexeKaOYu,@object
-.LstrftNoexeKaOYu:
+	.type	.LstrYDzQScET,@object
+.LstrYDzQScET:
 	.asciz	"Press Ctrl+C to stop...\n\n"
-	.size	.LstrftNoexeKaOYu, 26
+	.size	.LstrYDzQScET, 26
 
-	.type	.LstrdYwFCnNSEpL,@object
-.LstrdYwFCnNSEpL:
+	.type	.LstrADDUnaFh,@object
+.LstrADDUnaFh:
 	.asciz	"accept failed"
-	.size	.LstrdYwFCnNSEpL, 14
+	.size	.LstrADDUnaFh, 14
 
-	.type	.LstrMUbnsuXjQ,@object
-.LstrMUbnsuXjQ:
-	.asciz	"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<html><head><title>Thrust Server</title></head><body><h1>\302\241Hola desde Thrust!</h1><p>Servidor funcionando correctamente.</p></body></html>"
-	.size	.LstrMUbnsuXjQ, 217
+	.type	.LstraohTtOT,@object
+.LstraohTtOT:
+	.asciz	"HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n<html><head><title>Thrust Http Server</title></head><body><h2>\302\241Hello from Thrust!</h2></body></html>"
+	.size	.LstraohTtOT, 180
 
 	.ident	"thrustc version 0.1.0"
 	.section	".note.GNU-stack","",@progbits

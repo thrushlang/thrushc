@@ -17,6 +17,9 @@
 
 */
 
+use std::hash::Hash;
+use std::hash::Hasher;
+
 use crate::{
     Type,
     traits::{TypeCodeLocation, TypeExtensions, TypeIsExtensions},
@@ -252,6 +255,63 @@ impl TypeExtensions for Type {
     #[inline]
     fn get_type_ref(&self) -> Type {
         Type::Ptr(Some(self.clone().into()), self.get_span())
+    }
+}
+
+impl Hash for Type {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+
+        match self {
+            Type::S8(_)
+            | Type::S16(_)
+            | Type::S32(_)
+            | Type::S64(_)
+            | Type::SSize(_)
+            | Type::U8(_)
+            | Type::U16(_)
+            | Type::U32(_)
+            | Type::U64(_)
+            | Type::U128(_)
+            | Type::USize(_)
+            | Type::F32(_)
+            | Type::F64(_)
+            | Type::F128(_)
+            | Type::FX8680(_)
+            | Type::FPPC128(_)
+            | Type::Bool(_)
+            | Type::Char(_)
+            | Type::Addr(_)
+            | Type::Void(_) => {}
+
+            Type::Const(inner, _) => inner.hash(state),
+            Type::Ptr(inner, _) => inner.hash(state),
+            Type::Struct(name, fields, modifier, _) => {
+                name.hash(state);
+                fields.hash(state);
+                modifier.hash(state);
+            }
+            Type::FixedArray(inner, size, _) => {
+                inner.hash(state);
+                size.hash(state);
+            }
+            Type::Array {
+                base_type,
+                infered_type,
+                ..
+            } => {
+                base_type.hash(state);
+                infered_type.hash(state);
+            }
+            Type::Fn(params, ret, modifier, _) => {
+                params.hash(state);
+                ret.hash(state);
+                modifier.hash(state);
+            }
+            Type::Unresolved { hint, .. } => {
+                hint.hash(state);
+            }
+        }
     }
 }
 

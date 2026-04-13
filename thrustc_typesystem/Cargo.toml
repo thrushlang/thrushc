@@ -7,8 +7,13 @@ version.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ahash = "0.8.11"
+either = "1.15.0"
+
 thrustc_span = { path = "../thrustc_span" }
 thrustc_token_type = { path = "../thrustc_token_type" }
+
+thrustc_llvm_target_triple = { path = "../thrustc_llvm_target_triple" }
 
 arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
 

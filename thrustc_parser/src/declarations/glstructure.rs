@@ -23,7 +23,7 @@ use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
-use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
+use thrustc_typesystem::{Type, type_modificators::StructureTypeModificator};
 
 use thrustc_ast::traits::AstStructureDataExtensions;
 

@@ -1,23 +1,58 @@
 #![allow(clippy::field_reassign_with_default)]
 
 use thrustc_llvm_target_triple::LLVMTargetTriple;
-use thrustc_typesystem::Type;
 
-#[derive(Debug, Clone, Copy, Default)]
+use ahash::AHashMap as HashMap;
+use either::Either;
+
+use super::Type;
+
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Layout {
+    pub width: u32,
+    pub align: u32,
+    pub sizeof: u32,
+    pub field_offsets: Vec<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct TypeLayout {
     pub width: u32,
     pub align: u32,
     pub sizeof: u32,
 }
 
-#[derive(Debug)]
+impl TypeLayout {
+    pub fn into_layout(self) -> Layout {
+        Layout {
+            width: self.width,
+            align: self.align,
+            sizeof: self.sizeof,
+            field_offsets: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct StructTypeLayout {
     pub width: u32,
     pub align: u32,
+    pub sizeof: u32,
     pub field_offsets: Vec<u32>,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+impl StructTypeLayout {
+    pub fn into_layout(self) -> Layout {
+        Layout {
+            width: self.width,
+            align: self.align,
+            sizeof: self.sizeof,
+            field_offsets: self.field_offsets,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct TargetInfo {
     bool_width: u32,
     bool_align: u32,
@@ -52,6 +87,8 @@ pub struct TargetInfo {
 
     ptr_width: u32,
     ptr_align: u32,
+
+    type_cached: HashMap<Type, Either<TypeLayout, StructTypeLayout>>,
 }
 
 impl TargetInfo {
@@ -238,11 +275,18 @@ impl TargetInfo {
 }
 
 impl TargetInfo {
-    pub fn get_type_info(&self, r#type: &Type) -> either::Either<TypeLayout, StructTypeLayout> {
+    pub fn get_type_layout(
+        &mut self,
+        r#type: &Type,
+    ) -> either::Either<TypeLayout, StructTypeLayout> {
+        if let Some(cached) = self.type_cached.get(r#type).cloned() {
+            return cached;
+        }
+
         let mut type_info: TypeLayout = TypeLayout::default();
 
-        match r#type {
-            Type::Const(subtype, ..) => self.get_type_info(subtype),
+        let layout: Either<TypeLayout, StructTypeLayout> = match r#type {
+            Type::Const(subtype, ..) => self.get_type_layout(subtype),
 
             Type::Bool(..) => {
                 type_info.width = self.bool_width();
@@ -357,14 +401,14 @@ impl TargetInfo {
             }
 
             Type::FixedArray(element_type, size, ..) => {
-                let element_width: u32 = match self.get_type_info(element_type) {
-                    either::Either::Left(lft) => lft.width,
-                    either::Either::Right(rht) => rht.width,
+                let element_width: u32 = match self.get_type_layout(element_type) {
+                    either::Either::Left(left) => left.width,
+                    either::Either::Right(right) => right.width,
                 };
 
-                let element_align: u32 = match self.get_type_info(element_type) {
-                    either::Either::Left(lft) => lft.align,
-                    either::Either::Right(rht) => rht.align,
+                let element_align: u32 = match self.get_type_layout(element_type) {
+                    either::Either::Left(left) => left.align,
+                    either::Either::Right(right) => right.align,
                 };
 
                 type_info.width = element_width * size;
@@ -396,12 +440,12 @@ impl TargetInfo {
 
                     either::Either::Left(type_info)
                 } else {
-                    let element_width: u32 = match self.get_type_info(element_type) {
+                    let element_width: u32 = match self.get_type_layout(element_type) {
                         either::Either::Left(lft) => lft.width,
                         either::Either::Right(rht) => rht.width,
                     };
 
-                    let element_align: u32 = match self.get_type_info(element_type) {
+                    let element_align: u32 = match self.get_type_layout(element_type) {
                         either::Either::Left(lft) => lft.align,
                         either::Either::Right(rht) => rht.align,
                     };
@@ -415,51 +459,45 @@ impl TargetInfo {
             }
 
             Type::Struct(_, types, _, _) => {
-                let mut current_offset: u32 = 0;
-                let mut max_alignment: u32 = 1;
-                let mut field_offsets: Vec<u32> = Vec::new();
+                let mut current_offset_bits: u32 = 0;
+                let mut max_align_bits: u32 = 1;
+                let mut field_offsets_bits: Vec<u32> = Vec::with_capacity(types.len());
 
                 for field in types {
-                    let field_width: u32 = match self.get_type_info(field) {
-                        either::Either::Left(lft) => lft.width,
-                        either::Either::Right(rht) => rht.width,
+                    let layout: Either<TypeLayout, StructTypeLayout> = self.get_type_layout(field);
+
+                    let (f_width, f_align) = match layout {
+                        Either::Left(l) => (l.width, l.align),
+                        Either::Right(r) => (r.width, r.align),
                     };
 
-                    let field_align: u32 = match self.get_type_info(field) {
-                        either::Either::Left(lft) => lft.align,
-                        either::Either::Right(rht) => rht.align,
-                    };
+                    if f_align > 0 {
+                        current_offset_bits = current_offset_bits.div_ceil(f_align) * f_align;
+                    }
 
-                    let field_size: u32 = field_width / self.i8_align();
-                    let field_align: u32 = field_align / self.i8_align();
+                    field_offsets_bits.push(current_offset_bits);
 
-                    current_offset = align_to(current_offset, field_align);
+                    current_offset_bits = current_offset_bits.saturating_add(f_width);
 
-                    field_offsets.push(current_offset);
-
-                    current_offset = current_offset.saturating_add(field_size);
-
-                    if field_align > max_alignment {
-                        max_alignment = field_align;
+                    if f_align > max_align_bits {
+                        max_align_bits = f_align;
                     }
                 }
 
-                let total_size: u32 = align_to(current_offset, max_alignment);
+                let total_width_bits: u32 =
+                    current_offset_bits.div_ceil(max_align_bits) * max_align_bits;
 
                 either::Either::Right(StructTypeLayout {
-                    width: total_size,
-                    align: max_alignment,
-                    field_offsets,
+                    width: total_width_bits,
+                    align: max_align_bits,
+                    sizeof: total_width_bits / self.i8_width,
+                    field_offsets: field_offsets_bits,
                 })
             }
-        }
-    }
-}
+        };
 
-pub fn align_to(value: u32, align: u32) -> u32 {
-    if align == 0 {
-        return value;
-    }
+        self.type_cached.insert(r#type.clone(), layout.clone());
 
-    value.div_ceil(align) * align
+        layout
+    }
 }

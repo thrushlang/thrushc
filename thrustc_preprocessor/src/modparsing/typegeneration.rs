@@ -30,11 +30,11 @@ use thrustc_token_type::TokenType;
 use thrustc_token_type::traits::TokenTypeExtensions;
 use thrustc_typesystem::{
     Type,
-    modificators::{
+    traits::TypeIsExtensions,
+    type_modificators::{
         FunctionReferenceTypeModificator, GCCFunctionReferenceTypeModificator,
         LLVMFunctionReferenceTypeModificator,
     },
-    traits::TypeIsExtensions,
 };
 
 use crate::{

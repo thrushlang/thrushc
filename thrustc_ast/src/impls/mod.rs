@@ -22,8 +22,8 @@ use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::{
     Type,
-    modificators::StructureTypeModificator,
     traits::{TypePointerExtensions, TypeStructExtensions},
+    type_modificators::StructureTypeModificator,
 };
 
 use crate::{
@@ -340,7 +340,7 @@ impl<'a> AstStructureDataExtensions<'a> for StructureData<'a> {
     #[inline]
     fn new(
         name: &'a str,
-        modificator: thrustc_typesystem::modificators::StructureTypeModificator,
+        modificator: thrustc_typesystem::type_modificators::StructureTypeModificator,
         span: thrustc_span::Span,
     ) -> Self {
         (

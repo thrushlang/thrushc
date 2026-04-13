@@ -17,33 +17,34 @@
 
 */
 
-mod array;
-mod casting;
-mod constant;
-mod dereference;
-mod fixedarray;
-mod fnref;
-mod general;
-mod index;
-mod inferer;
-mod location;
-pub mod modificators;
-mod pointer;
-mod precendece;
-mod structure;
+mod array_type;
+mod constant_type;
+mod fixed_array_type;
+mod function_reference_type;
+mod impls;
+mod pointer_dereference;
+mod pointer_type;
+mod structure_type;
 pub mod traits;
-mod void;
+mod type_cast;
+mod type_indexation;
+mod type_inference;
+pub mod type_layout;
+mod type_location;
+pub mod type_modificators;
+mod type_precendece;
+mod void_type;
 
 use thrustc_span::Span;
 
-use crate::modificators::FunctionReferenceTypeModificator;
-use crate::modificators::StructureTypeModificator;
+use crate::type_modificators::FunctionReferenceTypeModificator;
+use crate::type_modificators::StructureTypeModificator;
 
 #[cfg(feature = "fuzz")]
 use arbitrary::Arbitrary;
 
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq)]
 pub enum Type {
     S8(Span),
     S16(Span),

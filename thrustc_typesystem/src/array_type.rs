@@ -65,7 +65,7 @@ impl TypeArrayEntensions for Type {
             Type::U128(..) => 7,
             Type::USize(..) => 8,
 
-            Type::S8(..) => 9,
+            Type::S8 { .. } => 9,
             Type::S16(..) => 10,
             Type::S32(..) => 11,
             Type::S64(..) => 12,
