@@ -60,6 +60,10 @@ pub trait TypeExtensions {
     fn is_const_value(&self) -> bool;
 }
 
+pub trait ConstantTypeExtensions {
+    fn remove_all_constant_type(&self) -> Type;
+}
+
 pub trait TypeFixedArrayEntensions {
     fn get_fixed_array_base_type(&self) -> Type;
     fn get_fixed_array_type_herarchy(&self) -> u8;

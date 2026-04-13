@@ -57,7 +57,7 @@ pub fn compile_as_function_type<'ctx>(
             Ast::FunctionParameter { kind, .. }
             | Ast::IntrinsicParameter { kind, .. }
             | Ast::AssemblerFunctionParameter { kind, .. } => {
-                parameters_types.push(self::compile_from(context, kind).into());
+                parameters_types.push(self::generate_type(context, kind).into());
             }
 
             _ => {}
@@ -69,12 +69,12 @@ pub fn compile_as_function_type<'ctx>(
             .void_type()
             .fn_type(&parameters_types, is_var_args)
     } else {
-        self::compile_from(context, kind).fn_type(&parameters_types, is_var_args)
+        self::generate_type(context, kind).fn_type(&parameters_types, is_var_args)
     }
 }
 
 #[inline]
-pub fn compile_from_function_type_to_function_type<'ctx>(
+pub fn generate_type_function_type_to_function_type<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
     parameters: &[Type],
@@ -84,21 +84,21 @@ pub fn compile_from_function_type_to_function_type<'ctx>(
 
     let mut parameters_types: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(parameters.len());
 
-    parameters.iter().for_each(|parameter_type| {
-        parameters_types.push(self::compile_from(context, parameter_type).into());
-    });
+    for ty in parameters.iter() {
+        parameters_types.push(self::generate_type(context, ty).into())
+    }
 
     if kind.is_void_type() {
         llvm_context
             .void_type()
             .fn_type(&parameters_types, is_var_args)
     } else {
-        self::compile_from(context, kind).fn_type(&parameters_types, is_var_args)
+        self::generate_type(context, kind).fn_type(&parameters_types, is_var_args)
     }
 }
 
 #[inline]
-pub fn compile_from<'ctx>(
+pub fn generate_type<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
 ) -> BasicTypeEnum<'ctx> {
@@ -116,7 +116,7 @@ pub fn compile_from<'ctx>(
                 .into(),
 
             Type::Bool(..) => llvm_context.bool_type().into(),
-            Type::Const(any, ..) => self::compile_from(context, any),
+            Type::Const(any, ..) => self::generate_type(context, any),
 
             any => abort::abort_codegen(
                 context,
@@ -134,7 +134,7 @@ pub fn compile_from<'ctx>(
             Type::FX8680(..) => llvm_context.x86_f80_type().into(),
             Type::FPPC128(..) => llvm_context.ppc_f128_type().into(),
 
-            Type::Const(any, ..) => self::compile_from(context, any),
+            Type::Const(any, ..) => self::generate_type(context, any),
 
             any => abort::abort_codegen(
                 context,
@@ -147,7 +147,7 @@ pub fn compile_from<'ctx>(
 
         t if t.is_ptr_like_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
 
-        Type::Const(any, ..) => self::compile_from(context, any),
+        Type::Const(any, ..) => self::generate_type(context, any),
 
         Type::Struct(_, fields, modificator, ..) => {
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(u8::MAX as usize);
@@ -156,7 +156,7 @@ pub fn compile_from<'ctx>(
 
             {
                 for ty in fields.iter() {
-                    field_types.push(self::compile_from(context, ty));
+                    field_types.push(self::generate_type(context, ty));
                 }
             }
 
@@ -164,7 +164,7 @@ pub fn compile_from<'ctx>(
         }
 
         Type::FixedArray(kind, size, ..) => {
-            let arraytype: BasicTypeEnum = self::compile_from(context, kind);
+            let arraytype: BasicTypeEnum = self::generate_type(context, kind);
             arraytype.array_type(*size).into()
         }
 
@@ -179,7 +179,7 @@ pub fn compile_from<'ctx>(
 }
 
 #[inline]
-pub fn compile_type_for_size_of<'ctx>(
+pub fn generate_type_for_size_of<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
 ) -> BasicTypeEnum<'ctx> {
@@ -197,7 +197,7 @@ pub fn compile_type_for_size_of<'ctx>(
                 .into(),
 
             Type::Bool(..) => llvm_context.bool_type().into(),
-            Type::Const(any, ..) => self::compile_type_for_size_of(context, any),
+            Type::Const(any, ..) => self::generate_type_for_size_of(context, any),
 
             any => abort::abort_codegen(
                 context,
@@ -215,7 +215,7 @@ pub fn compile_type_for_size_of<'ctx>(
             Type::FX8680(..) => llvm_context.x86_f80_type().into(),
             Type::FPPC128(..) => llvm_context.ppc_f128_type().into(),
 
-            Type::Const(any, ..) => self::compile_type_for_size_of(context, any),
+            Type::Const(any, ..) => self::generate_type_for_size_of(context, any),
 
             any => abort::abort_codegen(
                 context,
@@ -229,11 +229,11 @@ pub fn compile_type_for_size_of<'ctx>(
         Type::Array {
             infered_type: Some((infered_type, _)),
             ..
-        } => self::compile_from(context, infered_type),
+        } => self::generate_type(context, infered_type),
 
         t if t.is_ptr_like_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
 
-        Type::Const(any, ..) => self::compile_type_for_size_of(context, any),
+        Type::Const(any, ..) => self::generate_type_for_size_of(context, any),
 
         Type::Struct(_, fields, modificator, ..) => {
             let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(u8::MAX as usize);
@@ -242,7 +242,7 @@ pub fn compile_type_for_size_of<'ctx>(
 
             {
                 for ty in fields.iter() {
-                    field_types.push(self::compile_type_for_size_of(context, ty));
+                    field_types.push(self::generate_type_for_size_of(context, ty));
                 }
             }
 
@@ -250,7 +250,7 @@ pub fn compile_type_for_size_of<'ctx>(
         }
 
         Type::FixedArray(kind, size, ..) => {
-            let arraytype: BasicTypeEnum = self::compile_type_for_size_of(context, kind);
+            let arraytype: BasicTypeEnum = self::generate_type_for_size_of(context, kind);
             arraytype.array_type(*size).into()
         }
 
@@ -395,23 +395,23 @@ pub fn compile_as_dbg_type<'ctx>(
 }
 
 #[inline]
-pub fn compile_gep_type<'ctx>(
+pub fn generate_pointer_arithmetic_type<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
 ) -> BasicTypeEnum<'ctx> {
     match kind {
-        Type::Const(subtype, ..) => self::compile_gep_type(context, subtype),
+        Type::Const(subtype, ..) => self::generate_pointer_arithmetic_type(context, subtype),
         Type::Array {
             infered_type: Some((infered_type, _)),
             ..
         } if kind.is_inferer_inner_type_is_not_array_decay() => {
-            self::compile_from(context, infered_type)
+            self::generate_type(context, infered_type)
         }
         Type::Array {
             base_type: subtype, ..
-        } => self::compile_from(context, subtype),
-        Type::Ptr(Some(subtype), ..) => self::compile_from(context, subtype),
+        } => self::generate_type(context, subtype),
+        Type::Ptr(Some(subtype), ..) => self::generate_type(context, subtype),
 
-        _ => self::compile_from(context, kind),
+        _ => self::generate_type(context, kind),
     }
 }

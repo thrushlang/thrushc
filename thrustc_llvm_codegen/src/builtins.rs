@@ -138,21 +138,24 @@ pub fn compile<'ctx>(
 
             let src_span: Span = source.get_span();
             let src: PointerValue =
-                codegen::compile_as_ptr(context, source, Some(&Type::Ptr(None, src_span)))
+                codegen::compile_as_ptr_value(context, source, Some(&Type::Ptr(None, src_span)))
                     .into_pointer_value();
 
             let dest_span: Span = destination.get_span();
-            let dest: PointerValue =
-                codegen::compile_as_ptr(context, destination, Some(&Type::Ptr(None, dest_span)))
-                    .into_pointer_value();
+            let dest: PointerValue = codegen::compile_as_ptr_value(
+                context,
+                destination,
+                Some(&Type::Ptr(None, dest_span)),
+            )
+            .into_pointer_value();
 
-            let size: IntValue = codegen::compile(context, size, None).into_int_value();
+            let size: IntValue = codegen::compile_as_value(context, size, None).into_int_value();
 
             let source_type: &Type = source.llvm_get_type();
             let destination_type: &Type = destination.llvm_get_type();
 
-            let src_type: BasicTypeEnum = typegeneration::compile_from(context, source_type);
-            let dest_type: BasicTypeEnum = typegeneration::compile_from(context, destination_type);
+            let src_type: BasicTypeEnum = typegeneration::generate_type(context, source_type);
+            let dest_type: BasicTypeEnum = typegeneration::generate_type(context, destination_type);
 
             let src_alignment: u32 = context.get_target_data().get_preferred_alignment(&src_type);
             let dest_alignment: u32 = context
@@ -182,21 +185,24 @@ pub fn compile<'ctx>(
 
             let src_span: Span = source.get_span();
             let src: PointerValue =
-                codegen::compile_as_ptr(context, source, Some(&Type::Ptr(None, src_span)))
+                codegen::compile_as_ptr_value(context, source, Some(&Type::Ptr(None, src_span)))
                     .into_pointer_value();
 
             let dest_span: Span = destination.get_span();
-            let dest: PointerValue =
-                codegen::compile_as_ptr(context, destination, Some(&Type::Ptr(None, dest_span)))
-                    .into_pointer_value();
+            let dest: PointerValue = codegen::compile_as_ptr_value(
+                context,
+                destination,
+                Some(&Type::Ptr(None, dest_span)),
+            )
+            .into_pointer_value();
 
-            let size: IntValue = codegen::compile(context, size, None).into_int_value();
+            let size: IntValue = codegen::compile_as_value(context, size, None).into_int_value();
 
             let source_type: &Type = source.llvm_get_type();
             let destination_type: &Type = destination.llvm_get_type();
 
-            let src_type: BasicTypeEnum = typegeneration::compile_from(context, source_type);
-            let dest_type: BasicTypeEnum = typegeneration::compile_from(context, destination_type);
+            let src_type: BasicTypeEnum = typegeneration::generate_type(context, source_type);
+            let dest_type: BasicTypeEnum = typegeneration::generate_type(context, destination_type);
 
             let src_alignment: u32 = context.get_target_data().get_preferred_alignment(&src_type);
             let dest_alignment: u32 = context
@@ -225,16 +231,20 @@ pub fn compile<'ctx>(
             let llvm_builder: &Builder = context.get_llvm_builder();
 
             let dest_span: Span = destination.get_span();
-            let dest: PointerValue =
-                codegen::compile_as_ptr(context, destination, Some(&Type::Ptr(None, dest_span)))
-                    .into_pointer_value();
+            let dest: PointerValue = codegen::compile_as_ptr_value(
+                context,
+                destination,
+                Some(&Type::Ptr(None, dest_span)),
+            )
+            .into_pointer_value();
 
-            let new_size: IntValue = codegen::compile(context, new_size, None).into_int_value();
-            let size: IntValue = codegen::compile(context, size, None).into_int_value();
+            let new_size: IntValue =
+                codegen::compile_as_value(context, new_size, None).into_int_value();
+            let size: IntValue = codegen::compile_as_value(context, size, None).into_int_value();
 
             let destination_type: &Type = destination.llvm_get_type();
 
-            let dest_type: BasicTypeEnum = typegeneration::compile_from(context, destination_type);
+            let dest_type: BasicTypeEnum = typegeneration::generate_type(context, destination_type);
             let dest_alignment: u32 = context
                 .get_target_data()
                 .get_preferred_alignment(&dest_type);
@@ -254,7 +264,7 @@ pub fn compile<'ctx>(
         }
         LLVMBuiltin::Malloc { of, span } => context
             .get_llvm_builder()
-            .build_malloc(typegeneration::compile_from(context, of), "")
+            .build_malloc(typegeneration::generate_type(context, of), "")
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
@@ -266,7 +276,7 @@ pub fn compile<'ctx>(
             })
             .into(),
         LLVMBuiltin::AlignOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
 
             let alignment: u32 = context
                 .get_target_data()
@@ -281,7 +291,7 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::U32(span), alignment, span)
         }
         LLVMBuiltin::SizeOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegeneration::compile_type_for_size_of(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::generate_type_for_size_of(context, of);
 
             let sizeof_value: BasicValueEnum = llvm_type
                 .size_of()
@@ -299,7 +309,7 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::USize(span), sizeof_value, span)
         }
         LLVMBuiltin::AbiSizeOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
             let abi_size: u64 = context.get_target_data().get_abi_size(&llvm_type);
             let size: BasicValueEnum = context
                 .get_llvm_context()
@@ -310,7 +320,7 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::U64(span), size, span)
         }
         LLVMBuiltin::BitSizeOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
             let bit_size: u64 = context.get_target_data().get_bit_size(&llvm_type);
             let size: BasicValueEnum = context
                 .get_llvm_context()
@@ -321,7 +331,7 @@ pub fn compile<'ctx>(
             cast::try_cast(context, cast_type, &Type::U64(span), size, span)
         }
         LLVMBuiltin::AbiAlignOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, of);
+            let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
             let abi_align: u32 = context.get_target_data().get_abi_alignment(&llvm_type);
 
             let align: BasicValueEnum = context

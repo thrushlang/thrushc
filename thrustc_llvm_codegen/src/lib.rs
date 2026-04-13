@@ -17,6 +17,9 @@
 
 */
 
+#![allow(stable_features)]
+#![feature(unbounded_shifts)]
+
 use thrustc_ast::Ast;
 
 use crate::{codegen::LLVMCodegen, context::LLVMCodeGenContext, metadata::LLVMMetadata};

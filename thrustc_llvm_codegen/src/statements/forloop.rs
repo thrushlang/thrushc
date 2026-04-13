@@ -98,7 +98,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
     llvm_builder.position_at_end(steps);
 
     if !actions.is_unary_before_operation() {
-        let _ = codegen::compile(codegen.get_mut_context(), actions, None);
+        let _ = codegen::compile_as_value(codegen.get_mut_context(), actions, None);
     }
 
     llvm_builder
@@ -144,7 +144,7 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
         .add_break_branch(exit);
 
     if actions.is_unary_before_operation() {
-        let _ = codegen::compile(codegen.get_mut_context(), actions, None);
+        let _ = codegen::compile_as_value(codegen.get_mut_context(), actions, None);
     }
 
     codegen.codegen_block(block);
@@ -242,7 +242,7 @@ fn short_circuit_comparison<'ctx>(
         }
     }
 
-    let comparison: IntValue<'_> = codegen::compile(
+    let comparison: IntValue<'_> = codegen::compile_as_value(
         codegen.get_mut_context(),
         condition,
         Some(condition.llvm_get_type()),

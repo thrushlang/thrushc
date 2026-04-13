@@ -36,7 +36,7 @@ pub fn local_variable<'ctx>(
     attributes: &ThrustAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
-    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, kind);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, kind);
 
     let name: String = format!("local.{}", ascii_name);
 

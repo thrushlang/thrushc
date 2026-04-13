@@ -62,15 +62,15 @@ fn compile_int_operation<'ctx>(
         TokenType::PlusEq => {
             if lhs.is_reference() {
                 let reference: BasicValueEnum<'_> =
-                    codegen::compile_as_ptr(context, lhs, cast_type);
+                    codegen::compile_as_ptr_value(context, lhs, cast_type);
 
                 if reference.is_pointer_value() {
                     let ptr: PointerValue<'_> = reference.into_pointer_value();
 
                     let old_value: IntValue<'_> =
-                        codegen::compile(context, lhs, cast_type).into_int_value();
+                        codegen::compile_as_value(context, lhs, cast_type).into_int_value();
                     let value: IntValue<'_> =
-                        codegen::compile(context, rhs, cast_type).into_int_value();
+                        codegen::compile_as_value(context, rhs, cast_type).into_int_value();
 
                     let new_value: BasicValueEnum<'_>;
 
@@ -133,8 +133,8 @@ fn compile_int_operation<'ctx>(
                     )
                 }
             } else {
-                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast_type);
-                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast_type);
+                let lhs: BasicValueEnum = codegen::compile_as_value(context, lhs, cast_type);
+                let rhs: BasicValueEnum = codegen::compile_as_value(context, rhs, cast_type);
 
                 let old_value: IntValue<'_> = lhs.into_int_value();
                 let value: IntValue<'_> = rhs.into_int_value();
@@ -157,15 +157,15 @@ fn compile_int_operation<'ctx>(
         TokenType::MinusEq => {
             if lhs.is_reference() {
                 let reference: BasicValueEnum<'_> =
-                    codegen::compile_as_ptr(context, lhs, cast_type);
+                    codegen::compile_as_ptr_value(context, lhs, cast_type);
 
                 if reference.is_pointer_value() {
                     let ptr: PointerValue<'_> = reference.into_pointer_value();
 
                     let old_value: IntValue<'_> =
-                        codegen::compile(context, lhs, cast_type).into_int_value();
+                        codegen::compile_as_value(context, lhs, cast_type).into_int_value();
                     let value: IntValue<'_> =
-                        codegen::compile(context, rhs, cast_type).into_int_value();
+                        codegen::compile_as_value(context, rhs, cast_type).into_int_value();
 
                     let options: &CompilerOptions = context.get_compiler_options();
                     let llvm_backend: &LLVMBackend = options.get_llvm_backend();
@@ -228,8 +228,8 @@ fn compile_int_operation<'ctx>(
                     )
                 }
             } else {
-                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast_type);
-                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast_type);
+                let lhs: BasicValueEnum = codegen::compile_as_value(context, lhs, cast_type);
+                let rhs: BasicValueEnum = codegen::compile_as_value(context, rhs, cast_type);
 
                 let old_value: IntValue<'_> = lhs.into_int_value();
                 let value: IntValue<'_> = rhs.into_int_value();
@@ -302,8 +302,8 @@ fn compile_int_operation<'ctx>(
             | TokenType::Bor
             | TokenType::BAnd = operator
             {
-                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast_type);
-                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast_type);
+                let lhs: BasicValueEnum = codegen::compile_as_value(context, lhs, cast_type);
+                let rhs: BasicValueEnum = codegen::compile_as_value(context, rhs, cast_type);
 
                 return self::compile_int_value_operation(
                     context, lhs, rhs, signatures, operator, span,
@@ -669,7 +669,7 @@ fn compile_int_value_operation<'ctx>(
                 let lhs_type: &Type = signatures.2;
                 let subtype: &Type = lhs_type.get_type_with_depth(1);
 
-                let pointee_ty: BasicTypeEnum = typegeneration::compile_from(context, subtype);
+                let pointee_ty: BasicTypeEnum = typegeneration::generate_type(context, subtype);
 
                 return llvm_builder
                     .build_ptr_diff(pointee_ty, lhs, rhs, "")

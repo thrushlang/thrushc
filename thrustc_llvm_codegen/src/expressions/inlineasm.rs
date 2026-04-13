@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::builder::Builder;
 use inkwell::context::Context;
 use inkwell::types::FunctionType;
@@ -52,7 +51,7 @@ pub fn compile<'ctx>(
 
     let compiled_args: Vec<BasicMetadataValueEnum> = args
         .iter()
-        .map(|arg| codegen::compile(context, arg, None).into())
+        .map(|arg| codegen::compile_as_value(context, arg, None).into())
         .collect();
 
     let syntax: InlineAsmDialect = match attributes.get_attr(LLVMAttributeComparator::AsmSyntax) {

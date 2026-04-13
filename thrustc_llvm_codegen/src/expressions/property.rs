@@ -69,7 +69,7 @@ fn compile_extract_property<'ctx>(
     let span: Span = source.get_span();
 
     let mut property: BasicValueEnum = {
-        let value: BasicValueEnum = codegen::compile(context, source, None);
+        let value: BasicValueEnum = codegen::compile_as_value(context, source, None);
 
         let index: u32 = data
             .get_first_property()
@@ -125,7 +125,8 @@ fn compile_gep_property<'ctx>(
 
     let span: Span = source.get_span();
 
-    let ptr: PointerValue = codegen::compile_as_ptr(context, source, None).into_pointer_value();
+    let ptr: PointerValue =
+        codegen::compile_as_ptr_value(context, source, None).into_pointer_value();
     let ptr_type: &Type = source.llvm_get_type();
 
     let index: u32 = data
@@ -147,7 +148,8 @@ fn compile_gep_property<'ctx>(
         let base_type: Type = field.get_base_type();
         let index: u32 = field.get_index();
 
-        let pointee_ty: BasicTypeEnum = typegeneration::compile_gep_type(context, &base_type);
+        let pointee_ty: BasicTypeEnum =
+            typegeneration::generate_pointer_arithmetic_type(context, &base_type);
 
         property = llvm_builder
             .build_struct_gep(pointee_ty, property, index, "")

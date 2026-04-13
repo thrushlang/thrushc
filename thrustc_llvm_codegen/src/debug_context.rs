@@ -131,14 +131,14 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         let line: u32 = span.get_line();
 
         let llvm_return_type: Option<BasicTypeEnum<'_>> = if !return_type.is_void_type() {
-            Some(typegeneration::compile_from(context, return_type))
+            Some(typegeneration::generate_type(context, return_type))
         } else {
             None
         };
 
         let llvm_parameter_types: Vec<BasicTypeEnum<'_>> = parameter_types
             .iter()
-            .map(|parameter_type| typegeneration::compile_from(context, parameter_type))
+            .map(|parameter_type| typegeneration::generate_type(context, parameter_type))
             .collect();
 
         let mut dbg_parameter_types: Vec<DIType<'_>> =

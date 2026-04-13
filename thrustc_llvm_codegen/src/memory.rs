@@ -178,7 +178,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
         }
 
         let inner_type: &Type = self.get_type(context);
-        let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, inner_type);
+        let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, inner_type);
 
         let alignment: u32 = context
             .get_target_data()
@@ -420,7 +420,7 @@ pub fn load_anon<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, ptr_type);
 
     let alignment: u32 = context
         .get_target_data()
@@ -454,7 +454,7 @@ pub fn dereference<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, ptr_type);
 
     let alignment: u32 = context
         .get_target_data()
@@ -496,7 +496,7 @@ pub fn alloc_anon<'ctx>(
     let llvm_module: &Module = context.get_llvm_module();
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, kind);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, kind);
 
     let alignment: u32 = context
         .get_target_data()
@@ -555,7 +555,7 @@ pub fn gep_struct_anon<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     if let Ok(ptr) = llvm_builder.build_struct_gep(
-        typegeneration::compile_gep_type(context, ptr_type),
+        typegeneration::generate_pointer_arithmetic_type(context, ptr_type),
         ptr,
         index,
         "",
@@ -585,7 +585,7 @@ pub fn gep_anon<'ctx>(
 
     if let Ok(ptr) = unsafe {
         llvm_builder.build_in_bounds_gep(
-            typegeneration::compile_gep_type(context, ptr_type),
+            typegeneration::generate_pointer_arithmetic_type(context, ptr_type),
             ptr,
             indexes,
             "",

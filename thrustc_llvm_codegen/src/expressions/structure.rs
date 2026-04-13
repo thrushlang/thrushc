@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::AddressSpace;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{BasicValueEnum, PointerValue};
@@ -54,7 +53,7 @@ fn compile_with_anchor<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     context.mark_pointer_anchor();
 
-    let ptr_type: BasicTypeEnum<'_> = typegeneration::compile_from(context, struct_type);
+    let ptr_type: BasicTypeEnum<'_> = typegeneration::generate_type(context, struct_type);
     let ptr: PointerValue<'_> = anchor.get_pointer();
 
     let fields_types: &[Type] = struct_type.get_struct_fields();
@@ -62,7 +61,7 @@ fn compile_with_anchor<'ctx>(
     let fields: Vec<_> = data
         .iter()
         .zip(fields_types)
-        .map(|((_, field, _, _), kind)| codegen::compile(context, field, Some(kind)))
+        .map(|((_, field, _, _), kind)| codegen::compile_as_value(context, field, Some(kind)))
         .collect();
 
     for (idx, value) in fields.iter().enumerate() {
@@ -83,7 +82,7 @@ fn compile_without_anchor<'ctx>(
     struct_type: &Type,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let ptr_type: BasicTypeEnum<'_> = typegeneration::compile_from(context, struct_type);
+    let ptr_type: BasicTypeEnum<'_> = typegeneration::generate_type(context, struct_type);
     let ptr: PointerValue<'_> =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, struct_type, span);
 
@@ -92,7 +91,7 @@ fn compile_without_anchor<'ctx>(
     let fields: Vec<_> = data
         .iter()
         .zip(fields_types)
-        .map(|((_, field, _, _), kind)| codegen::compile(context, field, Some(kind)))
+        .map(|((_, field, _, _), kind)| codegen::compile_as_value(context, field, Some(kind)))
         .collect();
 
     for (idx, value) in fields.iter().enumerate() {

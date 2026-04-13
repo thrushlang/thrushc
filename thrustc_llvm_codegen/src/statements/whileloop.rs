@@ -195,7 +195,7 @@ fn short_circuit_comparison<'ctx>(
         }
     }
 
-    let comparison: IntValue<'_> = codegen::compile(
+    let comparison: IntValue<'_> = codegen::compile_as_value(
         codegen.get_mut_context(),
         condition,
         Some(condition.llvm_get_type()),

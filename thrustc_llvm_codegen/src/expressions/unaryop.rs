@@ -227,7 +227,7 @@ fn compile_increment_decrement_ref<'ctx>(
         }
         _ => {
             let old_value: FloatValue = symbol.load(context).into_float_value();
-            let modifier: FloatValue = typegeneration::compile_from(context, kind)
+            let modifier: FloatValue = typegeneration::generate_type(context, kind)
                 .into_float_type()
                 .const_float(1.0);
 
@@ -283,7 +283,7 @@ fn compile_increment_decrement<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = codegen::compile(context, expression, cast_type);
+    let value: BasicValueEnum = codegen::compile_as_value(context, expression, cast_type);
     let kind: &Type = expression.llvm_get_type();
 
     let span: Span = expression.get_span();
@@ -446,9 +446,9 @@ fn compile_logical_negation<'ctx>(
     let kind: &Type = expr.llvm_get_type();
 
     let value: BasicValueEnum = if kind.is_ptr_like_type() {
-        codegen::compile_as_ptr(context, expr, cast_type)
+        codegen::compile_as_ptr_value(context, expr, cast_type)
     } else {
-        codegen::compile(context, expr, cast_type)
+        codegen::compile_as_value(context, expr, cast_type)
     };
 
     let span: Span = expr.get_span();
@@ -504,7 +504,7 @@ fn compile_arithmetic_negation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = codegen::compile(context, expr, cast_type);
+    let value: BasicValueEnum = codegen::compile_as_value(context, expr, cast_type);
     let kind: &Type = expr.llvm_get_type();
 
     let span: Span = expr.get_span();
@@ -552,7 +552,7 @@ fn compile_bitwise_not<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let value: BasicValueEnum = codegen::compile(context, expr, cast_type);
+    let value: BasicValueEnum = codegen::compile_as_value(context, expr, cast_type);
     let kind: &Type = expr.llvm_get_type();
 
     let span: Span = expr.get_span();

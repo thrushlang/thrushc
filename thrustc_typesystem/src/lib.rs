@@ -17,9 +17,9 @@
 
 */
 
-
 mod array;
 mod casting;
+mod constant;
 mod dereference;
 mod fixedarray;
 mod fnref;

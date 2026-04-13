@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::types::BasicTypeEnum;
@@ -56,7 +55,7 @@ pub fn compile_const<'ctx>(
     span: Span,
 ) -> BasicValueEnum<'ctx> {
     let base_type: Type = array_type.get_fixed_array_base_type();
-    let array_type: BasicTypeEnum = typegeneration::compile_from(context, &base_type);
+    let array_type: BasicTypeEnum = typegeneration::generate_type(context, &base_type);
 
     let values: Vec<BasicValueEnum> = items
         .iter()
@@ -64,7 +63,7 @@ pub fn compile_const<'ctx>(
             let value_type: &Type = item.llvm_get_type();
             let value: BasicValueEnum = codegen::compile_constant(context, item, &base_type);
 
-            cast::try_cast_const(context, value, value_type, &base_type)
+            cast::try_cast_const(context, &base_type, value_type, value)
         })
         .collect();
 
@@ -142,7 +141,7 @@ fn compile_fixed_array_with_anchor<'ctx>(
     let array_type: &Type = cast_type.unwrap_or(array_type);
     let items_type: Type = array_type.get_fixed_array_base_type();
 
-    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, array_type);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, array_type);
 
     if items.is_empty() {
         memory::store_anon(context, anchor, llvm_type.const_zero(), span);
@@ -156,7 +155,7 @@ fn compile_fixed_array_with_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile(context, item, Some(&items_type)))
+        .map(|item| codegen::compile_as_value(context, item, Some(&items_type)))
         .collect();
 
     for (n, value) in items.iter().enumerate() {
@@ -202,7 +201,7 @@ fn compile_fixed_array_without_anchor<'ctx>(
     let array_type: &Type = cast_type.unwrap_or(array_type);
     let items_type: Type = array_type.get_fixed_array_base_type();
 
-    let llvm_type: BasicTypeEnum = typegeneration::compile_from(context, array_type);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, array_type);
 
     if items.is_empty() {
         return llvm_type.const_zero();
@@ -213,7 +212,7 @@ fn compile_fixed_array_without_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile(context, item, Some(&items_type)))
+        .map(|item| codegen::compile_as_value(context, item, Some(&items_type)))
         .collect();
 
     for (n, value) in items.iter().enumerate() {

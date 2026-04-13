@@ -17,7 +17,6 @@
 
 */
 
-
 use std::io::BufReader;
 use std::io::Read;
 use std::path::Path;
@@ -91,7 +90,7 @@ fn count_lines_exact(path: &Path) -> anyhow::Result<u64> {
 fn count_lines_from_reader<R: Read>(reader: &mut R) -> anyhow::Result<u64> {
     const CHUNK_SIZE: usize = 1 << 16;
 
-    let mut buffer: [u8; _] = [0u8; CHUNK_SIZE];
+    let mut buffer: [u8; CHUNK_SIZE] = [0u8; CHUNK_SIZE];
     let mut count: u64 = 0;
 
     loop {

@@ -12,10 +12,12 @@ The frontend uses a **handwritten recursive descent parser**. The backend perfor
 
 ### Core Infrastructure
 
-- **`thrustc_core`**  
-  Central driver of the compiler. Manages the compilation pipeline, emitters, printers (AST, LLVM IR, tokens, assembler), and lifecycle stages (starter, cleaner, finisher).
 - **`thrustc`**  
   Main binary entry point. Handles command-line arguments and orchestrates the entire compilation process.
+- **`thrustc_core`**  
+  Central driver of the compiler. Manages the compilation pipeline, emitters, printers (AST, LLVM IR, tokens, assembler), and lifecycle stages (starter, cleaner, finisher).
+- **`thrustc_cli`**  
+  Command-line interface helpers and argument parsing utilities shared by the `thrustc` binary. Provides structured access to flags, subcommands, and help text generation.
 - **`thrustc_options`**  
   Compiler configuration and command-line options (backends, optimization levels, debug information, linkage, target settings, etc.).
 - **`thrustc_diagnostician`**  
@@ -47,11 +49,21 @@ The frontend uses a **handwritten recursive descent parser**. The backend perfor
   Token definitions and supporting traits.
 - **`thrustc_reader`**  
   Source file reading and input management.
+- **`thrustc_parser_context`**  
+  Context state maintained by the parser during recursive descent, including current scope, pending declarations, and parse-time flags.
+- **`thrustc_parser_table`**  
+  Symbol and declaration tables consumed by the parser, providing fast lookups for identifiers, types, and built-in constructs during parsing.
+- **`thrustc_parser_external_table`**  
+  External-facing table interface exposed to other crates that need read access to parser-built symbol data without depending on the full parser.
+- **`thrustc_ast_external`**  
+  Thin re-export layer that exposes selected AST types to external consumers (preprocessor, codegen, tools) without creating circular dependencies on `thrustc_ast`.
 
 ### Semantic Analysis
 
 - **`thrustc_scoper`**  
   Scope analysis.
+- **`thrustc_analyzer`**  
+  General Analysis.
 - **`thrustc_typechecker`**  
   Main type checker with type inference for expressions, function calls, operations, and globals.
 - **`thrustc_typesystem`**  

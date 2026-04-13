@@ -23,12 +23,16 @@ use inkwell::builder::Builder;
 use inkwell::targets::TargetData;
 use inkwell::types::BasicTypeEnum;
 use inkwell::types::FloatType;
+use inkwell::types::IntType;
 use inkwell::types::PointerType;
 use inkwell::values::BasicValueEnum;
 use inkwell::values::FloatValue;
 use inkwell::values::IntValue;
+use inkwell::values::PointerValue;
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
+use thrustc_typesystem::traits::ConstantTypeExtensions;
+use thrustc_typesystem::traits::TypeCodeLocation;
 use thrustc_typesystem::traits::TypePointerExtensions;
 
 use crate::abort;
@@ -295,7 +299,7 @@ pub fn integer<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     target_type: &Type,
     from_type: &Type,
-    from: BasicValueEnum<'ctx>,
+    from_value: BasicValueEnum<'ctx>,
     span: Span,
 ) -> Option<BasicValueEnum<'ctx>> {
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -312,44 +316,41 @@ pub fn integer<'ctx>(
         target_type.is_signed_integer_type() || from_type.is_signed_integer_type();
 
     if is_signed {
-        Some(
-            llvm_builder
-                .build_int_cast_sign_flag(
-                    from.into_int_value(),
-                    typegeneration::compile_from(context, target_type).into_int_type(),
-                    true,
-                    "",
+        let int_value: IntValue<'_> = from_value.into_int_value();
+        let cast_type: IntType<'_> =
+            typegeneration::generate_type(context, target_type).into_int_type();
+
+        let casted_value: IntValue<'_> = llvm_builder
+            .build_int_cast_sign_flag(int_value, cast_type, true, "")
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to cast integer!",
+                    span,
+                    std::path::PathBuf::from(file!()),
+                    line!(),
                 )
-                .unwrap_or_else(|_| {
-                    abort::abort_codegen(
-                        context,
-                        "Failed to cast integer!",
-                        span,
-                        std::path::PathBuf::from(file!()),
-                        line!(),
-                    )
-                })
-                .into(),
-        )
+            });
+
+        Some(casted_value.into())
     } else {
-        Some(
-            llvm_builder
-                .build_int_cast(
-                    from.into_int_value(),
-                    typegeneration::compile_from(context, target_type).into_int_type(),
-                    "",
+        let int_value: IntValue<'_> = from_value.into_int_value();
+        let cast_type: IntType<'_> =
+            typegeneration::generate_type(context, target_type).into_int_type();
+
+        let casted_value: IntValue<'_> = llvm_builder
+            .build_int_cast(int_value, cast_type, "")
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to cast integer!",
+                    span,
+                    std::path::PathBuf::from(file!()),
+                    line!(),
                 )
-                .unwrap_or_else(|_| {
-                    abort::abort_codegen(
-                        context,
-                        "Failed to cast integer!",
-                        span,
-                        std::path::PathBuf::from(file!()),
-                        line!(),
-                    )
-                })
-                .into(),
-        )
+            });
+
+        Some(casted_value.into())
     }
 }
 
@@ -365,7 +366,7 @@ pub fn float<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     target_type: &Type,
     from_type: &Type,
-    from: BasicValueEnum<'ctx>,
+    from_value: BasicValueEnum<'ctx>,
     span: Span,
 ) -> Option<BasicValueEnum<'ctx>> {
     let llvm_builder: &Builder = context.get_llvm_builder();
@@ -378,24 +379,23 @@ pub fn float<'ctx>(
         return None;
     }
 
-    Some(
-        llvm_builder
-            .build_float_cast(
-                from.into_float_value(),
-                typegeneration::compile_from(context, target_type).into_float_type(),
-                "",
+    let float_value: FloatValue<'_> = from_value.into_float_value();
+    let cast_type: FloatType<'_> =
+        typegeneration::generate_type(context, target_type).into_float_type();
+
+    let casted_value: FloatValue<'_> = llvm_builder
+        .build_float_cast(float_value, cast_type, "")
+        .unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to cast float!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
             )
-            .unwrap_or_else(|_| {
-                abort::abort_codegen(
-                    context,
-                    "Failed to cast float!",
-                    span,
-                    std::path::PathBuf::from(file!()),
-                    line!(),
-                )
-            })
-            .into(),
-    )
+        });
+
+    Some(casted_value.into())
 }
 
 /* ######################################################################
@@ -411,32 +411,34 @@ pub fn try_cast<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     target_type: Option<&Type>,
     from_type: &Type,
-    from: BasicValueEnum<'ctx>,
+    from_value: BasicValueEnum<'ctx>,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    if from.is_float_value()
-        && let Some(target_type) = target_type
-        && target_type.is_float_type()
-    {
-        return self::float(context, target_type, from_type, from, span).unwrap_or(from);
-    } else if from.is_int_value()
-        && let Some(target_type) = target_type
-        && target_type.is_integer_type()
-    {
-        return self::integer(context, target_type, from_type, from, span).unwrap_or(from);
+    let Some(target_type) = target_type else {
+        return from_value;
+    };
+
+    if from_value.is_float_value() && target_type.is_float_type() {
+        return self::float(context, target_type, from_type, from_value, span)
+            .unwrap_or(from_value);
     }
 
-    from
+    if from_value.is_int_value() && target_type.is_integer_type() {
+        return self::integer(context, target_type, from_type, from_value, span)
+            .unwrap_or(from_value);
+    }
+
+    from_value
 }
 
 #[inline]
 pub fn try_cast_const<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    from: BasicValueEnum<'ctx>,
-    from_type: &Type,
     target_type: &Type,
+    from_type: &Type,
+    from_value: BasicValueEnum<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    match (from, target_type) {
+    match (from_value, target_type) {
         (lhs, rhs) if rhs.is_numeric_type() => {
             self::const_numeric_cast(context, lhs, rhs, from_type.is_signed_integer_type())
         }
@@ -445,7 +447,7 @@ pub fn try_cast_const<'ctx>(
             lhs.into_pointer_value().into()
         }
 
-        _ => from,
+        _ => from_value,
     }
 }
 
@@ -458,21 +460,24 @@ pub fn try_cast_const<'ctx>(
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     expr: &'ctx Ast,
-    target_type: &Type,
+    cast_type: &Type,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
-    let from_type: &Type = expr.llvm_get_type();
 
-    match (from_type, target_type) {
+    let from_type: Type = expr.llvm_get_type().remove_all_constant_type();
+    let target_type: Type = cast_type.remove_all_constant_type();
+
+    match (&from_type, &target_type) {
         (from, to) if from.is_ptr_like_type() && to.is_integer_type() => {
-            let val: BasicValueEnum = codegen::compile_as_ptr(context, expr, None);
+            let from_value: BasicValueEnum = codegen::compile_as_ptr_value(context, expr, None);
 
-            if val.is_pointer_value() {
-                let integer_type: BasicTypeEnum =
-                    typegeneration::compile_from(context, target_type);
+            if from_value.is_pointer_value() {
+                let ptr: PointerValue<'_> = from_value.into_pointer_value();
+                let cast_type: BasicTypeEnum = typegeneration::generate_type(context, &target_type);
+                let int_type: IntType<'_> = cast_type.into_int_type();
 
-                return llvm_builder
-                    .build_ptr_to_int(val.into_pointer_value(), integer_type.into_int_type(), "")
+                let casted: IntValue<'_> = llvm_builder
+                    .build_ptr_to_int(ptr, int_type, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -484,19 +489,22 @@ pub fn compile<'ctx>(
                             std::path::PathBuf::from(file!()),
                             line!(),
                         );
-                    })
-                    .into();
+                    });
+
+                return casted.into();
             };
         }
 
         (_, to) if to.is_numeric_type() => {
-            let value: BasicValueEnum = codegen::compile(context, expr, None);
-            let cast: BasicTypeEnum = typegeneration::compile_from(context, target_type);
-            let is_signed: bool = from_type.is_signed_integer_type();
+            let value: BasicValueEnum = codegen::compile_as_value(context, expr, None);
+            let cast: BasicTypeEnum = typegeneration::generate_type(context, &target_type);
 
             if value.is_int_value() && cast.is_int_type() {
-                return llvm_builder
-                    .build_int_cast(value.into_int_value(), cast.into_int_type(), "")
+                let int_value: IntValue<'_> = value.into_int_value();
+                let cast_type: IntType<'_> = cast.into_int_type();
+
+                let casted_value: IntValue<'_> = llvm_builder
+                    .build_int_cast(int_value, cast_type, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -508,13 +516,17 @@ pub fn compile<'ctx>(
                             std::path::PathBuf::from(file!()),
                             line!(),
                         );
-                    })
-                    .into();
+                    });
+
+                return casted_value.into();
             }
 
             if value.is_float_value() && cast.is_float_type() {
-                return llvm_builder
-                    .build_float_cast(value.into_float_value(), cast.into_float_type(), "")
+                let float_value: FloatValue<'_> = value.into_float_value();
+                let cast_type: FloatType<'_> = cast.into_float_type();
+
+                let casted_value: FloatValue<'_> = llvm_builder
+                    .build_float_cast(float_value, cast_type, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -526,18 +538,20 @@ pub fn compile<'ctx>(
                             std::path::PathBuf::from(file!()),
                             line!(),
                         );
-                    })
-                    .into();
+                    });
+
+                return casted_value.into();
             }
 
             if value.is_int_value() && cast.is_float_type() {
+                let is_signed: bool = from_type.is_signed_integer_type();
+
+                let int_value: IntValue<'_> = value.into_int_value();
+                let cast_type: FloatType<'_> = cast.into_float_type();
+
                 if is_signed {
-                    return llvm_builder
-                        .build_signed_int_to_float(
-                            value.into_int_value(),
-                            cast.into_float_type(),
-                            "",
-                        )
+                    let casted_value: FloatValue<'_> = llvm_builder
+                        .build_signed_int_to_float(int_value, cast_type, "")
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
@@ -549,15 +563,12 @@ pub fn compile<'ctx>(
                                 std::path::PathBuf::from(file!()),
                                 line!(),
                             );
-                        })
-                        .into();
+                        });
+
+                    return casted_value.into();
                 } else {
-                    return llvm_builder
-                        .build_unsigned_int_to_float(
-                            value.into_int_value(),
-                            cast.into_float_type(),
-                            "",
-                        )
+                    let casted_value: FloatValue<'_> = llvm_builder
+                        .build_unsigned_int_to_float(int_value, cast_type, "")
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
@@ -569,13 +580,14 @@ pub fn compile<'ctx>(
                                 std::path::PathBuf::from(file!()),
                                 line!(),
                             );
-                        })
-                        .into();
+                        });
+
+                    return casted_value.into();
                 }
             }
 
-            if self::is_same_bit_size(context, from_type, target_type) {
-                return llvm_builder
+            if self::is_same_bit_size(context, &from_type, &target_type) {
+                let casted_value: BasicValueEnum<'_> = llvm_builder
                     .build_bit_cast(value, cast, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
@@ -589,43 +601,20 @@ pub fn compile<'ctx>(
                             line!(),
                         );
                     });
+
+                return casted_value;
             }
         }
 
         (_, to) if to.is_ptr_like_type() => {
-            let value: BasicValueEnum = codegen::compile_as_ptr(context, expr, None);
+            let value: BasicValueEnum = codegen::compile_as_ptr_value(context, expr, None);
 
             if value.is_pointer_value() {
-                let cast: PointerType =
-                    typegeneration::compile_from(context, target_type).into_pointer_type();
+                let cast_type: PointerType =
+                    typegeneration::generate_type(context, &target_type).into_pointer_type();
 
                 return llvm_builder
-                    .build_pointer_cast(value.into_pointer_value(), cast, "")
-                    .unwrap_or_else(|_| {
-                        abort::abort_codegen(
-                            context,
-                            &format!(
-                                "Failed to cast '{}' type to '{}' type.",
-                                from_type, target_type
-                            ),
-                            expr.get_span(),
-                            std::path::PathBuf::from(file!()),
-                            line!(),
-                        );
-                    })
-                    .into();
-            };
-        }
-
-        (_, to) if to.is_const_type() => {
-            let value: BasicValueEnum = codegen::compile_as_ptr(context, expr, None);
-
-            if value.is_pointer_value() {
-                let cast: PointerType =
-                    typegeneration::compile_from(context, target_type).into_pointer_type();
-
-                return llvm_builder
-                    .build_pointer_cast(value.into_pointer_value(), cast, "")
+                    .build_pointer_cast(value.into_pointer_value(), cast_type, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -669,7 +658,7 @@ pub fn const_numeric_cast<'ctx>(
     target: &Type,
     is_signed: bool,
 ) -> BasicValueEnum<'ctx> {
-    let cast_type: BasicTypeEnum = typegeneration::compile_from(context, target);
+    let cast_type: BasicTypeEnum = typegeneration::generate_type(context, target);
 
     if value.is_int_value() && cast_type.is_int_type() {
         let integer: IntValue = value.into_int_value();
@@ -677,11 +666,9 @@ pub fn const_numeric_cast<'ctx>(
 
         if is_signed {
             if let Some(n) = integer.get_sign_extended_constant() {
-                let transmuted_n: u64 = unsafe { std::mem::transmute::<i64, u64>(n) };
-                return cast_type
-                    .into_int_type()
-                    .const_int(transmuted_n, true)
-                    .into();
+                let new_n: u64 = unsafe { std::mem::transmute::<i64, u64>(n) };
+
+                return cast_type.into_int_type().const_int(new_n, true).into();
             }
         }
 
@@ -694,10 +681,19 @@ pub fn const_numeric_cast<'ctx>(
 
     if value.is_float_value() && cast_type.is_float_type() {
         let float: FloatValue = value.into_float_value();
+        let constant_value: (f64, bool) = float.get_constant().unwrap_or_else(|| {
+            abort::abort_codegen(
+                context,
+                "Failed to extract constant value from a supposed constant value!",
+                target.get_span(),
+                std::path::PathBuf::from(file!()),
+                line!(),
+            );
+        });
 
         return cast_type
             .into_float_type()
-            .const_float(float.get_constant().unwrap_or((0.0, false)).0)
+            .const_float(constant_value.0)
             .into();
     }
 
@@ -706,8 +702,8 @@ pub fn const_numeric_cast<'ctx>(
 
 #[inline]
 fn is_same_bit_size(context: &mut LLVMCodeGenContext<'_, '_>, lhs: &Type, rhs: &Type) -> bool {
-    let lhs: BasicTypeEnum = typegeneration::compile_from(context, lhs);
-    let rhs: BasicTypeEnum = typegeneration::compile_from(context, rhs);
+    let lhs: BasicTypeEnum = typegeneration::generate_type(context, lhs);
+    let rhs: BasicTypeEnum = typegeneration::generate_type(context, rhs);
 
     let target_data: &TargetData = context.get_target_data();
 

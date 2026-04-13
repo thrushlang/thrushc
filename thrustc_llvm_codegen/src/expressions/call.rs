@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_typesystem::Type;
 use thrustc_typesystem::traits::TypeIsExtensions;
@@ -51,7 +50,7 @@ pub fn compile<'ctx>(
         .enumerate()
         .map(|(i, expr)| {
             let cast: Option<&Type> = function_arg_types.get(i);
-            codegen::compile(context, expr, cast).into()
+            codegen::compile_as_value(context, expr, cast).into()
         })
         .collect();
 

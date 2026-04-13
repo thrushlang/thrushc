@@ -50,15 +50,16 @@ pub fn compile_float_operation<'ctx>(
     match operator {
         TokenType::PlusEq => {
             if lhs.is_reference() {
-                let reference: BasicValueEnum<'_> = codegen::compile_as_ptr(context, lhs, cast);
+                let reference: BasicValueEnum<'_> =
+                    codegen::compile_as_ptr_value(context, lhs, cast);
 
                 if reference.is_pointer_value() {
                     let ptr: PointerValue<'_> = reference.into_pointer_value();
 
                     let old_value: FloatValue<'_> =
-                        codegen::compile(context, lhs, cast).into_float_value();
+                        codegen::compile_as_value(context, lhs, cast).into_float_value();
                     let value: FloatValue<'_> =
-                        codegen::compile(context, rhs, cast).into_float_value();
+                        codegen::compile_as_value(context, rhs, cast).into_float_value();
 
                     let new_value: BasicValueEnum<'_> = llvm_builder
                         .build_float_add(old_value, value, "")
@@ -86,8 +87,8 @@ pub fn compile_float_operation<'ctx>(
                     )
                 }
             } else {
-                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast);
-                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast);
+                let lhs: BasicValueEnum = codegen::compile_as_value(context, lhs, cast);
+                let rhs: BasicValueEnum = codegen::compile_as_value(context, rhs, cast);
 
                 let old_value: FloatValue<'_> = lhs.into_float_value();
                 let value: FloatValue<'_> = rhs.into_float_value();
@@ -109,15 +110,16 @@ pub fn compile_float_operation<'ctx>(
 
         TokenType::MinusEq => {
             if lhs.is_reference() {
-                let reference: BasicValueEnum<'_> = codegen::compile_as_ptr(context, lhs, cast);
+                let reference: BasicValueEnum<'_> =
+                    codegen::compile_as_ptr_value(context, lhs, cast);
 
                 if reference.is_pointer_value() {
                     let ptr: PointerValue<'_> = reference.into_pointer_value();
 
                     let old_value: FloatValue<'_> =
-                        codegen::compile(context, lhs, cast).into_float_value();
+                        codegen::compile_as_value(context, lhs, cast).into_float_value();
                     let value: FloatValue<'_> =
-                        codegen::compile(context, rhs, cast).into_float_value();
+                        codegen::compile_as_value(context, rhs, cast).into_float_value();
 
                     let new_value: BasicValueEnum<'_> = llvm_builder
                         .build_float_sub(old_value, value, "")
@@ -145,8 +147,8 @@ pub fn compile_float_operation<'ctx>(
                     )
                 }
             } else {
-                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast);
-                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast);
+                let lhs: BasicValueEnum = codegen::compile_as_value(context, lhs, cast);
+                let rhs: BasicValueEnum = codegen::compile_as_value(context, rhs, cast);
 
                 let old_value: FloatValue<'_> = lhs.into_float_value();
                 let value: FloatValue<'_> = rhs.into_float_value();
@@ -179,8 +181,8 @@ pub fn compile_float_operation<'ctx>(
             | TokenType::Greater
             | TokenType::GreaterEq = operator
             {
-                let lhs: BasicValueEnum = codegen::compile(context, lhs, cast);
-                let rhs: BasicValueEnum = codegen::compile(context, rhs, cast);
+                let lhs: BasicValueEnum = codegen::compile_as_value(context, lhs, cast);
+                let rhs: BasicValueEnum = codegen::compile_as_value(context, rhs, cast);
 
                 return compile_float_value_operation(
                     context,

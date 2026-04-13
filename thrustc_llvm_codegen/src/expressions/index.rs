@@ -17,13 +17,12 @@
 
 */
 
-
 use inkwell::values::{BasicValueEnum, IntValue, PointerValue};
 use thrustc_ast::{Ast, traits::AstCodeLocation};
 use thrustc_span::Span;
 use thrustc_typesystem::{
     Type,
-    traits::{InfererTypeExtensions, TypeIsExtensions, TypePointerExtensions},
+    traits::{InfererTypeExtensions, TypePointerExtensions},
 };
 
 use crate::{codegen, context::LLVMCodeGenContext, expressions, memory, traits::AstLLVMGetType};
@@ -33,7 +32,8 @@ pub fn compile<'ctx>(
     source: &'ctx Ast<'ctx>,
     index: &'ctx Ast<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let ptr: PointerValue = codegen::compile_as_ptr(context, source, None).into_pointer_value();
+    let ptr: PointerValue =
+        codegen::compile_as_ptr_value(context, source, None).into_pointer_value();
 
     let mut ptr_type: &Type = source.llvm_get_type();
     let infered_inner_type: Type = ptr_type.get_inferer_inner_type();
@@ -60,12 +60,12 @@ pub fn compile<'ctx>(
                 index.get_span(),
             );
             let depth: IntValue =
-                codegen::compile(context, index, Some(&Type::U32(span))).into_int_value();
+                codegen::compile_as_value(context, index, Some(&Type::U32(span))).into_int_value();
 
             vec![base, depth]
         } else if is_ptr_like_type {
             let base: IntValue =
-                codegen::compile(context, index, Some(&Type::U64(span))).into_int_value();
+                codegen::compile_as_value(context, index, Some(&Type::U64(span))).into_int_value();
 
             vec![base]
         } else {
@@ -77,7 +77,7 @@ pub fn compile<'ctx>(
                 index.get_span(),
             );
             let depth: IntValue =
-                codegen::compile(context, index, Some(&Type::U32(span))).into_int_value();
+                codegen::compile_as_value(context, index, Some(&Type::U32(span))).into_int_value();
 
             vec![base, depth]
         };
