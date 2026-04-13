@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -25,9 +24,9 @@ use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{ParserContext, expressions, statements};
+use crate::{ParserContext, expressions, statements::block};
 
-pub fn build_defer_executation<'parser>(
+pub fn parse_post_executation_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let defer_tk: &Token = ctx.consume(
@@ -39,9 +38,9 @@ pub fn build_defer_executation<'parser>(
     let span: Span = defer_tk.get_span();
 
     let node: Ast<'_> = if ctx.check(TokenType::LBrace) {
-        statements::block::build_block(ctx)?
+        block::parse_code_block_stmt(ctx)?
     } else {
-        expressions::build_expression(ctx)?
+        expressions::parse_expression(ctx)?
     };
 
     Ok(Ast::Defer {

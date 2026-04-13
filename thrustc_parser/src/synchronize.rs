@@ -108,7 +108,7 @@ fn synchronize_statement<'parser>(ctx: &mut ParserContext<'parser>) {
 
         if SYNC_STATEMENTS.contains(&peeked.get_type()) {
             let first_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
-                block::build_block_without_start(ctx);
+                block::parse_code_block_without_start_stmt(ctx);
 
             if first_.is_ok() {
                 let mut continue_first_loop: bool = false;
@@ -119,7 +119,7 @@ fn synchronize_statement<'parser>(ctx: &mut ParserContext<'parser>) {
                     }
 
                     let second_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
-                        block::build_block_without_start(ctx);
+                        block::parse_code_block_without_start_stmt(ctx);
 
                     if second_.is_err() {
                         continue_first_loop = true;
@@ -158,7 +158,7 @@ fn synchonize_expression<'parser>(ctx: &mut ParserContext<'parser>) {
 
         if SYNC_STATEMENTS.contains(&peeked.get_type()) {
             let first_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
-                block::build_block_without_start(ctx);
+                block::parse_code_block_without_start_stmt(ctx);
 
             if first_.is_ok() {
                 let mut continue_first_loop: bool = false;
@@ -169,7 +169,7 @@ fn synchonize_expression<'parser>(ctx: &mut ParserContext<'parser>) {
                     }
 
                     let second_: Result<Ast<'_>, thrustc_errors::CompilationIssue> =
-                        block::build_block_without_start(ctx);
+                        block::parse_code_block_without_start_stmt(ctx);
 
                     if second_.is_err() {
                         continue_first_loop = true;

@@ -26,7 +26,7 @@ use thrustc_typesystem::Type;
 
 use crate::{ParserContext, statements};
 
-pub fn build_block<'parser>(
+pub fn parse_code_block_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let block_tk: &Token = ctx.consume(
@@ -65,7 +65,7 @@ pub fn build_block<'parser>(
     })
 }
 
-pub fn build_block_without_start<'parser>(
+pub fn parse_code_block_without_start_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.begin_scope();

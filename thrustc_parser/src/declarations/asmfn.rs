@@ -142,7 +142,7 @@ pub fn build_assembler_function<'parser>(
             break;
         }
 
-        let raw_str: Ast = expressions::build_expr(ctx)?;
+        let raw_str: Ast = expressions::parse_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_cnstring() {
@@ -199,7 +199,7 @@ pub fn build_assembler_function<'parser>(
             break;
         }
 
-        let raw_str: Ast = expressions::build_expr(ctx)?;
+        let raw_str: Ast = expressions::parse_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_cnstring() {

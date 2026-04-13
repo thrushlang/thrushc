@@ -29,7 +29,7 @@ use crate::{
     statements::{self, block, var},
 };
 
-pub fn build_for_loop<'parser>(
+pub fn parse_for_loop_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let for_tk: &Token = ctx.consume(
@@ -41,7 +41,7 @@ pub fn build_for_loop<'parser>(
     let span: Span = for_tk.get_span();
 
     if ctx.check(TokenType::LBrace) {
-        let body: Ast<'_> = block::build_block(ctx)?;
+        let body: Ast<'_> = block::parse_code_block_stmt(ctx)?;
 
         Ok(Ast::Loop {
             block: body.into(),
@@ -53,7 +53,7 @@ pub fn build_for_loop<'parser>(
         while ctx.match_token(TokenType::SemiColon)? {}
 
         let body: Ast<'_> = if ctx.check(TokenType::LBrace) {
-            block::build_block(ctx)?
+            block::parse_code_block_stmt(ctx)?
         } else {
             statements::parse(ctx)?
         };
@@ -68,12 +68,12 @@ pub fn build_for_loop<'parser>(
         ctx.get_mut_symbols().begin_scope();
         ctx.begin_scope();
 
-        let local: Ast = var::build_var(ctx)?;
-        let condition: Ast = expressions::build_expression(ctx)?;
-        let actions: Ast = expressions::build_expression(ctx)?;
+        let local: Ast = var::build_variable_stmt(ctx)?;
+        let condition: Ast = expressions::parse_expression(ctx)?;
+        let actions: Ast = expressions::parse_expression(ctx)?;
 
         let body: Ast = if ctx.check(TokenType::LBrace) {
-            block::build_block(ctx)?
+            block::parse_code_block_stmt(ctx)?
         } else {
             statements::parse(ctx)?
         };
@@ -93,7 +93,7 @@ pub fn build_for_loop<'parser>(
     }
 }
 
-pub fn build_loop<'parser>(
+pub fn parse_loop_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let loop_tk: &Token = ctx.consume(
@@ -104,7 +104,7 @@ pub fn build_loop<'parser>(
 
     let span: Span = loop_tk.get_span();
     let body: Ast = if ctx.check(TokenType::LBrace) {
-        block::build_block(ctx)?
+        block::parse_code_block_stmt(ctx)?
     } else {
         statements::parse(ctx)?
     };
@@ -117,7 +117,7 @@ pub fn build_loop<'parser>(
     })
 }
 
-pub fn build_while_loop<'parser>(
+pub fn parse_while_loop_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let while_tk: &Token = ctx.consume(
@@ -132,7 +132,7 @@ pub fn build_while_loop<'parser>(
         ctx.get_mut_symbols().begin_scope();
         ctx.begin_scope();
 
-        let local: Ast<'_> = var::build_var(ctx)?;
+        let local: Ast<'_> = var::build_variable_stmt(ctx)?;
 
         ctx.consume(
             TokenType::Colon,
@@ -140,9 +140,10 @@ pub fn build_while_loop<'parser>(
             "Expected ':'.".into(),
         )?;
 
-        let condition: Ast = expressions::build_expr(ctx)?;
+        let condition: Ast = expressions::parse_expr(ctx)?;
+
         let body: Ast = if ctx.check(TokenType::LBrace) {
-            block::build_block(ctx)?
+            block::parse_code_block_stmt(ctx)?
         } else {
             statements::parse(ctx)?
         };
@@ -169,7 +170,7 @@ pub fn build_while_loop<'parser>(
             ctx.get_mut_symbols().begin_scope();
             ctx.begin_scope();
 
-            let local: Ast<'_> = var::build_var(ctx)?;
+            let local: Ast<'_> = var::build_variable_stmt(ctx)?;
 
             ctx.consume(
                 TokenType::Colon,
@@ -177,7 +178,7 @@ pub fn build_while_loop<'parser>(
                 "Expected ':'.".into(),
             )?;
 
-            let condition: Ast = expressions::build_expr(ctx)?;
+            let condition: Ast = expressions::parse_expr(ctx)?;
 
             for _ in 0..=found_rparen {
                 ctx.consume(
@@ -188,7 +189,7 @@ pub fn build_while_loop<'parser>(
             }
 
             let body: Ast = if ctx.check(TokenType::LBrace) {
-                block::build_block(ctx)?
+                block::parse_code_block_stmt(ctx)?
             } else {
                 statements::parse(ctx)?
             };
@@ -205,7 +206,7 @@ pub fn build_while_loop<'parser>(
                 id: NodeId::new(),
             })
         } else {
-            let condition: Ast = expressions::build_expr(ctx)?;
+            let condition: Ast = expressions::parse_expr(ctx)?;
 
             for _ in 0..=found_rparen {
                 ctx.consume(
@@ -215,7 +216,7 @@ pub fn build_while_loop<'parser>(
                 )?;
             }
 
-            let block: Ast = block::build_block(ctx)?;
+            let block: Ast = block::parse_code_block_stmt(ctx)?;
 
             Ok(Ast::While {
                 variable: None,
@@ -227,8 +228,8 @@ pub fn build_while_loop<'parser>(
             })
         }
     } else {
-        let condition: Ast = expressions::build_expr(ctx)?;
-        let block: Ast = block::build_block(ctx)?;
+        let condition: Ast = expressions::parse_expr(ctx)?;
+        let block: Ast = block::parse_code_block_stmt(ctx)?;
 
         Ok(Ast::While {
             variable: None,

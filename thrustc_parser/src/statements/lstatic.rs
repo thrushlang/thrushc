@@ -30,7 +30,7 @@ use thrustc_typesystem::Type;
 
 use crate::{ParserContext, attributes, expressions, modificators, typegeneration};
 
-pub fn build_static<'parser>(
+pub fn parse_static_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
@@ -116,7 +116,7 @@ pub fn build_static<'parser>(
 
         ctx.get_mut_control_context().set_position(Position::Static);
 
-        let value: Ast = expressions::build_expression(ctx)?;
+        let value: Ast = expressions::parse_expression(ctx)?;
 
         ctx.get_mut_control_context().reset_position();
 

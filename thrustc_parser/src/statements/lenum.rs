@@ -27,7 +27,7 @@ use thrustc_typesystem::Type;
 
 use crate::{ParserContext, attributes, expressions, typegeneration};
 
-pub fn build_enum<'parser>(
+pub fn parse_enum_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
@@ -54,7 +54,7 @@ pub fn build_enum<'parser>(
         "Expected '{'.".into(),
     )?;
 
-    let mut data: EnumData = Vec::with_capacity(10);
+    let mut data: EnumData = Vec::with_capacity(u8::MAX as usize);
 
     loop {
         if ctx.check(TokenType::RBrace) {
@@ -79,7 +79,7 @@ pub fn build_enum<'parser>(
                 "Expected '='.".into(),
             )?;
 
-            let expr: Ast = expressions::build_expr(ctx)?;
+            let expr: Ast = expressions::parse_expr(ctx)?;
 
             ctx.consume(
                 TokenType::SemiColon,

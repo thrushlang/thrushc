@@ -58,7 +58,7 @@ pub fn lower_precedence<'parser>(
 
             let span: Span = lparen_tk.get_span();
 
-            let expr: Ast = expressions::build_expr(ctx)?;
+            let expr: Ast = expressions::parse_expr(ctx)?;
             let expr_type: &Type = expr.get_value_type()?;
 
             ctx.consume(
@@ -260,7 +260,7 @@ pub fn lower_precedence<'parser>(
         TokenType::DirectRef => {
             let span: Span = ctx.advance()?.get_span();
 
-            let expr: Ast = expressions::build_expr(ctx)?;
+            let expr: Ast = expressions::parse_expr(ctx)?;
             let expr_type: &Type = expr.get_value_type()?;
 
             Ast::DirectRef {

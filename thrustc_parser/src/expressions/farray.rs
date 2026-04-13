@@ -57,7 +57,7 @@ pub fn build_fixed_array<'parser>(
             break;
         }
 
-        let item: Ast = expressions::build_expr(ctx)?;
+        let item: Ast = expressions::parse_expr(ctx)?;
 
         items.push(item);
 

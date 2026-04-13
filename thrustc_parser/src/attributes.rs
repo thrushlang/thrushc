@@ -140,7 +140,7 @@ fn build_align_attribute<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let expr: Ast<'_> = expressions::build_expr(ctx)?;
+    let expr: Ast<'_> = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::RParen,

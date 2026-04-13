@@ -46,7 +46,7 @@ pub fn build_call<'parser>(
             break;
         }
 
-        let expr: Ast<'_> = expressions::build_expr(ctx)?;
+        let expr: Ast<'_> = expressions::parse_expr(ctx)?;
 
         args.push(expr);
 
@@ -141,14 +141,14 @@ pub fn build_anonymous_call<'parser>(
 
     let span: Span = expr.get_span();
 
-    let mut args: Vec<Ast> = Vec::with_capacity(10);
+    let mut args: Vec<Ast> = Vec::with_capacity(u8::MAX as usize);
 
     loop {
         if ctx.check(TokenType::RParen) {
             break;
         }
 
-        let expr: Ast<'_> = expressions::build_expr(ctx)?;
+        let expr: Ast<'_> = expressions::parse_expr(ctx)?;
 
         args.push(expr);
 

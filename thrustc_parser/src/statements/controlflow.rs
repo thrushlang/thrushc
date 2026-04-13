@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -27,7 +26,7 @@ use thrustc_typesystem::Type;
 
 use crate::ParserContext;
 
-pub fn build_continue<'parser>(
+pub fn parse_continue_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let continue_tk: &Token = ctx.consume(
@@ -51,7 +50,7 @@ pub fn build_continue<'parser>(
     })
 }
 
-pub fn build_break<'parser>(
+pub fn parse_break_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let break_tk: &Token = ctx.consume(
@@ -75,7 +74,7 @@ pub fn build_break<'parser>(
     })
 }
 
-pub fn build_continueall<'parser>(
+pub fn parse_continueall_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let continueall_tk: &Token = ctx.consume(
@@ -99,7 +98,7 @@ pub fn build_continueall<'parser>(
     })
 }
 
-pub fn build_breakall<'parser>(
+pub fn parse_breakall_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let breakall_tk: &Token = ctx.consume(

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -32,7 +31,7 @@ pub fn build_index<'parser>(
     span: Span,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let index_type: &Type = source.get_value_type()?;
-    let index: Ast = expressions::build_expr(ctx)?;
+    let index: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::RBracket,

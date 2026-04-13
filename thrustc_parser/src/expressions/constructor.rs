@@ -118,7 +118,7 @@ pub fn build_constructor<'parser>(
                                 continue;
                             }
 
-                            let expression: Ast = expressions::build_expr(ctx)?;
+                            let expression: Ast = expressions::parse_expr(ctx)?;
 
                             if let Some(target_type) = object.get_field_type(field_name) {
                                 data.push((field_name, expression, target_type, count as u32));

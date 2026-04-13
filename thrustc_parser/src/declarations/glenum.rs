@@ -80,7 +80,7 @@ pub fn build_enum<'parser>(
                 "Expected '='.".into(),
             )?;
 
-            let expr: Ast = expressions::build_expr(ctx)?;
+            let expr: Ast = expressions::parse_expr(ctx)?;
 
             ctx.consume(
                 TokenType::SemiColon,

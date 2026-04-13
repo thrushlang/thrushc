@@ -100,7 +100,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expr: Ast = expressions::build_expr(ctx)?;
+        let expr: Ast = expressions::parse_expr(ctx)?;
         let expr_type: &Type = expr.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {
@@ -122,7 +122,7 @@ pub fn unary_precedence<'parser>(
         let operator: TokenType = operator_tk.get_type();
         let span: Span = operator_tk.get_span();
 
-        let expr: Ast = expressions::build_expr(ctx)?;
+        let expr: Ast = expressions::parse_expr(ctx)?;
         let expr_type: &Type = expr.get_value_type()?;
 
         let unaryop: Ast = Ast::UnaryOp {

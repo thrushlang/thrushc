@@ -33,7 +33,7 @@ use thrustc_typesystem::{Type, traits::InfererTypeExtensions};
 
 use crate::{ParserContext, attributes, expressions, modificators, typegeneration};
 
-pub fn build_var<'parser>(
+pub fn build_variable_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(
@@ -105,7 +105,7 @@ pub fn build_var<'parser>(
         ctx.get_mut_control_context()
             .set_position(Position::Variable);
 
-        let value: Ast = expressions::build_expression(ctx)?;
+        let value: Ast = expressions::parse_expression(ctx)?;
         let value_type: &Type = value.get_value_type()?;
 
         ctx.get_mut_type_context().pop_infered_type();

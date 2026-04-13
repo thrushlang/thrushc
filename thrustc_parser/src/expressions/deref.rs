@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, metadata::DereferenceMetadata, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::atomicord::ThrustAtomicOrdering;
@@ -54,7 +53,7 @@ pub fn build_dereference<'parser>(
             deref_count = deref_count.saturating_add(1);
         }
 
-        let expr: Ast = expressions::build_expr(ctx)?;
+        let expr: Ast = expressions::parse_expr(ctx)?;
 
         expr
     };

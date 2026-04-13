@@ -46,7 +46,7 @@ pub fn build_global_assembler<'parser>(
         "Expected '('.".into(),
     )?;
 
-    let assembler: Ast = expressions::build_expr(ctx)?;
+    let assembler: Ast = expressions::parse_expr(ctx)?;
     let asssembler_span: Span = assembler.get_span();
 
     ctx.consume(

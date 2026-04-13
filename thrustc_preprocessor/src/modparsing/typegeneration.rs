@@ -50,12 +50,12 @@ pub fn build_type(ctx: &mut ModuleParser<'_>) -> Result<Type, ()> {
             let span: Span = tk.get_span();
 
             match tk_kind {
-                _ if tk_kind.is_array() => self::build_array_type(ctx, span),
-                _ if tk_kind.is_const() => self::build_const_type(ctx, span),
-                _ if tk_kind.is_fn_ref() => self::build_fn_ref_type(ctx, span),
+                _ if tk_kind.is_array() => self::parse_array_type(ctx, span),
+                _ if tk_kind.is_const() => self::parse_constant_type(ctx, span),
+                _ if tk_kind.is_fn_ref() => self::parse_anonymous_function_type(ctx, span),
                 _ => match tk_kind {
                     ty if ty.is_ptr() && ctx.check(TokenType::LBracket) => {
-                        self::build_recursive_type(ctx, Type::Ptr(None, span), span)
+                        self::parse_pointer_type(ctx, Type::Ptr(None, span), span)
                     }
                     TokenType::Char => Ok(Type::Char(span)),
 
@@ -120,7 +120,7 @@ pub fn build_type(ctx: &mut ModuleParser<'_>) -> Result<Type, ()> {
     }
 }
 
-fn build_fn_ref_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> {
+fn parse_anonymous_function_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> {
     ctx.consume(TokenType::LBracket)?;
 
     let mut parameter_types: Vec<Type> = Vec::with_capacity(10);
@@ -161,13 +161,13 @@ fn build_fn_ref_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()>
     ))
 }
 
-fn build_const_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> {
+fn parse_constant_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> {
     let inner_type: Type = self::build_type(ctx)?;
 
     Ok(Type::Const(inner_type.into(), span))
 }
 
-fn build_array_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> {
+fn parse_array_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> {
     ctx.consume(TokenType::LBracket)?;
 
     let array_type: Type = self::build_type(ctx)?;
@@ -226,7 +226,7 @@ fn build_array_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> 
     })
 }
 
-fn build_recursive_type(
+fn parse_pointer_type(
     ctx: &mut ModuleParser<'_>,
     mut before_type: Type,
     span: Span,
@@ -237,7 +237,7 @@ fn build_recursive_type(
         let mut inner_type: Type = self::build_type(ctx)?;
 
         while ctx.check(TokenType::LBracket) {
-            inner_type = self::build_recursive_type(ctx, inner_type, span)?;
+            inner_type = self::parse_pointer_type(ctx, inner_type, span)?;
         }
 
         ctx.consume(TokenType::RBracket)?;

@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::CompilationIssue;
 use thrustc_span::Span;
@@ -40,7 +39,7 @@ pub fn equal_precedence<'parser>(
     if ctx.match_token(TokenType::Eq)? {
         let span: Span = ctx.previous().get_span();
 
-        let expr: Ast = expressions::build_expr(ctx)?;
+        let expr: Ast = expressions::parse_expr(ctx)?;
 
         expression = Ast::Mut {
             source: expression.into(),

@@ -29,7 +29,7 @@ use thrustc_typesystem::{Type, modificators::StructureTypeModificator};
 
 use crate::{ParserContext, attributes, modificators, typegeneration};
 
-pub fn build_structure<'parser>(
+pub fn parse_structure_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(

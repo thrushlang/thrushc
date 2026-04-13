@@ -27,7 +27,7 @@ use thrustc_typesystem::Type;
 
 use crate::{ParserContext, attributes, typegeneration};
 
-pub fn build_custom_type<'parser>(
+pub fn parse_custom_type_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.consume(

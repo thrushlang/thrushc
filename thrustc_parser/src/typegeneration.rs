@@ -56,12 +56,12 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
             let span: Span = tk.get_span();
 
             match tk_kind {
-                _ if tk_kind.is_array() => self::build_array_type(ctx, span),
-                _ if tk_kind.is_const() => self::build_const_type(ctx, span),
-                _ if tk_kind.is_fn_ref() => self::build_fn_ref_type(ctx, span),
+                _ if tk_kind.is_array() => self::parse_array_type(ctx, span),
+                _ if tk_kind.is_const() => self::parse_constant_type(ctx, span),
+                _ if tk_kind.is_fn_ref() => self::parse_anonymous_function_type(ctx, span),
                 _ => match tk_kind {
                     ty if ty.is_ptr() && ctx.check(TokenType::LBracket) => {
-                        self::build_recursive_pointer_type(ctx, Type::Ptr(None, span), span)
+                        self::parse_pointer_type(ctx, Type::Ptr(None, span), span)
                     }
                     TokenType::Char => Ok(Type::Char(span)),
 
@@ -229,7 +229,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
             }
         }
 
-        _ if parse_expr => expressions::build_expr(ctx)?.get_value_type().cloned(),
+        _ if parse_expr => expressions::parse_expr(ctx)?.get_value_type().cloned(),
 
         any => Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
@@ -240,7 +240,10 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
     }
 }
 
-fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
+fn parse_anonymous_function_type(
+    ctx: &mut ParserContext<'_>,
+    span: Span,
+) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
         CompilationIssueCode::E0001,
@@ -298,13 +301,13 @@ fn build_fn_ref_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Co
     ))
 }
 
-fn build_const_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
+fn parse_constant_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
     let inner_type: Type = self::build_type(ctx, false)?;
 
     Ok(Type::Const(inner_type.into(), span))
 }
 
-fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
+fn parse_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, CompilationIssue> {
     ctx.consume(
         TokenType::LBracket,
         CompilationIssueCode::E0019,
@@ -320,7 +323,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
             "Expected ';'.".into(),
         )?;
 
-        let size: Ast = expressions::build_expr(ctx)?;
+        let size: Ast = expressions::parse_expr(ctx)?;
         let size_type: &Type = size.get_value_type()?;
 
         if !size.is_integer() {
@@ -384,7 +387,7 @@ fn build_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
     })
 }
 
-fn build_recursive_pointer_type(
+fn parse_pointer_type(
     ctx: &mut ParserContext<'_>,
     mut before_type: Type,
     span: Span,
@@ -399,7 +402,7 @@ fn build_recursive_pointer_type(
         let mut inner_type: Type = self::build_type(ctx, false)?;
 
         while ctx.check(TokenType::LBracket) {
-            inner_type = self::build_recursive_pointer_type(ctx, inner_type, span)?;
+            inner_type = self::parse_pointer_type(ctx, inner_type, span)?;
         }
 
         ctx.consume(

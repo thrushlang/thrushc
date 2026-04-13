@@ -40,10 +40,10 @@ pub fn build_conditional<'parser>(
 
     let span: Span = if_tk.get_span();
 
-    let condition: Ast = expressions::build_expr(ctx)?;
+    let condition: Ast = expressions::parse_expr(ctx)?;
 
     let body: Ast = if ctx.check(TokenType::LBrace) {
-        block::build_block(ctx)?
+        block::parse_code_block_stmt(ctx)?
     } else {
         statements::parse(ctx)?
     };
@@ -75,10 +75,10 @@ pub fn build_conditional<'parser>(
 
         let span: Span = ctx.previous().get_span();
 
-        let condition: Ast = expressions::build_expr(ctx)?;
+        let condition: Ast = expressions::parse_expr(ctx)?;
 
         let body: Ast = if ctx.check(TokenType::LBrace) {
-            block::build_block(ctx)?
+            block::parse_code_block_stmt(ctx)?
         } else {
             statements::parse(ctx)?
         };
@@ -98,7 +98,7 @@ pub fn build_conditional<'parser>(
         let span: Span = ctx.previous().get_span();
 
         let else_body: Ast = if ctx.check(TokenType::LBrace) {
-            block::build_block(ctx)?
+            block::parse_code_block_stmt(ctx)?
         } else {
             statements::parse(ctx)?
         };

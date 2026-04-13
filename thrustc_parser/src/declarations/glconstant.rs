@@ -78,7 +78,7 @@ pub fn build_global_const<'parser>(
     ctx.get_mut_control_context()
         .set_position(Position::Constant);
 
-    let value: Ast = expressions::build_expression(ctx)?;
+    let value: Ast = expressions::parse_expression(ctx)?;
 
     ctx.get_mut_control_context().reset_position();
 

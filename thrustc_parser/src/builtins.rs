@@ -109,7 +109,7 @@ pub fn build_memcpy<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: Ast = expressions::build_expr(ctx)?;
+    let source: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -117,7 +117,7 @@ pub fn build_memcpy<'parser>(
         "Expected ','.".into(),
     )?;
 
-    let destination: Ast = expressions::build_expr(ctx)?;
+    let destination: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -125,7 +125,7 @@ pub fn build_memcpy<'parser>(
         "Expected ','.".into(),
     )?;
 
-    let size: Ast = expressions::build_expr(ctx)?;
+    let size: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -163,7 +163,7 @@ pub fn build_memmove<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let source: Ast = expressions::build_expr(ctx)?;
+    let source: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -171,7 +171,7 @@ pub fn build_memmove<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let destination: Ast = expressions::build_expr(ctx)?;
+    let destination: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -179,7 +179,7 @@ pub fn build_memmove<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expressions::build_expr(ctx)?;
+    let size: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::RParen,
@@ -217,7 +217,7 @@ pub fn build_memset<'parser>(
 
     let span: Span = memcpy_tk.get_span();
 
-    let destination: Ast = expressions::build_expr(ctx)?;
+    let destination: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -225,7 +225,7 @@ pub fn build_memset<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let new_size: Ast = expressions::build_expr(ctx)?;
+    let new_size: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::Comma,
@@ -233,7 +233,7 @@ pub fn build_memset<'parser>(
         String::from("Expected ','."),
     )?;
 
-    let size: Ast = expressions::build_expr(ctx)?;
+    let size: Ast = expressions::parse_expr(ctx)?;
 
     ctx.consume(
         TokenType::RParen,

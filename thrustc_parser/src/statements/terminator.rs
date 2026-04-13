@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId, traits::AstGetType};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -27,7 +26,7 @@ use thrustc_typesystem::Type;
 
 use crate::{ParserContext, expressions};
 
-pub fn build_return<'parser>(
+pub fn parse_return_stmt<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let return_tk: &Token = ctx.consume(
@@ -47,7 +46,7 @@ pub fn build_return<'parser>(
         });
     }
 
-    let value: Ast = expressions::build_expr(ctx)?;
+    let value: Ast = expressions::parse_expr(ctx)?;
     let kind: &Type = value.get_value_type()?;
 
     ctx.consume(

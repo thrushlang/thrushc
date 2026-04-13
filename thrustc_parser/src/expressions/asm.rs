@@ -54,7 +54,7 @@ pub fn build_asm_code_block<'parser>(
                 break;
             }
 
-            args.push(expressions::build_expression(ctx)?);
+            args.push(expressions::parse_expr(ctx)?);
 
             if ctx.check(TokenType::RParen) {
                 break;
@@ -88,7 +88,7 @@ pub fn build_asm_code_block<'parser>(
             break;
         }
 
-        let raw_str: Ast = expressions::build_expr(ctx)?;
+        let raw_str: Ast = expressions::parse_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_cnstring() {
@@ -137,7 +137,7 @@ pub fn build_asm_code_block<'parser>(
         "Expected '{'.".into(),
     )?;
 
-    let mut constraints: String = String::with_capacity(100);
+    let mut constraints: String = String::with_capacity(u8::MAX as usize);
     let mut constraint_pos: usize = 0;
 
     loop {
@@ -145,7 +145,7 @@ pub fn build_asm_code_block<'parser>(
             break;
         }
 
-        let raw_str: Ast = expressions::build_expr(ctx)?;
+        let raw_str: Ast = expressions::parse_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
         if !raw_str.is_cnstring() {

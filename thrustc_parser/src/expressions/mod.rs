@@ -36,7 +36,7 @@ use thrustc_token_type::TokenType;
 
 use crate::ParserContext;
 
-pub fn build_expression<'parser>(
+pub fn parse_expression<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_context()
@@ -58,7 +58,7 @@ pub fn build_expression<'parser>(
     Ok(expression)
 }
 
-pub fn build_expr<'parser>(
+pub fn parse_expr<'parser>(
     ctx: &mut ParserContext<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     ctx.get_mut_control_context()
