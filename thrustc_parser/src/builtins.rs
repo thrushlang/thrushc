@@ -17,7 +17,7 @@
 
 */
 
-use thrustc_ast::{Ast, NodeId, builitins::ThrustBuiltin};
+use thrustc_ast::{Ast, NodeId, builtins::AstBuiltin};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
@@ -82,7 +82,7 @@ pub fn build_halloc<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::Halloc {
+        builtin: AstBuiltin::Halloc {
             of: of.clone(),
             span,
         },
@@ -134,7 +134,7 @@ pub fn build_memcpy<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::MemCpy {
+        builtin: AstBuiltin::MemCpy {
             src: source.into(),
             dst: destination.into(),
             size: size.into(),
@@ -188,7 +188,7 @@ pub fn build_memmove<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::MemMove {
+        builtin: AstBuiltin::MemMove {
             src: source.into(),
             dst: destination.into(),
             size: size.into(),
@@ -242,7 +242,7 @@ pub fn build_memset<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::MemSet {
+        builtin: AstBuiltin::MemSet {
             dst: destination.into(),
             new_size: new_size.into(),
             size: size.into(),
@@ -280,7 +280,7 @@ pub fn build_alignof<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::AlignOf { of, span },
+        builtin: AstBuiltin::AlignOf { of, span },
         kind: Type::U32(span),
         span,
         id: NodeId::new(),
@@ -313,7 +313,7 @@ pub fn build_sizeof<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::SizeOf { of, span },
+        builtin: AstBuiltin::SizeOf { of, span },
         kind: Type::USize(span),
         span,
         id: NodeId::new(),
@@ -346,7 +346,7 @@ pub fn build_bit_size_of<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::BitSizeOf { of, span },
+        builtin: AstBuiltin::BitSizeOf { of, span },
         kind: Type::U64(span),
         span,
         id: NodeId::new(),
@@ -379,7 +379,7 @@ pub fn build_abi_size_of<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::AbiSizeOf { of, span },
+        builtin: AstBuiltin::AbiSizeOf { of, span },
         kind: Type::U64(span),
         span,
         id: NodeId::new(),
@@ -412,7 +412,7 @@ pub fn build_abi_align_of<'parser>(
     )?;
 
     Ok(Ast::Builtin {
-        builtin: ThrustBuiltin::AbiAlignOf { of, span },
+        builtin: AstBuiltin::AbiAlignOf { of, span },
         kind: Type::U32(span),
         span,
         id: NodeId::new(),

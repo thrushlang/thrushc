@@ -43,7 +43,7 @@ pub fn cast_precedence<'parser>(
         let cast: Type = typegeneration::build_type(ctx, false)?;
 
         let is_constant: bool = expression.is_constant_value();
-        let is_allocated: bool = expression.is_allocated_value()?;
+        let is_allocated: bool = expression.is_memory_assigned_value()?;
 
         expression = Ast::As {
             from: expression.into(),

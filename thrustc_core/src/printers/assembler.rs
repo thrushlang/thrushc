@@ -17,7 +17,6 @@
 
 */
 
-
 use colored::Colorize;
 
 use inkwell::memory_buffer::MemoryBuffer;
@@ -37,10 +36,10 @@ pub fn print_llvm_assembler(
     file_name: &str,
     unoptimized: bool,
 ) -> Result<(), LLVMString> {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
     let obfuscate: bool = compiler_options.need_obfuscate_archive_names();
 
-    let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
+    let optimization_name_modifier: &str = if unoptimized { "unopt_" } else { "" };
 
     let assembler_file_name: String = if obfuscate {
         format!(

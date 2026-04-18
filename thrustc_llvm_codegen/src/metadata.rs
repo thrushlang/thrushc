@@ -62,7 +62,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
     }
 
     fn setup_target_specific_metadata_or_attributes(&self) {
-        let options: &CompilerOptions = self.get_context().get_compiler_options();
+        let options: &CompilerOptions = self.get_codegen_context().get_compiler_options();
         let llvm_backend: &LLVMBackend = options.get_llvm_backend();
 
         {
@@ -70,29 +70,29 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             let cpu: &str = llvm_backend.get_target_cpu().get_cpu_name();
 
             let features_attr: Attribute = self
-                .get_context()
+                .get_codegen_context()
                 .get_llvm_context()
                 .create_string_attribute("target-features", features);
 
             let target_cpu_attr: Attribute = self
-                .get_context()
+                .get_codegen_context()
                 .get_llvm_context()
                 .create_string_attribute("target-cpu", cpu);
 
             let tune_cpu_attr: Attribute = self
-                .get_context()
+                .get_codegen_context()
                 .get_llvm_context()
                 .create_string_attribute("tune-cpu", cpu);
 
             {
-                for function in self.get_context().get_llvm_module().get_functions() {
+                for function in self.get_codegen_context().get_llvm_module().get_functions() {
                     function.add_attribute(AttributeLoc::Function, target_cpu_attr);
                     function.add_attribute(AttributeLoc::Function, tune_cpu_attr);
                     function.add_attribute(AttributeLoc::Function, features_attr);
 
                     if !llvm_backend.omit_trapping_math() {
                         let no_trapping_math_attr: Attribute = self
-                            .get_context()
+                            .get_codegen_context()
                             .get_llvm_context()
                             .create_string_attribute("no-trapping-math", "true");
 
@@ -101,7 +101,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
 
                     if !llvm_backend.omit_frame_pointer() {
                         let frame_pointer_attr: Attribute = self
-                            .get_context()
+                            .get_codegen_context()
                             .get_llvm_context()
                             .create_string_attribute("frame-pointer", "all");
 
@@ -113,32 +113,32 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
     }
 
     fn setup_llvm_module_flags(&self) {
-        let options: &CompilerOptions = self.get_context().get_compiler_options();
+        let options: &CompilerOptions = self.get_codegen_context().get_compiler_options();
         let llvm_backend: &LLVMBackend = options.get_llvm_backend();
 
         let lvl_max: BasicMetadataValueEnum = self
-            .get_context()
+            .get_codegen_context()
             .get_llvm_context()
             .i32_type()
             .const_int(7, false)
             .into();
 
         let lvl_min: BasicMetadataValueEnum = self
-            .get_context()
+            .get_codegen_context()
             .get_llvm_context()
             .i32_type()
             .const_int(8, false)
             .into();
 
         let lvl_error: BasicMetadataValueEnum = self
-            .get_context()
+            .get_codegen_context()
             .get_llvm_context()
             .i32_type()
             .const_int(1, false)
             .into();
 
         let lvl_warn: BasicMetadataValueEnum = self
-            .get_context()
+            .get_codegen_context()
             .get_llvm_context()
             .i32_type()
             .const_int(2, false)
@@ -149,21 +149,23 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 let dwarf_version: u64 = llvm_backend.get_debug_config().get_dwarf_version();
                 let debug_info_version: u32 = debug_info::debug_metadata_version();
 
-                let dwarf_v: MetadataValue =
-                    self.get_context().get_llvm_context().metadata_node(&[
+                let dwarf_v: MetadataValue = self
+                    .get_codegen_context()
+                    .get_llvm_context()
+                    .metadata_node(&[
                         lvl_max,
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .metadata_string("Dwarf Version")
                             .into(),
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .i32_type()
                             .const_int(dwarf_version, false)
                             .into(),
                     ]);
 
-                self.get_context()
+                self.get_codegen_context()
                     .get_llvm_module()
                     .add_global_metadata("llvm.module.flags", &dwarf_v)
                     .unwrap_or_else(|_| {
@@ -173,21 +175,23 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                         );
                     });
 
-                let debug_info_v: MetadataValue =
-                    self.get_context().get_llvm_context().metadata_node(&[
+                let debug_info_v: MetadataValue = self
+                    .get_codegen_context()
+                    .get_llvm_context()
+                    .metadata_node(&[
                         lvl_warn,
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .metadata_string("Debug Info Version")
                             .into(),
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .i32_type()
                             .const_int(debug_info_version as u64, false)
                             .into(),
                     ]);
 
-                self.get_context()
+                self.get_codegen_context()
                     .get_llvm_module()
                     .add_global_metadata("llvm.module.flags", &debug_info_v)
                     .unwrap_or_else(|_| {
@@ -206,20 +210,23 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 RelocMode::DynamicNoPic => 1,
             };
 
-            let pic_level: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
-                lvl_min,
-                self.get_context()
-                    .get_llvm_context()
-                    .metadata_string("PIC Level")
-                    .into(),
-                self.get_context()
-                    .get_llvm_context()
-                    .i32_type()
-                    .const_int(repr, false)
-                    .into(),
-            ]);
+            let pic_level: MetadataValue = self
+                .get_codegen_context()
+                .get_llvm_context()
+                .metadata_node(&[
+                    lvl_min,
+                    self.get_codegen_context()
+                        .get_llvm_context()
+                        .metadata_string("PIC Level")
+                        .into(),
+                    self.get_codegen_context()
+                        .get_llvm_context()
+                        .i32_type()
+                        .const_int(repr, false)
+                        .into(),
+                ]);
 
-            self.get_context()
+            self.get_codegen_context()
                 .get_llvm_module()
                 .add_global_metadata("llvm.module.flags", &pic_level)
                 .unwrap_or_else(|_| {
@@ -237,20 +244,23 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 RelocMode::DynamicNoPic => 1,
             };
 
-            let pie_level: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
-                lvl_max,
-                self.get_context()
-                    .get_llvm_context()
-                    .metadata_string("PIE Level")
-                    .into(),
-                self.get_context()
-                    .get_llvm_context()
-                    .i32_type()
-                    .const_int(repr, false)
-                    .into(),
-            ]);
+            let pie_level: MetadataValue = self
+                .get_codegen_context()
+                .get_llvm_context()
+                .metadata_node(&[
+                    lvl_max,
+                    self.get_codegen_context()
+                        .get_llvm_context()
+                        .metadata_string("PIE Level")
+                        .into(),
+                    self.get_codegen_context()
+                        .get_llvm_context()
+                        .i32_type()
+                        .const_int(repr, false)
+                        .into(),
+                ]);
 
-            self.get_context()
+            self.get_codegen_context()
                 .get_llvm_module()
                 .add_global_metadata("llvm.module.flags", &pie_level)
                 .unwrap_or_else(|_| {
@@ -271,20 +281,23 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 CodeModel::Large => 4,
             };
 
-            let code_level: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
-                lvl_error,
-                self.get_context()
-                    .get_llvm_context()
-                    .metadata_string("Code Model")
-                    .into(),
-                self.get_context()
-                    .get_llvm_context()
-                    .i32_type()
-                    .const_int(repr, false)
-                    .into(),
-            ]);
+            let code_level: MetadataValue = self
+                .get_codegen_context()
+                .get_llvm_context()
+                .metadata_node(&[
+                    lvl_error,
+                    self.get_codegen_context()
+                        .get_llvm_context()
+                        .metadata_string("Code Model")
+                        .into(),
+                    self.get_codegen_context()
+                        .get_llvm_context()
+                        .i32_type()
+                        .const_int(repr, false)
+                        .into(),
+                ]);
 
-            self.get_context()
+            self.get_codegen_context()
                 .get_llvm_module()
                 .add_global_metadata("llvm.module.flags", &code_level)
                 .unwrap_or_else(|_| {
@@ -297,7 +310,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
 
         {
             let lvl_warning: BasicMetadataValueEnum = self
-                .get_context()
+                .get_codegen_context()
                 .get_llvm_context()
                 .i32_type()
                 .const_int(2, false)
@@ -308,33 +321,36 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 let minor: u64 = sdk_macos_version.1;
                 let patch: u64 = sdk_macos_version.2;
 
-                let sdk_v: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
-                    lvl_warning,
-                    self.get_context()
-                        .get_llvm_context()
-                        .metadata_string("SDK Version")
-                        .into(),
-                    self.get_context()
-                        .get_llvm_context()
-                        .i32_type()
-                        .const_array(&[
-                            self.get_context()
-                                .get_llvm_context()
-                                .i32_type()
-                                .const_int(major, false),
-                            self.get_context()
-                                .get_llvm_context()
-                                .i32_type()
-                                .const_int(minor, false),
-                            self.get_context()
-                                .get_llvm_context()
-                                .i32_type()
-                                .const_int(patch, false),
-                        ])
-                        .into(),
-                ]);
+                let sdk_v: MetadataValue = self
+                    .get_codegen_context()
+                    .get_llvm_context()
+                    .metadata_node(&[
+                        lvl_warning,
+                        self.get_codegen_context()
+                            .get_llvm_context()
+                            .metadata_string("SDK Version")
+                            .into(),
+                        self.get_codegen_context()
+                            .get_llvm_context()
+                            .i32_type()
+                            .const_array(&[
+                                self.get_codegen_context()
+                                    .get_llvm_context()
+                                    .i32_type()
+                                    .const_int(major, false),
+                                self.get_codegen_context()
+                                    .get_llvm_context()
+                                    .i32_type()
+                                    .const_int(minor, false),
+                                self.get_codegen_context()
+                                    .get_llvm_context()
+                                    .i32_type()
+                                    .const_int(patch, false),
+                            ])
+                            .into(),
+                    ]);
 
-                self.get_context()
+                self.get_codegen_context()
                     .get_llvm_module()
                     .add_global_metadata("llvm.module.flags", &sdk_v)
                     .unwrap_or_else(|_| {
@@ -350,33 +366,36 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                 let minor: u64 = sdk_ios_version.1;
                 let patch: u64 = sdk_ios_version.2;
 
-                let sdk_v: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
-                    lvl_warning,
-                    self.get_context()
-                        .get_llvm_context()
-                        .metadata_string("SDK Version")
-                        .into(),
-                    self.get_context()
-                        .get_llvm_context()
-                        .i32_type()
-                        .const_array(&[
-                            self.get_context()
-                                .get_llvm_context()
-                                .i32_type()
-                                .const_int(major, false),
-                            self.get_context()
-                                .get_llvm_context()
-                                .i32_type()
-                                .const_int(minor, false),
-                            self.get_context()
-                                .get_llvm_context()
-                                .i32_type()
-                                .const_int(patch, false),
-                        ])
-                        .into(),
-                ]);
+                let sdk_v: MetadataValue = self
+                    .get_codegen_context()
+                    .get_llvm_context()
+                    .metadata_node(&[
+                        lvl_warning,
+                        self.get_codegen_context()
+                            .get_llvm_context()
+                            .metadata_string("SDK Version")
+                            .into(),
+                        self.get_codegen_context()
+                            .get_llvm_context()
+                            .i32_type()
+                            .const_array(&[
+                                self.get_codegen_context()
+                                    .get_llvm_context()
+                                    .i32_type()
+                                    .const_int(major, false),
+                                self.get_codegen_context()
+                                    .get_llvm_context()
+                                    .i32_type()
+                                    .const_int(minor, false),
+                                self.get_codegen_context()
+                                    .get_llvm_context()
+                                    .i32_type()
+                                    .const_int(patch, false),
+                            ])
+                            .into(),
+                    ]);
 
-                self.get_context()
+                self.get_codegen_context()
                     .get_llvm_module()
                     .add_global_metadata("llvm.module.flags", &sdk_v)
                     .unwrap_or_else(|_| {
@@ -389,26 +408,34 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         }
 
         {
-            let triple: LLVMTargetTriple =
-                LLVMTargetTriple::new(self.get_context().get_target_triple());
+            let triple_formatted: String = self
+                .get_codegen_context()
+                .get_target_triple()
+                .as_str()
+                .to_string_lossy()
+                .to_string();
 
-            let abi: &str = triple.get_abi();
+            let target_triple: LLVMTargetTriple = LLVMTargetTriple::new(triple_formatted);
+
+            let abi: &str = target_triple.get_abi();
 
             if abi != "unknown" {
-                let metadata: MetadataValue =
-                    self.get_context().get_llvm_context().metadata_node(&[
+                let metadata: MetadataValue = self
+                    .get_codegen_context()
+                    .get_llvm_context()
+                    .metadata_node(&[
                         lvl_error,
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .metadata_string("target-abi")
                             .into(),
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .metadata_string(abi)
                             .into(),
                     ]);
 
-                self.get_context()
+                self.get_codegen_context()
                     .get_llvm_module()
                     .add_global_metadata("llvm.module.flags", &metadata)
                     .unwrap_or_else(|_| {
@@ -429,21 +456,23 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             if is_no_pic
                 || llvm_backend.is_full_jit() && !llvm_backend.omit_direct_access_external_data()
             {
-                let direct_access_external_data: MetadataValue =
-                    self.get_context().get_llvm_context().metadata_node(&[
+                let direct_access_external_data: MetadataValue = self
+                    .get_codegen_context()
+                    .get_llvm_context()
+                    .metadata_node(&[
                         lvl_max,
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .metadata_string("direct-access-external-data")
                             .into(),
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .i32_type()
                             .const_int(1, false)
                             .into(),
                     ]);
 
-                self.get_context()
+                self.get_codegen_context()
                     .get_llvm_module()
                     .add_global_metadata("llvm.module.flags", &direct_access_external_data)
                     .unwrap_or_else(|_| {
@@ -459,14 +488,16 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             if let Some(target_triple_darwin_variant) =
                 llvm_backend.get_target().get_triple_darwin_variant()
             {
-                let code_level: MetadataValue =
-                    self.get_context().get_llvm_context().metadata_node(&[
+                let code_level: MetadataValue = self
+                    .get_codegen_context()
+                    .get_llvm_context()
+                    .metadata_node(&[
                         lvl_error,
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .metadata_string("darwin.target_variant.triple")
                             .into(),
-                        self.get_context()
+                        self.get_codegen_context()
                             .get_llvm_context()
                             .metadata_string(
                                 target_triple_darwin_variant
@@ -477,7 +508,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
                             .into(),
                     ]);
 
-                self.get_context()
+                self.get_codegen_context()
                     .get_llvm_module()
                     .add_global_metadata("llvm.module.flags", &code_level)
                     .unwrap_or_else(|_| {
@@ -493,25 +524,34 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
             let is_pic: bool = matches!(llvm_backend.get_reloc_mode(), RelocMode::PIC);
 
             if !llvm_backend.omit_rtlibusegot() {
-                let triple: LLVMTargetTriple =
-                    LLVMTargetTriple::new(self.get_context().get_target_triple());
+                let triple_formatted: String = self
+                    .get_codegen_context()
+                    .get_target_triple()
+                    .as_str()
+                    .to_string_lossy()
+                    .to_string();
 
-                if triple.get_arch().contains("arm") && is_pic && triple.has_posix_thread_model() {
-                    let rt_lib_use_got: MetadataValue =
-                        self.get_context().get_llvm_context().metadata_node(&[
+                let target_triple: LLVMTargetTriple = LLVMTargetTriple::new(triple_formatted);
+
+                if target_triple.is_arm_family() && is_pic && target_triple.has_posix_thread_model()
+                {
+                    let rt_lib_use_got: MetadataValue = self
+                        .get_codegen_context()
+                        .get_llvm_context()
+                        .metadata_node(&[
                             lvl_error,
-                            self.get_context()
+                            self.get_codegen_context()
                                 .get_llvm_context()
                                 .metadata_string("RtLibUseGOT")
                                 .into(),
-                            self.get_context()
+                            self.get_codegen_context()
                                 .get_llvm_context()
                                 .i32_type()
                                 .const_int(1, false)
                                 .into(),
                         ]);
 
-                    self.get_context()
+                    self.get_codegen_context()
                         .get_llvm_module()
                         .add_global_metadata("llvm.module.flags", &rt_lib_use_got)
                         .unwrap_or_else(|_| {
@@ -525,21 +565,23 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         }
 
         if !llvm_backend.get_optimization().is_high_opt() && !llvm_backend.omit_frame_pointer() {
-            let frame_pointer: MetadataValue =
-                self.get_context().get_llvm_context().metadata_node(&[
+            let frame_pointer: MetadataValue = self
+                .get_codegen_context()
+                .get_llvm_context()
+                .metadata_node(&[
                     lvl_max,
-                    self.get_context()
+                    self.get_codegen_context()
                         .get_llvm_context()
                         .metadata_string("frame-pointer")
                         .into(),
-                    self.get_context()
+                    self.get_codegen_context()
                         .get_llvm_context()
                         .i32_type()
                         .const_int(2, false)
                         .into(),
                 ]);
 
-            self.get_context()
+            self.get_codegen_context()
                 .get_llvm_module()
                 .add_global_metadata("llvm.module.flags", &frame_pointer)
                 .unwrap_or_else(|_| {
@@ -551,20 +593,23 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
         }
 
         if !llvm_backend.omit_uwtable() {
-            let uwtable: MetadataValue = self.get_context().get_llvm_context().metadata_node(&[
-                lvl_max,
-                self.get_context()
-                    .get_llvm_context()
-                    .metadata_string("uwtable")
-                    .into(),
-                self.get_context()
-                    .get_llvm_context()
-                    .i32_type()
-                    .const_int(2, false)
-                    .into(),
-            ]);
+            let uwtable: MetadataValue = self
+                .get_codegen_context()
+                .get_llvm_context()
+                .metadata_node(&[
+                    lvl_max,
+                    self.get_codegen_context()
+                        .get_llvm_context()
+                        .metadata_string("uwtable")
+                        .into(),
+                    self.get_codegen_context()
+                        .get_llvm_context()
+                        .i32_type()
+                        .const_int(2, false)
+                        .into(),
+                ]);
 
-            self.get_context()
+            self.get_codegen_context()
                 .get_llvm_module()
                 .add_global_metadata("llvm.module.flags", &uwtable)
                 .unwrap_or_else(|_| {
@@ -578,45 +623,48 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
 
     fn setup_compiler_info(&self) {
         let version: MetadataValue = self
-            .get_context()
+            .get_codegen_context()
             .get_llvm_context()
             .metadata_string(COMPILER_ID);
 
         let node: MetadataValue = self
-            .get_context()
+            .get_codegen_context()
             .get_llvm_context()
             .metadata_node(&[version.into()]);
 
         let _ = self
-            .get_context()
+            .get_codegen_context()
             .get_llvm_module()
             .add_global_metadata("llvm.ident", &node);
     }
 
     fn setup_build_id(&self) {
-        let options: &CompilerOptions = self.get_context().get_compiler_options();
+        let options: &CompilerOptions = self.get_codegen_context().get_compiler_options();
         let id: String = options.get_build_id().to_string();
 
-        let build_id: MetadataValue = self.get_context().get_llvm_context().metadata_string(&id);
+        let build_id: MetadataValue = self
+            .get_codegen_context()
+            .get_llvm_context()
+            .metadata_string(&id);
 
         let llvm_major: u32 = inkwell::support::get_llvm_version().0;
         let llvm_minor: u32 = inkwell::support::get_llvm_version().1;
         let llvm_patch: u32 = inkwell::support::get_llvm_version().2;
 
-        let llvm_v: MetadataValue =
-            self.get_context()
-                .get_llvm_context()
-                .metadata_string(&format!(
-                    "LLVM {}.{}.{}",
-                    llvm_major, llvm_minor, llvm_patch
-                ));
+        let llvm_v: MetadataValue = self
+            .get_codegen_context()
+            .get_llvm_context()
+            .metadata_string(&format!(
+                "LLVM {}.{}.{}",
+                llvm_major, llvm_minor, llvm_patch
+            ));
 
         let node: MetadataValue = self
-            .get_context()
+            .get_codegen_context()
             .get_llvm_context()
             .metadata_node(&[build_id.into(), llvm_v.into()]);
 
-        self.get_context()
+        self.get_codegen_context()
             .get_llvm_module()
             .add_global_metadata("build", &node)
             .unwrap_or_else(|_| {
@@ -630,7 +678,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
     #[inline]
-    fn get_context(&self) -> &'a LLVMCodeGenContext<'a, 'ctx> {
+    fn get_codegen_context(&self) -> &'a LLVMCodeGenContext<'a, 'ctx> {
         self.context
     }
 }

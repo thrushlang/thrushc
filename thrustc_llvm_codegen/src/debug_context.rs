@@ -68,7 +68,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         options: &CompilerOptions,
         unit: &CompilationUnit,
     ) -> Self {
-        let is_optimized: bool = LLVMOptimizer::is_optimizable(options);
+        let is_optimized: bool = LLVMOptimizer::is_an_optimizable_module(options);
 
         let split_debug_inlining: bool = options
             .get_llvm_backend()
@@ -123,7 +123,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         function: &LLVMDBGFunction<'ctx>,
         context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ) {
-        let value: FunctionValue<'_> = function.get_value();
+        let function_value: FunctionValue<'_> = function.get_value();
         let name: &str = function.get_name();
         let return_type: &Type = function.get_return_type();
         let parameter_types: Vec<Type> = function.get_parameters_types();
@@ -157,18 +157,20 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
             typegeneration::compile_as_dbg_type(self, return_type, llvm_return_type)
         });
 
-        let subroutine_type: DISubroutineType<'_> = self.get_builder().create_subroutine_type(
-            self.get_unit().get_file(),
-            dbg_return_type,
-            &dbg_parameter_types,
-            DIFlagsConstants::PUBLIC,
-        );
+        let subroutine_type: DISubroutineType<'_> =
+            self.get_debug_builder().create_subroutine_type(
+                self.get_debug_unit().get_file(),
+                dbg_return_type,
+                &dbg_parameter_types,
+                DIFlagsConstants::PUBLIC,
+            );
 
-        let is_optimized: bool = LLVMOptimizer::is_optimizable(context.get_compiler_options());
+        let is_optimized: bool =
+            LLVMOptimizer::is_an_optimizable_module(context.get_compiler_options());
 
-        let file: DIFile<'_> = self.get_unit().get_file();
+        let file: DIFile<'_> = self.get_debug_unit().get_file();
 
-        let subprogram: DISubprogram<'_> = self.get_builder().create_function(
+        let subprogram: DISubprogram<'_> = self.get_debug_builder().create_function(
             file.as_debug_info_scope(),
             name,
             None,
@@ -183,8 +185,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         );
 
         self.add_subprogram(subprogram);
-
-        value.set_subprogram(subprogram);
+        function_value.set_subprogram(subprogram);
     }
 }
 
@@ -198,7 +199,7 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         let line: u32 = span.get_line();
         let column: u32 = span.get_span_start();
 
-        let debug_loc: DILocation<'_> = self.get_builder().create_debug_location(
+        let debug_loc: DILocation<'_> = self.get_debug_builder().create_debug_location(
             llvm_context,
             line,
             column,
@@ -216,9 +217,9 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
 
         let parent_scope: DIScope = self.get_scope();
 
-        let block: DILexicalBlock<'_> = self.get_builder().create_lexical_block(
+        let block: DILexicalBlock<'_> = self.get_debug_builder().create_lexical_block(
             parent_scope,
-            self.get_unit().get_file(),
+            self.get_debug_unit().get_file(),
             line,
             column,
         );
@@ -268,19 +269,19 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
         } else if let Some(subprogram) = self.get_last_subprogram() {
             subprogram.as_debug_info_scope()
         } else {
-            self.get_unit().as_debug_info_scope()
+            self.get_debug_unit().as_debug_info_scope()
         }
     }
 }
 
 impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
     #[inline]
-    pub fn get_builder(&self) -> &DebugInfoBuilder<'ctx> {
+    pub fn get_debug_builder(&self) -> &DebugInfoBuilder<'ctx> {
         &self.builder
     }
 
     #[inline]
-    pub fn get_unit(&self) -> &DICompileUnit<'ctx> {
+    pub fn get_debug_unit(&self) -> &DICompileUnit<'ctx> {
         &self.unit
     }
 
@@ -288,7 +289,9 @@ impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
     pub fn get_target_data(&self) -> TargetData {
         self.target_machine.get_target_data()
     }
+}
 
+impl<'a, 'ctx> LLVMDebugContext<'a, 'ctx> {
     #[inline]
     pub fn get_mut_diagnostician(&mut self) -> &mut Diagnostician {
         &mut self.diagnostician

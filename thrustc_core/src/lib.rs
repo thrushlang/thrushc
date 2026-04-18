@@ -17,19 +17,17 @@
 
 */
 
-mod cleaner;
-mod emit;
+pub mod cleaner;
+pub mod emit;
 pub mod emitters;
-mod finisher;
-mod interrupt;
-mod linkage;
-mod print;
+pub mod finisher;
+pub mod interrupt;
+pub mod linkage;
+pub mod print;
 pub mod printers;
-mod starter;
-mod utils;
-mod validate;
-
-use std::time::Duration;
+pub mod starter;
+pub mod utils;
+pub mod validate;
 
 use inkwell::OptimizationLevel;
 use inkwell::builder::Builder;
@@ -79,6 +77,14 @@ pub struct ThrustCompiler<'thrustc> {
     thrustc_time: std::time::Duration,
 }
 
+pub type CompileTime = (
+    bool,
+    std::time::Duration,
+    std::time::Duration,
+    std::time::Duration,
+    std::time::Duration,
+);
+
 impl<'thrustc> ThrustCompiler<'thrustc> {
     pub fn new(files: &'thrustc [CompilationUnit], options: &'thrustc CompilerOptions) -> Self {
         Self {
@@ -96,18 +102,15 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 }
 
 impl ThrustCompiler<'_> {
-    pub fn compile(
-        &mut self,
-    ) -> (
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-    ) {
-        if self.get_options().llvm() {
+    pub fn compile(&mut self) -> CompileTime {
+        if self.get_compilation_options().llvm() {
             Target::initialize_all(&InitializationConfig::default());
 
-            if self.get_options().get_llvm_backend().is_full_jit() {
+            if self
+                .get_compilation_options()
+                .get_llvm_backend()
+                .is_full_jit()
+            {
                 return self.compile_jit_llvm();
             } else {
                 return self.compile_aot_llvm();
@@ -120,6 +123,7 @@ impl ThrustCompiler<'_> {
         }
 
         (
+            false,
             self.thrustc_time,
             self.thrustc_frontend_time,
             self.thrustc_backend_time,
@@ -129,15 +133,8 @@ impl ThrustCompiler<'_> {
 }
 
 impl<'thrustc> ThrustCompiler<'thrustc> {
-    fn compile_aot_llvm(
-        &mut self,
-    ) -> (
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-    ) {
-        cleaner::auto_clean(self.get_options());
+    fn compile_aot_llvm(&mut self) -> CompileTime {
+        cleaner::auto_clean(self.get_compilation_options());
 
         let mut disrupted: bool = false;
 
@@ -146,11 +143,12 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         }
 
         if disrupted
-            || self.get_options().get_was_printed()
-            || self.get_options().get_was_emited()
+            || self.get_compilation_options().get_was_printed()
+            || self.get_compilation_options().get_was_emited()
             || self.get_compiled_files().is_empty()
         {
             return (
+                disrupted,
                 self.thrustc_time,
                 self.thrustc_frontend_time,
                 self.thrustc_backend_time,
@@ -170,6 +168,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         }
 
         (
+            disrupted,
             self.thrustc_time,
             self.thrustc_frontend_time,
             self.thrustc_backend_time,
@@ -190,7 +189,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             return interrupt::archive_compilation_unit(self, file, file_time);
         };
 
-        self.update_thrushc_frontend_time(frontend_time.elapsed());
+        self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if print::frontend_before(self, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation(self, file_time, file);
@@ -204,7 +203,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let modules: Result<&[thrustc_preprocessor::module::Module], ()> =
             preprocessor.generate_modules(&tokens, self.options, file);
 
-        self.update_thrushc_frontend_time(frontend_time.elapsed());
+        self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if modules.is_err() {
             return interrupt::archive_compilation_unit(self, file, file_time);
@@ -240,7 +239,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let semantic_analysis_throwed_errors: bool =
             SemanticAnalysis::new(ast, file, self.options).analyze(parser_throwed_errors);
 
-        self.update_thrushc_frontend_time(frontend_time.elapsed());
+        self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return finisher::archive_compilation(self, file_time, file);
@@ -250,12 +249,12 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             LLVMIntrinsicChecker::new(ast, file, self.options);
 
         let mut call_conv_checker: LLVMCallConventionsChecker<'_> =
-            LLVMCallConventionsChecker::new(ast, self.get_options(), file);
+            LLVMCallConventionsChecker::new(ast, self.get_compilation_options(), file);
 
         let intrinsic_result: bool = intrinsic_checker.analyze();
         let call_conv_result: bool = call_conv_checker.analyze();
 
-        self.update_thrushc_frontend_time(frontend_time.elapsed());
+        self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if intrinsic_result || call_conv_result {
             return interrupt::archive_compilation_unit(self, file, file_time);
@@ -344,7 +343,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         validate::llvm_codegen(&llvm_module, file)?;
 
-        self.update_thrushc_backend_time(backend_time.elapsed());
+        self.update_thrustc_backend_time(backend_time.elapsed());
 
         if print::llvm_before_optimization(self, &llvm_module, &target_machine, file, file_time)? {
             return finisher::archive_compilation(self, file_time, file);
@@ -361,7 +360,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             return finisher::archive_compilation(self, file_time, file);
         }
 
-        self.update_thrushc_backend_time(backend_time.elapsed());
+        self.update_thrustc_backend_time(backend_time.elapsed());
 
         let llvm_optimizer_config: LLVMOptimizationConfig = LLVMOptimizationConfig::new(
             compiler_optimization,
@@ -391,7 +390,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         )
         .optimize();
 
-        self.update_thrushc_backend_time(backend_time.elapsed());
+        self.update_thrustc_backend_time(backend_time.elapsed());
 
         if print::llvm_after_optimization(self, &llvm_module, &target_machine, file, file_time)? {
             return finisher::archive_compilation(self, file_time, file);
@@ -417,7 +416,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         self.add_compiled_unit(obj_file);
 
-        self.update_thrushc_backend_time(backend_time.elapsed());
+        self.update_thrustc_backend_time(backend_time.elapsed());
 
         finisher::archive_compilation(self, file_time, file)?;
 
@@ -426,15 +425,8 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 }
 
 impl<'thrustc> ThrustCompiler<'thrustc> {
-    fn compile_jit_llvm(
-        &mut self,
-    ) -> (
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-    ) {
-        cleaner::auto_clean(self.get_options());
+    fn compile_jit_llvm(&mut self) -> CompileTime {
+        cleaner::auto_clean(self.get_compilation_options());
 
         let context: Context = Context::create();
 
@@ -457,11 +449,12 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         }
 
         if disrupted
-            || self.get_options().get_was_printed()
-            || self.get_options().get_was_emited()
+            || self.get_compilation_options().get_was_printed()
+            || self.get_compilation_options().get_was_emited()
             || modules.is_empty()
         {
             return (
+                disrupted,
                 self.thrustc_time,
                 self.thrustc_frontend_time,
                 self.thrustc_backend_time,
@@ -485,6 +478,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
                     );
 
                     return (
+                        disrupted,
                         self.thrustc_time,
                         self.thrustc_frontend_time,
                         self.thrustc_backend_time,
@@ -507,6 +501,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         }
 
         (
+            disrupted,
             self.thrustc_time,
             self.thrustc_frontend_time,
             self.thrustc_backend_time,
@@ -530,7 +525,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             return interrupt::archive_compilation_unit_jit(self, file, file_time);
         };
 
-        self.update_thrushc_frontend_time(frontend_time.elapsed());
+        self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if print::frontend_before(self, file, Emited::Tokens(&tokens)) {
             return finisher::archive_compilation_module_jit(self, file_time, file);
@@ -544,7 +539,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let modules: Result<&[thrustc_preprocessor::module::Module], ()> =
             preprocessor.generate_modules(&tokens, self.options, file);
 
-        self.update_thrushc_frontend_time(frontend_time.elapsed());
+        self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if modules.is_err() {
             return interrupt::archive_compilation_unit_jit(self, file, file_time);
@@ -580,7 +575,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let semantic_analysis_throwed_errors: bool =
             SemanticAnalysis::new(ast, file, self.options).analyze(parser_throwed_errors);
 
-        self.update_thrushc_frontend_time(frontend_time.elapsed());
+        self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if parser_throwed_errors || semantic_analysis_throwed_errors {
             return finisher::archive_compilation_module_jit(self, file_time, file);
@@ -590,12 +585,12 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             LLVMIntrinsicChecker::new(ast, file, self.options);
 
         let mut call_conv_checker: LLVMCallConventionsChecker<'_> =
-            LLVMCallConventionsChecker::new(ast, self.get_options(), file);
+            LLVMCallConventionsChecker::new(ast, self.get_compilation_options(), file);
 
         let intrinsic_result: bool = intrinsic_checker.analyze();
         let call_conv_result: bool = call_conv_checker.analyze();
 
-        self.update_thrushc_frontend_time(frontend_time.elapsed());
+        self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if intrinsic_result || call_conv_result {
             return interrupt::archive_compilation_unit_jit(self, file, file_time);
@@ -676,7 +671,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
         validate::llvm_codegen(&llvm_module, file)?;
 
-        self.update_thrushc_backend_time(backend_time.elapsed());
+        self.update_thrustc_backend_time(backend_time.elapsed());
 
         if print::llvm_before_optimization(self, &llvm_module, &target_machine, file, file_time)? {
             return finisher::archive_compilation_module_jit(self, file_time, file);
@@ -721,7 +716,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         )
         .optimize();
 
-        self.update_thrushc_backend_time(backend_time.elapsed());
+        self.update_thrustc_backend_time(backend_time.elapsed());
 
         if print::llvm_after_optimization(self, &llvm_module, &target_machine, file, file_time)? {
             return finisher::archive_compilation_module_jit(self, file_time, file);
@@ -738,7 +733,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             return finisher::archive_compilation_module_jit(self, file_time, file);
         }
 
-        self.update_thrushc_backend_time(backend_time.elapsed());
+        self.update_thrustc_backend_time(backend_time.elapsed());
 
         finisher::archive_compilation(self, file_time, file)?;
 
@@ -748,17 +743,17 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
 
 impl ThrustCompiler<'_> {
     #[inline]
-    pub fn update_thrushc_time(&mut self, elapsed: Duration) {
+    pub fn update_thrustc_time(&mut self, elapsed: std::time::Duration) {
         self.thrustc_time = elapsed;
     }
 
     #[inline]
-    pub fn update_thrushc_frontend_time(&mut self, elapsed: Duration) {
+    pub fn update_thrustc_frontend_time(&mut self, elapsed: std::time::Duration) {
         self.thrustc_frontend_time = elapsed;
     }
 
     #[inline]
-    pub fn update_thrushc_backend_time(&mut self, elapsed: Duration) {
+    pub fn update_thrustc_backend_time(&mut self, elapsed: std::time::Duration) {
         self.thrustc_backend_time = elapsed;
     }
 }
@@ -770,7 +765,7 @@ impl ThrustCompiler<'_> {
     }
 
     #[inline]
-    pub fn get_options(&self) -> &CompilerOptions {
+    pub fn get_compilation_options(&self) -> &CompilerOptions {
         self.options
     }
 }

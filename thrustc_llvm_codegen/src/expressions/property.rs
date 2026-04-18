@@ -42,7 +42,7 @@ pub fn compile<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let source_type: &Type = source.llvm_get_type();
 
-    let is_allocated: bool = source.is_allocated_value().unwrap_or_else(|_| {
+    let is_allocated: bool = source.is_memory_assigned_value().unwrap_or_else(|_| {
         abort::abort_codegen(
             context,
             "Failed to determinate if the value is in memory!",

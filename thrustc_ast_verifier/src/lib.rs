@@ -19,7 +19,7 @@
 
 use thrustc_ast::{
     Ast,
-    builitins::ThrustBuiltin,
+    builtins::AstBuiltin,
     traits::{AstCodeLocation, AstExpressionExtensions, AstStatementExtensions},
 };
 use thrustc_diagnostician::Diagnostician;
@@ -280,7 +280,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
             }
 
             Ast::Builtin { builtin, .. } => match builtin {
-                ThrustBuiltin::MemMove { src, dst, size, .. } => {
+                AstBuiltin::MemMove { src, dst, size, .. } => {
                     self.expected_expression(src);
                     self.analyze_expression(src);
 
@@ -290,7 +290,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
                     self.expected_expression(size);
                     self.analyze_expression(size);
                 }
-                ThrustBuiltin::MemSet {
+                AstBuiltin::MemSet {
                     dst,
                     new_size,
                     size,
@@ -305,8 +305,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
                     self.expected_expression(size);
                     self.analyze_expression(size);
                 }
-
-                ThrustBuiltin::MemCpy { dst, src, size, .. } => {
+                AstBuiltin::MemCpy { dst, src, size, .. } => {
                     self.expected_expression(src);
                     self.analyze_expression(src);
 

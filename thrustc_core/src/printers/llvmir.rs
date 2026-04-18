@@ -17,7 +17,6 @@
 
 */
 
-
 use colored::Colorize;
 
 use inkwell::module::Module;
@@ -32,10 +31,10 @@ pub fn print_llvm_ir(
     file_name: &str,
     unoptimized: bool,
 ) {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
     let obfuscate: bool = compiler_options.need_obfuscate_archive_names();
 
-    let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
+    let optimization_name_modifier: &str = if unoptimized { "unopt_" } else { "" };
 
     let ir_file_name: String = if obfuscate {
         format!(

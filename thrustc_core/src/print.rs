@@ -32,7 +32,7 @@ pub fn llvm_before_optimization(
     file: &CompilationUnit,
     file_time: std::time::Instant,
 ) -> Result<bool, ()> {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
 
     if compiler_options.contains_printable(PrintableUnit::UnOptLLVMIR) {
         printers::llvmir::print_llvm_ir(compiler, llvm_module, file.get_name(), true);
@@ -65,7 +65,7 @@ pub fn llvm_after_optimization(
     file: &CompilationUnit,
     file_time: std::time::Instant,
 ) -> Result<bool, ()> {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
 
     if compiler_options.contains_printable(PrintableUnit::LLVMIR) {
         printers::llvmir::print_llvm_ir(compiler, llvm_module, file.get_name(), false);
@@ -96,7 +96,7 @@ pub fn frontend_before(
     file: &CompilationUnit,
     emited: Emited,
 ) -> bool {
-    let options: &CompilerOptions = compiler.get_options();
+    let options: &CompilerOptions = compiler.get_compilation_options();
 
     if options.contains_printable(PrintableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {
@@ -127,7 +127,7 @@ pub fn frontend_after(
     file: &CompilationUnit,
     emited: Emited,
 ) -> bool {
-    let options: &CompilerOptions = compiler.get_options();
+    let options: &CompilerOptions = compiler.get_compilation_options();
 
     if options.contains_printable(PrintableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {

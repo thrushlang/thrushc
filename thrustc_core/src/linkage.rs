@@ -206,10 +206,11 @@ impl GCCLinker<'_> {
 }
 
 pub fn link_with_clang(compiler: &mut ThrustCompiler) {
-    let llvm_backend: &LLVMBackend = compiler.get_options().get_llvm_backend();
+    let llvm_backend: &LLVMBackend = compiler.get_compilation_options().get_llvm_backend();
 
-    let linking_compiler_config: &LinkingCompilersConfiguration =
-        compiler.get_options().get_linking_compilers_configuration();
+    let linking_compiler_config: &LinkingCompilersConfiguration = compiler
+        .get_compilation_options()
+        .get_linking_compilers_configuration();
 
     let all_compiled_files: &[std::path::PathBuf] = compiler.get_compiled_files();
 
@@ -239,8 +240,9 @@ pub fn link_with_clang(compiler: &mut ThrustCompiler) {
 }
 
 pub fn link_with_gcc(compiler: &mut ThrustCompiler) {
-    let linking_compiler_configuration: &LinkingCompilersConfiguration =
-        compiler.get_options().get_linking_compilers_configuration();
+    let linking_compiler_configuration: &LinkingCompilersConfiguration = compiler
+        .get_compilation_options()
+        .get_linking_compilers_configuration();
 
     let all_compiled_files: &[std::path::PathBuf] = compiler.get_compiled_files();
 

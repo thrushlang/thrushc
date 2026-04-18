@@ -43,7 +43,7 @@ pub enum LoggingType {
 
 #[inline]
 pub fn print_debug(ltype: LoggingType, msg: &str) {
-    let _ = io::stderr().write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes());
+    let _ = io::stdout().write_all(format!("{} {}", ltype.as_styled(), msg).as_bytes());
 }
 
 #[inline]

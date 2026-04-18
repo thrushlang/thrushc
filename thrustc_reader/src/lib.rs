@@ -32,7 +32,7 @@ pub fn get_file_source_code(file_path: &std::path::Path) -> String {
             thrustc_logging::print_warn(
                 LoggingType::Warning,
                 &format!(
-                    "File '{}' exceeds 100000 lines of code. You should split it into as a minimal two diferent files.",
+                    "'{}' exceeds 100000 lines. You should split it into as a minimal two diferent files.",
                     file_path.display()
                 ),
             );
@@ -100,7 +100,7 @@ fn count_lines_from_reader<R: Read>(reader: &mut R) -> anyhow::Result<u64> {
             break;
         }
 
-        count += bytecount::count(&buffer[..bytes_read], b'\n') as u64;
+        count = count.saturating_add(bytecount::count(&buffer[..bytes_read], b'\n') as u64);
     }
 
     Ok(count)

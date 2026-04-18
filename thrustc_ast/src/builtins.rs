@@ -17,14 +17,13 @@
 
 */
 
-
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
 
 use crate::Ast;
 
 #[derive(Debug, Clone)]
-pub enum ThrustBuiltin<'mir> {
+pub enum AstBuiltin<'mir> {
     Halloc {
         of: Type,
         span: Span,

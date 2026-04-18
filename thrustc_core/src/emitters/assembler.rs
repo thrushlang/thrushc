@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::{
     module::Module,
     targets::{FileType, TargetMachine},
@@ -40,7 +39,7 @@ pub fn emit_llvm_assembler(
         );
     }
 
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
     let need_obfuscation: bool = compiler_options.need_obfuscate_archive_names();
 
     let assembler_base_path: std::path::PathBuf = build_dir.join("emit").join("assembler");
@@ -49,7 +48,7 @@ pub fn emit_llvm_assembler(
         let _ = std::fs::create_dir_all(&assembler_base_path);
     }
 
-    let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
+    let optimization_name_modifier: &str = if unoptimized { "unopt_" } else { "" };
 
     let assembler_file_name: String = if need_obfuscation {
         format!(

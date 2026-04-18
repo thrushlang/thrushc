@@ -24,7 +24,7 @@ use thrustc_ast::{
     traits::{AstGetType, AstMemoryExtensions, AstStructureDataExtensions},
 };
 use thrustc_entities::parser::{FoundSymbolId, Struct};
-use thrustc_errors::{CompilationIssue, CompilationIssueCode};
+use thrustc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
@@ -39,7 +39,7 @@ pub fn build_property<'parser>(
     source: Ast<'parser>,
 ) -> Result<Ast<'parser>, CompilationIssue> {
     let base_type: &Type = source.get_value_type()?;
-    let metadata: PropertyMetadata = PropertyMetadata::new(source.is_allocated_value()?);
+    let metadata: PropertyMetadata = PropertyMetadata::new(source.is_memory_assigned_value()?);
 
     let mut property_names: Vec<&str> = Vec::with_capacity(u8::MAX as usize);
 
@@ -66,7 +66,7 @@ pub fn build_property<'parser>(
     }
 
     let properties_result: Result<(Type, PropertyData), CompilationIssue> =
-        self::decompose(ctx, 0, &source, property_names, base_type, span);
+        self::decompose_structure_property(ctx, 0, &source, property_names, base_type, span);
 
     match properties_result {
         Ok(properties) => {
@@ -90,7 +90,7 @@ pub fn build_property<'parser>(
     }
 }
 
-fn decompose<'parser>(
+fn decompose_structure_property<'parser>(
     ctx: &mut ParserContext<'parser>,
     mut position: usize,
     source: &Ast,
@@ -114,7 +114,16 @@ fn decompose<'parser>(
         _ => base_type,
     };
 
-    let property_name: &str = property_names[position];
+    let current_property_name: &str = property_names.get(position).unwrap_or_else(|| {
+        thrustc_frontend_abort::abort_compilation(
+            ctx.get_mut_diagnostician(),
+            CompilationPosition::Parser,
+            "Cannot be parsed correctly!",
+            span,
+            std::path::PathBuf::from(file!()),
+            line!(),
+        )
+    });
 
     if let Type::Struct(name, ..) = current_type {
         let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
@@ -130,18 +139,18 @@ fn decompose<'parser>(
             .get_fields()
             .iter()
             .enumerate()
-            .find(|(_, (other_property_name, ..))| *other_property_name == property_name);
+            .find(|(_, (other_property_name, ..))| *other_property_name == current_property_name);
 
         let Some((index, (_, field_type, ..))) = field else {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0028,
-                format!("'{}' not found", property_name),
+                format!("'{}' not found", current_property_name),
                 None,
                 span,
             ));
         };
 
-        let adjusted_inner_type: Type = if is_parent_ptr || source.is_allocated_value()? {
+        let adjusted_inner_type: Type = if is_parent_ptr || source.is_memory_assigned_value()? {
             Type::Ptr(Some(field_type.clone().into()), field_type.get_span())
         } else {
             field_type.clone()
@@ -151,25 +160,24 @@ fn decompose<'parser>(
             current_type.clone(),
             (
                 adjusted_inner_type.clone(),
-                u32::try_from(index).map_err(|_| {
-                    CompilationIssue::Error(
-                        CompilationIssueCode::E0037,
-                        "Too deeper for property indexing.".into(),
-                        None,
-                        span,
-                    )
-                })?,
+                u32::try_from(index).unwrap_or(u32::MAX - 1),
             ),
         ));
 
         position = position.saturating_add(1);
 
-        let (field_inner_type, mut nested_indices) =
-            self::decompose(ctx, position, source, property_names, field_type, span)?;
+        let (field_inner_type, mut nested_indices) = self::decompose_structure_property(
+            ctx,
+            position,
+            source,
+            property_names,
+            field_type,
+            span,
+        )?;
 
         {
             for (base_subtype, ..) in nested_indices.iter_mut() {
-                *base_subtype = if is_parent_ptr || source.is_allocated_value()? {
+                *base_subtype = if is_parent_ptr || source.is_memory_assigned_value()? {
                     Type::Ptr(Some(base_subtype.clone().into()), base_subtype.get_span())
                 } else {
                     base_subtype.clone()
@@ -179,7 +187,7 @@ fn decompose<'parser>(
 
         indices.append(&mut nested_indices);
 
-        let adjusted_inner_type: Type = if is_parent_ptr || source.is_allocated_value()? {
+        let adjusted_inner_type: Type = if is_parent_ptr || source.is_memory_assigned_value()? {
             Type::Ptr(
                 Some(field_inner_type.clone().into()),
                 field_inner_type.get_span(),
@@ -194,7 +202,7 @@ fn decompose<'parser>(
     if position < property_names.len() {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("'{}' not found", property_name),
+            format!("'{}' not found", current_property_name),
             None,
             span,
         ));

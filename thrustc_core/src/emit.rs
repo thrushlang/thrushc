@@ -31,8 +31,7 @@ pub fn llvm_after_optimization(
     file: &CompilationUnit,
     file_time: std::time::Instant,
 ) -> Result<bool, ()> {
-
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
 
     if compiler_options.contains_emitable(EmitableUnit::LLVMBitcode) {
         if !emitters::llvmbitcode::emit_llvm_bitcode(
@@ -110,7 +109,7 @@ pub fn llvm_before_optimization(
     file: &CompilationUnit,
     file_time: std::time::Instant,
 ) -> Result<bool, ()> {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
 
     if compiler_options.contains_emitable(EmitableUnit::UnOptLLVMIR) {
         if let Err(error) =
@@ -169,7 +168,7 @@ pub fn frontend_before(
     file: &CompilationUnit,
     emited: Emited,
 ) -> bool {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
 
     if compiler_options.contains_emitable(EmitableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {
@@ -200,7 +199,7 @@ pub fn frontend_after(
     file: &CompilationUnit,
     emited: Emited,
 ) -> bool {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
 
     if compiler_options.contains_emitable(EmitableUnit::Tokens) {
         if let Emited::Tokens(tokens) = emited {

@@ -24,6 +24,10 @@ use thrustc_typesystem::{Type, type_modificators::StructureTypeModificator};
 
 use crate::data::{EnumDataField, PropertyDataField, StructureDataFields};
 
+pub trait AstBuiltinsExtensions {
+    fn is_avalaible_at_compile_time(&self) -> bool;
+}
+
 pub trait AstGetType {
     fn get_any_type(&self) -> Result<&Type, CompilationIssue>;
     fn get_value_type(&self) -> Result<&Type, CompilationIssue>;
@@ -87,7 +91,7 @@ pub trait AstCodeBlockEntensions {
 }
 
 pub trait AstMemoryExtensions {
-    fn is_allocated_value(&self) -> Result<bool, CompilationIssue>;
+    fn is_memory_assigned_value(&self) -> Result<bool, CompilationIssue>;
 }
 
 pub trait AstConstantExtensions {

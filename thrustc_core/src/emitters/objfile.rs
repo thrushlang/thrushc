@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::{
     module::Module,
     support::LLVMString,
@@ -35,7 +34,7 @@ pub fn emit_llvm_object(
     file_name: &str,
     unoptimized: bool,
 ) -> Result<(), LLVMString> {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
     let need_obfuscation: bool = compiler_options.need_obfuscate_archive_names();
 
     let objects_base_path: std::path::PathBuf = build_dir.join("emit").join("obj");
@@ -44,7 +43,7 @@ pub fn emit_llvm_object(
         let _ = std::fs::create_dir_all(&objects_base_path);
     }
 
-    let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
+    let optimization_name_modifier: &str = if unoptimized { "unopt_" } else { "" };
 
     let object_file_name: String = if need_obfuscation {
         format!(

@@ -1257,9 +1257,9 @@ pub fn init_llvm_constructors<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>) 
         }
     }
 
-    let actual_size: u32 = u32::try_from(llvm_ctors.len()).unwrap_or(u32::MAX - 1);
+    let size: u32 = u32::try_from(llvm_ctors.len()).unwrap_or(u32::MAX - 1);
 
-    let llvm_ctors_type: ArrayType = ctor_type.array_type(actual_size);
+    let llvm_ctors_type: ArrayType = ctor_type.array_type(size);
     let global: GlobalValue = llvm_module.add_global(llvm_ctors_type, None, "llvm.global_ctors");
 
     global.set_linkage(Linkage::Appending);
@@ -1305,9 +1305,9 @@ pub fn init_llvm_destructors<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>) {
         }
     }
 
-    let actual_size: u32 = u32::try_from(llvm_dtors.len()).unwrap_or(u32::MAX - 1);
+    let size: u32 = u32::try_from(llvm_dtors.len()).unwrap_or(u32::MAX - 1);
 
-    let llvm_dtors_type: ArrayType = dtor_type.array_type(actual_size);
+    let llvm_dtors_type: ArrayType = dtor_type.array_type(size);
     let global: GlobalValue = llvm_module.add_global(llvm_dtors_type, None, "llvm.global_dtors");
 
     global.set_linkage(Linkage::Appending);

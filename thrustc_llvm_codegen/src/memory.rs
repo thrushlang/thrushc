@@ -344,7 +344,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
             _ => {
                 abort::abort_codegen(
                     context,
-                    "Failed to get a type from a allocated symbol!",
+                    "Failed to get a type from an allocated symbol!",
                     self.get_span(),
                     PathBuf::from(file!()),
                     line!(),

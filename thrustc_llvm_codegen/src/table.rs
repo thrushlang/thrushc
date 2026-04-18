@@ -56,7 +56,7 @@ impl LLVMSymbolsTable<'_> {
             local_constants: Vec::with_capacity(u8::MAX as usize),
 
             locals: Vec::with_capacity(u8::MAX as usize),
-            parameters: HashMap::with_capacity(15),
+            parameters: HashMap::with_capacity(u8::MAX as usize),
 
             scope: 0,
         }

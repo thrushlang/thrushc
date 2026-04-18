@@ -39,6 +39,7 @@ use crate::{
     },
 };
 
+mod builtins;
 mod constant;
 mod literal;
 
@@ -294,7 +295,7 @@ impl AstCodeBlockEntensions for Ast<'_> {
 
 impl AstMemoryExtensions for Ast<'_> {
     #[inline]
-    fn is_allocated_value(&self) -> Result<bool, CompilationIssue> {
+    fn is_memory_assigned_value(&self) -> Result<bool, CompilationIssue> {
         match self {
             Ast::Reference { metadata, .. } => Ok(metadata.is_allocated()),
             Ast::Property { metadata, .. } => Ok(metadata.is_allocated()),

@@ -17,7 +17,11 @@
 
 */
 
-use crate::{Ast, builitins::ThrustBuiltin, traits::AstConstantExtensions};
+use crate::{
+    Ast,
+    builtins::AstBuiltin,
+    traits::{AstBuiltinsExtensions, AstConstantExtensions},
+};
 
 impl AstConstantExtensions for Ast<'_> {
     fn is_constant_value(&self) -> bool {
@@ -28,16 +32,10 @@ impl AstConstantExtensions for Ast<'_> {
             | Ast::Char { .. }
             | Ast::CNString { .. }
             | Ast::CString { .. }
-            | Ast::NullPtr { .. }
-            | Self::Builtin {
-                builtin:
-                    ThrustBuiltin::AlignOf { .. }
-                    | ThrustBuiltin::SizeOf { .. }
-                    | ThrustBuiltin::AbiSizeOf { .. }
-                    | ThrustBuiltin::AbiAlignOf { .. }
-                    | ThrustBuiltin::BitSizeOf { .. },
-                ..
-            } => true,
+            | Ast::NullPtr { .. } => true,
+
+            Ast::Builtin { builtin, .. } => builtin.is_avalaible_at_compile_time(),
+
             Ast::EnumValue { value, .. } => value.is_constant_value(),
             Ast::DirectRef { expr, .. } => expr.is_constant_value(),
             Ast::Group { node, .. } => node.is_constant_value(),

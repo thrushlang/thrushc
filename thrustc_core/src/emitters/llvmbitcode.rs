@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::module::Module;
 use thrustc_options::CompilerOptions;
 
@@ -30,7 +29,7 @@ pub fn emit_llvm_bitcode(
     file_name: &str,
     unoptimized: bool,
 ) -> bool {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
     let need_obfuscation: bool = compiler_options.need_obfuscate_archive_names();
 
     let bitcode_base_path: std::path::PathBuf = build_dir.join("emit").join("llvm-bitcode");
@@ -39,7 +38,7 @@ pub fn emit_llvm_bitcode(
         let _ = std::fs::create_dir_all(&bitcode_base_path);
     }
 
-    let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
+    let optimization_name_modifier: &str = if unoptimized { "unopt_" } else { "" };
 
     let bitcode_file_name: String = if need_obfuscation {
         format!(

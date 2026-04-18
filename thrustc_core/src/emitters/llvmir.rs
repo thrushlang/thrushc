@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::{module::Module, support::LLVMString};
 use thrustc_options::CompilerOptions;
 
@@ -30,7 +29,7 @@ pub fn emit_llvm_ir(
     file_name: &str,
     unoptimized: bool,
 ) -> Result<(), LLVMString> {
-    let compiler_options: &CompilerOptions = compiler.get_options();
+    let compiler_options: &CompilerOptions = compiler.get_compilation_options();
     let need_obfuscation: bool = compiler_options.need_obfuscate_archive_names();
 
     let llvmir_base_path: std::path::PathBuf = build_dir.join("emit").join("llvm-ir");
@@ -39,7 +38,7 @@ pub fn emit_llvm_ir(
         let _ = std::fs::create_dir_all(&llvmir_base_path);
     }
 
-    let optimization_name_modifier: &str = if unoptimized { "raw_" } else { "" };
+    let optimization_name_modifier: &str = if unoptimized { "unopt_" } else { "" };
 
     let llvmir_file_name: String = if need_obfuscation {
         format!(

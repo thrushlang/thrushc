@@ -27,7 +27,7 @@ use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
 use crate::{
-    builitins::ThrustBuiltin,
+    builtins::AstBuiltin,
     data::{ConstructorData, EnumData, PropertyData, StructureData},
     metadata::{
         CastingMetadata, ConstantMetadata, DereferenceMetadata, FunctionParameterMetadata,
@@ -38,7 +38,7 @@ use crate::{
 #[cfg(feature = "fuzz")]
 use arbitrary::Arbitrary;
 
-pub mod builitins;
+pub mod builtins;
 pub mod data;
 mod getters;
 mod impls;
@@ -502,7 +502,7 @@ pub enum Ast<'ast> {
 
     // Builtins
     Builtin {
-        builtin: ThrustBuiltin<'ast>,
+        builtin: AstBuiltin<'ast>,
         kind: Type,
         span: Span,
         id: NodeId,

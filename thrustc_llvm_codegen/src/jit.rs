@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(clippy::result_unit_err)]
 
 use thrustc_options::backends::llvm::jit::JITConfiguration;
@@ -90,7 +89,7 @@ impl<'ctx> LLVMJITCompiler<'ctx> {
             unsafe { libloading::Library::new(self.config.get_libc_path()) }.map_err(|e| {
                 thrustc_logging::print_error(
                     thrustc_logging::LoggingType::JITCompiler,
-                    &format!("The C runtime couldn't be loaded: '{}'.", e),
+                    &format!("The C runtime can't be loaded: '{}'.", e),
                 );
             })?;
 
@@ -175,7 +174,7 @@ impl<'ctx> LLVMJITCompiler<'ctx> {
                     thrustc_logging::print_warn(
                         thrustc_logging::LoggingType::Warning,
                         &format!(
-                            "The dynamic library '{}' could not be loaded: '{}'.",
+                            "The dynamic library '{}' can't be loaded: '{}'.",
                             library_path.display(),
                             e
                         ),
@@ -197,7 +196,7 @@ impl<'ctx> LLVMJITCompiler<'ctx> {
             .ok_or_else(|| {
                 thrustc_logging::print_error(
                     thrustc_logging::LoggingType::Error,
-                    "The program entrypoint couldn't be found.",
+                    "The program entrypoint can't be found.",
                 );
             })
     }

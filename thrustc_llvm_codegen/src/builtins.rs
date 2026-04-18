@@ -26,7 +26,7 @@ use thrustc_ast::traits::AstCodeLocation;
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
 
-use thrustc_ast::{Ast, builitins::ThrustBuiltin};
+use thrustc_ast::{Ast, builtins::AstBuiltin};
 
 use crate::{
     abort, cast, codegen, context::LLVMCodeGenContext, traits::AstLLVMGetType, typegeneration,
@@ -78,10 +78,10 @@ pub enum LLVMBuiltin<'ctx> {
     },
 }
 
-pub fn into_llvm_builtin<'ctx>(thrust_builtin: &'ctx ThrustBuiltin) -> LLVMBuiltin<'ctx> {
-    match thrust_builtin {
-        ThrustBuiltin::Halloc { of, span } => LLVMBuiltin::Malloc { of, span: *span },
-        ThrustBuiltin::MemCpy {
+pub fn into_llvm_builtin<'ctx>(ast_builtin: &'ctx AstBuiltin) -> LLVMBuiltin<'ctx> {
+    match ast_builtin {
+        AstBuiltin::Halloc { of, span } => LLVMBuiltin::Malloc { of, span: *span },
+        AstBuiltin::MemCpy {
             src,
             dst,
             size,
@@ -92,7 +92,7 @@ pub fn into_llvm_builtin<'ctx>(thrust_builtin: &'ctx ThrustBuiltin) -> LLVMBuilt
             size,
             span: *span,
         },
-        ThrustBuiltin::MemMove {
+        AstBuiltin::MemMove {
             src,
             dst,
             size,
@@ -103,7 +103,7 @@ pub fn into_llvm_builtin<'ctx>(thrust_builtin: &'ctx ThrustBuiltin) -> LLVMBuilt
             size,
             span: *span,
         },
-        ThrustBuiltin::MemSet {
+        AstBuiltin::MemSet {
             dst,
             new_size,
             size,
@@ -114,11 +114,11 @@ pub fn into_llvm_builtin<'ctx>(thrust_builtin: &'ctx ThrustBuiltin) -> LLVMBuilt
             size,
             span: *span,
         },
-        ThrustBuiltin::AlignOf { of, span } => LLVMBuiltin::AlignOf { of, span: *span },
-        ThrustBuiltin::SizeOf { of, span } => LLVMBuiltin::SizeOf { of, span: *span },
-        ThrustBuiltin::BitSizeOf { of, span } => LLVMBuiltin::BitSizeOf { of, span: *span },
-        ThrustBuiltin::AbiSizeOf { of, span } => LLVMBuiltin::AbiSizeOf { of, span: *span },
-        ThrustBuiltin::AbiAlignOf { of, span } => LLVMBuiltin::AbiAlignOf { of, span: *span },
+        AstBuiltin::AlignOf { of, span } => LLVMBuiltin::AlignOf { of, span: *span },
+        AstBuiltin::SizeOf { of, span } => LLVMBuiltin::SizeOf { of, span: *span },
+        AstBuiltin::BitSizeOf { of, span } => LLVMBuiltin::BitSizeOf { of, span: *span },
+        AstBuiltin::AbiSizeOf { of, span } => LLVMBuiltin::AbiSizeOf { of, span: *span },
+        AstBuiltin::AbiAlignOf { of, span } => LLVMBuiltin::AbiAlignOf { of, span: *span },
     }
 }
 

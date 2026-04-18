@@ -17,8 +17,7 @@
 
 */
 
-
-use thrustc_ast::{Ast, builitins::ThrustBuiltin, traits::AstCodeLocation};
+use thrustc_ast::{Ast, builtins::AstBuiltin, traits::AstCodeLocation};
 use thrustc_errors::{CompilationIssue, CompilationPosition};
 use thrustc_span::Span;
 use thrustc_token_type::traits::TokenTypeExtensions;
@@ -49,9 +48,9 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         }
 
         Ast::AsmValue { args, .. } => {
-            args.iter().for_each(|arg| {
-                linter.analyze_expr(arg);
-            });
+            for node in args.iter() {
+                linter.analyze_expr(node);
+            }
         }
 
         Ast::Index { source, index, .. } => {
@@ -66,9 +65,9 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         Ast::Constructor {
             name, data, span, ..
         } => {
-            data.iter().for_each(|(_, expr, ..)| {
+            for (_, expr, ..) in data.iter() {
                 linter.analyze_expr(expr);
-            });
+            }
 
             if let Some(structure) = linter.symbols.get_struct_info(name) {
                 structure.2 = true;
@@ -190,17 +189,17 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
         }
 
         Ast::Builtin { builtin, .. } => match builtin {
-            ThrustBuiltin::MemCpy { src, dst, size, .. } => {
+            AstBuiltin::MemCpy { src, dst, size, .. } => {
                 linter.analyze_expr(src);
                 linter.analyze_expr(dst);
                 linter.analyze_expr(size);
             }
-            ThrustBuiltin::MemMove { src, dst, size, .. } => {
+            AstBuiltin::MemMove { src, dst, size, .. } => {
                 linter.analyze_expr(src);
                 linter.analyze_expr(dst);
                 linter.analyze_expr(size);
             }
-            ThrustBuiltin::MemSet {
+            AstBuiltin::MemSet {
                 dst,
                 new_size,
                 size,
@@ -210,13 +209,12 @@ pub fn analyze<'linter>(linter: &mut Linter<'linter>, expr: &'linter Ast) {
                 linter.analyze_expr(new_size);
                 linter.analyze_expr(size);
             }
-
-            ThrustBuiltin::Halloc { .. }
-            | ThrustBuiltin::AlignOf { .. }
-            | ThrustBuiltin::SizeOf { .. }
-            | ThrustBuiltin::AbiSizeOf { .. }
-            | ThrustBuiltin::BitSizeOf { .. }
-            | ThrustBuiltin::AbiAlignOf { .. } => (),
+            AstBuiltin::Halloc { .. }
+            | AstBuiltin::AlignOf { .. }
+            | AstBuiltin::SizeOf { .. }
+            | AstBuiltin::AbiSizeOf { .. }
+            | AstBuiltin::BitSizeOf { .. }
+            | AstBuiltin::AbiAlignOf { .. } => (),
         },
         Ast::As { from, .. } => {
             linter.analyze_expr(from);

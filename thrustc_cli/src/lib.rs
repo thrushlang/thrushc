@@ -24,6 +24,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use colored::Colorize;
+use thrustc_core::CompileTime;
 use thrustc_logging::LoggingType;
 use thrustc_logging::OutputIn;
 use thrustc_options::CompilerOptions;
@@ -1449,17 +1450,14 @@ pub fn set_up_ansi(options: &CompilerOptions) {
 pub fn report_compile_time(
     options: &CompilerOptions,
     start_time: std::time::Instant,
-    compile_time: (
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-    ),
+    compile_time: CompileTime,
 ) -> ! {
-    let thrustc_time_ms: f64 = compile_time.0.as_millis_f64();
-    let frontend_time_ms: f64 = compile_time.1.as_millis_f64();
-    let backend_time_ms: f64 = compile_time.2.as_millis_f64();
-    let linking_time_ms: f64 = compile_time.3.as_millis_f64();
+    let failed: bool = compile_time.0;
+
+    let thrustc_time_ms: f64 = compile_time.1.as_millis_f64();
+    let frontend_time_ms: f64 = compile_time.2.as_millis_f64();
+    let backend_time_ms: f64 = compile_time.3.as_millis_f64();
+    let linking_time_ms: f64 = compile_time.4.as_millis_f64();
 
     let backend_identifier: &str = if options.llvm() { "LLVM" } else { "GCC" };
 
@@ -1499,5 +1497,9 @@ pub fn report_compile_time(
         ),
     );
 
-    std::process::exit(thrustc_constants::SUCCESFUL_CODE);
+    if failed {
+        std::process::exit(thrustc_constants::FAILURE_CODE);
+    } else {
+        std::process::exit(thrustc_constants::SUCCESFUL_CODE);
+    }
 }

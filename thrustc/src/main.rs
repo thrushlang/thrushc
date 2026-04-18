@@ -17,6 +17,8 @@
 
 */
 
+use thrustc_core::CompileTime;
+
 #[cfg(not(target_pointer_width = "64"))]
 compile_error!("This compiler requires a 64-bit target.");
 #[rustversion::before(1.85)]
@@ -38,12 +40,10 @@ fn main() -> ! {
 
     let start_time: std::time::Instant = std::time::Instant::now();
 
-    let compile_time: (
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-        std::time::Duration,
-    ) = ThrustCompiler::new(options.get_files(), options).compile();
+    let mut compiler_instance: ThrustCompiler<'_> =
+        ThrustCompiler::new(options.get_files(), options);
+
+    let compile_time: CompileTime = compiler_instance.compile();
 
     thrustc_cli::report_compile_time(options, start_time, compile_time)
 }

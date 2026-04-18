@@ -19,7 +19,7 @@
 
 use thrustc_ast::{
     Ast,
-    builitins::ThrustBuiltin,
+    builtins::AstBuiltin,
     traits::{AstCodeLocation, AstGetType, AstMemoryExtensions, AstStandardExtensions},
 };
 use thrustc_errors::{CompilationIssue, CompilationIssueCode, CompilationPosition};
@@ -78,7 +78,7 @@ pub fn validate<'analyzer>(
         Ast::Index { source, index, .. } => {
             let source_type: &Type = source.get_any_type()?;
 
-            if source.is_reference() && !source.is_allocated_value()? {
+            if source.is_reference() && !source.is_memory_assigned_value()? {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0007,
                     "An reference with memory address was expected. Try to allocate it.".into(),
@@ -87,7 +87,9 @@ pub fn validate<'analyzer>(
                 ));
             }
 
-            if (!source.is_allocated_value()? || !source.is_reference()) && source_type.is_value() {
+            if (!source.is_memory_assigned_value()? || !source.is_reference())
+                && source_type.is_value()
+            {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
                     format!(
@@ -136,7 +138,7 @@ pub fn validate<'analyzer>(
         Ast::DirectRef { expr, span, .. } => {
             let expr_type: &Type = expr.get_value_type()?;
 
-            if expr.is_reference() && !expr.is_allocated_value()? {
+            if expr.is_reference() && !expr.is_memory_assigned_value()? {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0007,
                     "An reference with memory address was expected. Try to allocate it.".into(),
@@ -169,7 +171,7 @@ pub fn validate<'analyzer>(
             Ok(())
         }
         Ast::Builtin { builtin, .. } => match builtin {
-            ThrustBuiltin::MemSet {
+            AstBuiltin::MemSet {
                 dst,
                 new_size,
                 size,
@@ -182,7 +184,7 @@ pub fn validate<'analyzer>(
                 Ok(())
             }
 
-            ThrustBuiltin::MemMove { dst, src, size, .. } => {
+            AstBuiltin::MemMove { dst, src, size, .. } => {
                 analyzer.analyze_expr(dst)?;
                 analyzer.analyze_expr(src)?;
                 analyzer.analyze_expr(size)?;
@@ -190,7 +192,7 @@ pub fn validate<'analyzer>(
                 Ok(())
             }
 
-            ThrustBuiltin::MemCpy { dst, src, size, .. } => {
+            AstBuiltin::MemCpy { dst, src, size, .. } => {
                 analyzer.analyze_expr(dst)?;
                 analyzer.analyze_expr(src)?;
                 analyzer.analyze_expr(size)?;
@@ -198,12 +200,12 @@ pub fn validate<'analyzer>(
                 Ok(())
             }
 
-            ThrustBuiltin::Halloc { .. }
-            | ThrustBuiltin::AlignOf { .. }
-            | ThrustBuiltin::SizeOf { .. }
-            | ThrustBuiltin::AbiSizeOf { .. }
-            | ThrustBuiltin::BitSizeOf { .. }
-            | ThrustBuiltin::AbiAlignOf { .. } => Ok(()),
+            AstBuiltin::Halloc { .. }
+            | AstBuiltin::AlignOf { .. }
+            | AstBuiltin::SizeOf { .. }
+            | AstBuiltin::AbiSizeOf { .. }
+            | AstBuiltin::BitSizeOf { .. }
+            | AstBuiltin::AbiAlignOf { .. } => Ok(()),
         },
 
         Ast::AsmValue { .. }

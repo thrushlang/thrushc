@@ -281,7 +281,7 @@ impl<'a, 'ctx> LLVMOptimizer<'a, 'ctx> {
 
 impl LLVMOptimizer<'_, '_> {
     #[inline]
-    pub fn is_optimizable(options: &CompilerOptions) -> bool {
+    pub fn is_an_optimizable_module(options: &CompilerOptions) -> bool {
         (!options.omit_default_optimizations()
             && options
                 .get_llvm_backend()
@@ -1271,9 +1271,11 @@ impl<'a, 'ctx> LLVMComdatApplier<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMComdatApplier<'a, 'ctx> {
     pub fn run(&self) {
-        let target: LLVMTargetTriple = LLVMTargetTriple::new(&self.module.get_triple());
 
-        if !target.is_xcoff_object_format() && !target.is_object_format_mach_o() {
+        let target_triple_formatted: String = self.module.get_triple().as_str().to_string_lossy().to_string();
+        let target_triple: LLVMTargetTriple = LLVMTargetTriple::new(target_triple_formatted);
+
+        if !target_triple.is_xcoff_object_format() && !target_triple.is_object_format_mach_o() {
             
             let same_name: Vec<(GlobalValue, FunctionValue)> = self
                 .module
@@ -1324,7 +1326,7 @@ impl<'a, 'ctx> LLVMComdatApplier<'a, 'ctx> {
                         SymbolLinkageMergeStrategy::NoDuplicates => ComdatSelectionKind::NoDuplicates,
                     };
     
-                if target.get_arch().contains("wasm") && merge_strategy != ComdatSelectionKind::Any {
+                if target_triple.get_arch().contains("wasm") && merge_strategy != ComdatSelectionKind::Any {
                     thrustc_logging::print_warn(
                         thrustc_logging::LoggingType::Warning,
                         "WebAssembly target only support the any mode for the symbol linkage strategy!",
@@ -1333,7 +1335,7 @@ impl<'a, 'ctx> LLVMComdatApplier<'a, 'ctx> {
                     merge_strategy = ComdatSelectionKind::Any;
                 }
 
-                if target.is_object_format_elf() && merge_strategy != ComdatSelectionKind::Any && merge_strategy != ComdatSelectionKind::NoDuplicates {
+                if target_triple.is_object_format_elf() && merge_strategy != ComdatSelectionKind::Any && merge_strategy != ComdatSelectionKind::NoDuplicates {
                     thrustc_logging::print_warn(
                         thrustc_logging::LoggingType::Warning,
                         "ELF-based target only support the any and noduplicates modes for the symbol linkage strategy!",

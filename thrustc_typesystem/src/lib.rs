@@ -32,7 +32,7 @@ mod type_inference;
 pub mod type_layout;
 mod type_location;
 pub mod type_modificators;
-mod type_precendece;
+mod type_precedence;
 mod void_type;
 
 use thrustc_span::Span;

@@ -100,7 +100,10 @@ impl<'a, 'ctx> LLVMCodeGenContext<'a, 'ctx> {
             None
         };
 
-        let target_info: TargetInfo = TargetInfo::new(LLVMTargetTriple::new(&target_triple));
+        let target_triple_formatted: String = target_triple.as_str().to_string_lossy().to_string();
+
+        let target_info: TargetInfo =
+            TargetInfo::new(LLVMTargetTriple::new(target_triple_formatted));
 
         Self {
             module,

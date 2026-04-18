@@ -17,10 +17,9 @@
 
 */
 
-
 use thrustc_ast::{
     Ast,
-    builitins::ThrustBuiltin,
+    builtins::AstBuiltin,
     traits::{AstCodeLocation, AstGetType},
 };
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -34,30 +33,30 @@ use crate::TypeChecker;
 
 pub fn validate<'type_checker>(
     typechecker: &mut TypeChecker<'type_checker>,
-    builtin: &'type_checker ThrustBuiltin,
+    builtin: &'type_checker AstBuiltin,
 ) -> Result<(), CompilationIssue> {
     match builtin {
-        ThrustBuiltin::MemSet {
+        AstBuiltin::MemSet {
             dst,
             new_size,
             size,
             ..
         } => self::validate_memset(typechecker, dst, new_size, size),
 
-        ThrustBuiltin::MemMove { dst, src, size, .. } => {
+        AstBuiltin::MemMove { dst, src, size, .. } => {
             self::validate_memmove(typechecker, dst, src, size)
         }
 
-        ThrustBuiltin::MemCpy { dst, src, size, .. } => {
+        AstBuiltin::MemCpy { dst, src, size, .. } => {
             self::validate_memcpy(typechecker, dst, src, size)
         }
 
-        ThrustBuiltin::Halloc { .. }
-        | ThrustBuiltin::AlignOf { .. }
-        | ThrustBuiltin::SizeOf { .. }
-        | ThrustBuiltin::AbiSizeOf { .. }
-        | ThrustBuiltin::BitSizeOf { .. }
-        | ThrustBuiltin::AbiAlignOf { .. } => Ok(()),
+        AstBuiltin::Halloc { .. }
+        | AstBuiltin::AlignOf { .. }
+        | AstBuiltin::SizeOf { .. }
+        | AstBuiltin::AbiSizeOf { .. }
+        | AstBuiltin::BitSizeOf { .. }
+        | AstBuiltin::AbiAlignOf { .. } => Ok(()),
     }
 }
 

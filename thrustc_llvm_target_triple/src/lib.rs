@@ -17,8 +17,6 @@
 
 */
 
-use inkwell::targets::TargetTriple;
-
 #[derive(Debug)]
 pub struct LLVMTargetTriple {
     arch: String,
@@ -29,9 +27,8 @@ pub struct LLVMTargetTriple {
 
 impl LLVMTargetTriple {
     #[inline]
-    pub fn new(triple: &TargetTriple) -> Self {
-        let triple_str: String = triple.as_str().to_string_lossy().to_string();
-        let triple_dissasembled: Vec<&str> = triple_str.split('-').collect();
+    pub fn new(target_triple: String) -> Self {
+        let triple_dissasembled: Vec<&str> = target_triple.split('-').collect();
 
         let arch: String = triple_dissasembled
             .first()

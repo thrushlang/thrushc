@@ -294,7 +294,7 @@ pub fn compile_as_dbg_type<'ctx>(
                 self::compile_as_dbg_type(context, from_type, array_ty.get_element_type());
 
             context
-                .get_builder()
+                .get_debug_builder()
                 .create_array_type(
                     inner_type,
                     target_data.get_bit_size(&array_ty),
@@ -305,7 +305,7 @@ pub fn compile_as_dbg_type<'ctx>(
         }
 
         BasicTypeEnum::FloatType(fp_ty) => context
-            .get_builder()
+            .get_debug_builder()
             .create_basic_type(
                 format!("{}", from_type).trim(),
                 target_data.get_bit_size(&fp_ty),
@@ -324,7 +324,7 @@ pub fn compile_as_dbg_type<'ctx>(
             .as_type(),
 
         BasicTypeEnum::IntType(int_ty) => context
-            .get_builder()
+            .get_debug_builder()
             .create_basic_type(
                 format!("{}", from_type).trim(),
                 target_data.get_bit_size(&int_ty),
@@ -346,7 +346,7 @@ pub fn compile_as_dbg_type<'ctx>(
             let inner_type: DIType = self::compile_as_dbg_type(context, from_type, pt_ty.into());
 
             context
-                .get_builder()
+                .get_debug_builder()
                 .create_pointer_type(
                     format!("{}", from_type).trim(),
                     inner_type,
@@ -366,11 +366,11 @@ pub fn compile_as_dbg_type<'ctx>(
             let line: u32 = from_type.get_span().get_line();
 
             context
-                .get_builder()
+                .get_debug_builder()
                 .create_struct_type(
-                    context.get_unit().get_file().as_debug_info_scope(),
+                    context.get_debug_unit().get_file().as_debug_info_scope(),
                     format!("{}", from_type).trim(),
-                    context.get_unit().get_file(),
+                    context.get_debug_unit().get_file(),
                     line,
                     target_data.get_bit_size(&struct_ty),
                     target_data.get_abi_alignment(&struct_ty),
