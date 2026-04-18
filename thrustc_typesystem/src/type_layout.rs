@@ -12,6 +12,7 @@ pub struct Layout {
     pub width: u32,
     pub align: u32,
     pub sizeof: u32,
+    pub alignof: u32,
     pub field_offsets: Vec<u32>,
 }
 
@@ -19,6 +20,7 @@ pub struct Layout {
 pub struct TypeLayout {
     pub width: u32,
     pub align: u32,
+    pub alignof: u32,
     pub sizeof: u32,
 }
 
@@ -27,6 +29,7 @@ impl TypeLayout {
         Layout {
             width: self.width,
             align: self.align,
+            alignof: self.alignof,
             sizeof: self.sizeof,
             field_offsets: Vec::new(),
         }
@@ -37,6 +40,7 @@ impl TypeLayout {
 pub struct StructTypeLayout {
     pub width: u32,
     pub align: u32,
+    pub alignof: u32,
     pub sizeof: u32,
     pub field_offsets: Vec<u32>,
 }
@@ -46,6 +50,7 @@ impl StructTypeLayout {
         Layout {
             width: self.width,
             align: self.align,
+            alignof: self.alignof,
             sizeof: self.sizeof,
             field_offsets: self.field_offsets,
         }
@@ -92,10 +97,10 @@ pub struct TargetInfo {
 }
 
 impl TargetInfo {
-    pub fn new(triple: LLVMTargetTriple) -> Self {
+    pub fn new(triple_triple: LLVMTargetTriple) -> Self {
         let mut target_info: TargetInfo = TargetInfo::default();
 
-        let is_64_bit: bool = triple.is_64_bit();
+        let is_64_bit: bool = triple_triple.is_64_bit();
 
         target_info.bool_width = 8;
         target_info.bool_align = 8;
@@ -136,7 +141,125 @@ impl TargetInfo {
         target_info.ptr_width = if is_64_bit { 64 } else { 32 };
         target_info.ptr_align = if is_64_bit { 64 } else { 32 };
 
+        target_info.adjust(triple_triple);
+
         target_info
+    }
+}
+
+impl TargetInfo {
+    pub fn adjust(&mut self, target_triple: LLVMTargetTriple) {
+        // SYSTEM-Z
+        {
+            if target_triple.is_systemz() {
+                self.i128_align = 64;
+
+                self.f64_width = 128;
+                self.f64_align = 64;
+            }
+        }
+
+        // AVR
+        {
+            if target_triple.is_avr() {
+                self.ptr_width = 16;
+                self.ptr_align = 8;
+
+                self.i16_width = 16;
+                self.i16_align = 8;
+
+                self.i32_width = 16;
+                self.i32_align = 8;
+
+                self.i64_width = 32;
+                self.i64_align = 8;
+
+                self.f16_width = 16;
+                self.f16_align = 8;
+
+                self.f32_width = 32;
+                self.f32_align = 8;
+
+                self.f64_width = 32;
+                self.f64_align = 8;
+            }
+        }
+
+        // ARM
+        {
+            // llvm-project/clang/lib/Basic/Targets/ARM.cpp
+            if target_triple.is_arm_family() {
+                let is_aapc16: bool = target_triple.get_abi() == "aapcs16";
+
+                if is_aapc16 {
+                    self.i64_align = 64;
+                    self.f64_align = 64;
+                } else {
+                    self.i64_align = 32;
+                    self.f64_align = 32;
+                }
+            }
+        }
+
+        // ARC
+        {
+            if target_triple.is_arc() {
+                self.i64_align = 32;
+                self.f64_align = 32;
+            }
+        }
+
+        // CSKY
+        {
+            // llvm-project/clang/lib/Basic/Targets/CSKY.h
+            if target_triple.is_csky() {
+                self.i64_align = 32;
+                self.f64_align = 32;
+            }
+        }
+
+        // MSP430
+
+        {
+            // llvm-project/clang/lib/Basic/Targets/MSP430.h
+            if target_triple.is_msp430() {
+                self.ptr_width = 16;
+                self.ptr_align = 16;
+
+                self.i32_width = 16;
+                self.i32_align = 16;
+
+                self.i64_align = 16;
+
+                self.f32_align = 16;
+                self.f64_align = 16;
+            }
+        }
+
+        // PPC
+        {
+            // llvm-project/clang/lib/Basic/Targets/PPC.h
+            if target_triple.is_ppc() && target_triple.is_os_aix() {
+                self.f64_align = 32;
+            }
+        }
+
+        // SPARC
+        {
+            // llvm-project/clang/lib/Basic/Targets/Sparc.h
+            if target_triple.is_sparc() {
+                self.f64_width = 128;
+                self.f64_align = 64;
+            }
+        }
+
+        // XCORE
+        {
+            // llvm-project/clang/lib/Basic/Targets/XCore.h
+            if target_triple.is_xcore() {
+                self.i64_align = 32;
+            }
+        }
     }
 }
 
@@ -291,6 +414,7 @@ impl TargetInfo {
             Type::Bool(..) => {
                 type_info.width = self.bool_width();
                 type_info.align = self.bool_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -299,6 +423,7 @@ impl TargetInfo {
             Type::S8(..) | Type::U8(..) | Type::Char(..) => {
                 type_info.width = self.i8_width();
                 type_info.align = self.i8_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -307,6 +432,7 @@ impl TargetInfo {
             Type::S16(..) | Type::U16(..) => {
                 type_info.width = self.i16_width();
                 type_info.align = self.i16_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -315,6 +441,7 @@ impl TargetInfo {
             Type::S32(..) | Type::U32(..) => {
                 type_info.width = self.i32_width();
                 type_info.align = self.i32_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -323,6 +450,7 @@ impl TargetInfo {
             Type::S64(..) | Type::U64(..) => {
                 type_info.width = self.i64_width();
                 type_info.align = self.i64_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -331,6 +459,7 @@ impl TargetInfo {
             Type::U128(..) => {
                 type_info.width = self.i128_width();
                 type_info.align = self.i128_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -339,6 +468,7 @@ impl TargetInfo {
             Type::SSize(..) => {
                 type_info.width = self.isize_width();
                 type_info.align = self.isize_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -347,6 +477,7 @@ impl TargetInfo {
             Type::USize(..) => {
                 type_info.width = self.usize_width();
                 type_info.align = self.usize_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -355,6 +486,7 @@ impl TargetInfo {
             Type::FX8680(..) => {
                 type_info.width = self.f16_width();
                 type_info.align = self.f16_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -363,6 +495,7 @@ impl TargetInfo {
             Type::F32(..) => {
                 type_info.width = self.f32_width();
                 type_info.align = self.f32_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -371,6 +504,7 @@ impl TargetInfo {
             Type::F64(..) => {
                 type_info.width = self.f64_width();
                 type_info.align = self.f64_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -379,6 +513,7 @@ impl TargetInfo {
             Type::F128(..) | Type::FPPC128(..) => {
                 type_info.width = self.f128_width();
                 type_info.align = self.f128_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -387,6 +522,7 @@ impl TargetInfo {
             Type::Void(..) | Type::Unresolved { .. } => {
                 type_info.width = 1;
                 type_info.align = 8;
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -395,6 +531,7 @@ impl TargetInfo {
             Type::Ptr(..) | Type::Fn(..) | Type::Addr(..) => {
                 type_info.width = self.ptr_width();
                 type_info.align = self.ptr_align();
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -413,6 +550,7 @@ impl TargetInfo {
 
                 type_info.width = element_width * size;
                 type_info.align = element_align;
+                type_info.alignof = type_info.align / self.i8_width;
                 type_info.sizeof = type_info.width / self.i8_width;
 
                 either::Either::Left(type_info)
@@ -436,6 +574,7 @@ impl TargetInfo {
                 if size == 0 {
                     type_info.width = self.ptr_width();
                     type_info.align = self.ptr_align();
+                    type_info.alignof = type_info.align / self.i8_width;
                     type_info.sizeof = type_info.width / self.i8_width;
 
                     either::Either::Left(type_info)
@@ -452,6 +591,7 @@ impl TargetInfo {
 
                     type_info.width = element_width * size;
                     type_info.align = element_align;
+                    type_info.alignof = type_info.align / self.i8_width;
                     type_info.sizeof = type_info.width / self.i8_width;
 
                     either::Either::Left(type_info)
@@ -490,6 +630,7 @@ impl TargetInfo {
                 either::Either::Right(StructTypeLayout {
                     width: total_width_bits,
                     align: max_align_bits,
+                    alignof: max_align_bits / self.i8_width,
                     sizeof: total_width_bits / self.i8_width,
                     field_offsets: field_offsets_bits,
                 })

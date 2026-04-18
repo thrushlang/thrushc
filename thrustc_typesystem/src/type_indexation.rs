@@ -23,7 +23,7 @@ use crate::{
 };
 
 impl IndexExtensions for Type {
-    fn calculate_index_type(&self, depth: usize) -> &Type {
+    fn calculate_index_type(&self, depth: u64) -> &Type {
         if depth == 0 {
             return self;
         }

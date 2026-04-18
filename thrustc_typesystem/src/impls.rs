@@ -208,7 +208,7 @@ impl TypeExtensions for Type {
         self.is_numeric_type() || self.is_fixed_array_type() || self.is_struct_type()
     }
 
-    fn get_type_with_depth(&self, base_depth: usize) -> &Type {
+    fn get_type_with_depth(&self, base_depth: u64) -> &Type {
         if base_depth == 0 {
             return self;
         }

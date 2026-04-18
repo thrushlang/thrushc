@@ -146,7 +146,7 @@ impl LLVMTargetTriple {
     pub fn is_object_format_elf(&self) -> bool {
         // https://llvm.org/doxygen/Triple_8cpp_source.html
 
-        let arch_in_elf_list = matches!(
+        let arch_in_elf_list: bool = matches!(
             self.arch.as_str(),
             "aarch64_be"
                 | "amdgcn"
@@ -303,12 +303,62 @@ impl LLVMTargetTriple {
 
     #[inline]
     pub fn is_loongarch64(&self) -> bool {
-        self.arch == "loongarch64"
+        matches!(self.arch.as_str(), "loongarch64")
     }
 
     #[inline]
     pub fn is_wasm64(&self) -> bool {
-        self.arch == "wasm64" || self.arch.starts_with("wasm64")
+        matches!(self.arch.as_str(), "wasm64")
+    }
+
+    #[inline]
+    pub fn is_avr(&self) -> bool {
+        self.arch.contains("avr")
+    }
+
+    #[inline]
+    pub fn is_arc(&self) -> bool {
+        self.arch.contains("arc")
+    }
+
+    #[inline]
+    pub fn is_csky(&self) -> bool {
+        self.arch.contains("csky")
+    }
+
+    #[inline]
+    pub fn is_arm_family(&self) -> bool {
+        self.arch.contains("arm") || self.arch.contains("aarch64") || self.arch.contains("thumb")
+    }
+
+    #[inline]
+    pub fn is_hexagon(&self) -> bool {
+        self.arch.contains("hexagon")
+    }
+
+    #[inline]
+    pub fn is_msp430(&self) -> bool {
+        self.arch.contains("msp430")
+    }
+
+    #[inline]
+    pub fn is_ppc(&self) -> bool {
+        self.arch.contains("powerpc") || self.arch.contains("ppc")
+    }
+
+    #[inline]
+    pub fn is_sparc(&self) -> bool {
+        self.arch.contains("sparc")
+    }
+
+    #[inline]
+    pub fn is_xcore(&self) -> bool {
+        self.arch.contains("xcore")
+    }
+
+    #[inline]
+    pub fn is_os_aix(&self) -> bool {
+        self.os.contains("aix")
     }
 
     #[inline]

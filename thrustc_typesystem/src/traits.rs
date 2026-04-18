@@ -50,11 +50,11 @@ pub trait FunctionReferenceExtensions {
 }
 
 pub trait IndexExtensions {
-    fn calculate_index_type(&self, depth: usize) -> &Type;
+    fn calculate_index_type(&self, depth: u64) -> &Type;
 }
 
 pub trait TypeExtensions {
-    fn get_type_with_depth(&self, base_depth: usize) -> &Type;
+    fn get_type_with_depth(&self, base_depth: u64) -> &Type;
     fn get_type_ref(&self) -> Type;
 
     fn is_value(&self) -> bool;

@@ -276,19 +276,23 @@ pub fn compile<'ctx>(
             })
             .into(),
         LLVMBuiltin::AlignOf { of, span } => {
-            let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
+            let type_layout_result: either::Either<
+                thrustc_typesystem::type_layout::TypeLayout,
+                thrustc_typesystem::type_layout::StructTypeLayout,
+            > = context.get_mut_target_info().get_type_layout(of);
 
-            let alignment: u32 = context
-                .get_target_data()
-                .get_preferred_alignment(&llvm_type);
+            let align_of: u32 = match type_layout_result {
+                either::Either::Left(t) => t.into_layout().alignof,
+                either::Either::Right(t) => t.into_layout().alignof,
+            };
 
-            let alignment: BasicValueEnum = context
+            let align_value: BasicValueEnum = context
                 .get_llvm_context()
                 .i32_type()
-                .const_int(alignment.into(), false)
+                .const_int(align_of.into(), false)
                 .into();
 
-            cast::try_cast(context, cast_type, &Type::U32(span), alignment, span)
+            cast::try_cast(context, cast_type, &Type::U32(span), align_value, span)
         }
         LLVMBuiltin::SizeOf { of, span } => {
             let type_layout_result: either::Either<
