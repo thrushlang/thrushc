@@ -28,6 +28,8 @@ members = [
     "thrustc_semantic", 
     "thrustc_entities", 
     "thrustc_preprocessor",
+    "thrustc_llvm_abi",
+    "thrustc_llvm_abi_x86",
     "thrustc_llvm_codegen", 
     "thrustc_llvm_attributes", 
     "thrustc_llvm_callconventions",

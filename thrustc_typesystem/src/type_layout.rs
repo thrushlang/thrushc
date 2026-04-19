@@ -598,9 +598,14 @@ impl TargetInfo {
                 }
             }
 
-            Type::Struct { fields, .. } => {
+            Type::Struct {
+                fields, modifier, ..
+            } => {
+                let packed: bool = modifier.llvm().is_packed();
+
                 let mut current_offset_bits: u32 = 0;
-                let mut max_align_bits: u32 = 1;
+                let mut max_align_bits: u32 = if packed { 1 } else { 8 };
+
                 let mut field_offsets_bits: Vec<u32> = Vec::with_capacity(fields.len());
 
                 for field in fields {
@@ -611,7 +616,7 @@ impl TargetInfo {
                         Either::Right(r) => (r.width, r.align),
                     };
 
-                    if f_align > 0 {
+                    if !packed && f_align > 0 {
                         current_offset_bits = current_offset_bits.div_ceil(f_align) * f_align;
                     }
 
@@ -619,13 +624,16 @@ impl TargetInfo {
 
                     current_offset_bits = current_offset_bits.saturating_add(f_width);
 
-                    if f_align > max_align_bits {
+                    if !packed && f_align > max_align_bits {
                         max_align_bits = f_align;
                     }
                 }
 
-                let total_width_bits: u32 =
-                    current_offset_bits.div_ceil(max_align_bits) * max_align_bits;
+                let total_width_bits: u32 = if packed {
+                    current_offset_bits
+                } else {
+                    current_offset_bits.div_ceil(max_align_bits) * max_align_bits
+                };
 
                 either::Either::Right(StructTypeLayout {
                     width: total_width_bits,

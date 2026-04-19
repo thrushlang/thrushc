@@ -1,0 +1,13 @@
+[package]
+name = "thrustc_llvm_abi_x86"
+description.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+thrustc_typesystem = { path = "../thrustc_typesystem" }
