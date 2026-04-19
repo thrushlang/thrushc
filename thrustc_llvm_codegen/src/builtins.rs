@@ -286,13 +286,15 @@ pub fn compile<'ctx>(
                 either::Either::Right(t) => t.into_layout().alignof,
             };
 
-            let align_value: BasicValueEnum = context
+            let align_of_value: BasicValueEnum = context
                 .get_llvm_context()
                 .i32_type()
                 .const_int(align_of.into(), false)
                 .into();
 
-            cast::try_cast(context, cast_type, &Type::U32(span), align_value, span)
+            let align_of_type: Type = Type::U32 { span };
+
+            cast::try_cast(context, cast_type, &align_of_type, align_of_value, span)
         }
         LLVMBuiltin::SizeOf { of, span } => {
             let type_layout_result: either::Either<
@@ -305,13 +307,15 @@ pub fn compile<'ctx>(
                 either::Either::Right(t) => t.into_layout().sizeof,
             };
 
-            let sizeof_value: BasicValueEnum = context
+            let size_of_value: BasicValueEnum = context
                 .get_llvm_context()
                 .i32_type()
                 .const_int(size_of.into(), false)
                 .into();
 
-            cast::try_cast(context, cast_type, &Type::USize(span), sizeof_value, span)
+            let size_of_type: Type = Type::USize { span };
+
+            cast::try_cast(context, cast_type, &size_of_type, size_of_value, span)
         }
         LLVMBuiltin::AbiSizeOf { of, span } => {
             let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
@@ -322,7 +326,9 @@ pub fn compile<'ctx>(
                 .const_int(abi_size, false)
                 .into();
 
-            cast::try_cast(context, cast_type, &Type::U64(span), size, span)
+            let size_type: Type = Type::U64 { span };
+
+            cast::try_cast(context, cast_type, &size_type, size, span)
         }
         LLVMBuiltin::BitSizeOf { of, span } => {
             let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
@@ -335,7 +341,9 @@ pub fn compile<'ctx>(
                 .const_int(bit_size_bytes, false)
                 .into();
 
-            cast::try_cast(context, cast_type, &Type::U64(span), size, span)
+            let size_type: Type = Type::U64 { span };
+
+            cast::try_cast(context, cast_type, &size_type, size, span)
         }
         LLVMBuiltin::AbiAlignOf { of, span } => {
             let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
@@ -347,7 +355,9 @@ pub fn compile<'ctx>(
                 .const_int(abi_align.into(), false)
                 .into();
 
-            cast::try_cast(context, cast_type, &Type::U32(span), align, span)
+            let abi_align_type: Type = Type::U32 { span };
+
+            cast::try_cast(context, cast_type, &abi_align_type, align, span)
         }
     }
 }

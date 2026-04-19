@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_ast::{Ast, NodeId};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_span::Span;
@@ -62,7 +61,7 @@ pub fn build_embedded<'parser>(
         path: lexeme.into(),
         literal: lexeme,
         kind: Type::Array {
-            base_type: Type::U8(span).into(),
+            base_type: Type::U8 { span }.into(),
             infered_type: None,
             span,
         },

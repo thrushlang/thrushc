@@ -51,7 +51,7 @@ impl TypeIsExtensions for Type {
 
     #[inline(always)]
     fn is_struct_type(&self) -> bool {
-        matches!(self, Type::Struct(..))
+        matches!(self, Type::Struct { .. })
     }
 
     #[inline(always)]
@@ -101,12 +101,12 @@ impl TypeIsExtensions for Type {
     fn is_unsigned_integer_type(&self) -> bool {
         matches!(
             self,
-            Type::U8(..)
-                | Type::U16(..)
-                | Type::U32(..)
-                | Type::U64(..)
-                | Type::U128(..)
-                | Type::USize(..)
+            Type::U8 { .. }
+                | Type::U16 { .. }
+                | Type::U32 { .. }
+                | Type::U64 { .. }
+                | Type::U128 { .. }
+                | Type::USize { .. }
         )
     }
 
@@ -114,30 +114,34 @@ impl TypeIsExtensions for Type {
     fn is_signed_integer_type(&self) -> bool {
         matches!(
             self,
-            Type::S8(..) | Type::S16(..) | Type::S32(..) | Type::S64(..) | Type::SSize(..)
+            Type::S8 { .. }
+                | Type::S16 { .. }
+                | Type::S32 { .. }
+                | Type::S64 { .. }
+                | Type::SSize { .. }
         )
     }
 
     #[inline(always)]
     fn is_lesseq_unsigned32bit_integer(&self) -> bool {
-        matches!(self, Type::U8(..) | Type::U16(..) | Type::U32(..))
+        matches!(self, Type::U8 { .. } | Type::U16 { .. } | Type::U32 { .. })
     }
 
     #[inline(always)]
     fn is_integer_type(&self) -> bool {
         matches!(
             self,
-            Type::S8(..)
-                | Type::S16(..)
-                | Type::S32(..)
-                | Type::S64(..)
-                | Type::SSize(..)
-                | Type::U8(..)
-                | Type::U16(..)
-                | Type::U32(..)
-                | Type::U64(..)
-                | Type::U128(..)
-                | Type::USize(..)
+            Type::S8 { .. }
+                | Type::S16 { .. }
+                | Type::S32 { .. }
+                | Type::S64 { .. }
+                | Type::SSize { .. }
+                | Type::U8 { .. }
+                | Type::U16 { .. }
+                | Type::U32 { .. }
+                | Type::U64 { .. }
+                | Type::U128 { .. }
+                | Type::USize { .. }
                 | Type::Char(..)
         )
     }
@@ -153,18 +157,18 @@ impl TypeIsExtensions for Type {
             Type::Bool(..) => 1,
             Type::Char(..) => 2,
 
-            Type::U8(..) => 3,
-            Type::U16(..) => 4,
-            Type::U32(..) => 5,
-            Type::U64(..) => 6,
-            Type::U128(..) => 7,
-            Type::USize(..) => 8,
+            Type::U8 { .. } => 3,
+            Type::U16 { .. } => 4,
+            Type::U32 { .. } => 5,
+            Type::U64 { .. } => 6,
+            Type::U128 { .. } => 7,
+            Type::USize { .. } => 8,
 
-            Type::S8(..) => 9,
-            Type::S16(..) => 10,
-            Type::S32(..) => 11,
-            Type::S64(..) => 12,
-            Type::SSize(..) => 13,
+            Type::S8 { .. } => 9,
+            Type::S16 { .. } => 10,
+            Type::S32 { .. } => 11,
+            Type::S64 { .. } => 12,
+            Type::SSize { .. } => 13,
 
             Type::F32(..) => 15,
             Type::F64(..) => 16,
@@ -182,7 +186,7 @@ impl TypeIsExtensions for Type {
 
             Type::Array { .. } => 23,
             Type::FixedArray(..) => 24,
-            Type::Struct(..) => 25,
+            Type::Struct { .. } => 25,
 
             Type::Void(..) => 26,
             Type::Unresolved { .. } => 27,
@@ -225,18 +229,18 @@ impl TypeExtensions for Type {
             } => element_type.get_type_with_depth(base_depth - 1),
             Type::Const(inner_type, ..) => inner_type.get_type_with_depth(base_depth - 1),
             Type::Ptr(Some(inner_type), ..) => inner_type.get_type_with_depth(base_depth - 1),
-            Type::Struct(..) => self,
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::SSize(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..)
-            | Type::USize(..)
+            Type::Struct { .. } => self,
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::SSize { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. }
+            | Type::USize { .. }
             | Type::F32(..)
             | Type::F64(..)
             | Type::F128(..)
@@ -263,17 +267,17 @@ impl Hash for Type {
         std::mem::discriminant(self).hash(state);
 
         match self {
-            Type::S8(_)
-            | Type::S16(_)
-            | Type::S32(_)
-            | Type::S64(_)
-            | Type::SSize(_)
-            | Type::U8(_)
-            | Type::U16(_)
-            | Type::U32(_)
-            | Type::U64(_)
-            | Type::U128(_)
-            | Type::USize(_)
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::SSize { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. }
+            | Type::USize { .. }
             | Type::F32(_)
             | Type::F64(_)
             | Type::F128(_)
@@ -286,7 +290,12 @@ impl Hash for Type {
 
             Type::Const(inner, _) => inner.hash(state),
             Type::Ptr(inner, _) => inner.hash(state),
-            Type::Struct(name, fields, modifier, _) => {
+            Type::Struct {
+                name,
+                fields,
+                modifier,
+                ..
+            } => {
                 name.hash(state);
                 fields.hash(state);
                 modifier.hash(state);
@@ -325,7 +334,20 @@ impl PartialEq for Type {
                     && mod1 == mod2
             }
 
-            (Type::Struct(a, fields1, mod1, ..), Type::Struct(b, fields2, mod2, ..)) => {
+            (
+                Type::Struct {
+                    name: a,
+                    fields: fields1,
+                    modifier: mod1,
+                    ..
+                },
+                Type::Struct {
+                    name: b,
+                    fields: fields2,
+                    modifier: mod2,
+                    ..
+                },
+            ) => {
                 fields1.len() == fields2.len()
                     && a == b
                     && fields1.iter().zip(fields2.iter()).all(|(f1, f2)| f1 == f2)
@@ -347,17 +369,17 @@ impl PartialEq for Type {
             (Type::Const(target, ..), Type::Const(from, ..)) => target == from,
 
             (Type::Char(..), Type::Char(..)) => true,
-            (Type::S8(..), Type::S8(..)) => true,
-            (Type::S16(..), Type::S16(..)) => true,
-            (Type::S32(..), Type::S32(..)) => true,
-            (Type::S64(..), Type::S64(..)) => true,
-            (Type::SSize(..), Type::SSize(..)) => true,
-            (Type::U8(..), Type::U8(..)) => true,
-            (Type::U16(..), Type::U16(..)) => true,
-            (Type::U32(..), Type::U32(..)) => true,
-            (Type::U64(..), Type::U64(..)) => true,
-            (Type::U128(..), Type::U128(..)) => true,
-            (Type::USize(..), Type::USize(..)) => true,
+            (Type::S8 { .. }, Type::S8 { .. }) => true,
+            (Type::S16 { .. }, Type::S16 { .. }) => true,
+            (Type::S32 { .. }, Type::S32 { .. }) => true,
+            (Type::S64 { .. }, Type::S64 { .. }) => true,
+            (Type::SSize { .. }, Type::SSize { .. }) => true,
+            (Type::U8 { .. }, Type::U8 { .. }) => true,
+            (Type::U16 { .. }, Type::U16 { .. }) => true,
+            (Type::U32 { .. }, Type::U32 { .. }) => true,
+            (Type::U64 { .. }, Type::U64 { .. }) => true,
+            (Type::U128 { .. }, Type::U128 { .. }) => true,
+            (Type::USize { .. }, Type::USize { .. }) => true,
             (Type::F32(..), Type::F32(..)) => true,
             (Type::F64(..), Type::F64(..)) => true,
             (Type::F128(..), Type::F128(..)) => true,
@@ -378,17 +400,17 @@ impl PartialEq for Type {
 impl std::fmt::Display for Type {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Type::S8(..) => write!(f, "s8"),
-            Type::S16(..) => write!(f, "s16"),
-            Type::S32(..) => write!(f, "s32"),
-            Type::S64(..) => write!(f, "s64"),
-            Type::SSize(..) => write!(f, "ssize"),
-            Type::U8(..) => write!(f, "u8"),
-            Type::U16(..) => write!(f, "u16"),
-            Type::U32(..) => write!(f, "u32"),
-            Type::U64(..) => write!(f, "u64"),
-            Type::U128(..) => write!(f, "u128"),
-            Type::USize(..) => write!(f, "usize"),
+            Type::S8 { .. } => write!(f, "s8"),
+            Type::S16 { .. } => write!(f, "s16"),
+            Type::S32 { .. } => write!(f, "s32"),
+            Type::S64 { .. } => write!(f, "s64"),
+            Type::SSize { .. } => write!(f, "ssize"),
+            Type::U8 { .. } => write!(f, "u8"),
+            Type::U16 { .. } => write!(f, "u16"),
+            Type::U32 { .. } => write!(f, "u32"),
+            Type::U64 { .. } => write!(f, "u64"),
+            Type::U128 { .. } => write!(f, "u128"),
+            Type::USize { .. } => write!(f, "usize"),
             Type::F32(..) => write!(f, "f32"),
             Type::F64(..) => write!(f, "f64"),
             Type::F128(..) => write!(f, "f128"),
@@ -423,25 +445,30 @@ impl std::fmt::Display for Type {
             Type::Array { base_type, .. } => {
                 write!(f, "array[{}]", base_type)
             }
-            Type::Struct(name, fields, modificator, ..) => {
-                let is_llvm_packed: &str = if modificator.llvm().is_packed() {
+            Type::Struct {
+                name,
+                fields,
+                modifier,
+                ..
+            } => {
+                let has_llvm_packed_attribute: &str = if modifier.llvm().is_packed() {
                     "<packed>"
                 } else {
                     ""
                 };
 
-                write!(f, "struct {}{} {{ ", name, is_llvm_packed)?;
+                write!(f, "struct {}{} {{ ", name, has_llvm_packed_attribute)?;
 
-                fields.iter().for_each(|field| {
-                    let _ = write!(f, "{} ", field);
-                });
+                for field in fields.iter() {
+                    write!(f, "{} ", field)?;
+                }
 
                 write!(f, "}}")
             }
             Type::Ptr(nested_type, ..) => {
                 if let Some(nested_type) = nested_type {
-                    let _ = write!(f, "ptr[");
-                    let _ = write!(f, "{}", nested_type);
+                    write!(f, "ptr[")?;
+                    write!(f, "{}", nested_type)?;
 
                     return write!(f, "]");
                 }

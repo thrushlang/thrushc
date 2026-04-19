@@ -125,7 +125,7 @@ fn decompose_structure_property<'parser>(
         )
     });
 
-    if let Type::Struct(name, ..) = current_type {
+    if let Type::Struct { name, .. } = current_type {
         let object: FoundSymbolId = ctx.get_symbols().get_symbols_id(name, span)?;
 
         let struct_id: (&str, usize) = object.expected_struct(span)?;

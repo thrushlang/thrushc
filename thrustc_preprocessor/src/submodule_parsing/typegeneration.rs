@@ -38,9 +38,9 @@ use thrustc_typesystem::{
 };
 
 use crate::{
-    modparsing::{attributes, expression},
     parser::ModuleParser,
     signatures::{Signature, Symbol, Variant},
+    submodule_parsing::{attributes, expressions},
 };
 
 pub fn build_type(ctx: &mut ModuleParser<'_>) -> Result<Type, ()> {
@@ -59,18 +59,18 @@ pub fn build_type(ctx: &mut ModuleParser<'_>) -> Result<Type, ()> {
                     }
                     TokenType::Char => Ok(Type::Char(span)),
 
-                    TokenType::S8 => Ok(Type::S8(span)),
-                    TokenType::S16 => Ok(Type::S16(span)),
-                    TokenType::S32 => Ok(Type::S32(span)),
-                    TokenType::S64 => Ok(Type::S64(span)),
-                    TokenType::Ssize => Ok(Type::SSize(span)),
+                    TokenType::S8 => Ok(Type::S8 { span }),
+                    TokenType::S16 => Ok(Type::S16 { span }),
+                    TokenType::S32 => Ok(Type::S32 { span }),
+                    TokenType::S64 => Ok(Type::S64 { span }),
+                    TokenType::Ssize => Ok(Type::SSize { span }),
 
-                    TokenType::U8 => Ok(Type::U8(span)),
-                    TokenType::U16 => Ok(Type::U16(span)),
-                    TokenType::U32 => Ok(Type::U32(span)),
-                    TokenType::U64 => Ok(Type::U64(span)),
-                    TokenType::U128 => Ok(Type::U128(span)),
-                    TokenType::Usize => Ok(Type::USize(span)),
+                    TokenType::U8 => Ok(Type::U8 { span }),
+                    TokenType::U16 => Ok(Type::U16 { span }),
+                    TokenType::U32 => Ok(Type::U32 { span }),
+                    TokenType::U64 => Ok(Type::U64 { span }),
+                    TokenType::U128 => Ok(Type::U128 { span }),
+                    TokenType::Usize => Ok(Type::USize { span }),
 
                     TokenType::Bool => Ok(Type::Bool(span)),
 
@@ -175,7 +175,7 @@ fn parse_array_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> 
     if ctx.check(TokenType::SemiColon) {
         ctx.consume(TokenType::SemiColon)?;
 
-        let size: Ast = expression::build_expr(ctx)?;
+        let size: Ast = expressions::parse_expr(ctx)?;
         let size_type: &Type = size.get_value_type().map_err(|_| ())?;
 
         if !size.is_integer() {

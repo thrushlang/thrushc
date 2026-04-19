@@ -46,19 +46,41 @@ use arbitrary::Arbitrary;
 #[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Eq)]
 pub enum Type {
-    S8(Span),
-    S16(Span),
-    S32(Span),
-    S64(Span),
-    SSize(Span),
+    S8 {
+        span: Span,
+    },
+    S16 {
+        span: Span,
+    },
+    S32 {
+        span: Span,
+    },
+    S64 {
+        span: Span,
+    },
+    SSize {
+        span: Span,
+    },
 
     // Unsigned Integer Type
-    U8(Span),
-    U16(Span),
-    U32(Span),
-    U64(Span),
-    U128(Span),
-    USize(Span),
+    U8 {
+        span: Span,
+    },
+    U16 {
+        span: Span,
+    },
+    U32 {
+        span: Span,
+    },
+    U64 {
+        span: Span,
+    },
+    U128 {
+        span: Span,
+    },
+    USize {
+        span: Span,
+    },
 
     // Floating Point Type
     F32(Span),
@@ -80,7 +102,12 @@ pub enum Type {
     Ptr(Option<std::boxed::Box<Type>>, Span),
 
     // Struct Type
-    Struct(String, std::vec::Vec<Type>, StructureTypeModificator, Span),
+    Struct {
+        name: String,
+        fields: std::vec::Vec<Type>,
+        modifier: StructureTypeModificator,
+        span: Span,
+    },
 
     // Fixed FixedArray
     FixedArray(std::boxed::Box<Type>, u32, Span),

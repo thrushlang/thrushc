@@ -17,14 +17,14 @@
 
 */
 
-
+use thrustc_ast::Ast;
 use thrustc_attributes::{ThrustAttribute, ThrustAttributes, linkage::ThrustLinkage};
 use thrustc_span::Span;
 
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::{TokenType, traits::TokenTypeAttributesExtensions};
 
-use crate::parser::ModuleParser;
+use crate::{parser::ModuleParser, submodule_parsing::expressions};
 
 pub fn build_attributes<'parser>(
     parser: &mut ModuleParser<'parser>,
@@ -38,6 +38,8 @@ pub fn build_attributes<'parser>(
 
         match current_tk.get_type() {
             TokenType::Extern => {
+                parser.consume(TokenType::Extern)?;
+
                 attributes.push(ThrustAttribute::Extern(
                     self::build_external_attribute(parser)?,
                     span,
@@ -45,6 +47,8 @@ pub fn build_attributes<'parser>(
             }
 
             TokenType::Convention => {
+                parser.consume(TokenType::Convention)?;
+
                 attributes.push(ThrustAttribute::Convention(
                     self::build_call_convention_attribute(parser)?,
                     span,
@@ -52,6 +56,8 @@ pub fn build_attributes<'parser>(
             }
 
             TokenType::Linkage => {
+                parser.consume(TokenType::Linkage)?;
+
                 let result: (ThrustLinkage, String) = self::build_linkage_attribute(parser)?;
 
                 let linkage: ThrustLinkage = result.0;
@@ -65,10 +71,23 @@ pub fn build_attributes<'parser>(
                 parser.only_advance()?;
             }
 
-            TokenType::AsmSyntax => attributes.push(ThrustAttribute::AsmSyntax(
-                self::build_assembler_syntax_attribute(parser)?,
-                span,
-            )),
+            TokenType::AsmSyntax => {
+                parser.consume(TokenType::AsmSyntax)?;
+
+                attributes.push(ThrustAttribute::AsmSyntax(
+                    self::build_assembler_syntax_attribute(parser)?,
+                    span,
+                ))
+            }
+
+            TokenType::Align => {
+                parser.consume(TokenType::Align)?;
+
+                attributes.push(ThrustAttribute::Align(
+                    self::build_align_attribute(parser)?,
+                    span,
+                ))
+            }
 
             tk_type if tk_type.is_attribute() => {
                 if let Some(compiler_attribute) = thrustc_attributes::as_attribute(tk_type, span) {
@@ -86,11 +105,28 @@ pub fn build_attributes<'parser>(
     Ok(attributes)
 }
 
+fn build_align_attribute<'parser>(parser: &mut ModuleParser<'parser>) -> Result<u64, ()> {
+    parser.consume(TokenType::LParen)?;
+
+    let expr: Ast<'_> = expressions::parse_expr(parser)?;
+
+    parser.consume(TokenType::RParen)?;
+
+    if let Ast::Integer {
+        value,
+        signed: false,
+        ..
+    } = expr
+    {
+        Ok(value)
+    } else {
+        Err(())
+    }
+}
+
 fn build_linkage_attribute<'parser>(
     parser: &mut ModuleParser<'parser>,
 ) -> Result<(ThrustLinkage, String), ()> {
-    parser.only_advance()?;
-
     parser.consume(TokenType::LParen)?;
 
     let linkage_tk: &Token = parser.consume_these(&[TokenType::CString, TokenType::CNString])?;
@@ -104,8 +140,6 @@ fn build_linkage_attribute<'parser>(
 }
 
 fn build_external_attribute<'parser>(parser: &mut ModuleParser<'parser>) -> Result<String, ()> {
-    parser.only_advance()?;
-
     parser.consume(TokenType::LParen)?;
 
     let name: &Token = parser.consume_these(&[TokenType::CString, TokenType::CNString])?;
@@ -119,8 +153,6 @@ fn build_external_attribute<'parser>(parser: &mut ModuleParser<'parser>) -> Resu
 fn build_assembler_syntax_attribute<'parser>(
     parser: &mut ModuleParser<'parser>,
 ) -> Result<String, ()> {
-    parser.only_advance()?;
-
     parser.consume(TokenType::LParen)?;
 
     let syntax_tk: &Token = parser.consume_these(&[TokenType::CString, TokenType::CNString])?;
@@ -132,8 +164,6 @@ fn build_assembler_syntax_attribute<'parser>(
 }
 
 fn build_call_convention_attribute(parser: &mut ModuleParser) -> Result<String, ()> {
-    parser.only_advance()?;
-
     parser.consume(TokenType::LParen)?;
 
     let convention_tk: &Token = parser.consume_these(&[TokenType::CString, TokenType::CNString])?;

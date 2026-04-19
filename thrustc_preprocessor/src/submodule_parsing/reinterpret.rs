@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
 
@@ -47,10 +46,10 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ()> {
 
     fn match_signed(number: isize, span: Span) -> Result<(Type, u64), ()> {
         match number {
-            n if (I8_MIN..=I8_MAX).contains(&n) => Ok((Type::S8(span), n as u64)),
-            n if (I16_MIN..=I16_MAX).contains(&n) => Ok((Type::S16(span), n as u64)),
-            n if (I32_MIN..=I32_MAX).contains(&n) => Ok((Type::S32(span), n as u64)),
-            n if (isize::MIN..=isize::MAX).contains(&n) => Ok((Type::S64(span), n as u64)),
+            n if (I8_MIN..=I8_MAX).contains(&n) => Ok((Type::S8 { span }, n as u64)),
+            n if (I16_MIN..=I16_MAX).contains(&n) => Ok((Type::S16 { span }, n as u64)),
+            n if (I32_MIN..=I32_MAX).contains(&n) => Ok((Type::S32 { span }, n as u64)),
+            n if (isize::MIN..=isize::MAX).contains(&n) => Ok((Type::S64 { span }, n as u64)),
 
             _ => Err(()),
         }
@@ -58,10 +57,10 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ()> {
 
     fn match_unsigned(number: usize, span: Span) -> Result<(Type, u64), ()> {
         match number {
-            n if (0..=U8_MAX).contains(&n) => Ok((Type::U8(span), n as u64)),
-            n if (0..=U16_MAX).contains(&n) => Ok((Type::U16(span), n as u64)),
-            n if (0..=U32_MAX).contains(&n) => Ok((Type::U32(span), n as u64)),
-            n if (0..=usize::MAX).contains(&n) => Ok((Type::U64(span), n as u64)),
+            n if (0..=U8_MAX).contains(&n) => Ok((Type::U8 { span }, n as u64)),
+            n if (0..=U16_MAX).contains(&n) => Ok((Type::U16 { span }, n as u64)),
+            n if (0..=U32_MAX).contains(&n) => Ok((Type::U32 { span }, n as u64)),
+            n if (0..=usize::MAX).contains(&n) => Ok((Type::U64 { span }, n as u64)),
 
             _ => Err(()),
         }
@@ -71,34 +70,44 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), ()> {
     let octal: bool = lexeme.strip_prefix("0o").is_some();
     let binary: bool = lexeme.strip_prefix("0b").is_some();
 
-    let (radix, prefix, _) = if hexadecimal {
-        (16, "0x", "hexadecimal")
+    let (radix, prefix) = if hexadecimal {
+        (16, "0x")
     } else if octal {
-        (8, "0o", "octal")
+        (8, "0o")
     } else if binary {
-        (2, "0b", "binary")
+        (2, "0b")
     } else {
-        (10, "", "decimal")
+        (10, "")
+    };
+
+    let cleaned: String = if radix != 10 {
+        lexeme
+            .strip_prefix(prefix)
+            .unwrap_or(lexeme)
+            .replace('_', "")
+    } else {
+        lexeme.replace('_', "")
     };
 
     if radix != 10 {
-        let cleaned: String = lexeme
-            .strip_prefix(prefix)
-            .unwrap_or(lexeme)
-            .replace('_', "");
+        if let Ok(n) = usize::from_str_radix(&cleaned, radix) {
+            return match_unsigned(n, span);
+        }
 
-        isize::from_str_radix(&cleaned, radix)
-            .map(|n| match_signed(n, span))
-            .unwrap_or_else(|_| {
-                usize::from_str_radix(&cleaned, radix)
-                    .map(|n| match_unsigned(n, span))
-                    .unwrap_or_else(|_| Err(()))
-            })
+        if let Ok(n) = isize::from_str_radix(&cleaned, radix) {
+            return match_signed(n, span);
+        }
+
+        Err(())
     } else {
-        lexeme
-            .parse::<usize>()
-            .map(|n| match_unsigned(n, span))
-            .or_else(|_| lexeme.parse::<isize>().map(|n| match_signed(n, span)))
-            .unwrap_or(Err(()))
+        if let Ok(n) = lexeme.parse::<usize>() {
+            return match_unsigned(n, span);
+        }
+
+        if let Ok(n) = lexeme.parse::<isize>() {
+            return match_signed(n, span);
+        }
+
+        Err(())
     }
 }

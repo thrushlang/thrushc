@@ -26,15 +26,20 @@ impl TypeStructExtensions for Type {
     fn create_struct_type(
         name: String,
         fields: &[Type],
-        modificator: StructureTypeModificator,
+        modifier: StructureTypeModificator,
         span: Span,
     ) -> Type {
-        Type::Struct(name, fields.to_vec(), modificator, span)
+        Type::Struct {
+            name,
+            fields: fields.to_vec(),
+            modifier,
+            span,
+        }
     }
 
     #[inline]
     fn get_struct_fields(&self) -> &[Type] {
-        if let Type::Struct(_, fields, ..) = self {
+        if let Type::Struct { fields, .. } = self {
             return fields;
         }
 

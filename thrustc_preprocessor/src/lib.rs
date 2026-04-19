@@ -28,12 +28,12 @@ use crate::{context::PreprocessorContext, module::Module};
 use ahash::AHashSet as HashSet;
 
 mod context;
-mod modparsing;
+mod highmodule_parsing;
 pub mod module;
 mod moduletable;
 mod parser;
-mod preparsing;
 pub mod signatures;
+mod submodule_parsing;
 
 #[derive(Debug)]
 pub struct Preprocessor {
@@ -65,7 +65,7 @@ impl<'preprocessor> Preprocessor {
 
         while !context.is_eof() {
             if context.check(TokenType::Import) {
-                if let Ok(Some(module)) = preparsing::import::parse_import(&mut context) {
+                if let Ok(Some(module)) = highmodule_parsing::import::parse_import(&mut context) {
                     self.modules.push(module);
                 }
             }

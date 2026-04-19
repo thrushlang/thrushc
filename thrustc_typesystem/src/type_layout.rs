@@ -420,7 +420,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::S8(..) | Type::U8(..) | Type::Char(..) => {
+            Type::S8 { .. } | Type::U8 { .. } | Type::Char(..) => {
                 type_info.width = self.i8_width();
                 type_info.align = self.i8_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -429,7 +429,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::S16(..) | Type::U16(..) => {
+            Type::S16 { .. } | Type::U16 { .. } => {
                 type_info.width = self.i16_width();
                 type_info.align = self.i16_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -438,7 +438,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::S32(..) | Type::U32(..) => {
+            Type::S32 { .. } | Type::U32 { .. } => {
                 type_info.width = self.i32_width();
                 type_info.align = self.i32_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -447,7 +447,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::S64(..) | Type::U64(..) => {
+            Type::S64 { .. } | Type::U64 { .. } => {
                 type_info.width = self.i64_width();
                 type_info.align = self.i64_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -456,7 +456,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::U128(..) => {
+            Type::U128 { .. } => {
                 type_info.width = self.i128_width();
                 type_info.align = self.i128_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -465,7 +465,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::SSize(..) => {
+            Type::SSize { .. } => {
                 type_info.width = self.isize_width();
                 type_info.align = self.isize_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -474,7 +474,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::USize(..) => {
+            Type::USize { .. } => {
                 type_info.width = self.usize_width();
                 type_info.align = self.usize_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -598,12 +598,12 @@ impl TargetInfo {
                 }
             }
 
-            Type::Struct(_, types, _, _) => {
+            Type::Struct { fields, .. } => {
                 let mut current_offset_bits: u32 = 0;
                 let mut max_align_bits: u32 = 1;
-                let mut field_offsets_bits: Vec<u32> = Vec::with_capacity(types.len());
+                let mut field_offsets_bits: Vec<u32> = Vec::with_capacity(fields.len());
 
-                for field in types {
+                for field in fields {
                     let layout: Either<TypeLayout, StructTypeLayout> = self.get_type_layout(field);
 
                     let (f_width, f_align) = match layout {

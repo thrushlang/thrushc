@@ -24,9 +24,9 @@ use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
 use crate::{
-    modparsing::{attributes, typegeneration},
     parser::ModuleParser,
     signatures::{Signature, Symbol, Variant},
+    submodule_parsing::{attributes, typegeneration},
 };
 
 pub fn parse_constant<'module_parser>(

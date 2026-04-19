@@ -26,7 +26,7 @@ use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 
-use crate::{modparsing, module::Module, signatures::Symbol};
+use crate::{module::Module, signatures::Symbol, submodule_parsing};
 
 use ahash::AHashSet as HashSet;
 
@@ -51,7 +51,7 @@ impl<'module_parser> ModuleParser<'module_parser> {
         visited: HashSet<PathBuf>,
     ) -> Self {
         Self {
-            module: Module::new(name),
+            module: Module::new(name, file.get_path().to_path_buf()),
             tokens,
             diagnostician: Diagnostician::new(file, options),
             errors: Vec::with_capacity(u8::MAX as usize),
@@ -94,12 +94,12 @@ impl<'module_parser> ModuleParser<'module_parser> {
 impl<'module_parser> ModuleParser<'module_parser> {
     pub fn start(&mut self) -> Result<(), ()> {
         if self.check(TokenType::Import) {
-            modparsing::import::parse_import(self)?;
+            submodule_parsing::import::parse_import(self)?;
         } else if self.check(TokenType::Const) {
-            let symbol: Symbol = modparsing::constant::parse_constant(self)?;
+            let symbol: Symbol = submodule_parsing::constant::parse_constant(self)?;
             self.module.add_symbol(symbol);
         } else if self.check(TokenType::Type) {
-            let symbol: Symbol = modparsing::customtype::parse_type(self)?;
+            let symbol: Symbol = submodule_parsing::customtype::parse_type(self)?;
             self.module.add_symbol(symbol);
         } else {
             let _ = self.advance();

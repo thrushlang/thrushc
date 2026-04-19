@@ -17,6 +17,8 @@
 
 */
 
+#![allow(clippy::result_unit_err)]
+
 use colored::Colorize;
 use inkwell::memory_buffer::MemoryBuffer;
 use thrustc_logging::LoggingType;

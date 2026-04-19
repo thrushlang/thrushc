@@ -7,20 +7,15 @@ pub struct ExternalSymbol {
     pub name: String,
     pub signature: ExternalSignature,
     pub variant: ExternalVariant,
-    pub is_unavailable: bool,
 }
 
 impl ExternalSymbol {
     #[inline]
-    pub fn new(span: Span) -> Self {
+    pub fn new(name: String, signature: ExternalSignature, variant: ExternalVariant) -> Self {
         Self {
-            name: "unvailable".into(),
-            signature: ExternalSignature::Unavailable {
-                kind: Type::Void(span),
-                span,
-            },
-            variant: ExternalVariant::Unavailable,
-            is_unavailable: true,
+            name,
+            signature,
+            variant,
         }
     }
 }

@@ -40,18 +40,18 @@ impl IndexExtensions for Type {
                 inner_type.get_type_with_depth(depth)
             }
             Type::Ptr(Some(inner_type), ..) => inner_type.get_type_with_depth(depth - 1),
-            Type::Struct(..) => self,
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::SSize(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..)
-            | Type::USize(..)
+            Type::Struct { .. } => self,
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::SSize { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. }
+            | Type::USize { .. }
             | Type::F32(..)
             | Type::F64(..)
             | Type::F128(..)

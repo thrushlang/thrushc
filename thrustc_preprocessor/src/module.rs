@@ -17,6 +17,8 @@
 
 */
 
+use std::path::{Path, PathBuf};
+
 use uuid::Uuid;
 
 use crate::signatures::{Symbol, Variant};
@@ -26,15 +28,17 @@ pub struct Module {
     base_name: String,
     symbols: Vec<Symbol>,
     submodules: Vec<Module>,
+    path: PathBuf,
     unique_id: Uuid,
 }
 
 impl Module {
-    pub fn new(base_name: String) -> Self {
+    pub fn new(base_name: String, path: PathBuf) -> Self {
         Module {
             base_name,
             symbols: Vec::with_capacity(u8::MAX as usize),
             submodules: Vec::with_capacity(u8::MAX as usize),
+            path,
             unique_id: Uuid::new_v4(),
         }
     }
@@ -49,6 +53,13 @@ impl Module {
     #[inline]
     pub fn add_symbol(&mut self, symbol: Symbol) {
         self.symbols.push(symbol);
+    }
+}
+
+impl Module {
+    #[inline]
+    pub fn get_path(&self) -> &Path {
+        &self.path
     }
 }
 

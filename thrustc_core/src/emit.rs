@@ -17,6 +17,8 @@
 
 */
 
+#![allow(clippy::result_unit_err)]
+
 use inkwell::module::Module;
 use inkwell::targets::TargetMachine;
 use thrustc_options::{CompilationUnit, CompilerOptions, EmitableUnit, Emited};

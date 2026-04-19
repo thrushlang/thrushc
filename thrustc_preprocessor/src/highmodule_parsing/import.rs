@@ -17,6 +17,8 @@
 
 */
 
+use std::path::PathBuf;
+
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_lexer::Lexer;
 use thrustc_options::{CompilationUnit, CompilerOptions};
@@ -31,16 +33,39 @@ pub fn parse_import<'preprocessor>(
 ) -> Result<Option<Module>, ()> {
     parser.consume(TokenType::Import)?;
 
+    let current_path: PathBuf = parser.get_compilation_unit().get_path().to_path_buf();
+
+    let current_dir: PathBuf = current_path
+        .parent()
+        .map_or_else(|| PathBuf::from("."), |p| p.to_path_buf());
+
     let module_path_tk: &Token =
         parser.consume_these(&[TokenType::CString, TokenType::CNString])?;
+
+    let import_str: &str = module_path_tk.get_lexeme();
     let span: Span = module_path_tk.get_span();
 
-    let mut module_path: std::path::PathBuf = std::path::PathBuf::from(module_path_tk.get_lexeme());
-
-    parser.consume(TokenType::SemiColon)?;
+    let mut module_path: PathBuf = PathBuf::from(import_str);
 
     if let Ok(canocalized) = module_path.canonicalize() {
         module_path = canocalized;
+    }
+
+    if module_path.is_relative() {
+        module_path = current_dir.join(import_str);
+    }
+
+    parser.consume(TokenType::SemiColon)?;
+
+    if module_path == current_dir {
+        parser.add_error(CompilationIssue::Error(
+            CompilationIssueCode::E0035,
+            "The module cannot be imported itself.".into(),
+            None,
+            span,
+        ));
+
+        return Err(());
     }
 
     if parser.has_visited(&module_path) {
@@ -98,7 +123,7 @@ pub fn parse_import<'preprocessor>(
     }) {
         parser.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0035,
-            "It was expected that it would target files with a '.thrust' or '.🐦' extension. Make sure they are valid thrust files.".into(),
+            "It was expected files ended with '.thrust' or '.🐦' extension.".into(),
             None,
             span,
         ));

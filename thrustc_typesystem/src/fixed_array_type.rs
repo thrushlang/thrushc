@@ -43,18 +43,18 @@ impl TypeFixedArrayEntensions for Type {
             Type::Bool(..) => 1,
             Type::Char(..) => 2,
 
-            Type::U8(..) => 3,
-            Type::U16(..) => 4,
-            Type::U32(..) => 5,
-            Type::U64(..) => 6,
-            Type::U128(..) => 7,
-            Type::USize(..) => 8,
+            Type::U8 { .. } => 3,
+            Type::U16 { .. } => 4,
+            Type::U32 { .. } => 5,
+            Type::U64 { .. } => 6,
+            Type::U128 { .. } => 7,
+            Type::USize { .. } => 8,
 
             Type::S8 { .. } => 9,
-            Type::S16(..) => 10,
-            Type::S32(..) => 11,
-            Type::S64(..) => 12,
-            Type::SSize(..) => 13,
+            Type::S16 { .. } => 10,
+            Type::S32 { .. } => 11,
+            Type::S64 { .. } => 12,
+            Type::SSize { .. } => 13,
 
             Type::F32(..) => 15,
             Type::F64(..) => 16,
@@ -70,7 +70,7 @@ impl TypeFixedArrayEntensions for Type {
 
             Type::Array { .. } => 22,
             Type::FixedArray(..) => 23,
-            Type::Struct(..) => 24,
+            Type::Struct { .. } => 24,
 
             Type::Fn(..) => 25,
             Type::Void(..) => 26,

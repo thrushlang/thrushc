@@ -203,6 +203,8 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let modules: Result<&[thrustc_preprocessor::module::Module], ()> =
             preprocessor.generate_modules(&tokens, self.options, file);
 
+        println!("{:?}", modules);
+
         self.update_thrustc_frontend_time(frontend_time.elapsed());
 
         if modules.is_err() {

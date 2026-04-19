@@ -77,27 +77,27 @@ fn validate_band_expression(
 ) -> Result<(), CompilationIssue> {
     match (left, right) {
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
         ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
+        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
@@ -120,27 +120,27 @@ fn validate_bor_expression(
 ) -> Result<(), CompilationIssue> {
     match (left, right) {
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
         ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
+        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
@@ -163,25 +163,25 @@ fn validate_xor_expression(
 ) -> Result<(), CompilationIssue> {
     match (left, right) {
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..),
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. },
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. },
         ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
+        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
@@ -226,27 +226,27 @@ fn validate_binary_shift_expression(
 ) -> Result<(), CompilationIssue> {
     match (left, right) {
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
         ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
+        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
@@ -269,27 +269,27 @@ fn validate_binary_comparasion_expression(
 ) -> Result<(), CompilationIssue> {
     match (left, right) {
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
         ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
+        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
         (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
         (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
         (
@@ -318,27 +318,27 @@ fn validate_binary_equality_expression(
 ) -> Result<(), CompilationIssue> {
     match (left, right) {
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..),
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. },
         ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
+        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
         (
             Type::F32(..) | Type::F64(..) | Type::F128(..),
             Type::F32(..) | Type::F64(..) | Type::F128(..),
@@ -371,25 +371,25 @@ fn validate_binary_arithmetic_expression(
 ) -> Result<(), CompilationIssue> {
     match (left, right) {
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..),
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. },
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. },
         ) => Ok(()),
-        (Type::SSize(..), Type::SSize(..)) => Ok(()),
-        (Type::USize(..), Type::USize(..)) => Ok(()),
+        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
+        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
         (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
         (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
         (

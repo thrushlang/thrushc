@@ -216,7 +216,7 @@ impl<'ctx> AttributeBuilder<'ctx> {
                     }
 
                     if let LLVMAttribute::Align(value, ..) = attribute {
-                        let _ = global.set_alignment((*value).try_into().unwrap_or(u32::MAX));
+                        global.set_alignment((*value).try_into().unwrap_or(u32::MAX));
                     }
                 }
             }

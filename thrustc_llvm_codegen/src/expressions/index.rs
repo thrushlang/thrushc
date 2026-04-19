@@ -52,32 +52,34 @@ pub fn compile<'ctx>(
         let is_ptr_like_type: bool = ptr_type.is_ptr_like_type();
 
         let indexes: Vec<IntValue> = if is_ptr_aggv_type {
-            let base: IntValue = expressions::integer::compile(
-                context,
-                &Type::U32(span),
-                0,
-                false,
-                index.get_span(),
-            );
+            let base_type: Type = Type::U32 { span };
+
+            let base: IntValue =
+                expressions::integer::compile(context, &base_type, 0, false, index.get_span());
+
+            let depth_type: Type = Type::U32 { span };
+
             let depth: IntValue =
-                codegen::compile_as_value(context, index, Some(&Type::U32(span))).into_int_value();
+                codegen::compile_as_value(context, index, Some(&depth_type)).into_int_value();
 
             vec![base, depth]
         } else if is_ptr_like_type {
+            let base_type: Type = Type::U64 { span };
+
             let base: IntValue =
-                codegen::compile_as_value(context, index, Some(&Type::U64(span))).into_int_value();
+                codegen::compile_as_value(context, index, Some(&base_type)).into_int_value();
 
             vec![base]
         } else {
-            let base: IntValue = expressions::integer::compile(
-                context,
-                &Type::U32(span),
-                0,
-                false,
-                index.get_span(),
-            );
+            let base_type: Type = Type::U32 { span };
+
+            let base: IntValue =
+                expressions::integer::compile(context, &base_type, 0, false, index.get_span());
+
+            let depth_type: Type = Type::U32 { span };
+
             let depth: IntValue =
-                codegen::compile_as_value(context, index, Some(&Type::U32(span))).into_int_value();
+                codegen::compile_as_value(context, index, Some(&depth_type)).into_int_value();
 
             vec![base, depth]
         };

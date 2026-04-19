@@ -281,7 +281,7 @@ pub fn build_alignof<'parser>(
 
     Ok(Ast::Builtin {
         builtin: AstBuiltin::AlignOf { of, span },
-        kind: Type::U32(span),
+        kind: Type::U32 { span },
         span,
         id: NodeId::new(),
     })
@@ -314,7 +314,7 @@ pub fn build_sizeof<'parser>(
 
     Ok(Ast::Builtin {
         builtin: AstBuiltin::SizeOf { of, span },
-        kind: Type::USize(span),
+        kind: Type::USize { span },
         span,
         id: NodeId::new(),
     })
@@ -347,7 +347,7 @@ pub fn build_bit_size_of<'parser>(
 
     Ok(Ast::Builtin {
         builtin: AstBuiltin::BitSizeOf { of, span },
-        kind: Type::U64(span),
+        kind: Type::U64 { span },
         span,
         id: NodeId::new(),
     })
@@ -380,7 +380,7 @@ pub fn build_abi_size_of<'parser>(
 
     Ok(Ast::Builtin {
         builtin: AstBuiltin::AbiSizeOf { of, span },
-        kind: Type::U64(span),
+        kind: Type::U64 { span },
         span,
         id: NodeId::new(),
     })
@@ -413,7 +413,7 @@ pub fn build_abi_align_of<'parser>(
 
     Ok(Ast::Builtin {
         builtin: AstBuiltin::AbiAlignOf { of, span },
-        kind: Type::U32(span),
+        kind: Type::U32 { span },
         span,
         id: NodeId::new(),
     })

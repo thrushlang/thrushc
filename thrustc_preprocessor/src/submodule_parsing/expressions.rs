@@ -17,16 +17,15 @@
 
 */
 
-
 use thrustc_ast::Ast;
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 
-use crate::{modparsing::reinterpret, parser::ModuleParser};
+use crate::{parser::ModuleParser, submodule_parsing::reinterpret};
 
-pub fn build_expr<'module_parser>(ctx: &mut ModuleParser) -> Result<Ast<'module_parser>, ()> {
+pub fn parse_expr<'module_parser>(ctx: &mut ModuleParser) -> Result<Ast<'module_parser>, ()> {
     match ctx.peek().get_type() {
         TokenType::Integer => {
             let tk: &Token = ctx.advance()?;
@@ -40,6 +39,14 @@ pub fn build_expr<'module_parser>(ctx: &mut ModuleParser) -> Result<Ast<'module_
             let integer_value: u64 = parsed_integer.1;
 
             Ok(Ast::new_integer(integer_type, integer_value, false, span))
+        }
+
+        TokenType::Identifier => {
+            ctx.advance()?;
+
+            if ctx.match_token(TokenType::ColonColon)? {}
+
+            Err(())
         }
 
         _ => Err(()),

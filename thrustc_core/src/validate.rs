@@ -17,6 +17,7 @@
 
 */
 
+#![allow(clippy::result_unit_err)]
 
 use colored::Colorize;
 

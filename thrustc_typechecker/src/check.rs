@@ -108,7 +108,19 @@ pub fn check_type_together(
     match (target, provided, operator) {
         (Type::Char(..), Type::Char(..), None) => Ok(()),
 
-        (Type::Struct(_, target, mod1, ..), Type::Struct(_, provided, mod2, ..), None) => {
+        (
+            Type::Struct {
+                fields: target,
+                modifier: mod1,
+                ..
+            },
+            Type::Struct {
+                fields: provided,
+                modifier: mod2,
+                ..
+            },
+            None,
+        ) => {
             if target.len() != provided.len() {
                 return Err(error);
             }
@@ -288,8 +300,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::S8(..),
-            Type::S8(..),
+            Type::S8 { .. },
+            Type::S8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -311,8 +323,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::S16(..),
-            Type::S16(..) | Type::S8(..),
+            Type::S16 { .. },
+            Type::S16 { .. } | Type::S8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -334,8 +346,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::S32(..),
-            Type::S32(..) | Type::S16(..) | Type::S8(..),
+            Type::S32 { .. },
+            Type::S32 { .. } | Type::S16 { .. } | Type::S8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -357,8 +369,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::S64(..),
-            Type::S64(..) | Type::S32(..) | Type::S16(..) | Type::S8(..),
+            Type::S64 { .. },
+            Type::S64 { .. } | Type::S32 { .. } | Type::S16 { .. } | Type::S8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -380,8 +392,12 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::SSize(..),
-            Type::SSize(..) | Type::S64(..) | Type::S32(..) | Type::S16(..) | Type::S8(..),
+            Type::SSize { .. },
+            Type::SSize { .. }
+            | Type::S64 { .. }
+            | Type::S32 { .. }
+            | Type::S16 { .. }
+            | Type::S8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -403,8 +419,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::U8(..),
-            Type::U8(..),
+            Type::U8 { .. },
+            Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -426,8 +442,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::U16(..),
-            Type::U16(..) | Type::U8(..),
+            Type::U16 { .. },
+            Type::U16 { .. } | Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -449,8 +465,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::U32(..),
-            Type::U32(..) | Type::U16(..) | Type::U8(..),
+            Type::U32 { .. },
+            Type::U32 { .. } | Type::U16 { .. } | Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -472,8 +488,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::U64(..),
-            Type::U64(..) | Type::U32(..) | Type::U16(..) | Type::U8(..),
+            Type::U64 { .. },
+            Type::U64 { .. } | Type::U32 { .. } | Type::U16 { .. } | Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -495,8 +511,12 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::U128(..),
-            Type::U128(..) | Type::U64(..) | Type::U32(..) | Type::U16(..) | Type::U8(..),
+            Type::U128 { .. },
+            Type::U128 { .. }
+            | Type::U64 { .. }
+            | Type::U32 { .. }
+            | Type::U16 { .. }
+            | Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -518,8 +538,12 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::USize(..),
-            Type::USize(..) | Type::U64(..) | Type::U32(..) | Type::U16(..) | Type::U8(..),
+            Type::USize { .. },
+            Type::USize { .. }
+            | Type::U64 { .. }
+            | Type::U32 { .. }
+            | Type::U16 { .. }
+            | Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -630,8 +654,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::S8(..),
-            Type::U8(..),
+            Type::S8 { .. },
+            Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -653,8 +677,8 @@ pub fn check_type_together(
         ) if metadata.is_literal_value() => Ok(()),
 
         (
-            Type::S16(..),
-            Type::U16(..) | Type::U8(..),
+            Type::S16 { .. },
+            Type::U16 { .. } | Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -676,8 +700,8 @@ pub fn check_type_together(
         ) if metadata.is_literal_value() => Ok(()),
 
         (
-            Type::S32(..),
-            Type::U32(..) | Type::U16(..) | Type::U8(..),
+            Type::S32 { .. },
+            Type::U32 { .. } | Type::U16 { .. } | Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -699,8 +723,8 @@ pub fn check_type_together(
         ) if metadata.is_literal_value() => Ok(()),
 
         (
-            Type::S64(..),
-            Type::U64(..) | Type::U32(..) | Type::U16(..) | Type::U8(..),
+            Type::S64 { .. },
+            Type::U64 { .. } | Type::U32 { .. } | Type::U16 { .. } | Type::U8 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -742,7 +766,7 @@ pub fn check_type_cast(
     if control_context.get_type_cast_depth() >= thrustc_constants::COMPILER_TOO_MANY_TYPE_DEPTH {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0037,
-            "Too many type depth, the nodeession exceeds type checking bounds!".into(),
+            "Too many type depth, the type exceeds type checking bounds!".into(),
             None,
             *span,
         ));
@@ -750,32 +774,32 @@ pub fn check_type_cast(
 
     match (from_type, cast_type) {
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..)
-            | Type::USize(..)
-            | Type::SSize(..)
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. }
+            | Type::USize { .. }
+            | Type::SSize { .. }
             | Type::Char(..)
             | Type::F32(..)
             | Type::F64(..)
             | Type::F128(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..)
-            | Type::USize(..)
-            | Type::SSize(..)
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. }
+            | Type::USize { .. }
+            | Type::SSize { .. }
             | Type::Char(..)
             | Type::F32(..)
             | Type::F64(..)
@@ -787,17 +811,17 @@ pub fn check_type_cast(
 
         (
             Type::Ptr(..) | Type::Addr(..),
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..)
-            | Type::USize(..)
-            | Type::SSize(..),
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. }
+            | Type::USize { .. }
+            | Type::SSize { .. },
         ) => Ok(()),
 
         (Type::Ptr(..) | Type::Addr(..), Type::Ptr(..) | Type::Addr(..)) => Ok(()),
@@ -805,17 +829,17 @@ pub fn check_type_cast(
         (Type::Ptr(None, ..), Type::Fn { .. }) if is_allocated => Ok(()),
 
         (
-            Type::S8(..)
-            | Type::S16(..)
-            | Type::S32(..)
-            | Type::S64(..)
-            | Type::U8(..)
-            | Type::U16(..)
-            | Type::U32(..)
-            | Type::U64(..)
-            | Type::U128(..)
-            | Type::USize(..)
-            | Type::SSize(..)
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. }
+            | Type::USize { .. }
+            | Type::SSize { .. }
             | Type::Char(..)
             | Type::F32(..)
             | Type::F64(..)
@@ -823,7 +847,7 @@ pub fn check_type_cast(
             | Type::FX8680(..)
             | Type::FPPC128(..)
             | Type::Bool(..)
-            | Type::Struct(..)
+            | Type::Struct { .. }
             | Type::Array { .. }
             | Type::FixedArray(..)
             | Type::Fn(..),
