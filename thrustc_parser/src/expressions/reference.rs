@@ -124,7 +124,6 @@ pub fn build_reference<'parser>(
 
                     Err(error) => {
                         ctx.add_error_report(error);
-
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
@@ -265,7 +264,6 @@ pub fn build_reference<'parser>(
 
                     Err(error) => {
                         ctx.add_error_report(error);
-
                         return Ok(Ast::invalid_ast(span));
                     }
                 }
@@ -283,7 +281,6 @@ pub fn build_reference<'parser>(
 
         Err(error) => {
             ctx.add_error_report(error);
-
             Ok(Ast::invalid_ast(span))
         }
     }

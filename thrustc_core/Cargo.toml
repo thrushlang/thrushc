@@ -33,7 +33,7 @@ thrustc_logging = { path = "../thrustc_logging" }
 thrustc_utils = { path = "../thrustc_utils" }
 
 [features]
-default = ["llvm_backend_static", "cbindgen_static", "utils"]
+default = ["llvm_backend_static", "utils"]
 
 llvm_backend_dynamic = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-dynamic"]
 llvm_backend_static  = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-static"]

@@ -17,16 +17,19 @@
 
 */
 
-use thrustc_ast::{Ast, NodeId, metadata::StaticMetadata};
+use thrustc_ast::{Ast, NodeId, metadata::StaticMetadata, traits::AstGetType};
 use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::{atomicord::ThrustAtomicOrdering, threadmode::ThrustThreadMode};
 use thrustc_modificators::{Modificators, traits::ModificatorsExtensions};
-use thrustc_parser_context::{Position, traits::ControlContextExtensions};
+use thrustc_parser_context::{
+    Position,
+    traits::{ControlContextExtensions, TypeContextExtensions},
+};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
-use thrustc_typesystem::Type;
+use thrustc_typesystem::{Type, traits::InfererTypeExtensions};
 
 use crate::{ParserContext, attributes, expressions, modificators, typegeneration};
 
@@ -66,7 +69,7 @@ pub fn parse_static_stmt<'parser>(
         "Expected ':'.".into(),
     )?;
 
-    let static_type: Type = typegeneration::build_type(ctx, false)?;
+    let mut static_type: Type = typegeneration::build_type(ctx, false)?;
 
     let attributes: ThrustAttributes =
         attributes::build_compiler_attributes(ctx, &[TokenType::Eq])?;
@@ -115,10 +118,16 @@ pub fn parse_static_stmt<'parser>(
         )?;
 
         ctx.get_mut_control_context().set_position(Position::Static);
+        ctx.get_mut_type_context()
+            .add_infered_type(static_type.clone());
 
         let value: Ast = expressions::parse_expression(ctx)?;
+        let value_type: &Type = value.get_value_type()?;
 
+        ctx.get_mut_type_context().pop_infered_type();
         ctx.get_mut_control_context().reset_position();
+
+        static_type.inferer_inner_type_from_type(value_type);
 
         let metadata: StaticMetadata = StaticMetadata::new(
             true,

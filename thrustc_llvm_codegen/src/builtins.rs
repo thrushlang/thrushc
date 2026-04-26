@@ -151,8 +151,8 @@ pub fn compile<'ctx>(
 
             let size: IntValue = codegen::compile_as_value(context, size, None).into_int_value();
 
-            let source_type: &Type = source.llvm_get_type();
-            let destination_type: &Type = destination.llvm_get_type();
+            let source_type: &Type = source.get_type_for_llvm();
+            let destination_type: &Type = destination.get_type_for_llvm();
 
             let src_type: BasicTypeEnum = typegeneration::generate_type(context, source_type);
             let dest_type: BasicTypeEnum = typegeneration::generate_type(context, destination_type);
@@ -198,8 +198,8 @@ pub fn compile<'ctx>(
 
             let size: IntValue = codegen::compile_as_value(context, size, None).into_int_value();
 
-            let source_type: &Type = source.llvm_get_type();
-            let destination_type: &Type = destination.llvm_get_type();
+            let source_type: &Type = source.get_type_for_llvm();
+            let destination_type: &Type = destination.get_type_for_llvm();
 
             let src_type: BasicTypeEnum = typegeneration::generate_type(context, source_type);
             let dest_type: BasicTypeEnum = typegeneration::generate_type(context, destination_type);
@@ -242,7 +242,7 @@ pub fn compile<'ctx>(
                 codegen::compile_as_value(context, new_size, None).into_int_value();
             let size: IntValue = codegen::compile_as_value(context, size, None).into_int_value();
 
-            let destination_type: &Type = destination.llvm_get_type();
+            let destination_type: &Type = destination.get_type_for_llvm();
 
             let dest_type: BasicTypeEnum = typegeneration::generate_type(context, destination_type);
             let dest_alignment: u32 = context
@@ -294,7 +294,7 @@ pub fn compile<'ctx>(
 
             let align_of_type: Type = Type::U32 { span };
 
-            cast::try_cast(context, cast_type, &align_of_type, align_of_value, span)
+            cast::try_smart_cast(context, cast_type, &align_of_type, align_of_value, span)
         }
         LLVMBuiltin::SizeOf { of, span } => {
             let type_layout_result: either::Either<
@@ -315,7 +315,7 @@ pub fn compile<'ctx>(
 
             let size_of_type: Type = Type::USize { span };
 
-            cast::try_cast(context, cast_type, &size_of_type, size_of_value, span)
+            cast::try_smart_cast(context, cast_type, &size_of_type, size_of_value, span)
         }
         LLVMBuiltin::AbiSizeOf { of, span } => {
             let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
@@ -328,7 +328,7 @@ pub fn compile<'ctx>(
 
             let size_type: Type = Type::U64 { span };
 
-            cast::try_cast(context, cast_type, &size_type, size, span)
+            cast::try_smart_cast(context, cast_type, &size_type, size, span)
         }
         LLVMBuiltin::BitSizeOf { of, span } => {
             let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
@@ -343,7 +343,7 @@ pub fn compile<'ctx>(
 
             let size_type: Type = Type::U64 { span };
 
-            cast::try_cast(context, cast_type, &size_type, size, span)
+            cast::try_smart_cast(context, cast_type, &size_type, size, span)
         }
         LLVMBuiltin::AbiAlignOf { of, span } => {
             let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, of);
@@ -357,7 +357,7 @@ pub fn compile<'ctx>(
 
             let abi_align_type: Type = Type::U32 { span };
 
-            cast::try_cast(context, cast_type, &abi_align_type, align, span)
+            cast::try_smart_cast(context, cast_type, &abi_align_type, align, span)
         }
     }
 }

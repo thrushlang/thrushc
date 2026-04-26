@@ -93,7 +93,7 @@ pub fn compile<'ctx>(
                 ),
             };
 
-        cast::try_cast(context, cast_type, kind, fn_value, span)
+        cast::try_smart_cast(context, cast_type, kind, fn_value, span)
     } else {
         abort::abort_codegen(
             context,

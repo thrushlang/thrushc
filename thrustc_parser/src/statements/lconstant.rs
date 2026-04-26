@@ -17,16 +17,19 @@
 
 */
 
-use thrustc_ast::{Ast, NodeId, metadata::ConstantMetadata};
+use thrustc_ast::{Ast, NodeId, metadata::ConstantMetadata, traits::AstGetType};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::atomicord::ThrustAtomicOrdering;
 use thrustc_modificators::{Modificators, traits::ModificatorsExtensions};
-use thrustc_parser_context::{Position, traits::ControlContextExtensions};
+use thrustc_parser_context::{
+    Position,
+    traits::{ControlContextExtensions, TypeContextExtensions},
+};
 use thrustc_span::Span;
 use thrustc_token::{Token, traits::TokenExtensions};
 use thrustc_token_type::TokenType;
-use thrustc_typesystem::Type;
+use thrustc_typesystem::{Type, traits::InfererTypeExtensions};
 
 use crate::{ParserContext, attributes, expressions, modificators, typegeneration};
 
@@ -63,7 +66,7 @@ pub fn parse_constant_stmt<'parser>(
         "Expected ':'.".into(),
     )?;
 
-    let const_type: Type = typegeneration::build_type(ctx, false)?;
+    let mut const_type: Type = typegeneration::build_type(ctx, false)?;
 
     let attributes: ThrustAttributes =
         attributes::build_compiler_attributes(ctx, &[TokenType::Eq])?;
@@ -76,10 +79,16 @@ pub fn parse_constant_stmt<'parser>(
 
     ctx.get_mut_control_context()
         .set_position(Position::Constant);
+    ctx.get_mut_type_context()
+        .add_infered_type(const_type.clone());
 
     let value: Ast = expressions::parse_expression(ctx)?;
+    let value_type: &Type = value.get_value_type()?;
 
+    ctx.get_mut_type_context().pop_infered_type();
     ctx.get_mut_control_context().reset_position();
+
+    const_type.inferer_inner_type_from_type(value_type);
 
     let metadata: ConstantMetadata =
         ConstantMetadata::new(false, thread_local, is_volatile, atomic_ord);

@@ -35,7 +35,7 @@ pub fn compile<'ctx>(
     let ptr: PointerValue =
         codegen::compile_as_ptr_value(context, source, None).into_pointer_value();
 
-    let mut ptr_type: &Type = source.llvm_get_type();
+    let mut ptr_type: &Type = source.get_type_for_llvm();
     let infered_inner_type: Type = ptr_type.get_inferer_inner_type();
 
     let ordered_indexes: Vec<IntValue> = {

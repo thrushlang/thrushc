@@ -180,11 +180,13 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let inner_type: &Type = self.get_type(context);
         let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, inner_type);
 
+        let span: Span = self.get_span();
+
         let alignment: u32 = context
             .get_target_data()
             .get_preferred_alignment(&llvm_type);
 
-        context.mark_dbg_location(self.get_span());
+        context.mark_dbg_location(span);
 
         if let Self::Local {
             ptr,
@@ -204,13 +206,40 @@ impl<'ctx> SymbolAllocated<'ctx> {
                     );
 
                     if attributes.has_explicit_memory_alignment() {
-                        if let Some(alignment) = attributes.get_explicit_memory_alignment() {
-                            let _ = instr.set_alignment(alignment.try_into().unwrap_or(u32::MAX));
+                        if let Some(explicit_alignment) = attributes.get_explicit_memory_alignment()
+                        {
+                            instr
+                                .set_alignment(explicit_alignment.try_into().unwrap_or(alignment))
+                                .unwrap_or_else(|_| {
+                                    abort::abort_codegen(
+                                        context,
+                                        "Failed to set type alignment!",
+                                        span,
+                                        PathBuf::from(file!()),
+                                        line!(),
+                                    );
+                                });
                         } else {
-                            let _ = instr.set_alignment(alignment);
+                            instr.set_alignment(alignment).unwrap_or_else(|_| {
+                                abort::abort_codegen(
+                                    context,
+                                    "Failed to set memory type alignment!",
+                                    span,
+                                    PathBuf::from(file!()),
+                                    line!(),
+                                );
+                            });
                         }
                     } else {
-                        let _ = instr.set_alignment(alignment);
+                        instr.set_alignment(alignment).unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to set type alignment!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            );
+                        });
                     }
                 }
 
@@ -229,7 +258,15 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         },
                     );
 
-                    let _ = instr.set_alignment(alignment);
+                    instr.set_alignment(alignment).unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to set type alignment!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    });
                 }
 
                 return loaded_value;
@@ -247,7 +284,15 @@ impl<'ctx> SymbolAllocated<'ctx> {
                         },
                     );
 
-                    let _ = instr.set_alignment(alignment);
+                    instr.set_alignment(alignment).unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to set type alignment!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    });
                 }
 
                 return loaded_value;
@@ -264,7 +309,15 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
                 if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
                     if let Some(instr) = loaded_value.as_instruction_value() {
-                        let _ = instr.set_alignment(alignment);
+                        instr.set_alignment(alignment).unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to set type alignment!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            );
+                        });
                     }
 
                     return loaded_value;
@@ -291,20 +344,39 @@ impl<'ctx> SymbolAllocated<'ctx> {
         let llvm_builder: &Builder = context.get_llvm_builder();
         let target_data: &TargetData = context.get_target_data();
 
+        let span: Span = self.get_span();
         let alignment: u32 = target_data.get_preferred_alignment(&new_value.get_type());
 
         context.mark_dbg_location(self.get_span());
 
         if let Self::Local { ptr, .. } = self {
             if let Ok(store) = llvm_builder.build_store(*ptr, new_value) {
-                let _ = store.set_alignment(alignment);
+                store.set_alignment(alignment).unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to set type alignment!",
+                        span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    );
+                });
+
                 return;
             }
         }
 
         if let Self::LowLevelInstruction { value, .. } | Self::Parameter { value, .. } = self {
             if let Ok(store) = llvm_builder.build_store(value.into_pointer_value(), new_value) {
-                let _ = store.set_alignment(alignment);
+                store.set_alignment(alignment).unwrap_or_else(|_| {
+                    abort::abort_codegen(
+                        context,
+                        "Failed to set type alignment!",
+                        span,
+                        PathBuf::from(file!()),
+                        line!(),
+                    );
+                });
+
                 return;
             }
         }
@@ -393,13 +465,21 @@ pub fn store_anon<'ctx>(
     span: Span,
 ) {
     let llvm_builder: &Builder = context.get_llvm_builder();
-
     let target_data: &TargetData = context.get_target_data();
 
     let alignment: u32 = target_data.get_preferred_alignment(&new_value.get_type());
 
     if let Ok(store) = llvm_builder.build_store(ptr, new_value) {
-        let _ = store.set_alignment(alignment);
+        store.set_alignment(alignment).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to set type alignment!",
+                span,
+                PathBuf::from(file!()),
+                line!(),
+            );
+        });
+
         return;
     }
 
@@ -430,7 +510,15 @@ pub fn load_anon<'ctx>(
         context.mark_dbg_location(span);
 
         if let Some(instr) = loaded_value.as_instruction_value() {
-            let _ = instr.set_alignment(alignment);
+            instr.set_alignment(alignment).unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to set type alignment!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                );
+            });
         }
 
         loaded_value
@@ -472,7 +560,15 @@ pub fn dereference<'ctx>(
                 },
             );
 
-            let _ = instr.set_alignment(alignment);
+            instr.set_alignment(alignment).unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to set type alignment!",
+                    span,
+                    PathBuf::from(file!()),
+                    line!(),
+                );
+            });
         }
 
         return loaded_value;
@@ -508,7 +604,15 @@ pub fn alloc_anon<'ctx>(
                 context.mark_dbg_location(span);
 
                 if let Some(instruction) = ptr.as_instruction() {
-                    let _ = instruction.set_alignment(alignment);
+                    instruction.set_alignment(alignment).unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to set type alignment!",
+                            span,
+                            PathBuf::from(file!()),
+                            line!(),
+                        );
+                    });
                 }
 
                 return ptr;

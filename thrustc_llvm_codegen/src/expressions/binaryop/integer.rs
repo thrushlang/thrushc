@@ -337,7 +337,7 @@ fn compile_int_value_operation<'ctx>(
 
         let signatures: (bool, bool) = (signatures.0, signatures.1);
 
-        let (lhs, rhs) = cast::integer_together(context, lhs, rhs, signatures, span);
+        let (lhs, rhs) = cast::compile_int_together_cast(context, lhs, rhs, signatures, span);
 
         let options: &CompilerOptions = context.get_compiler_options();
         let llvm_backend: &LLVMBackend = options.get_llvm_backend();
@@ -740,8 +740,8 @@ pub fn compile<'ctx>(
         let lhs: &Ast<'_> = binary.0;
         let rhs: &Ast<'_> = binary.2;
 
-        let lhs_type: &Type = binary.0.llvm_get_type();
-        let rhs_type: &Type = binary.2.llvm_get_type();
+        let lhs_type: &Type = binary.0.get_type_for_llvm();
+        let rhs_type: &Type = binary.2.get_type_for_llvm();
 
         let lhs_is_signed: bool = lhs_type.is_signed_integer_type();
         let rhs_is_signed: bool = rhs_type.is_signed_integer_type();
@@ -778,7 +778,7 @@ fn compile_const_int_value_operation<'ctx>(
         let lhs: IntValue = lhs.into_int_value();
         let rhs: IntValue = rhs.into_int_value();
 
-        let (lhs, rhs) = cast::const_integer_together(lhs, rhs, signatures);
+        let (lhs, rhs) = cast::compile_constant_int_together_cast(lhs, rhs, signatures);
 
         return match operator {
             TokenType::Plus | TokenType::PlusEq => lhs.const_nsw_add(rhs).into(),
@@ -1287,11 +1287,11 @@ pub fn compile_const<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let lhs: BasicValueEnum = codegen::compile_constant(context, binary.0, cast);
-        let rhs: BasicValueEnum = codegen::compile_constant(context, binary.2, cast);
+        let lhs: BasicValueEnum = codegen::compile_constant_as_value(context, binary.0, cast);
+        let rhs: BasicValueEnum = codegen::compile_constant_as_value(context, binary.2, cast);
 
-        let lhs_type: &Type = binary.0.llvm_get_type();
-        let rhs_type: &Type = binary.2.llvm_get_type();
+        let lhs_type: &Type = binary.0.get_type_for_llvm();
+        let rhs_type: &Type = binary.2.get_type_for_llvm();
 
         return self::compile_const_int_value_operation(
             context,

@@ -69,7 +69,7 @@ pub fn compile<'ctx>(
 
         what => abort::abort_codegen(
             context,
-            "Unknown unary operation!",
+            "Failed to compile the operation!",
             what.2.get_span(),
             PathBuf::from(file!()),
             line!(),
@@ -98,7 +98,7 @@ pub fn compile_const<'ctx>(
 
         what => abort::abort_codegen(
             context,
-            "Unknown unary operation!",
+            "Failed to compile the operation!",
             what.2.get_span(),
             PathBuf::from(file!()),
             line!(),
@@ -133,7 +133,7 @@ fn compile_increment_decrement_ref<'ctx>(
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
-                                "Failed to compile '++' operation!",
+                                "Failed to compile the operation!",
                                 span,
                                 PathBuf::from(file!()),
                                 line!(),
@@ -147,7 +147,7 @@ fn compile_increment_decrement_ref<'ctx>(
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
-                                "Failed to compile '++' operation!",
+                                "Failed to compile the operation!",
                                 span,
                                 PathBuf::from(file!()),
                                 line!(),
@@ -161,7 +161,7 @@ fn compile_increment_decrement_ref<'ctx>(
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
-                            "Failed to compile '++' operation!",
+                            "Failed to compile the operation!",
                             span,
                             PathBuf::from(file!()),
                             line!(),
@@ -175,7 +175,7 @@ fn compile_increment_decrement_ref<'ctx>(
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
-                                "Failed to compile '--' operation!",
+                                "Failed to compile the operation!",
                                 span,
                                 PathBuf::from(file!()),
                                 line!(),
@@ -189,7 +189,7 @@ fn compile_increment_decrement_ref<'ctx>(
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
-                                "Failed to compile '--' operation!",
+                                "Failed to compile the operation!",
                                 span,
                                 PathBuf::from(file!()),
                                 line!(),
@@ -202,7 +202,7 @@ fn compile_increment_decrement_ref<'ctx>(
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
-                            "Failed to compile '--' operation!",
+                            "Failed to compile the operation!",
                             span,
                             PathBuf::from(file!()),
                             line!(),
@@ -212,14 +212,15 @@ fn compile_increment_decrement_ref<'ctx>(
 
                 _ => abort::abort_codegen(
                     context,
-                    "Failed to compile without a valid operator!",
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
                 ),
             };
 
-            let result: BasicValueEnum = cast::try_cast(context, cast_type, kind, result, span);
+            let result: BasicValueEnum =
+                cast::try_smart_cast(context, cast_type, kind, result, span);
 
             symbol.store(context, result);
 
@@ -237,7 +238,7 @@ fn compile_increment_decrement_ref<'ctx>(
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
-                            "Failed to compile '++' operation!",
+                            "Failed to compile the operation!",
                             span,
                             PathBuf::from(file!()),
                             line!(),
@@ -249,7 +250,7 @@ fn compile_increment_decrement_ref<'ctx>(
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
-                            "Failed to compile '--' operation!",
+                            "Failed to compile the operation!",
                             span,
                             PathBuf::from(file!()),
                             line!(),
@@ -259,18 +260,19 @@ fn compile_increment_decrement_ref<'ctx>(
 
                 _ => abort::abort_codegen(
                     context,
-                    "Failed to compile without a valid operator!",
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
                 ),
             };
 
-            let result: BasicValueEnum = cast::try_cast(context, cast_type, kind, result, span);
+            let new_value: BasicValueEnum =
+                cast::try_smart_cast(context, cast_type, kind, result, span);
 
-            symbol.store(context, result);
+            symbol.store(context, new_value);
 
-            result
+            new_value
         }
     }
 }
@@ -284,7 +286,7 @@ fn compile_increment_decrement<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let value: BasicValueEnum = codegen::compile_as_value(context, expression, cast_type);
-    let kind: &Type = expression.llvm_get_type();
+    let kind: &Type = expression.get_type_for_llvm();
 
     let span: Span = expression.get_span();
 
@@ -304,7 +306,7 @@ fn compile_increment_decrement<'ctx>(
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
-                                "Failed to compile '++' operation!",
+                                "Failed to compile the operation!",
                                 span,
                                 PathBuf::from(file!()),
                                 line!(),
@@ -318,7 +320,7 @@ fn compile_increment_decrement<'ctx>(
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
-                                "Failed to compile '++' operation!",
+                                "Failed to compile the operation!",
                                 span,
                                 PathBuf::from(file!()),
                                 line!(),
@@ -331,7 +333,7 @@ fn compile_increment_decrement<'ctx>(
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
-                            "Failed to compile '++' operation!",
+                            "Failed to compile the operation!",
                             span,
                             PathBuf::from(file!()),
                             line!(),
@@ -345,7 +347,7 @@ fn compile_increment_decrement<'ctx>(
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
-                                "Failed to compile '--' operation!",
+                                "Failed to compile the operation!",
                                 span,
                                 PathBuf::from(file!()),
                                 line!(),
@@ -359,7 +361,7 @@ fn compile_increment_decrement<'ctx>(
                         .unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
-                                "Failed to compile '--' operation!",
+                                "Failed to compile the operation!",
                                 span,
                                 PathBuf::from(file!()),
                                 line!(),
@@ -372,7 +374,7 @@ fn compile_increment_decrement<'ctx>(
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
-                            "Failed to compile '--' operation!",
+                            "Failed to compile the operation!",
                             span,
                             PathBuf::from(file!()),
                             line!(),
@@ -382,14 +384,14 @@ fn compile_increment_decrement<'ctx>(
 
                 _ => abort::abort_codegen(
                     context,
-                    "Failed to compile without a valid operator!",
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
                 ),
             };
 
-            cast::try_cast(context, cast_type, kind, result, span)
+            cast::try_smart_cast(context, cast_type, kind, result, span)
         }
         _ => {
             let old_value: FloatValue = value.into_float_value();
@@ -401,7 +403,7 @@ fn compile_increment_decrement<'ctx>(
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
-                            "Failed to compile '++' operation!",
+                            "Failed to compile the operation!",
                             span,
                             PathBuf::from(file!()),
                             line!(),
@@ -414,7 +416,7 @@ fn compile_increment_decrement<'ctx>(
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
-                            "Failed to compile '--' operation!",
+                            "Failed to compile the operation!",
                             span,
                             PathBuf::from(file!()),
                             line!(),
@@ -424,14 +426,14 @@ fn compile_increment_decrement<'ctx>(
 
                 _ => abort::abort_codegen(
                     context,
-                    "Failed to compile without a valid operator!",
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
                 ),
             };
 
-            cast::try_cast(context, cast_type, kind, result, span)
+            cast::try_smart_cast(context, cast_type, kind, result, span)
         }
     }
 }
@@ -443,7 +445,7 @@ fn compile_logical_negation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let kind: &Type = expr.llvm_get_type();
+    let kind: &Type = expr.get_type_for_llvm();
 
     let value: BasicValueEnum = if kind.is_ptr_like_type() {
         codegen::compile_as_ptr_value(context, expr, cast_type)
@@ -460,14 +462,14 @@ fn compile_logical_negation<'ctx>(
             let result: IntValue = llvm_builder.build_not(int, "").unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
-                    "Failed to compile '!bool' operation!",
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
                 )
             });
 
-            cast::try_cast(context, cast_type, kind, result.into(), span)
+            cast::try_smart_cast(context, cast_type, kind, result.into(), span)
         }
 
         kind if kind.is_ptr_type() => {
@@ -477,19 +479,19 @@ fn compile_logical_negation<'ctx>(
                 llvm_builder.build_is_not_null(ptr, "").unwrap_or_else(|_| {
                     abort::abort_codegen(
                         context,
-                        &format!("Failed to compile '!{}' operation!", kind),
+                        "Failed to compile the operation!",
                         span,
                         PathBuf::from(file!()),
                         line!(),
                     )
                 });
 
-            cast::try_cast(context, cast_type, kind, result.into(), span)
+            cast::try_smart_cast(context, cast_type, kind, result.into(), span)
         }
 
         _ => abort::abort_codegen(
             context,
-            "Unknown type for logical negation!",
+            "Failed to compile the operation!",
             span,
             PathBuf::from(file!()),
             line!(),
@@ -505,7 +507,7 @@ fn compile_arithmetic_negation<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let value: BasicValueEnum = codegen::compile_as_value(context, expr, cast_type);
-    let kind: &Type = expr.llvm_get_type();
+    let kind: &Type = expr.get_type_for_llvm();
 
     let span: Span = expr.get_span();
 
@@ -516,14 +518,14 @@ fn compile_arithmetic_negation<'ctx>(
             let result: IntValue<'_> = llvm_builder.build_int_neg(int, "").unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
-                    &format!("Failed to compile '!{}' operation!", kind),
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
                 )
             });
 
-            cast::try_cast(context, cast_type, kind, result.into(), span)
+            cast::try_smart_cast(context, cast_type, kind, result.into(), span)
         }
 
         _ => {
@@ -533,14 +535,14 @@ fn compile_arithmetic_negation<'ctx>(
                 llvm_builder.build_float_neg(float, "").unwrap_or_else(|_| {
                     abort::abort_codegen(
                         context,
-                        &format!("Failed to compile '!{}' operation!", kind),
+                        "Failed to compile the operation!",
                         span,
                         PathBuf::from(file!()),
                         line!(),
                     )
                 });
 
-            cast::try_cast(context, cast_type, kind, result.into(), span)
+            cast::try_smart_cast(context, cast_type, kind, result.into(), span)
         }
     }
 }
@@ -553,7 +555,7 @@ fn compile_bitwise_not<'ctx>(
     let llvm_builder: &Builder = context.get_llvm_builder();
 
     let value: BasicValueEnum = codegen::compile_as_value(context, expr, cast_type);
-    let kind: &Type = expr.llvm_get_type();
+    let kind: &Type = expr.get_type_for_llvm();
 
     let span: Span = expr.get_span();
 
@@ -564,14 +566,14 @@ fn compile_bitwise_not<'ctx>(
             let result: IntValue = llvm_builder.build_not(int, "").unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
-                    &format!("Failed to compile '~{}' operation!", kind),
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
                 )
             });
 
-            cast::try_cast(context, cast_type, kind, result.into(), span)
+            cast::try_smart_cast(context, cast_type, kind, result.into(), span)
         }
 
         _ => {
@@ -580,14 +582,14 @@ fn compile_bitwise_not<'ctx>(
             let result: PointerValue<'_> = llvm_builder.build_not(ptr, "").unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
-                    &format!("Failed to compile '~{}' operation!", kind),
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
                 )
             });
 
-            cast::try_cast(context, cast_type, kind, result.into(), span)
+            cast::try_smart_cast(context, cast_type, kind, result.into(), span)
         }
     }
 }
@@ -598,9 +600,9 @@ fn compile_increment_decrement_const<'ctx>(
     expression: &'ctx Ast,
     cast_type: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let value: BasicValueEnum = codegen::compile_constant(context, expression, cast_type);
+    let value: BasicValueEnum = codegen::compile_constant_as_value(context, expression, cast_type);
 
-    let kind: &Type = expression.llvm_get_type();
+    let kind: &Type = expression.get_type_for_llvm();
     let span: Span = expression.get_span();
 
     match kind {
@@ -615,7 +617,7 @@ fn compile_increment_decrement_const<'ctx>(
 
                 _ => abort::abort_codegen(
                     context,
-                    "Expected '++' or '--' operation!",
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
@@ -650,7 +652,7 @@ fn compile_increment_decrement_const<'ctx>(
 
                 _ => abort::abort_codegen(
                     context,
-                    "Failed to compile without a valid operator!",
+                    "Failed to compile the operation!",
                     span,
                     PathBuf::from(file!()),
                     line!(),
@@ -665,20 +667,21 @@ fn compile_logical_negation_const<'ctx>(
     expr: &'ctx Ast,
     cast_type: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let value: BasicValueEnum = codegen::compile_constant(context, expr, cast_type);
+    let value: BasicValueEnum = codegen::compile_constant_as_value(context, expr, cast_type);
 
-    let kind: &Type = expr.llvm_get_type();
+    let kind: &Type = expr.get_type_for_llvm();
     let span: Span = expr.get_span();
 
     match kind {
         kind if kind.is_bool_type() => {
-            let int: IntValue = value.into_int_value();
-            int.const_not().into()
+            let int_value: IntValue = value.into_int_value();
+
+            int_value.const_not().into()
         }
 
         _ => abort::abort_codegen(
             context,
-            "Failed to compile without a valid operator!",
+            "Failed to compile the operation!",
             span,
             PathBuf::from(file!()),
             line!(),
@@ -691,21 +694,21 @@ fn compile_arithmetic_negation_const<'ctx>(
     expr: &'ctx Ast,
     cast_type: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let value: BasicValueEnum = codegen::compile_constant(context, expr, cast_type);
-    let kind: &Type = expr.llvm_get_type();
+    let value: BasicValueEnum = codegen::compile_constant_as_value(context, expr, cast_type);
+    let kind: &Type = expr.get_type_for_llvm();
 
     match kind {
         kind if kind.is_integer_type() => value.into_int_value().const_neg().into(),
         _ => {
-            let float: FloatValue = value.into_float_value();
-            let float_type: FloatType = float.get_type();
+            let float_value: FloatValue = value.into_float_value();
+            let float_type: FloatType = float_value.get_type();
 
-            if let Some(float_value) = float.get_constant() {
-                float_type.const_float(-float_value.0).into()
+            if let Some((value, ..)) = float_value.get_constant() {
+                float_type.const_float(-value).into()
             } else {
                 abort::abort_codegen(
                     context,
-                    &format!("Failed to compile '-{}' operation!", kind),
+                    "Failed to compile the operation!",
                     expr.get_span(),
                     PathBuf::from(file!()),
                     line!(),
@@ -720,15 +723,15 @@ fn compile_arithmetic_bitwise_not_const<'ctx>(
     expr: &'ctx Ast,
     cast_type: &Type,
 ) -> BasicValueEnum<'ctx> {
-    let value: BasicValueEnum = codegen::compile_constant(context, expr, cast_type);
-    let kind: &Type = expr.llvm_get_type();
+    let value: BasicValueEnum = codegen::compile_constant_as_value(context, expr, cast_type);
+    let kind: &Type = expr.get_type_for_llvm();
 
     match kind {
         kind if kind.is_integer_type() => value.into_int_value().const_not().into(),
 
         _ => abort::abort_codegen(
             context,
-            "Failed to compile without a valid operator!",
+            "Failed to compile the operation!",
             expr.get_span(),
             PathBuf::from(file!()),
             line!(),

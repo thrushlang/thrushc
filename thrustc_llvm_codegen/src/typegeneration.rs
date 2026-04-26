@@ -119,7 +119,7 @@ pub fn generate_type<'ctx>(
 
             any => abort::abort_codegen(
                 context,
-                &format!("Failed to compile '{}' as a integer type!", any),
+                &format!("Failed to compile '{}' as a type!", any),
                 any.get_span(),
                 PathBuf::from(file!()),
                 line!(),
@@ -137,7 +137,7 @@ pub fn generate_type<'ctx>(
 
             any => abort::abort_codegen(
                 context,
-                &format!("Failed to compile '{}' as a float type!", any),
+                &format!("Failed to compile '{}' as a type!", any),
                 any.get_span(),
                 PathBuf::from(file!()),
                 line!(),
@@ -207,7 +207,7 @@ pub fn generate_load_type<'ctx>(
 
             any => abort::abort_codegen(
                 context,
-                &format!("Failed to compile '{}' as a integer type!", any),
+                &format!("Failed to compile '{}' as a type!", any),
                 any.get_span(),
                 PathBuf::from(file!()),
                 line!(),
@@ -225,7 +225,7 @@ pub fn generate_load_type<'ctx>(
 
             any => abort::abort_codegen(
                 context,
-                &format!("Failed to compile '{}' as a float type!", any),
+                &format!("Failed to compile '{}' as a type!", any),
                 any.get_span(),
                 PathBuf::from(file!()),
                 line!(),

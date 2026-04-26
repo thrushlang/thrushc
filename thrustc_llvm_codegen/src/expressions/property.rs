@@ -40,7 +40,7 @@ pub fn compile<'ctx>(
     source: &'ctx Ast<'ctx>,
     data: &'ctx PropertyData,
 ) -> BasicValueEnum<'ctx> {
-    let source_type: &Type = source.llvm_get_type();
+    let source_type: &Type = source.get_type_for_llvm();
 
     let is_allocated: bool = source.is_memory_assigned_value().unwrap_or_else(|_| {
         abort::abort_codegen(
@@ -127,7 +127,7 @@ fn compile_gep_property<'ctx>(
 
     let ptr: PointerValue =
         codegen::compile_as_ptr_value(context, source, None).into_pointer_value();
-    let ptr_type: &Type = source.llvm_get_type();
+    let ptr_type: &Type = source.get_type_for_llvm();
 
     let index: u32 = data
         .get_first_property()

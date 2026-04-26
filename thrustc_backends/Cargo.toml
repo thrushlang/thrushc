@@ -19,7 +19,7 @@ inkwell = { workspace = true, optional = true }
 clang = { workspace = true, optional = true }
 
 [features]
-default = ["llvm_backend_static", "cbindgen_static"]
+default = ["llvm_backend_static"]
 
 llvm_backend_dynamic = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-dynamic"]
 llvm_backend_static  = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-static"]

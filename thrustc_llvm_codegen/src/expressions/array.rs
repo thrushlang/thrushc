@@ -25,7 +25,8 @@ use thrustc_typesystem::traits::TypeArrayEntensions;
 use crate::anchor::PointerAnchor;
 use crate::context::LLVMCodeGenContext;
 use crate::memory::{self, LLVMAllocationSite};
-use crate::{abort, codegen, typegeneration};
+use crate::traits::AstLLVMGetType;
+use crate::{abort, cast, codegen, typegeneration};
 
 use inkwell::AddressSpace;
 use inkwell::context::Context;
@@ -45,6 +46,84 @@ pub fn compile<'ctx>(
             self::compile_array_with_anchor(context, items, array_type, span, cast_type, *anchor)
         }
         _ => self::compile_array_without_anchor(context, items, array_type, span, cast_type),
+    }
+}
+
+pub fn compile_const<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    items: &'ctx [Ast],
+    array_type: &Type,
+    span: Span,
+) -> BasicValueEnum<'ctx> {
+    let base_type: Type = array_type.get_array_base_type();
+    let array_type: BasicTypeEnum = typegeneration::generate_type(context, &base_type);
+
+    let values: Vec<BasicValueEnum> = items
+        .iter()
+        .map(|item| {
+            let value_type: &Type = item.get_type_for_llvm();
+            let value: BasicValueEnum =
+                codegen::compile_constant_as_value(context, item, &base_type);
+
+            cast::try_smart_constant_cast(context, &base_type, value_type, value)
+        })
+        .collect();
+
+    match array_type {
+        t if t.is_int_type() => t
+            .into_int_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_int_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        t if t.is_float_type() => t
+            .into_float_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_float_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        t if t.is_array_type() => t
+            .into_array_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_array_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        t if t.is_struct_type() => t
+            .into_struct_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_struct_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        t if t.is_pointer_type() => t
+            .into_pointer_type()
+            .const_array(
+                &values
+                    .iter()
+                    .map(|v| v.into_pointer_value())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
+        _ => {
+            abort::abort_codegen(
+                context,
+                "Failed to compile the constant array!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            );
+        }
     }
 }
 

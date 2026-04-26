@@ -213,7 +213,7 @@ pub fn compile_float_value_operation<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let (lhs, rhs) = cast::float_together(context, lhs, rhs, span);
+    let (lhs, rhs) = cast::compile_float_together_cast(context, lhs, rhs, span);
 
     match operator {
         TokenType::Plus => llvm_builder
@@ -356,7 +356,7 @@ pub fn compile_const_float_value_operation<'ctx>(
     operator: &TokenType,
     span: Span,
 ) -> BasicValueEnum<'ctx> {
-    let (lhs, rhs) = cast::const_float_together(lhs, rhs);
+    let (lhs, rhs) = cast::compile_constant_float_together_cast(lhs, rhs);
 
     match operator {
         TokenType::Plus | TokenType::PlusEq => {
@@ -469,8 +469,8 @@ pub fn compile_const<'ctx>(
     {
         let operator: &TokenType = binary.1;
 
-        let lhs: BasicValueEnum = codegen::compile_constant(context, binary.0, cast);
-        let rhs: BasicValueEnum = codegen::compile_constant(context, binary.2, cast);
+        let lhs: BasicValueEnum = codegen::compile_constant_as_value(context, binary.0, cast);
+        let rhs: BasicValueEnum = codegen::compile_constant_as_value(context, binary.2, cast);
 
         return compile_const_float_value_operation(
             context,

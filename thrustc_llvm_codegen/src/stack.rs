@@ -57,6 +57,8 @@ fn try_alloc_at_stack<'ctx>(
     attributes: &ThrustAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
+    let target_data: &inkwell::targets::TargetData = context.get_target_data();
+
     if let Ok(ptr) = context
         .get_llvm_builder()
         .build_alloca(llvm_type, ascii_name)
@@ -66,7 +68,19 @@ fn try_alloc_at_stack<'ctx>(
         {
             if let Some(instruction) = ptr.as_instruction() {
                 if let ThrustAttribute::Align(value, ..) = align_attr {
-                    let _ = instruction.set_alignment(value.try_into().unwrap_or(u32::MAX));
+                    let preferred_aligment: u32 = target_data.get_preferred_alignment(&llvm_type);
+
+                    instruction
+                        .set_alignment(value.try_into().unwrap_or(preferred_aligment))
+                        .unwrap_or_else(|_| {
+                            abort::abort_codegen(
+                                context,
+                                "Failed to set type alignment!",
+                                span,
+                                PathBuf::from(file!()),
+                                line!(),
+                            );
+                        });
                 }
             }
         }

@@ -86,7 +86,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
     fn init_top_entities(&mut self) {
         {
-            for node in self.ast.iter().rev() {
+            for node in self.ast.iter() {
                 match node {
                     Ast::Intrinsic { .. } => {
                         intrinsic::compile(
@@ -121,11 +121,12 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                         let llvm_type: BasicTypeEnum =
                             typegeneration::generate_type(self.get_mut_context(), kind);
-                        let value_type: &Type = value.llvm_get_type();
+                        let value_type: &Type = value.get_type_for_llvm();
 
                         let llvm_value: BasicValueEnum =
-                            codegen::compile_constant(self.get_mut_context(), value, kind);
-                        let value: BasicValueEnum = cast::try_cast_const(
+                            codegen::compile_constant_as_value(self.get_mut_context(), value, kind);
+
+                        let value: BasicValueEnum = cast::try_smart_constant_cast(
                             self.get_mut_context(),
                             kind,
                             value_type,
@@ -174,13 +175,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                         let span: Span = static_.6;
 
                         if let Some(value) = value {
-                            let value_type: &Type = value.llvm_get_type();
+                            let value_type: &Type = value.get_type_for_llvm();
                             let llvm_type: inkwell::types::BasicTypeEnum =
                                 typegeneration::generate_type(self.get_mut_context(), kind);
 
-                            let llvm_value: BasicValueEnum =
-                                codegen::compile_constant(self.get_mut_context(), value, kind);
-                            let value: BasicValueEnum = cast::try_cast_const(
+                            let llvm_value: BasicValueEnum = codegen::compile_constant_as_value(
+                                self.get_mut_context(),
+                                value,
+                                kind,
+                            );
+
+                            let value: BasicValueEnum = cast::try_smart_constant_cast(
                                 self.get_mut_context(),
                                 kind,
                                 value_type,
@@ -519,12 +524,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 
                 let llvm_type: BasicTypeEnum =
                     typegeneration::generate_type(self.get_mut_context(), kind);
-                let value_type: &Type = value.llvm_get_type();
+                let value_type: &Type = value.get_type_for_llvm();
 
                 let llvm_value: BasicValueEnum =
-                    codegen::compile_constant(self.get_mut_context(), value, kind);
-                let value: BasicValueEnum =
-                    cast::try_cast_const(self.get_mut_context(), kind, value_type, llvm_value);
+                    codegen::compile_constant_as_value(self.get_mut_context(), value, kind);
+
+                let value: BasicValueEnum = cast::try_smart_constant_cast(
+                    self.get_mut_context(),
+                    kind,
+                    value_type,
+                    llvm_value,
+                );
 
                 let ptr: PointerValue = r#static::allocate_local_constant(
                     self.get_mut_context(),
@@ -571,12 +581,17 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                 if let Some(value) = value {
                     let llvm_type: BasicTypeEnum =
                         typegeneration::generate_type(self.get_mut_context(), kind);
-                    let value_type: &Type = value.llvm_get_type();
+                    let value_type: &Type = value.get_type_for_llvm();
 
                     let llvm_value: BasicValueEnum =
-                        codegen::compile_constant(self.get_mut_context(), value, kind);
-                    let value: BasicValueEnum =
-                        cast::try_cast_const(self.get_mut_context(), kind, value_type, llvm_value);
+                        codegen::compile_constant_as_value(self.get_mut_context(), value, kind);
+
+                    let value: BasicValueEnum = cast::try_smart_constant_cast(
+                        self.get_mut_context(),
+                        kind,
+                        value_type,
+                        llvm_value,
+                    );
 
                     let ptr: PointerValue = r#static::allocate_local_static(
                         self.get_mut_context(),
@@ -740,7 +755,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     .get_mut_expressions_optimizations()
                     .denegate_all_expression_optimizations();
 
-                let source_type: &Type = source.llvm_get_type();
+                let source_type: &Type = source.get_type_for_llvm();
                 let cast_type: Type = source_type.dereference_until_value();
 
                 let ptr: BasicValueEnum = self::compile_as_ptr_value(self.context, source, None);
@@ -817,10 +832,10 @@ pub fn compile_as_value<'ctx>(
             span,
             ..
         } => {
-            let float: BasicValueEnum =
+            let float_value: BasicValueEnum =
                 expressions::floatingpoint::compile(context, kind, *value, *signed, *span).into();
 
-            cast::try_cast(context, cast_type, kind, float, *span)
+            cast::try_smart_cast(context, cast_type, kind, float_value, *span)
         }
 
         Ast::Integer {
@@ -830,10 +845,10 @@ pub fn compile_as_value<'ctx>(
             span,
             ..
         } => {
-            let integer: BasicValueEnum =
+            let int_value: BasicValueEnum =
                 expressions::integer::compile(context, kind, *value, *signed, *span).into();
 
-            cast::try_cast(context, cast_type, kind, integer, *span)
+            cast::try_smart_cast(context, cast_type, kind, int_value, *span)
         }
 
         Ast::NullPtr { .. } => context
@@ -966,7 +981,7 @@ pub fn compile_as_value<'ctx>(
                 value
             };
 
-            cast::try_cast(context, cast_type, kind, deref_value, *span)
+            cast::try_smart_cast(context, cast_type, kind, deref_value, *span)
         }
 
         // Array Operations
@@ -986,7 +1001,9 @@ pub fn compile_as_value<'ctx>(
         } => expressions::structure::compile(context, data, kind, *span),
 
         // Compiles a type cast_type operation
-        Ast::As { from, cast, .. } => cast::compile(context, from, cast),
+        Ast::As {
+            from: expr, cast, ..
+        } => cast::compile_type_cast(context, expr, cast),
 
         // Low-Level Operations
         // Compiles inline assembly code
@@ -1010,8 +1027,8 @@ pub fn compile_as_value<'ctx>(
 
         // Enum Value Access
         Ast::EnumValue { value, .. } => {
-            let cast_type: &Type = cast_type.unwrap_or(value.llvm_get_type());
-            codegen::compile_constant(context, value, cast_type)
+            let cast_type: &Type = cast_type.unwrap_or(value.get_type_for_llvm());
+            codegen::compile_constant_as_value(context, value, cast_type)
         }
 
         // Builtins
@@ -1037,7 +1054,7 @@ pub fn compile_as_value<'ctx>(
     }
 }
 
-pub fn compile_constant<'ctx>(
+pub fn compile_constant_as_value<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     ast: &'ctx Ast,
     cast_type: &Type,
@@ -1065,10 +1082,10 @@ pub fn compile_constant<'ctx>(
             span,
             ..
         } => {
-            let float: BasicValueEnum =
+            let float_value: BasicValueEnum =
                 expressions::floatingpoint::compile(context, kind, *value, *signed, *span).into();
 
-            cast::const_numeric_cast(context, float, cast_type, *signed)
+            cast::try_smart_constant_cast(context, cast_type, kind, float_value)
         }
 
         Ast::Integer {
@@ -1078,10 +1095,10 @@ pub fn compile_constant<'ctx>(
             span,
             ..
         } => {
-            let integer: BasicValueEnum =
+            let int_value: BasicValueEnum =
                 expressions::integer::compile(context, kind, *value, *signed, *span).into();
 
-            cast::const_numeric_cast(context, integer, cast_type, *signed)
+            cast::try_smart_constant_cast(context, cast_type, kind, int_value)
         }
 
         // Boolean true/false cases
@@ -1096,6 +1113,11 @@ pub fn compile_constant<'ctx>(
             expressions::farray::compile_const(context, items, cast_type, *span)
         }
 
+        // Dynamic-size array
+        Ast::Array { items, span, .. } => {
+            expressions::array::compile_const(context, items, cast_type, *span)
+        }
+
         Ast::CString { bytes, span, .. } => {
             expressions::string::compile(context, bytes, true, *span).into()
         }
@@ -1105,34 +1127,32 @@ pub fn compile_constant<'ctx>(
 
         // Struct constructor handling
         Ast::Constructor { data, kind, .. } => {
-            let fields_expr: Vec<&Ast> = data.iter().map(|raw_arg| &raw_arg.1).collect();
-
             let llvm_context: &Context = context.get_llvm_context();
 
-            let struct_fields_types: &[Type] = kind.get_struct_fields();
+            let fields_expr: Vec<&Ast> = data.iter().map(|raw_arg| &raw_arg.1).collect();
+            let fields_types: &[Type] = kind.get_struct_fields();
 
-            let fields: Vec<BasicValueEnum> = fields_expr
+            let field_values: Vec<BasicValueEnum> = fields_expr
                 .iter()
-                .zip(struct_fields_types)
-                .map(|(field, kind)| codegen::compile_constant(context, field, kind))
+                .zip(fields_types)
+                .map(|(field, cast_type)| {
+                    codegen::compile_constant_as_value(context, field, cast_type)
+                })
                 .collect();
 
-            llvm_context.const_struct(&fields, false).into()
+            llvm_context.const_struct(&field_values, false).into()
         }
 
         // Type cast_typeing operations
-        Ast::As { from, cast, .. } => {
-            let lhs_type: &Type = from.llvm_get_type();
-            let lhs: BasicValueEnum = codegen::compile_constant(context, from, lhs_type);
-
-            cast::try_cast_const(context, cast, lhs_type, lhs)
-        }
+        Ast::As {
+            from: expr, cast, ..
+        } => cast::compile_constant_type_cast(context, expr, cast),
 
         // Variable reference resolution
         Ast::Reference { name, .. } => context.get_table().get_symbol(name).get_value(context),
 
         // Grouped expression compilation
-        Ast::Group { node, .. } => codegen::compile_constant(context, node, cast_type),
+        Ast::Group { node, .. } => codegen::compile_constant_as_value(context, node, cast_type),
 
         // Binary operation dispatch
         Ast::BinaryOp {
@@ -1194,7 +1214,9 @@ pub fn compile_constant<'ctx>(
         }
 
         // Enum Value Access
-        Ast::EnumValue { value, .. } => codegen::compile_constant(context, value, cast_type),
+        Ast::EnumValue { value, .. } => {
+            codegen::compile_constant_as_value(context, value, cast_type)
+        }
 
         // Fallback for unsupported AST nodes
         what => abort::abort_codegen(
@@ -1204,6 +1226,17 @@ pub fn compile_constant<'ctx>(
             std::path::PathBuf::from(file!()),
             line!(),
         ),
+    }
+}
+
+pub fn compile_constant_as_ptr_value<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    expr: &'ctx Ast,
+    cast_type: &Type,
+) -> BasicValueEnum<'ctx> {
+    match expr {
+        Ast::Reference { name, .. } => context.get_table().get_symbol(name).get_ptr().into(),
+        _ => codegen::compile_constant_as_value(context, expr, cast_type),
     }
 }
 

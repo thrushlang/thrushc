@@ -22,6 +22,7 @@ use thrustc_ast::traits::AstCodeLocation;
 use thrustc_ast::traits::AstExpressionExtensions;
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
+use thrustc_typesystem::Type;
 
 use crate::abort;
 use crate::block;
@@ -242,12 +243,11 @@ fn short_circuit_comparison<'ctx>(
         }
     }
 
-    let comparison: IntValue<'_> = codegen::compile_as_value(
-        codegen.get_mut_context(),
-        condition,
-        Some(condition.llvm_get_type()),
-    )
-    .into_int_value();
+    let condition_type: &Type = condition.get_type_for_llvm();
+
+    let comparison: IntValue<'_> =
+        codegen::compile_as_value(codegen.get_mut_context(), condition, Some(condition_type))
+            .into_int_value();
 
     llvm_builder
         .build_conditional_branch(comparison, target_body, target_exit)

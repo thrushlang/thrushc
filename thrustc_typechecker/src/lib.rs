@@ -213,22 +213,22 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 Ok(())
             }
             Ast::Const {
-                kind: target_type,
+                kind: const_type,
                 value,
                 ..
             } => {
                 let metadata: TypeCheckerNodeMetadata =
                     TypeCheckerNodeMetadata::new(value.is_totaly_literal_value());
 
-                let from_type: &Type = value.get_value_type()?;
+                let value_type: &Type = value.get_value_type()?;
 
                 {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
                     check::check_type_together(
-                        target_type,
-                        from_type,
+                        const_type,
+                        value_type,
                         Some(value),
                         None,
                         metadata,
@@ -324,22 +324,22 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 Ok(())
             }
             Ast::Const {
-                kind: target_type,
+                kind: const_type,
                 value,
                 ..
             } => {
                 let metadata: TypeCheckerNodeMetadata =
                     TypeCheckerNodeMetadata::new(value.is_totaly_literal_value());
 
-                let from_type: &Type = value.get_value_type()?;
+                let value_type: &Type = value.get_value_type()?;
 
                 {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
                     check::check_type_together(
-                        target_type,
-                        from_type,
+                        const_type,
+                        value_type,
                         Some(value),
                         None,
                         metadata,
@@ -372,36 +372,33 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     ));
                 }
 
-                let Some(local_value) = value else {
+                let Some(value) = value else {
                     return Ok(());
                 };
 
                 let type_metadata: TypeCheckerNodeMetadata =
-                    TypeCheckerNodeMetadata::new(local_value.is_totaly_literal_value());
+                    TypeCheckerNodeMetadata::new(value.is_totaly_literal_value());
 
-                let local_value_type: &Type = local_value.get_value_type()?;
+                let value_type: &Type = value.get_value_type()?;
 
-                let is_literal_ptr_value: bool = local_value.is_literal_ptr_value();
+                let is_value_literal_ptr: bool = value.is_literal_ptr_value();
 
-                let is_ptr_type: bool = local_value_type.is_ptr_like_type()
-                    && local_value.is_reference()
-                    || local_value_type.is_ptr_like_type()
-                        && (!local_value.is_literal_value() || is_literal_ptr_value);
+                let is_ptr_type: bool = value_type.is_ptr_like_type() && value.is_reference()
+                    || value_type.is_ptr_like_type()
+                        && (!value.is_literal_value() || is_value_literal_ptr);
 
                 if is_ptr_type {
-                    let allocated_ptr_type: Type = Type::Ptr(
-                        Some(local_value_type.clone().into()),
-                        local_value_type.get_span(),
-                    );
-
                     {
+                        let ptr_type: Type =
+                            Type::Ptr(Some(value_type.clone().into()), value_type.get_span());
+
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
                         check::check_type_together(
                             local_type,
-                            &allocated_ptr_type,
-                            Some(local_value),
+                            &ptr_type,
+                            Some(value),
                             None,
                             type_metadata,
                             node.get_span(),
@@ -417,8 +414,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                         check::check_type_together(
                             local_type,
-                            local_value_type,
-                            Some(local_value),
+                            local_type,
+                            Some(value),
                             None,
                             type_metadata,
                             node.get_span(),
@@ -429,7 +426,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     }
                 }
 
-                self.analyze_expr(local_value)?;
+                self.analyze_expr(value)?;
 
                 Ok(())
             }

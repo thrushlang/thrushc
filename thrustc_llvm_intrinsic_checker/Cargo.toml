@@ -17,7 +17,7 @@ thrustc_ast = { path = "../thrustc_ast" }
 thrustc_errors = { path = "../thrustc_errors" }
 
 [features]
-default = ["llvm_backend_static", "cbindgen_static"]
+default = ["llvm_backend_static"]
 
 llvm_backend_dynamic = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-dynamic"]
 llvm_backend_static  = ["dep:inkwell", "inkwell/llvm17-0", "inkwell/llvm17-0-force-static"]

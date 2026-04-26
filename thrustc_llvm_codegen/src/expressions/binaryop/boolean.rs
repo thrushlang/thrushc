@@ -49,7 +49,7 @@ pub fn bool_operation<'ctx>(
     let (lhs_signed, rhs_signed) = signatures;
 
     if lhs.is_int_value() && rhs.is_int_value() {
-        let (lhs, rhs) = cast::integer_together(
+        let (lhs, rhs) = cast::compile_int_together_cast(
             context,
             lhs.into_int_value(),
             rhs.into_int_value(),
@@ -119,7 +119,7 @@ pub fn bool_operation<'ctx>(
             ),
         };
     } else if lhs.is_float_value() && rhs.is_float_value() {
-        let (lhs, rhs) = cast::float_together(
+        let (lhs, rhs) = cast::compile_float_together_cast(
             context,
             lhs.into_float_value(),
             rhs.into_float_value(),
@@ -218,8 +218,8 @@ pub fn compile<'ctx>(
         let lhs: BasicValueEnum<'_> = codegen::compile_as_value(context, binary.0, cast_type);
         let rhs: BasicValueEnum<'_> = codegen::compile_as_value(context, binary.2, cast_type);
 
-        let lhs_type: &Type = binary.0.llvm_get_type();
-        let rhs_type: &Type = binary.2.llvm_get_type();
+        let lhs_type: &Type = binary.0.get_type_for_llvm();
+        let rhs_type: &Type = binary.2.get_type_for_llvm();
 
         return bool_operation(
             context,
@@ -256,8 +256,11 @@ pub fn const_bool_operation<'ctx>(
     let (lhs_signed, rhs_signed) = signatures;
 
     if lhs.is_int_value() && rhs.is_int_value() {
-        let (lhs, rhs) =
-            cast::const_integer_together(lhs.into_int_value(), rhs.into_int_value(), signatures);
+        let (lhs, rhs) = cast::compile_constant_int_together_cast(
+            lhs.into_int_value(),
+            rhs.into_int_value(),
+            signatures,
+        );
 
         return match operator {
             op if op.is_logical_operator() => lhs
@@ -339,7 +342,10 @@ pub fn const_bool_operation<'ctx>(
             ),
         };
     } else if lhs.is_float_value() && rhs.is_float_value() {
-        let (lhs, rhs) = cast::const_float_together(lhs.into_float_value(), rhs.into_float_value());
+        let (lhs, rhs) = cast::compile_constant_float_together_cast(
+            lhs.into_float_value(),
+            rhs.into_float_value(),
+        );
 
         return match operator {
             op if op.is_logical_operator() => lhs
@@ -420,11 +426,13 @@ pub fn compile_const<'ctx>(
     {
         let operator: &'ctx TokenType = binary.1;
 
-        let lhs: BasicValueEnum<'_> = codegen::compile_constant(context, binary.0, cast_type);
-        let rhs: BasicValueEnum<'_> = codegen::compile_constant(context, binary.2, cast_type);
+        let lhs: BasicValueEnum<'_> =
+            codegen::compile_constant_as_value(context, binary.0, cast_type);
+        let rhs: BasicValueEnum<'_> =
+            codegen::compile_constant_as_value(context, binary.2, cast_type);
 
-        let lhs_type: &Type = binary.0.llvm_get_type();
-        let rhs_type: &Type = binary.2.llvm_get_type();
+        let lhs_type: &Type = binary.0.get_type_for_llvm();
+        let rhs_type: &Type = binary.2.get_type_for_llvm();
 
         return const_bool_operation(
             context,

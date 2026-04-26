@@ -30,7 +30,7 @@ use crate::{
 };
 
 impl AstLLVMGetType for Ast<'_> {
-    fn llvm_get_type(&self) -> &Type {
+    fn get_type_for_llvm(&self) -> &Type {
         match self {
             // Primitive values
             Ast::Integer { kind, .. } => kind,

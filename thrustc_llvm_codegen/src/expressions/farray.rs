@@ -60,10 +60,11 @@ pub fn compile_const<'ctx>(
     let values: Vec<BasicValueEnum> = items
         .iter()
         .map(|item| {
-            let value_type: &Type = item.llvm_get_type();
-            let value: BasicValueEnum = codegen::compile_constant(context, item, &base_type);
+            let value_type: &Type = item.get_type_for_llvm();
+            let value: BasicValueEnum =
+                codegen::compile_constant_as_value(context, item, &base_type);
 
-            cast::try_cast_const(context, &base_type, value_type, value)
+            cast::try_smart_constant_cast(context, &base_type, value_type, value)
         })
         .collect();
 

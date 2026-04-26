@@ -23,7 +23,7 @@ use thrustc_span::Span;
 use thrustc_typesystem::Type;
 
 pub trait AstLLVMGetType {
-    fn llvm_get_type(&self) -> &Type;
+    fn get_type_for_llvm(&self) -> &Type;
 }
 
 pub trait LLVMFunctionExtensions<'ctx> {

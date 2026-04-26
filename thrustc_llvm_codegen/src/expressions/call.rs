@@ -86,5 +86,5 @@ pub fn compile<'ctx>(
         ),
     };
 
-    cast::try_cast(context, cast, kind, ret_value, span)
+    cast::try_smart_cast(context, cast, kind, ret_value, span)
 }

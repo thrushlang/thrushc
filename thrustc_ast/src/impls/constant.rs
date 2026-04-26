@@ -19,7 +19,6 @@
 
 use crate::{
     Ast,
-    builtins::AstBuiltin,
     traits::{AstBuiltinsExtensions, AstConstantExtensions},
 };
 
@@ -35,7 +34,6 @@ impl AstConstantExtensions for Ast<'_> {
             | Ast::NullPtr { .. } => true,
 
             Ast::Builtin { builtin, .. } => builtin.is_avalaible_at_compile_time(),
-
             Ast::EnumValue { value, .. } => value.is_constant_value(),
             Ast::DirectRef { expr, .. } => expr.is_constant_value(),
             Ast::Group { node, .. } => node.is_constant_value(),
@@ -46,7 +44,10 @@ impl AstConstantExtensions for Ast<'_> {
             Ast::Reference { metadata, .. } => metadata.is_constant_ref(),
             Ast::As { metadata, .. } => metadata.is_constant(),
             Ast::FixedArray { items, .. } => items.iter().all(|item| item.is_constant_value()),
-            Ast::Constructor { data, .. } => data.iter().all(|arg| arg.1.is_constant_value()),
+            Ast::Array { items, .. } => items.iter().all(|item| item.is_constant_value()),
+            Ast::Constructor { data, .. } => {
+                data.iter().all(|(_, node, ..)| node.is_constant_value())
+            }
 
             _ => false,
         }
