@@ -854,6 +854,21 @@ pub fn check_type_cast(
             Type::Ptr(..) | Type::Addr(..),
         ) if is_allocated => Ok(()),
 
+        (
+            Type::S8 { .. }
+            | Type::S16 { .. }
+            | Type::S32 { .. }
+            | Type::S64 { .. }
+            | Type::U8 { .. }
+            | Type::U16 { .. }
+            | Type::U32 { .. }
+            | Type::U64 { .. }
+            | Type::U128 { .. }
+            | Type::USize { .. }
+            | Type::SSize { .. },
+            Type::Ptr(..),
+        ) => Ok(()),
+
         (Type::Const(from_type, ..), cast_type) => {
             self::check_type_cast(from_type, cast_type, metadata, span, control_context)
         }

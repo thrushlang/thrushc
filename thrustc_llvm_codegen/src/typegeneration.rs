@@ -97,7 +97,6 @@ pub fn generate_type_function_type_to_function_type<'ctx>(
     }
 }
 
-#[inline]
 pub fn generate_type<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
@@ -116,7 +115,7 @@ pub fn generate_type<'ctx>(
                 .into(),
 
             Type::Bool(..) => llvm_context.bool_type().into(),
-            Type::Const(any, ..) => self::generate_type(context, any),
+            Type::Const(subtype, ..) => self::generate_type(context, subtype),
 
             any => abort::abort_codegen(
                 context,
@@ -134,7 +133,7 @@ pub fn generate_type<'ctx>(
             Type::FX8680 { .. } => llvm_context.x86_f80_type().into(),
             Type::FPPC128 { .. } => llvm_context.ppc_f128_type().into(),
 
-            Type::Const(any, ..) => self::generate_type(context, any),
+            Type::Const(subtype, ..) => self::generate_type(context, subtype),
 
             any => abort::abort_codegen(
                 context,
@@ -145,9 +144,14 @@ pub fn generate_type<'ctx>(
             ),
         },
 
+        Type::Array {
+            infered_type: Some((infered_type, ..)),
+            ..
+        } => self::generate_type(context, infered_type),
+
         t if t.is_ptr_like_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
 
-        Type::Const(any, ..) => self::generate_type(context, any),
+        Type::Const(subtype, ..) => self::generate_type(context, subtype),
 
         Type::Struct {
             fields, modifier, ..
@@ -165,9 +169,92 @@ pub fn generate_type<'ctx>(
             llvm_context.struct_type(&field_types, packed).into()
         }
 
-        Type::FixedArray(kind, size, ..) => {
-            let arraytype: BasicTypeEnum = self::generate_type(context, kind);
-            arraytype.array_type(*size).into()
+        Type::FixedArray(type_, size, ..) => {
+            let array_type: BasicTypeEnum = self::generate_type(context, type_);
+            array_type.array_type(*size).into()
+        }
+
+        any => abort::abort_codegen(
+            context,
+            &format!("Failed to compile '{}' as a type!", any),
+            any.get_span(),
+            PathBuf::from(file!()),
+            line!(),
+        ),
+    }
+}
+
+#[inline]
+pub fn generate_load_type<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    kind: &Type,
+) -> BasicTypeEnum<'ctx> {
+    let llvm_context: &Context = context.get_llvm_context();
+
+    match kind {
+        t if t.is_integer_type() || t.is_char_type() || t.is_bool_type() => match kind {
+            Type::S8 { .. } | Type::U8 { .. } | Type::Char(..) => llvm_context.i8_type().into(),
+            Type::S16 { .. } | Type::U16 { .. } => llvm_context.i16_type().into(),
+            Type::S32 { .. } | Type::U32 { .. } => llvm_context.i32_type().into(),
+            Type::S64 { .. } | Type::U64 { .. } => llvm_context.i64_type().into(),
+            Type::U128 { .. } => llvm_context.i128_type().into(),
+            Type::USize { .. } | Type::SSize { .. } => llvm_context
+                .ptr_sized_int_type(context.get_target_data(), None)
+                .into(),
+
+            Type::Bool(..) => llvm_context.bool_type().into(),
+            Type::Const(subtype, ..) => self::generate_load_type(context, subtype),
+
+            any => abort::abort_codegen(
+                context,
+                &format!("Failed to compile '{}' as a integer type!", any),
+                any.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            ),
+        },
+
+        t if t.is_float_type() => match kind {
+            Type::F32 { .. } => llvm_context.f32_type().into(),
+            Type::F64 { .. } => llvm_context.f64_type().into(),
+            Type::F128 { .. } => llvm_context.f128_type().into(),
+            Type::FX8680 { .. } => llvm_context.x86_f80_type().into(),
+            Type::FPPC128 { .. } => llvm_context.ppc_f128_type().into(),
+
+            Type::Const(subtype, ..) => self::generate_load_type(context, subtype),
+
+            any => abort::abort_codegen(
+                context,
+                &format!("Failed to compile '{}' as a float type!", any),
+                any.get_span(),
+                PathBuf::from(file!()),
+                line!(),
+            ),
+        },
+
+        t if t.is_ptr_like_type() => llvm_context.ptr_type(AddressSpace::default()).into(),
+
+        Type::Const(subtype, ..) => self::generate_load_type(context, subtype),
+
+        Type::Struct {
+            fields, modifier, ..
+        } => {
+            let mut field_types: Vec<BasicTypeEnum> = Vec::with_capacity(u8::MAX as usize);
+
+            let packed: bool = modifier.llvm().is_packed();
+
+            {
+                for ty in fields.iter() {
+                    field_types.push(self::generate_load_type(context, ty));
+                }
+            }
+
+            llvm_context.struct_type(&field_types, packed).into()
+        }
+
+        Type::FixedArray(subtype, size, ..) => {
+            let array_type: BasicTypeEnum = self::generate_load_type(context, subtype);
+            array_type.array_type(*size).into()
         }
 
         any => abort::abort_codegen(

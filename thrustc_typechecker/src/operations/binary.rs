@@ -231,22 +231,24 @@ fn validate_binary_shift_expression(
             | Type::S32 { .. }
             | Type::S64 { .. }
             | Type::U8 { .. }
+            | Type::SSize { .. }
             | Type::U16 { .. }
             | Type::U32 { .. }
             | Type::U64 { .. }
-            | Type::U128 { .. },
+            | Type::U128 { .. }
+            | Type::USize { .. },
             Type::S8 { .. }
             | Type::S16 { .. }
             | Type::S32 { .. }
             | Type::S64 { .. }
+            | Type::SSize { .. }
             | Type::U8 { .. }
             | Type::U16 { .. }
             | Type::U32 { .. }
             | Type::U64 { .. }
-            | Type::U128 { .. },
+            | Type::U128 { .. }
+            | Type::USize { .. },
         ) => Ok(()),
-        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
-        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0030,
@@ -375,21 +377,23 @@ fn validate_binary_arithmetic_expression(
             | Type::S16 { .. }
             | Type::S32 { .. }
             | Type::S64 { .. }
+            | Type::SSize { .. }
             | Type::U8 { .. }
             | Type::U16 { .. }
             | Type::U32 { .. }
-            | Type::U64 { .. },
+            | Type::U64 { .. }
+            | Type::USize { .. },
             Type::S8 { .. }
             | Type::S16 { .. }
             | Type::S32 { .. }
             | Type::S64 { .. }
+            | Type::SSize { .. }
             | Type::U8 { .. }
             | Type::U16 { .. }
             | Type::U32 { .. }
-            | Type::U64 { .. },
+            | Type::U64 { .. }
+            | Type::USize { .. },
         ) => Ok(()),
-        (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
-        (Type::USize { .. }, Type::USize { .. }) => Ok(()),
         (Type::FPPC128 { .. }, Type::FPPC128 { .. }) => Ok(()),
         (Type::FX8680 { .. }, Type::FX8680 { .. }) => Ok(()),
         (

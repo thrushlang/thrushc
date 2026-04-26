@@ -610,11 +610,13 @@ pub fn compile<'ctx>(
             let value: BasicValueEnum = codegen::compile_as_ptr_value(context, expr, None);
 
             if value.is_pointer_value() {
+                let ptr_value: PointerValue<'_> = value.into_pointer_value();
+
                 let cast_type: PointerType =
                     typegeneration::generate_type(context, &target_type).into_pointer_type();
 
                 return llvm_builder
-                    .build_pointer_cast(value.into_pointer_value(), cast_type, "")
+                    .build_pointer_cast(ptr_value, cast_type, "")
                     .unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
@@ -629,6 +631,31 @@ pub fn compile<'ctx>(
                     })
                     .into();
             };
+
+            if value.is_int_value() {
+                let int_value: IntValue<'_> = value.into_int_value();
+
+                let cast_type: PointerType =
+                    typegeneration::generate_type(context, &target_type).into_pointer_type();
+
+                return llvm_builder
+                    .build_int_to_ptr(int_value, cast_type, "")
+                    .unwrap_or_else(|_| {
+                        abort::abort_codegen(
+                            context,
+                            &format!(
+                                "Failed to cast '{}' type to '{}' type.",
+                                from_type, target_type
+                            ),
+                            expr.get_span(),
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        );
+                    })
+                    .into();
+            }
+
+            println!("{}", value);
         }
 
         _ => {}

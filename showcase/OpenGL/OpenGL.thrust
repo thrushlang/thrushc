@@ -1,0 +1,143 @@
+/* 
+ * Thrust + OpenGL Showcase
+ * 
+ * This program draws a colored RGB triangle using modern OpenGL (3.3 Core).
+ * It uses GLFW to create a window and simple vertex + fragment shaders 
+ * to handle per-vertex colors.
+ * 
+ * Demonstrates:
+ *   - GLFW window and OpenGL context creation
+ *   - VAO + VBO with position and color attributes
+ *   - Vertex Shader and Fragment Shader
+ *   - FFI using @extern("C") to call OpenGL and GLFW functions
+ * 
+ * Usage: ./triangle
+ * 
+ * Press ESC or close the window to exit.
+*/
+
+fn printf(fmt: const array[char]) s32 @public @arbitraryArgs @extern("printf") @convention("C");
+fn perror(msg: const array[char]) void @public @arbitraryArgs @extern("perror") @convention("C");
+
+// GLFW
+fn glfwInit() bool @public @extern("glfwInit") @convention("C");
+fn glfwTerminate() void @public @extern("glfwTerminate") @convention("C");
+fn glfwCreateWindow(w: s32, h: s32, title: const array[char], monitor: ptr, share: ptr) ptr @public @extern("glfwCreateWindow") @convention("C");
+fn glfwMakeContextCurrent(window: ptr) void @public @extern("glfwMakeContextCurrent") @convention("C");
+fn glfwWindowShouldClose(window: ptr) bool @public @extern("glfwWindowShouldClose") @convention("C");
+fn glfwPollEvents() void @public @extern("glfwPollEvents") @convention("C");
+fn glfwSwapBuffers(window: ptr) void @public @extern("glfwSwapBuffers") @convention("C");
+
+// OpenGL functions
+fn glClearColor(r: f32, g: f32, b: f32, a: f32) void @public @extern("glClearColor") @convention("C");
+fn glClear(mask: u32) void @public @extern("glClear") @convention("C");
+fn glGenVertexArrays(n: s32, arrays: ptr) void @public @extern("glGenVertexArrays") @convention("C");
+fn glBindVertexArray(array_: u32) void @public @extern("glBindVertexArray") @convention("C");
+fn glGenBuffers(n: s32, buffers: ptr) void @public @extern("glGenBuffers") @convention("C");
+fn glBindBuffer(target: u32, buffer: u32) void @public @extern("glBindBuffer") @convention("C");
+fn glBufferData(target: u32, size: u64, data: ptr, usage: u32) void @public @extern("glBufferData") @convention("C");
+fn glVertexAttribPointer(index: u32, size: s32, type_: u32, normalized: bool, stride: s32, pointer: ptr) void @public @extern("glVertexAttribPointer") @convention("C");
+fn glEnableVertexAttribArray(index: u32) void @public @extern("glEnableVertexAttribArray") @convention("C");
+fn glDrawArrays(mode: u32, first: s32, count: s32) void @public @extern("glDrawArrays") @convention("C");
+
+// Shaders functions
+fn glCreateShader(type_: u32) u32 @public @extern("glCreateShader") @convention("C");
+fn glShaderSource(shader: u32, count: s32, string: ptr, length: ptr) void @public @extern("glShaderSource") @convention("C");
+fn glCompileShader(shader: u32) void @public @extern("glCompileShader") @convention("C");
+fn glCreateProgram() u32 @public @extern("glCreateProgram") @convention("C");
+fn glAttachShader(program: u32, shader: u32) void @public @extern("glAttachShader") @convention("C");
+fn glLinkProgram(program: u32) void @public @extern("glLinkProgram") @convention("C");
+fn glUseProgram(program: u32) void @public @extern("glUseProgram") @convention("C");
+fn glDeleteShader(shader: u32) void @public @extern("glDeleteShader") @convention("C");
+
+// Constants
+const GL_COLOR_BUFFER_BIT: u32 = 0x00004000;
+const GL_ARRAY_BUFFER: u32 = 0x8892;
+const GL_STATIC_DRAW: u32 = 0x88E4;
+const GL_FLOAT: u32 = 0x1406;
+const GL_TRIANGLES: u32 = 0x0004;
+const GL_FALSE: bool = false;
+const GL_VERTEX_SHADER: u32 = 0x8B31;
+const GL_FRAGMENT_SHADER: u32 = 0x8B30;
+
+fn main() s32 @public {
+
+    var vertexShaderSource: ptr[array[char]] = "#version 330 core\nlayout (location = 0) in vec3 aPos;\nlayout (location = 1) in vec3 aColor;\nout vec3 ourColor;\nvoid main() {\n    gl_Position = vec4(aPos, 1.0);\n    ourColor = aColor;\n}\0";
+    var fragmentShaderSource: ptr[array[char]] = "#version 330 core\nout vec4 FragColor;\nin vec3 ourColor;\nvoid main() {\n    FragColor = vec4(ourColor, 1.0);\n}\0";
+
+    var vertices: array[f32] = [
+        -0.5, -0.5, 0.0,  1.0, 0.0, 0.0,
+        0.5, -0.5, 0.0,  0.0, 1.0, 0.0,
+        0.0,  0.5, 0.0,  0.0, 0.0, 1.0
+    ];
+
+    var window: ptr;
+    var VAO: u32 = 0;
+    var VBO: u32 = 0;
+
+    if (!glfwInit()) {
+        perror("glfwInit failed");
+        return 1;
+    }
+
+    window = glfwCreateWindow(800, 600, "Thrust OpenGL - Triángulo RGB", nullptr, nullptr);
+
+    if ((deref window) == nullptr) {
+        perror("glfwCreateWindow failed");
+        glfwTerminate();
+        return 1;
+    }
+
+    glfwMakeContextCurrent(deref window);
+
+    var vertexShader: u32 = glCreateShader(GL_VERTEX_SHADER);
+
+    glShaderSource(vertexShader, 1, vertexShaderSource[0] as ptr, nullptr);
+    glCompileShader(vertexShader);
+
+    var fragmentShader: u32 = glCreateShader(GL_FRAGMENT_SHADER);
+
+    glShaderSource(fragmentShader, 1, fragmentShaderSource[0] as ptr, nullptr);
+    glCompileShader(fragmentShader);
+
+    var shaderProgram: u32 = glCreateProgram();
+    
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    glGenVertexArrays(1, ref VAO);
+    glGenBuffers(1, ref VBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, (sizeOf(vertices) as u64), ref vertices[0], GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, (6 * sizeOf(f32)) as s32, nullptr);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, (6 * sizeOf(f32)) as s32, (3 * sizeOf(f32)) as ptr);
+    glEnableVertexAttribArray(1);
+
+    glUseProgram(shaderProgram);
+
+    printf("Thrust OpenGL Triangle with Shaders running...\n");
+    printf("Press ESC or close window to exit.\n\n");
+
+    while !glfwWindowShouldClose(deref window) {
+        glClearColor(0.1, 0.1, 0.2, 1.0);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        glBindVertexArray(VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        glfwSwapBuffers(deref window);
+        glfwPollEvents();
+    }
+
+    glfwTerminate();
+    return 0;
+}

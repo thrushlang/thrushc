@@ -454,7 +454,7 @@ pub fn dereference<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, ptr_type);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_load_type(context, ptr_type);
 
     let alignment: u32 = context
         .get_target_data()
