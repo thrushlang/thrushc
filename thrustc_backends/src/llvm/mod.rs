@@ -25,14 +25,14 @@ pub mod passes;
 pub mod target;
 
 use crate::{
-    backends::llvm::cpu::LLVMTargetCPU, backends::llvm::debug::DebugConfiguration,
-    backends::llvm::jit::JITConfiguration, backends::llvm::passes::LLVMModificatorPasses,
-    backends::llvm::target::LLVMTarget,
+    llvm::cpu::LLVMTargetCPU, llvm::debug::DebugConfiguration, llvm::jit::JITConfiguration,
+    llvm::passes::LLVMModificatorPasses, llvm::target::LLVMTarget,
 };
 
-use crate::{ThrustCodeModel, ThrustOptimization, ThrustRelocMode};
+use super::{ThrustCodeModel, ThrustOptimization, ThrustRelocMode};
 
 use inkwell::targets::{CodeModel, RelocMode, TargetMachine};
+use thrustc_llvm_target_triple::LLVMTargetTriple;
 
 #[derive(Debug)]
 pub struct LLVMBackend {
@@ -81,10 +81,20 @@ impl LLVMBackend {
             .map_or("generic", |v| v)
             .to_string();
 
+        let target_triple: inkwell::targets::TargetTriple = TargetMachine::get_default_triple();
+
+        let normalized_target_triple: LLVMTargetTriple = LLVMTargetTriple::new(
+            TargetMachine::get_default_triple()
+                .as_str()
+                .to_string_lossy()
+                .to_string(),
+        );
+
         Self {
             target: LLVMTarget {
                 arch,
-                target_triple: TargetMachine::get_default_triple(),
+                target_triple,
+                normalized_target_triple,
                 target_triple_darwin_variant: None,
                 macos_version: None,
                 ios_version: None,

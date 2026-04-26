@@ -83,11 +83,21 @@ pub enum Type {
     },
 
     // Floating Point Type
-    F32(Span),
-    F64(Span),
-    F128(Span),
-    FX8680(Span),
-    FPPC128(Span),
+    F32 {
+        span: Span,
+    },
+    F64 {
+        span: Span,
+    },
+    F128 {
+        span: Span,
+    },
+    FX8680 {
+        span: Span,
+    },
+    FPPC128 {
+        span: Span,
+    },
 
     // Boolean Type
     Bool(Span),

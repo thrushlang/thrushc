@@ -36,11 +36,11 @@ impl TypeCodeLocation for Type {
             | Type::U64 { span }
             | Type::U128 { span }
             | Type::USize { span }
-            | Type::F32(span)
-            | Type::F64(span)
-            | Type::F128(span)
-            | Type::FX8680(span)
-            | Type::FPPC128(span)
+            | Type::F32 { span }
+            | Type::F64 { span }
+            | Type::F128 { span }
+            | Type::FX8680 { span }
+            | Type::FPPC128 { span }
             | Type::Bool(span)
             | Type::Void(span)
             | Type::Addr(span)

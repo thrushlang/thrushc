@@ -71,11 +71,11 @@ impl TypeArrayEntensions for Type {
             Type::S64 { .. } => 12,
             Type::SSize { .. } => 13,
 
-            Type::F32(..) => 15,
-            Type::F64(..) => 16,
-            Type::F128(..) => 17,
-            Type::FX8680(..) => 18,
-            Type::FPPC128(..) => 19,
+            Type::F32 { .. } => 15,
+            Type::F64 { .. } => 16,
+            Type::F128 { .. } => 17,
+            Type::FX8680 { .. } => 18,
+            Type::FPPC128 { .. } => 19,
 
             Type::Const(subtype, ..) => subtype.get_array_type_herarchy(),
 

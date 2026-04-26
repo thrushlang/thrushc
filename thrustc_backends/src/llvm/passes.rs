@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_logging::{self, LoggingType};
 
 #[derive(Debug, Clone, Copy)]

@@ -74,12 +74,12 @@ pub fn build_type(ctx: &mut ModuleParser<'_>) -> Result<Type, ()> {
 
                     TokenType::Bool => Ok(Type::Bool(span)),
 
-                    TokenType::F32 => Ok(Type::F32(span)),
-                    TokenType::F64 => Ok(Type::F64(span)),
-                    TokenType::F128 => Ok(Type::F128(span)),
+                    TokenType::F32 => Ok(Type::F32 { span }),
+                    TokenType::F64 => Ok(Type::F64 { span }),
+                    TokenType::F128 => Ok(Type::F128 { span }),
 
-                    TokenType::FX8680 => Ok(Type::FX8680(span)),
-                    TokenType::FPPC128 => Ok(Type::FPPC128(span)),
+                    TokenType::FX8680 => Ok(Type::FX8680 { span }),
+                    TokenType::FPPC128 => Ok(Type::FPPC128 { span }),
 
                     TokenType::Ptr => Ok(Type::Ptr(None, span)),
                     TokenType::Addr => Ok(Type::Addr(span)),

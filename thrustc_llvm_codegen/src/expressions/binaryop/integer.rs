@@ -31,9 +31,9 @@ use crate::typegeneration;
 
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstStandardExtensions;
+use thrustc_backends::llvm::LLVMBackend;
 use thrustc_entities::BinaryOperation;
 use thrustc_options::CompilerOptions;
-use thrustc_options::backends::llvm::LLVMBackend;
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_token_type::traits::TokenTypeExtensions;

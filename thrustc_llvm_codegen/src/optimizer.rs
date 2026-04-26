@@ -44,12 +44,12 @@ use inkwell::values::InstructionOpcode;
 use inkwell::values::InstructionValue;
 
 use thrustc_options::CompilerOptions;
-use thrustc_options::ThrustOptimization;
-use thrustc_options::backends::llvm::DenormalFloatingPointBehavior;
-use thrustc_options::backends::llvm::DenormalFloatingPointBehavior32BitFloatingPoint;
-use thrustc_options::backends::llvm::Sanitizer;
-use thrustc_options::backends::llvm::SymbolLinkageMergeStrategy;
-use thrustc_options::backends::llvm::passes::LLVMModificatorPasses;
+use thrustc_backends::ThrustOptimization;
+use thrustc_backends::llvm::DenormalFloatingPointBehavior;
+use thrustc_backends::llvm::DenormalFloatingPointBehavior32BitFloatingPoint;
+use thrustc_backends::llvm::Sanitizer;
+use thrustc_backends::llvm::SymbolLinkageMergeStrategy;
+use thrustc_backends::llvm::passes::LLVMModificatorPasses;
 
 use thrustc_llvm_target_triple::LLVMTargetTriple;
 

@@ -124,7 +124,7 @@ lazy_static! {
         types.insert("f32", TokenType::F32);
         types.insert("f64", TokenType::F64);
         types.insert("f128", TokenType::F128);
-        types.insert("fx86_80", TokenType::FX8680);
+        types.insert("f80", TokenType::FX8680);
         types.insert("fppc_128", TokenType::FPPC128);
         types.insert("bool", TokenType::Bool);
         types.insert("char", TokenType::Char);

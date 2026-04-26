@@ -68,7 +68,11 @@ impl TypeIsExtensions for Type {
     fn is_float_type(&self) -> bool {
         matches!(
             self,
-            Type::F32(..) | Type::F64(..) | Type::F128(..) | Type::FX8680(..) | Type::FPPC128(..)
+            Type::F32 { .. }
+                | Type::F64 { .. }
+                | Type::F128 { .. }
+                | Type::FX8680 { .. }
+                | Type::FPPC128 { .. }
         )
     }
 
@@ -170,11 +174,11 @@ impl TypeIsExtensions for Type {
             Type::S64 { .. } => 12,
             Type::SSize { .. } => 13,
 
-            Type::F32(..) => 15,
-            Type::F64(..) => 16,
-            Type::F128(..) => 17,
-            Type::FX8680(..) => 18,
-            Type::FPPC128(..) => 19,
+            Type::F32 { .. } => 15,
+            Type::F64 { .. } => 16,
+            Type::F128 { .. } => 17,
+            Type::FX8680 { .. } => 18,
+            Type::FPPC128 { .. } => 19,
 
             Type::Const(subtype, ..) => subtype.get_type_herarchy(),
 
@@ -241,11 +245,11 @@ impl TypeExtensions for Type {
             | Type::U64 { .. }
             | Type::U128 { .. }
             | Type::USize { .. }
-            | Type::F32(..)
-            | Type::F64(..)
-            | Type::F128(..)
-            | Type::FX8680(..)
-            | Type::FPPC128(..)
+            | Type::F32 { .. }
+            | Type::F64 { .. }
+            | Type::F128 { .. }
+            | Type::FX8680 { .. }
+            | Type::FPPC128 { .. }
             | Type::Bool(..)
             | Type::Char(..)
             | Type::Addr(..)
@@ -278,11 +282,11 @@ impl Hash for Type {
             | Type::U64 { .. }
             | Type::U128 { .. }
             | Type::USize { .. }
-            | Type::F32(_)
-            | Type::F64(_)
-            | Type::F128(_)
-            | Type::FX8680(_)
-            | Type::FPPC128(_)
+            | Type::F32 { .. }
+            | Type::F64 { .. }
+            | Type::F128 { .. }
+            | Type::FX8680 { .. }
+            | Type::FPPC128 { .. }
             | Type::Bool(_)
             | Type::Char(_)
             | Type::Addr(_)
@@ -380,11 +384,11 @@ impl PartialEq for Type {
             (Type::U64 { .. }, Type::U64 { .. }) => true,
             (Type::U128 { .. }, Type::U128 { .. }) => true,
             (Type::USize { .. }, Type::USize { .. }) => true,
-            (Type::F32(..), Type::F32(..)) => true,
-            (Type::F64(..), Type::F64(..)) => true,
-            (Type::F128(..), Type::F128(..)) => true,
-            (Type::FX8680(..), Type::FX8680(..)) => true,
-            (Type::FPPC128(..), Type::FPPC128(..)) => true,
+            (Type::F32 { .. }, Type::F32 { .. }) => true,
+            (Type::F64 { .. }, Type::F64 { .. }) => true,
+            (Type::F128 { .. }, Type::F128 { .. }) => true,
+            (Type::FX8680 { .. }, Type::FX8680 { .. }) => true,
+            (Type::FPPC128 { .. }, Type::FPPC128 { .. }) => true,
             (Type::Ptr(None, ..), Type::Ptr(None, ..)) => true,
             (Type::Ptr(Some(lhs), ..), Type::Ptr(Some(rhs), ..)) => lhs == rhs,
             (Type::Ptr(..), Type::Ptr(..)) => true,
@@ -411,11 +415,11 @@ impl std::fmt::Display for Type {
             Type::U64 { .. } => write!(f, "u64"),
             Type::U128 { .. } => write!(f, "u128"),
             Type::USize { .. } => write!(f, "usize"),
-            Type::F32(..) => write!(f, "f32"),
-            Type::F64(..) => write!(f, "f64"),
-            Type::F128(..) => write!(f, "f128"),
-            Type::FX8680(..) => write!(f, "fx86_80"),
-            Type::FPPC128(..) => write!(f, "fppc_128"),
+            Type::F32 { .. } => write!(f, "f32"),
+            Type::F64 { .. } => write!(f, "f64"),
+            Type::F128 { .. } => write!(f, "f128"),
+            Type::FX8680 { .. } => write!(f, "fx86_80"),
+            Type::FPPC128 { .. } => write!(f, "fppc_128"),
             Type::Bool(..) => write!(f, "bool"),
             Type::Char(..) => write!(f, "char"),
             Type::Unresolved { hint, .. } => write!(f, "unresolved[{}]", hint),

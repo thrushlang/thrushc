@@ -151,7 +151,7 @@ impl TargetInfo {
     pub fn adjust(&mut self, target_triple: LLVMTargetTriple) {
         // SYSTEM-Z
         {
-            if target_triple.is_systemz() {
+            if target_triple.is_systemz_arch() {
                 self.i128_align = 64;
 
                 self.f64_width = 128;
@@ -161,7 +161,7 @@ impl TargetInfo {
 
         // AVR
         {
-            if target_triple.is_avr() {
+            if target_triple.is_avr_arch() {
                 self.ptr_width = 16;
                 self.ptr_align = 8;
 
@@ -203,7 +203,7 @@ impl TargetInfo {
 
         // ARC
         {
-            if target_triple.is_arc() {
+            if target_triple.is_arc_arch() {
                 self.i64_align = 32;
                 self.f64_align = 32;
             }
@@ -212,7 +212,7 @@ impl TargetInfo {
         // CSKY
         {
             // llvm-project/clang/lib/Basic/Targets/CSKY.h
-            if target_triple.is_csky() {
+            if target_triple.is_csky_arch() {
                 self.i64_align = 32;
                 self.f64_align = 32;
             }
@@ -222,7 +222,7 @@ impl TargetInfo {
 
         {
             // llvm-project/clang/lib/Basic/Targets/MSP430.h
-            if target_triple.is_msp430() {
+            if target_triple.is_msp430_arch() {
                 self.ptr_width = 16;
                 self.ptr_align = 16;
 
@@ -239,7 +239,7 @@ impl TargetInfo {
         // PPC
         {
             // llvm-project/clang/lib/Basic/Targets/PPC.h
-            if target_triple.is_ppc() && target_triple.is_os_aix() {
+            if target_triple.is_ppc_arch() && target_triple.is_os_aix() {
                 self.f64_align = 32;
             }
         }
@@ -247,7 +247,7 @@ impl TargetInfo {
         // SPARC
         {
             // llvm-project/clang/lib/Basic/Targets/Sparc.h
-            if target_triple.is_sparc() {
+            if target_triple.is_sparc_arch() {
                 self.f64_width = 128;
                 self.f64_align = 64;
             }
@@ -256,7 +256,7 @@ impl TargetInfo {
         // XCORE
         {
             // llvm-project/clang/lib/Basic/Targets/XCore.h
-            if target_triple.is_xcore() {
+            if target_triple.is_xcore_arch() {
                 self.i64_align = 32;
             }
         }
@@ -483,7 +483,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::FX8680(..) => {
+            Type::FX8680 { .. } => {
                 type_info.width = self.f16_width();
                 type_info.align = self.f16_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -492,7 +492,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::F32(..) => {
+            Type::F32 { .. } => {
                 type_info.width = self.f32_width();
                 type_info.align = self.f32_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -501,7 +501,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::F64(..) => {
+            Type::F64 { .. } => {
                 type_info.width = self.f64_width();
                 type_info.align = self.f64_align();
                 type_info.alignof = type_info.align / self.i8_width;
@@ -510,7 +510,7 @@ impl TargetInfo {
                 either::Either::Left(type_info)
             }
 
-            Type::F128(..) | Type::FPPC128(..) => {
+            Type::F128 { .. } | Type::FPPC128 { .. } => {
                 type_info.width = self.f128_width();
                 type_info.align = self.f128_align();
                 type_info.alignof = type_info.align / self.i8_width;

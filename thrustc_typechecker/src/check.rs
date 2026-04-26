@@ -565,8 +565,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::F32(..),
-            Type::F32(..),
+            Type::F32 { .. },
+            Type::F32 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -582,8 +582,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::F64(..),
-            Type::F64(..) | Type::F32(..),
+            Type::F64 { .. },
+            Type::F64 { .. } | Type::F32 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -599,8 +599,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::F128(..),
-            Type::F128(..) | Type::F64(..) | Type::F32(..),
+            Type::F128 { .. },
+            Type::F128 { .. } | Type::F64 { .. } | Type::F32 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -616,8 +616,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::FX8680(..),
-            Type::FX8680(..),
+            Type::FX8680 { .. },
+            Type::FX8680 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -635,8 +635,8 @@ pub fn check_type_together(
         ) => Ok(()),
 
         (
-            Type::FPPC128(..),
-            Type::FPPC128(..),
+            Type::FPPC128 { .. },
+            Type::FPPC128 { .. },
             Some(
                 TokenType::Plus
                 | TokenType::Minus
@@ -786,9 +786,9 @@ pub fn check_type_cast(
             | Type::USize { .. }
             | Type::SSize { .. }
             | Type::Char(..)
-            | Type::F32(..)
-            | Type::F64(..)
-            | Type::F128(..),
+            | Type::F32 { .. }
+            | Type::F64 { .. }
+            | Type::F128 { .. },
             Type::S8 { .. }
             | Type::S16 { .. }
             | Type::S32 { .. }
@@ -801,13 +801,13 @@ pub fn check_type_cast(
             | Type::USize { .. }
             | Type::SSize { .. }
             | Type::Char(..)
-            | Type::F32(..)
-            | Type::F64(..)
-            | Type::F128(..),
+            | Type::F32 { .. }
+            | Type::F64 { .. }
+            | Type::F128 { .. },
         ) => Ok(()),
 
-        (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
-        (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
+        (Type::FX8680 { .. }, Type::FX8680 { .. }) => Ok(()),
+        (Type::FPPC128 { .. }, Type::FPPC128 { .. }) => Ok(()),
 
         (
             Type::Ptr(..) | Type::Addr(..),
@@ -841,11 +841,11 @@ pub fn check_type_cast(
             | Type::USize { .. }
             | Type::SSize { .. }
             | Type::Char(..)
-            | Type::F32(..)
-            | Type::F64(..)
-            | Type::F128(..)
-            | Type::FX8680(..)
-            | Type::FPPC128(..)
+            | Type::F32 { .. }
+            | Type::F64 { .. }
+            | Type::F128 { .. }
+            | Type::FX8680 { .. }
+            | Type::FPPC128 { .. }
             | Type::Bool(..)
             | Type::Struct { .. }
             | Type::Array { .. }

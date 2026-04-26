@@ -19,6 +19,7 @@ clang = { workspace = true, optional = true }
 thrustc_llvm_target_triple = { path = "../thrustc_llvm_target_triple" }
 thrustc_llvm_attributes = { path = "../thrustc_llvm_attributes" }
 thrustc_llvm_callconventions = { path = "../thrustc_llvm_callconventions" }
+thrustc_backends = { path = "../thrustc_backends" }
 thrustc_attributes = { path = "../thrustc_attributes" }
 thrustc_typesystem = { path = "../thrustc_typesystem" }
 thrustc_mir = { path = "../thrustc_mir" }

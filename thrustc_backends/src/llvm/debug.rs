@@ -17,7 +17,6 @@
 
 */
 
-
 #[derive(Debug, Clone, Copy)]
 pub enum DwarfVersion {
     V4,

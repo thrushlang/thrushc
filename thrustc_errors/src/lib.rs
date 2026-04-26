@@ -153,6 +153,7 @@ pub enum CompilationIssueCode {
     E0036, // Too many parameters
     E0037, // Too many depth,
     E0038, // Not Mutable
+    E0039, // Unsupported Native Type
 
     W0001, // Irrelevant Attribute
     W0002, // Unknown Call Convention
@@ -277,6 +278,9 @@ impl CompilationIssueCode {
             }
             CompilationIssueCode::E0038 => {
                 format!("NOT MUTABLE - {}", "E0038".bright_red())
+            }
+            CompilationIssueCode::E0039 => {
+                format!("UNSUPPORTED NATIVE TYPE - {}", "E0039".bright_red())
             }
             CompilationIssueCode::W0001 => {
                 format!("IRRELEVANT ATTRIBUTE - {}", "W0001".bright_yellow())

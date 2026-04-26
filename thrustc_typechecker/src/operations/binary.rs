@@ -290,11 +290,11 @@ fn validate_binary_comparasion_expression(
         ) => Ok(()),
         (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
         (Type::USize { .. }, Type::USize { .. }) => Ok(()),
-        (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
-        (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
+        (Type::FPPC128 { .. }, Type::FPPC128 { .. }) => Ok(()),
+        (Type::FX8680 { .. }, Type::FX8680 { .. }) => Ok(()),
         (
-            Type::F32(..) | Type::F64(..) | Type::F128(..),
-            Type::F32(..) | Type::F64(..) | Type::F128(..),
+            Type::F32 { .. } | Type::F64 { .. } | Type::F128 { .. },
+            Type::F32 { .. } | Type::F64 { .. } | Type::F128 { .. },
         ) => Ok(()),
 
         _ => Err(CompilationIssue::Error(
@@ -340,13 +340,13 @@ fn validate_binary_equality_expression(
         (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
         (Type::USize { .. }, Type::USize { .. }) => Ok(()),
         (
-            Type::F32(..) | Type::F64(..) | Type::F128(..),
-            Type::F32(..) | Type::F64(..) | Type::F128(..),
+            Type::F32 { .. } | Type::F64 { .. } | Type::F128 { .. },
+            Type::F32 { .. } | Type::F64 { .. } | Type::F128 { .. },
         ) => Ok(()),
         (Type::Bool(..), Type::Bool(..)) => Ok(()),
         (Type::Char(..), Type::Char(..)) => Ok(()),
-        (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
-        (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
+        (Type::FX8680 { .. }, Type::FX8680 { .. }) => Ok(()),
+        (Type::FPPC128 { .. }, Type::FPPC128 { .. }) => Ok(()),
 
         _ if left.is_ptr_type() && right.is_ptr_type() => Ok(()),
 
@@ -390,11 +390,11 @@ fn validate_binary_arithmetic_expression(
         ) => Ok(()),
         (Type::SSize { .. }, Type::SSize { .. }) => Ok(()),
         (Type::USize { .. }, Type::USize { .. }) => Ok(()),
-        (Type::FPPC128(..), Type::FPPC128(..)) => Ok(()),
-        (Type::FX8680(..), Type::FX8680(..)) => Ok(()),
+        (Type::FPPC128 { .. }, Type::FPPC128 { .. }) => Ok(()),
+        (Type::FX8680 { .. }, Type::FX8680 { .. }) => Ok(()),
         (
-            Type::F32(..) | Type::F64(..) | Type::F128(..),
-            Type::F32(..) | Type::F64(..) | Type::F128(..),
+            Type::F32 { .. } | Type::F64 { .. } | Type::F128 { .. },
+            Type::F32 { .. } | Type::F64 { .. } | Type::F128 { .. },
         ) => Ok(()),
         (Type::Ptr(..), Type::Ptr(..)) if left == right && *operator == TokenType::Minus => Ok(()),
 

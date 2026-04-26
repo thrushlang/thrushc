@@ -22,7 +22,8 @@
 use colored::Colorize;
 
 use inkwell::targets::TargetTriple;
-use thrustc_options::{backends::llvm::LLVMBackend, linkage::LinkingCompilersConfiguration};
+use thrustc_backends::llvm::LLVMBackend;
+use thrustc_options::linkage::LinkingCompilersConfiguration;
 
 use crate::ThrustCompiler;
 
@@ -73,10 +74,11 @@ impl ClangLinker<'_> {
 
         clang_command.arg("-v");
 
-        let triple: &TargetTriple = self.backend.get_target().get_triple();
+        let triple: &TargetTriple = self.backend.get_target().get_target_triple();
+        let triple_display: String = triple.as_str().to_string_lossy().into_owned();
 
         clang_command.arg("-target");
-        clang_command.arg(triple.as_str().to_string_lossy().into_owned());
+        clang_command.arg(triple_display);
 
         clang_command.args(self.files.iter());
         clang_command.args(self.config.get_args().iter());

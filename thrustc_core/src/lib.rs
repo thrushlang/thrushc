@@ -41,6 +41,11 @@ use inkwell::targets::TargetMachine;
 use inkwell::targets::TargetTriple;
 
 use thrustc_ast::Ast;
+use thrustc_backends::ThrustOptimization;
+use thrustc_backends::llvm::LLVMBackend;
+use thrustc_backends::llvm::jit;
+use thrustc_backends::llvm::jit::JITConfiguration;
+use thrustc_backends::llvm::target::LLVMTarget;
 use thrustc_diagnostician::Diagnostician;
 use thrustc_lexer::Lexer;
 use thrustc_llvm_callconventions_checker::LLVMCallConventionsChecker;
@@ -53,11 +58,6 @@ use thrustc_llvm_intrinsic_checker::LLVMIntrinsicChecker;
 use thrustc_options::CompilationUnit;
 use thrustc_options::CompilerOptions;
 use thrustc_options::Emited;
-use thrustc_options::ThrustOptimization;
-use thrustc_options::backends::llvm::LLVMBackend;
-use thrustc_options::backends::llvm::jit;
-use thrustc_options::backends::llvm::jit::JITConfiguration;
-use thrustc_options::backends::llvm::target::LLVMTarget;
 use thrustc_options::linkage::LinkingCompilersConfiguration;
 use thrustc_parser::Parser;
 use thrustc_parser::ParserContext;
@@ -142,11 +142,12 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             disrupted = self.compile_file_with_llvm_aot(file).is_err();
         }
 
-        if disrupted
+        disrupted = disrupted
             || self.get_compilation_options().get_was_printed()
             || self.get_compilation_options().get_was_emited()
-            || self.get_compiled_files().is_empty()
-        {
+            || self.get_compiled_files().is_empty();
+
+        if disrupted {
             return (
                 disrupted,
                 self.thrustc_time,
@@ -203,7 +204,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let modules: Result<&[thrustc_preprocessor::module::Module], ()> =
             preprocessor.generate_modules(&tokens, self.options, file);
 
-        println!("{:?}", modules);
+        //println!("{:?}", modules);
 
         self.update_thrustc_frontend_time(frontend_time.elapsed());
 
@@ -277,8 +278,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let llvm_module: Module = llvm_context.create_module(file.get_name());
 
         let target: &LLVMTarget = llvm_backend.get_target();
-
-        let llvm_triple: &TargetTriple = target.get_triple();
+        let llvm_triple: &TargetTriple = target.get_target_triple();
 
         let llvm_cpu_name: &str = llvm_backend.get_target_cpu().get_cpu_name();
         let llvm_cpu_features: &str = llvm_backend.get_target_cpu().get_cpu_features();
@@ -450,11 +450,12 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
             }
         }
 
-        if disrupted
+        disrupted = disrupted
             || self.get_compilation_options().get_was_printed()
             || self.get_compilation_options().get_was_emited()
-            || modules.is_empty()
-        {
+            || modules.is_empty();
+
+        if disrupted {
             return (
                 disrupted,
                 self.thrustc_time,
@@ -613,8 +614,7 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let llvm_module: Module = llvm_context.create_module(file.get_name());
 
         let target: &LLVMTarget = llvm_backend.get_target();
-
-        let llvm_triple: &TargetTriple = target.get_triple();
+        let llvm_triple: &TargetTriple = target.get_target_triple();
 
         let llvm_cpu_name: &str = llvm_backend.get_target_cpu().get_cpu_name();
         let llvm_cpu_features: &str = llvm_backend.get_target_cpu().get_cpu_features();

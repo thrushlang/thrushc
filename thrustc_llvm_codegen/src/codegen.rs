@@ -28,10 +28,10 @@ use inkwell::values::{GlobalValue, PointerValue, StructValue};
 use inkwell::{builder::Builder, values::BasicValueEnum};
 use thrustc_ast::metadata::{ConstantMetadata, LocalMetadata, StaticMetadata};
 use thrustc_attributes::ThrustAttributes;
+use thrustc_backends::llvm::LLVMBackend;
 use thrustc_entities::{GlobalConstant, GlobalStatic, LocalConstant, LocalStatic, LocalVariable};
 use thrustc_llvm_attributes::LLVMAttributes;
 use thrustc_options::CompilerOptions;
-use thrustc_options::backends::llvm::LLVMBackend;
 use thrustc_span::Span;
 
 use crate::anchor::PointerAnchor;

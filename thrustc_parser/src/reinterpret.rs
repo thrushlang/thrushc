@@ -32,8 +32,8 @@ pub fn floating_point(lexeme: &str, span: Span) -> Result<(Type, f64), Compilati
     } else {
         lexeme
             .parse::<f32>()
-            .map(|f| (Type::F32(span), f as f64))
-            .or_else(|_| lexeme.parse::<f64>().map(|f| (Type::F64(span), f)))
+            .map(|f| (Type::F32 { span }, f as f64))
+            .or_else(|_| lexeme.parse::<f64>().map(|f| (Type::F64 { span }, f)))
             .map_err(|_| {
                 CompilationIssue::Error(
                     CompilationIssueCode::E0001,

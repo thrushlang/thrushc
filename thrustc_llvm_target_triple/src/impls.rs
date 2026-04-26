@@ -1,0 +1,30 @@
+/*
+
+    Copyright (C) 2026  Stevens Benavides
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+*/
+
+use crate::{LLVMTargetTriple, traits::LLVMTargetTripleSupport};
+
+impl LLVMTargetTripleSupport for LLVMTargetTriple {
+    fn support_80_bits_floating_point(&self) -> bool {
+        self.is_x86_arch() || self.is_x86_64_arch()
+    }
+
+    fn support_128_bits_ppc_floating_point(&self) -> bool {
+        self.is_ppc64_arch()
+    }
+}

@@ -22,13 +22,14 @@ use thrustc_attributes::{
     ThrustAttribute, ThrustAttributeComparator, ThrustAttributes,
     traits::ThrustAttributesExtensions,
 };
+use thrustc_backends::llvm::LLVMBackend;
 use thrustc_diagnostician::Diagnostician;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_llvm_attributes::{
     LLVMAttribute, LLVMAttributeComparator, LLVMAttributes, traits::LLVMAttributesExtensions,
 };
 use thrustc_llvm_callconventions::LLVMCallConvention;
-use thrustc_options::{CompilationUnit, CompilerOptions, backends::llvm::LLVMBackend};
+use thrustc_options::{CompilationUnit, CompilerOptions};
 use thrustc_span::Span;
 
 #[derive(Debug)]

@@ -272,7 +272,7 @@ impl std::fmt::Display for TokenType {
             TokenType::Char => write!(f, "char"),
             TokenType::F32 => write!(f, "f32"),
             TokenType::F64 => write!(f, "f64"),
-            TokenType::FX8680 => write!(f, "fx86_80"),
+            TokenType::FX8680 => write!(f, "f80"),
             TokenType::F128 => write!(f, "f128"),
             TokenType::FPPC128 => write!(f, "fppc_128"),
             TokenType::Ptr => write!(f, "ptr"),

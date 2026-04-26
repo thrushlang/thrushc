@@ -17,6 +17,9 @@
 
 */
 
+mod impls;
+pub mod traits;
+
 #[derive(Debug)]
 pub struct LLVMTargetTriple {
     arch: String,
@@ -82,6 +85,127 @@ impl LLVMTargetTriple {
 
 impl LLVMTargetTriple {
     #[inline]
+    pub fn is_x86_64_arch(&self) -> bool {
+        matches!(self.arch.as_str(), "x86_64" | "amd64")
+    }
+
+    #[inline]
+    pub fn is_x86_arch(&self) -> bool {
+        matches!(
+            self.arch.as_str(),
+            "x86" | "i386" | "i486" | "i586" | "i686"
+        )
+    }
+
+    #[inline]
+    pub fn is_aarch64_arch(&self) -> bool {
+        matches!(
+            self.arch.as_str(),
+            "aarch64" | "arm64" | "aarch64_32" | "aarch64_be"
+        )
+    }
+
+    #[inline]
+    pub fn is_riscv64_arch(&self) -> bool {
+        matches!(self.arch.as_str(), "riscv64" | "riscv64be")
+    }
+
+    #[inline]
+    pub fn is_ppc64_arch(&self) -> bool {
+        matches!(self.arch.as_str(), "ppc64" | "ppc64le" | "powerpc64le")
+    }
+
+    #[inline]
+    pub fn is_mips64_arch(&self) -> bool {
+        matches!(self.arch.as_str(), "mips64" | "mips64el")
+    }
+
+    #[inline]
+    pub fn is_systemz_arch(&self) -> bool {
+        matches!(self.arch.as_str(), "systemz" | "s390x")
+    }
+
+    #[inline]
+    pub fn is_loongarch64_arch(&self) -> bool {
+        matches!(self.arch.as_str(), "loongarch64")
+    }
+
+    #[inline]
+    pub fn is_wasm64_arch(&self) -> bool {
+        matches!(self.arch.as_str(), "wasm64")
+    }
+
+    #[inline]
+    pub fn is_avr_arch(&self) -> bool {
+        self.arch.contains("avr")
+    }
+
+    #[inline]
+    pub fn is_arc_arch(&self) -> bool {
+        self.arch.contains("arc")
+    }
+
+    #[inline]
+    pub fn is_csky_arch(&self) -> bool {
+        self.arch.contains("csky")
+    }
+
+    #[inline]
+    pub fn is_arm_family(&self) -> bool {
+        self.arch.contains("arm") || self.arch.contains("aarch64") || self.arch.contains("thumb")
+    }
+
+    #[inline]
+    pub fn is_hexagon_arch(&self) -> bool {
+        self.arch.contains("hexagon")
+    }
+
+    #[inline]
+    pub fn is_msp430_arch(&self) -> bool {
+        self.arch.contains("msp430")
+    }
+
+    #[inline]
+    pub fn is_ppc_arch(&self) -> bool {
+        self.arch.contains("powerpc") || self.arch.contains("ppc")
+    }
+
+    #[inline]
+    pub fn is_sparc_arch(&self) -> bool {
+        self.arch.contains("sparc")
+    }
+
+    #[inline]
+    pub fn is_xcore_arch(&self) -> bool {
+        self.arch.contains("xcore")
+    }
+
+    #[inline]
+    pub fn is_os_aix(&self) -> bool {
+        self.os.contains("aix")
+    }
+
+    #[inline]
+    pub fn is_64_bit(&self) -> bool {
+        self.is_x86_64_arch()
+            || self.is_aarch64_arch()
+            || self.is_wasm64_arch()
+            || self.is_riscv64_arch()
+            || self.is_ppc64_arch()
+            || self.is_mips64_arch()
+            || self.is_systemz_arch()
+            || self.is_loongarch64_arch()
+            || self.arch.contains("64")
+    }
+
+    #[inline]
+    pub fn get_normalized(&self) -> String {
+        format!("{}-{}-{}-{}", self.arch, self.vendor, self.os, self.abi)
+    }
+}
+
+impl LLVMTargetTriple {
+    #[inline]
     pub fn is_object_format_mach_o(&self) -> bool {
         // https://llvm.org/doxygen/Triple_8cpp_source.html
         // https://github.com/llvm/llvm-project/blob/648193e1619f7af68230f6eddc526af542446cd8/llvm/include/llvm/TargetParser/Triple.h#L804
@@ -105,7 +229,7 @@ impl LLVMTargetTriple {
             return false;
         }
 
-        let darwin_os: bool = self.is_os_darwin();
+        let darwin_os: bool = self.is_darwin_os();
 
         let macho_abi: bool = self.abi.eq_ignore_ascii_case("macho")
             || self.abi.ends_with("macho")
@@ -211,10 +335,10 @@ impl LLVMTargetTriple {
             return false;
         }
 
-        let is_systemz: bool = self.arch == "systemz" || self.arch == "s390x";
+        let is_systemz_arch: bool = self.arch == "systemz" || self.arch == "s390x";
         let is_zos: bool = self.os.eq_ignore_ascii_case("zos") || self.os.starts_with("zos");
 
-        if is_systemz && is_zos {
+        if is_systemz_arch && is_zos {
             return false;
         }
 
@@ -240,9 +364,11 @@ impl LLVMTargetTriple {
 
         true
     }
+}
 
+impl LLVMTargetTriple {
     #[inline]
-    pub fn is_os_darwin(&self) -> bool {
+    pub fn is_darwin_os(&self) -> bool {
         // https://llvm.org/doxygen/Triple_8cpp_source.html
         // https://github.com/llvm/llvm-project/blob/648193e1619f7af68230f6eddc526af542446cd8/llvm/include/llvm/TargetParser/Triple.h#L804
 
@@ -263,116 +389,5 @@ impl LLVMTargetTriple {
             || self.os.contains("tvos")
             || self.os.contains("watchos")
             || self.os.contains("xros")
-    }
-
-    #[inline]
-    pub fn is_x86_64(&self) -> bool {
-        matches!(self.arch.as_str(), "x86_64" | "amd64")
-    }
-
-    #[inline]
-    pub fn is_aarch64(&self) -> bool {
-        matches!(
-            self.arch.as_str(),
-            "aarch64" | "arm64" | "aarch64_32" | "aarch64_be"
-        )
-    }
-
-    #[inline]
-    pub fn is_riscv64(&self) -> bool {
-        matches!(self.arch.as_str(), "riscv64" | "riscv64be")
-    }
-
-    #[inline]
-    pub fn is_ppc64(&self) -> bool {
-        matches!(self.arch.as_str(), "ppc64" | "ppc64le" | "powerpc64le")
-    }
-
-    #[inline]
-    pub fn is_mips64(&self) -> bool {
-        matches!(self.arch.as_str(), "mips64" | "mips64el")
-    }
-
-    #[inline]
-    pub fn is_systemz(&self) -> bool {
-        matches!(self.arch.as_str(), "systemz" | "s390x")
-    }
-
-    #[inline]
-    pub fn is_loongarch64(&self) -> bool {
-        matches!(self.arch.as_str(), "loongarch64")
-    }
-
-    #[inline]
-    pub fn is_wasm64(&self) -> bool {
-        matches!(self.arch.as_str(), "wasm64")
-    }
-
-    #[inline]
-    pub fn is_avr(&self) -> bool {
-        self.arch.contains("avr")
-    }
-
-    #[inline]
-    pub fn is_arc(&self) -> bool {
-        self.arch.contains("arc")
-    }
-
-    #[inline]
-    pub fn is_csky(&self) -> bool {
-        self.arch.contains("csky")
-    }
-
-    #[inline]
-    pub fn is_arm_family(&self) -> bool {
-        self.arch.contains("arm") || self.arch.contains("aarch64") || self.arch.contains("thumb")
-    }
-
-    #[inline]
-    pub fn is_hexagon(&self) -> bool {
-        self.arch.contains("hexagon")
-    }
-
-    #[inline]
-    pub fn is_msp430(&self) -> bool {
-        self.arch.contains("msp430")
-    }
-
-    #[inline]
-    pub fn is_ppc(&self) -> bool {
-        self.arch.contains("powerpc") || self.arch.contains("ppc")
-    }
-
-    #[inline]
-    pub fn is_sparc(&self) -> bool {
-        self.arch.contains("sparc")
-    }
-
-    #[inline]
-    pub fn is_xcore(&self) -> bool {
-        self.arch.contains("xcore")
-    }
-
-    #[inline]
-    pub fn is_os_aix(&self) -> bool {
-        self.os.contains("aix")
-    }
-
-    #[inline]
-    pub fn is_64_bit(&self) -> bool {
-        self.is_x86_64()
-            || self.is_aarch64()
-            || self.is_wasm64()
-            || self.is_riscv64()
-            || self.is_ppc64()
-            || self.is_mips64()
-            || self.is_systemz()
-            || self.is_loongarch64()
-            || self.arch.contains("64")
-    }
-
-    #[inline]
-    pub fn get_normalized(&self) -> String {
-        format!("{}-{}-{}-{}", self.arch, self.vendor, self.os, self.abi)
     }
 }

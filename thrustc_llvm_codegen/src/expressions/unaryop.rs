@@ -19,9 +19,9 @@
 
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
+use thrustc_backends::llvm::LLVMBackend;
 use thrustc_entities::UnaryOperation;
 use thrustc_options::CompilerOptions;
-use thrustc_options::backends::llvm::LLVMBackend;
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;

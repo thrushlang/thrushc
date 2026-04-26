@@ -17,13 +17,14 @@
 
 */
 
-
 use inkwell::targets::TargetTriple;
+use thrustc_llvm_target_triple::LLVMTargetTriple;
 
 #[derive(Debug)]
 pub struct LLVMTarget {
     pub arch: String,
     pub target_triple: TargetTriple,
+    pub normalized_target_triple: LLVMTargetTriple,
     pub target_triple_darwin_variant: Option<TargetTriple>,
     pub macos_version: Option<String>,
     pub ios_version: Option<String>,
@@ -36,15 +37,22 @@ impl LLVMTarget {
     }
 
     #[inline]
-    pub fn get_triple(&self) -> &TargetTriple {
+    pub fn get_target_triple(&self) -> &TargetTriple {
         &self.target_triple
     }
 
     #[inline]
-    pub fn get_triple_darwin_variant(&self) -> Option<&TargetTriple> {
-        self.target_triple_darwin_variant.as_ref()
+    pub fn get_normalized_target_triple(&self) -> &LLVMTargetTriple {
+        &self.normalized_target_triple
     }
 
+    #[inline]
+    pub fn get_target_triple_darwin_variant(&self) -> Option<&TargetTriple> {
+        self.target_triple_darwin_variant.as_ref()
+    }
+}
+
+impl LLVMTarget {
     pub fn get_macos_version(&self) -> Option<(u64, u64, u64)> {
         let macos_version: &str = self.macos_version.as_ref()?;
         let mut split: std::str::Split<'_, char> = macos_version.split('.');

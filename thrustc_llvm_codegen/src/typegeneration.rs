@@ -128,11 +128,11 @@ pub fn generate_type<'ctx>(
         },
 
         t if t.is_float_type() => match kind {
-            Type::F32(..) => llvm_context.f32_type().into(),
-            Type::F64(..) => llvm_context.f64_type().into(),
-            Type::F128(..) => llvm_context.f128_type().into(),
-            Type::FX8680(..) => llvm_context.x86_f80_type().into(),
-            Type::FPPC128(..) => llvm_context.ppc_f128_type().into(),
+            Type::F32 { .. } => llvm_context.f32_type().into(),
+            Type::F64 { .. } => llvm_context.f64_type().into(),
+            Type::F128 { .. } => llvm_context.f128_type().into(),
+            Type::FX8680 { .. } => llvm_context.x86_f80_type().into(),
+            Type::FPPC128 { .. } => llvm_context.ppc_f128_type().into(),
 
             Type::Const(any, ..) => self::generate_type(context, any),
 

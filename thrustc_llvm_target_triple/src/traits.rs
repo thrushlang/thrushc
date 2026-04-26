@@ -17,5 +17,7 @@
 
 */
 
-
-pub mod llvm;
+pub trait LLVMTargetTripleSupport {
+    fn support_80_bits_floating_point(&self) -> bool;
+    fn support_128_bits_ppc_floating_point(&self) -> bool;
+}

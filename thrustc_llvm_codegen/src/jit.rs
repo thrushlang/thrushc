@@ -19,7 +19,7 @@
 
 #![allow(clippy::result_unit_err)]
 
-use thrustc_options::backends::llvm::jit::JITConfiguration;
+use thrustc_backends::llvm::jit::JITConfiguration;
 
 use inkwell::execution_engine::ExecutionEngine;
 use inkwell::module::Linkage;

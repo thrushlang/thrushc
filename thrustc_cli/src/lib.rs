@@ -24,26 +24,26 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use colored::Colorize;
+use thrustc_backends::ThrustCodeModel;
+use thrustc_backends::ThrustOptimization;
 use thrustc_core::CompileTime;
 use thrustc_logging::LoggingType;
 use thrustc_logging::OutputIn;
 use thrustc_options::CompilerOptions;
 use thrustc_options::EmitableUnit;
 use thrustc_options::PrintableUnit;
-use thrustc_options::ThrustCodeModel;
-use thrustc_options::ThrustOptimization;
 
 use ahash::AHashMap as HashMap;
 
-use thrustc_options::ThrustRelocMode;
-use thrustc_options::backends::llvm;
-use thrustc_options::backends::llvm::DenormalFloatingPointBehavior;
-use thrustc_options::backends::llvm::DenormalFloatingPointBehavior32BitFloatingPoint;
-use thrustc_options::backends::llvm::Sanitizer;
-use thrustc_options::backends::llvm::SanitizerConfiguration;
-use thrustc_options::backends::llvm::SymbolLinkageMergeStrategy;
-use thrustc_options::backends::llvm::debug::DwarfVersion;
-use thrustc_options::backends::llvm::passes::LLVMModificatorPasses;
+use thrustc_backends::ThrustRelocMode;
+use thrustc_backends::llvm;
+use thrustc_backends::llvm::DenormalFloatingPointBehavior;
+use thrustc_backends::llvm::DenormalFloatingPointBehavior32BitFloatingPoint;
+use thrustc_backends::llvm::Sanitizer;
+use thrustc_backends::llvm::SanitizerConfiguration;
+use thrustc_backends::llvm::SymbolLinkageMergeStrategy;
+use thrustc_backends::llvm::debug::DwarfVersion;
+use thrustc_backends::llvm::passes::LLVMModificatorPasses;
 use thrustc_options::linkage::LinkingCompilersConfiguration;
 
 mod help;

@@ -27,8 +27,8 @@ use thrustc_logging::{self, LoggingType};
 use inkwell::debug_info;
 use inkwell::values::BasicMetadataValueEnum;
 use inkwell::values::MetadataValue;
+use thrustc_backends::llvm::LLVMBackend;
 use thrustc_options::CompilerOptions;
-use thrustc_options::backends::llvm::LLVMBackend;
 
 use thrustc_llvm_target_triple::LLVMTargetTriple;
 
@@ -486,7 +486,7 @@ impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
 
         {
             if let Some(target_triple_darwin_variant) =
-                llvm_backend.get_target().get_triple_darwin_variant()
+                llvm_backend.get_target().get_target_triple_darwin_variant()
             {
                 let code_level: MetadataValue = self
                     .get_codegen_context()

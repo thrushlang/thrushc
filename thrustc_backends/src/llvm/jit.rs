@@ -17,7 +17,6 @@
 
 */
 
-
 #![allow(clippy::result_unit_err)]
 
 use thrustc_logging::{self, LoggingType};
