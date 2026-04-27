@@ -92,12 +92,12 @@ impl<'type_checker> TypeChecker<'type_checker> {
         self.parse_top();
 
         while !self.is_eof() {
-            let node: &Ast = self.peek();
+            let node: &Ast = self.peek_node();
 
             match self.analyze_decl(node) {
                 Ok(()) => (),
                 Err(error) => {
-                    self.add_error(error);
+                    self.add_error_report(error);
 
                     {
                         let context: &mut TypeCheckerControlContext =
@@ -114,27 +114,29 @@ impl<'type_checker> TypeChecker<'type_checker> {
             self.advance();
         }
 
-        for warning in self.warnings.iter() {
-            self.diagnostician
-                .dispatch_diagnostic(warning, thrustc_logging::LoggingType::Warning);
-        }
-
-        if !self.errors.is_empty() || !self.bugs.is_empty() {
-            {
-                for bug in self.bugs.iter() {
-                    self.diagnostician
-                        .dispatch_diagnostic(bug, thrustc_logging::LoggingType::Bug);
-                }
-
-                for error in self.errors.iter() {
-                    self.diagnostician
-                        .dispatch_diagnostic(error, thrustc_logging::LoggingType::Error);
-                }
+        {
+            for warning in self.warnings.iter() {
+                self.diagnostician
+                    .dispatch_diagnostic(warning, thrustc_logging::LoggingType::Warning);
             }
 
-            true
-        } else {
-            false
+            if !self.errors.is_empty() || !self.bugs.is_empty() {
+                {
+                    for bug in self.bugs.iter() {
+                        self.diagnostician
+                            .dispatch_diagnostic(bug, thrustc_logging::LoggingType::Bug);
+                    }
+
+                    for error in self.errors.iter() {
+                        self.diagnostician
+                            .dispatch_diagnostic(error, thrustc_logging::LoggingType::Error);
+                    }
+                }
+
+                true
+            } else {
+                false
+            }
         }
     }
 }
@@ -195,7 +197,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         static_type,
                         value_type,
                         Some(value),
@@ -203,9 +207,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         node.get_span(),
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 self.analyze_expr(value)?;
@@ -226,7 +230,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         const_type,
                         value_type,
                         Some(value),
@@ -234,9 +240,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         node.get_span(),
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 self.analyze_expr(value)?;
@@ -269,7 +275,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                             let control_context: &mut TypeCheckerControlContext =
                                 self.get_mut_control_context();
 
-                            check::check_type_together(
+                            control_context.reset_checking_depth();
+
+                            if let Err(error) = check::check_type_together(
                                 target_type,
                                 from_type,
                                 Some(expr),
@@ -277,9 +285,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                                 metadata,
                                 expr.get_span(),
                                 control_context,
-                            )?;
-
-                            control_context.reset_checking_depth();
+                            ) {
+                                self.add_error_report(error);
+                            }
                         }
 
                         self.analyze_expr(expr)?;
@@ -306,7 +314,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         static_type,
                         value_type,
                         Some(value),
@@ -314,9 +324,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         node.get_span(),
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 self.analyze_expr(value)?;
@@ -337,7 +347,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         const_type,
                         value_type,
                         Some(value),
@@ -345,9 +357,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         node.get_span(),
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 self.analyze_expr(value)?;
@@ -364,7 +376,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 self.get_mut_table().new_local(name, (local_type, *span));
 
                 if local_type.contains_void_type() || local_type.is_void_type() {
-                    self.add_error(CompilationIssue::Error(
+                    self.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                         None,
@@ -395,7 +407,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
-                        check::check_type_together(
+                        control_context.reset_checking_depth();
+
+                        if let Err(error) = check::check_type_together(
                             local_type,
                             &ptr_type,
                             Some(value),
@@ -403,16 +417,18 @@ impl<'type_checker> TypeChecker<'type_checker> {
                             type_metadata,
                             node.get_span(),
                             control_context,
-                        )?;
-
-                        control_context.reset_checking_depth();
+                        ) {
+                            self.add_error_report(error);
+                        }
                     }
                 } else {
                     {
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
-                        check::check_type_together(
+                        control_context.reset_checking_depth();
+
+                        if let Err(error) = check::check_type_together(
                             local_type,
                             local_type,
                             Some(value),
@@ -420,9 +436,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                             type_metadata,
                             node.get_span(),
                             control_context,
-                        )?;
-
-                        control_context.reset_checking_depth();
+                        ) {
+                            self.add_error_report(error);
+                        }
                     }
                 }
 
@@ -471,7 +487,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         &Type::Bool(span),
                         condition.get_value_type()?,
                         Some(condition),
@@ -479,9 +497,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         span,
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 {
@@ -512,7 +530,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         &Type::Bool(condition.get_span()),
                         condition.get_value_type()?,
                         Some(condition),
@@ -520,9 +540,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         span,
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 self.analyze_stmt(block)?;
@@ -553,7 +573,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         &Type::Bool(span),
                         condition.get_value_type()?,
                         Some(condition),
@@ -561,9 +583,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         span,
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 self.analyze_expr(condition)?;
@@ -587,7 +609,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         &Type::Bool(span),
                         condition.get_value_type()?,
                         Some(condition),
@@ -595,9 +619,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         span,
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 if let Some(variable) = variable {
@@ -627,8 +651,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     self.get_type_context().get_current_function_type()
                 else {
                     return Err(CompilationIssue::Error(
-                        CompilationIssueCode::E0020,
-                        "Return statement outside of a function.".into(),
+                        CompilationIssueCode::E0018,
+                        "The expected terminator is outside a function. Reposition inside it."
+                            .into(),
                         None,
                         expr.get_span(),
                     ));
@@ -638,7 +663,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                     let control_context: &mut TypeCheckerControlContext =
                         self.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         return_type,
                         expr.get_value_type()?,
                         Some(expr),
@@ -646,9 +673,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         metadata,
                         function_loc,
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        self.add_error_report(error);
+                    }
                 }
 
                 self.analyze_expr(expr)?;
@@ -670,7 +697,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                         let control_context: &mut TypeCheckerControlContext =
                             self.get_mut_control_context();
 
-                        check::check_type_together(
+                        control_context.reset_checking_depth();
+
+                        if let Err(error) = check::check_type_together(
                             &lhs_pure_type,
                             &rhs_pure_type,
                             Some(value),
@@ -678,9 +707,9 @@ impl<'type_checker> TypeChecker<'type_checker> {
                             metadata,
                             source.get_span(),
                             control_context,
-                        )?;
-
-                        control_context.reset_checking_depth();
+                        ) {
+                            self.add_error_report(error);
+                        }
                     }
                 }
 
@@ -756,7 +785,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
     }
 
     #[inline]
-    fn peek(&self) -> &'type_checker Ast<'type_checker> {
+    fn peek_node(&self) -> &'type_checker Ast<'type_checker> {
         &self.ast[self.position]
     }
 
@@ -768,7 +797,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
 impl TypeChecker<'_> {
     #[inline]
-    fn add_error(&mut self, error: CompilationIssue) {
+    fn add_error_report(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 

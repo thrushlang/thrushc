@@ -40,7 +40,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy)]
 enum Notificator {
-    CommonHelp,
+    CommonError,
     CompilerFrontendBug,
     CompilerBackendBug,
 }
@@ -77,7 +77,7 @@ impl Diagnostician {
                     &self.code,
                     *span,
                     help,
-                    Notificator::CommonHelp,
+                    Notificator::CommonError,
                     logging_type,
                 );
 
@@ -118,7 +118,7 @@ impl Diagnostician {
                     &self.code,
                     *span,
                     help,
-                    Notificator::CommonHelp,
+                    Notificator::CommonError,
                     logging_type,
                 );
 

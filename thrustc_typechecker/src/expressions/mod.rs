@@ -66,7 +66,7 @@ pub fn validate<'type_checker>(
                 || right_type.contains_void_type()
                 || right_type.is_void_type()
             {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -75,7 +75,7 @@ pub fn validate<'type_checker>(
             }
 
             if kind.contains_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -100,7 +100,7 @@ pub fn validate<'type_checker>(
             let expr_type: &Type = node.get_value_type()?;
 
             if expr_type.contains_void_type() || expr_type.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -109,7 +109,7 @@ pub fn validate<'type_checker>(
             }
 
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -124,7 +124,7 @@ pub fn validate<'type_checker>(
             typechecker.analyze_expr(node)?;
 
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -139,14 +139,14 @@ pub fn validate<'type_checker>(
             items, kind, span, ..
         } => {
             if kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "An element is expected for type inference.".into(),
                     None,
                     *span,
                 ));
             } else if kind.contains_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -166,7 +166,9 @@ pub fn validate<'type_checker>(
                     let control_context: &mut TypeCheckerControlContext =
                         typechecker.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         &base_type,
                         item_type,
                         Some(node),
@@ -174,9 +176,9 @@ pub fn validate<'type_checker>(
                         metadata,
                         span,
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        typechecker.add_error_report(error);
+                    }
                 }
 
                 typechecker.analyze_expr(node)?;
@@ -189,14 +191,14 @@ pub fn validate<'type_checker>(
             items, kind, span, ..
         } => {
             if kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "An element is expected for type inference.".into(),
                     None,
                     *span,
                 ));
             } else if kind.contains_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -212,7 +214,7 @@ pub fn validate<'type_checker>(
                 let span: Span = node.get_span();
 
                 if item_type.contains_void_type() || item_type.is_void_type() {
-                    typechecker.add_error(CompilationIssue::Error(
+                    typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -224,7 +226,9 @@ pub fn validate<'type_checker>(
                     let control_context: &mut TypeCheckerControlContext =
                         typechecker.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         &base_type,
                         item_type,
                         Some(node),
@@ -232,9 +236,9 @@ pub fn validate<'type_checker>(
                         metadata,
                         span,
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        typechecker.add_error_report(error);
+                    }
                 }
 
                 typechecker.analyze_expr(node)?;
@@ -249,7 +253,7 @@ pub fn validate<'type_checker>(
             let span: Span = index.get_span();
 
             if !index_type.is_integer_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     format!("Expected integer value, got '{}'.", index_type),
                     None,
@@ -265,7 +269,7 @@ pub fn validate<'type_checker>(
                 || source_type.contains_void_type()
                 || source_type.is_void_type()
             {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -280,7 +284,7 @@ pub fn validate<'type_checker>(
             let source_span: Span = source.get_span();
 
             if !source_type.is_struct_type() && !source_type.is_ptr_struct_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     format!("A structure type was expected within a structure 'struct T' type, or raw typed pointer structure pointer 'ptr[struct T]', got '{}'.", source_type),
                     None,
@@ -291,7 +295,7 @@ pub fn validate<'type_checker>(
             typechecker.analyze_expr(source)?;
 
             if source_type.contains_void_type() || source_type.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -301,7 +305,7 @@ pub fn validate<'type_checker>(
 
             for (ty, (subtype, ..)) in data.iter() {
                 if ty.contains_void_type() || ty.is_void_type() {
-                    typechecker.add_error(CompilationIssue::Error(
+                    typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                         None,
@@ -310,7 +314,7 @@ pub fn validate<'type_checker>(
                 }
 
                 if subtype.contains_void_type() || subtype.is_void_type() {
-                    typechecker.add_error(CompilationIssue::Error(
+                    typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                         None,
@@ -319,7 +323,7 @@ pub fn validate<'type_checker>(
                 }
 
                 if !ty.is_struct_type() && !ty.is_ptr_struct_type() {
-                    typechecker.add_error(CompilationIssue::Error(
+                    typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         "Expected a structure value or pointer to structure value.".into(),
                         None,
@@ -343,7 +347,9 @@ pub fn validate<'type_checker>(
                     let control_context: &mut TypeCheckerControlContext =
                         typechecker.get_mut_control_context();
 
-                    check::check_type_together(
+                    control_context.reset_checking_depth();
+
+                    if let Err(error) = check::check_type_together(
                         target_type,
                         from_type,
                         Some(expr),
@@ -351,15 +357,15 @@ pub fn validate<'type_checker>(
                         metadata,
                         span,
                         control_context,
-                    )?;
-
-                    control_context.reset_checking_depth();
+                    ) {
+                        typechecker.add_error_report(error);
+                    }
                 }
 
                 typechecker.analyze_expr(expr)?;
 
                 if target_type.contains_void_type() || target_type.is_void_type() {
-                    typechecker.add_error(CompilationIssue::Error(
+                    typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                         None,
@@ -368,7 +374,7 @@ pub fn validate<'type_checker>(
                 }
 
                 if from_type.contains_void_type() || from_type.is_void_type() {
-                    typechecker.add_error(CompilationIssue::Error(
+                    typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                         None,
@@ -395,7 +401,7 @@ pub fn validate<'type_checker>(
                 return call::validate(typechecker, *metadata, args, span);
             }
 
-            typechecker.add_error(CompilationIssue::FrontEndBug(
+            typechecker.add_error_report(CompilationIssue::FrontEndBug(
                 "Function not found".into(),
                 "Function could not be found for processing.".into(),
                 *span,
@@ -414,7 +420,7 @@ pub fn validate<'type_checker>(
             ..
         } => {
             if !function_type.is_function_reference_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "Expected  valid function reference for call anonymously.".into(),
                     None,
@@ -435,7 +441,7 @@ pub fn validate<'type_checker>(
             let value_type: &Type = value.get_value_type()?;
 
             if !value_type.is_ptr_like_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
                     format!(
                         "An value with memory address was expected, got '{}'. Try to allocate it.",
@@ -449,7 +455,7 @@ pub fn validate<'type_checker>(
             typechecker.analyze_expr(value)?;
 
             if value_type.contains_void_type() || value_type.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -458,7 +464,7 @@ pub fn validate<'type_checker>(
             }
 
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -487,7 +493,7 @@ pub fn validate<'type_checker>(
             typechecker.analyze_expr(from)?;
 
             if cast_type.contains_void_type() || cast_type.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -496,7 +502,7 @@ pub fn validate<'type_checker>(
             }
 
             if from_type.contains_void_type() || from_type.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -514,7 +520,7 @@ pub fn validate<'type_checker>(
                 let node_type: &Type = node.get_value_type()?;
 
                 if node_type.contains_void_type() || node_type.is_void_type() {
-                    typechecker.add_error(CompilationIssue::Error(
+                    typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                         None,
@@ -524,7 +530,7 @@ pub fn validate<'type_checker>(
             }
 
             if kind.contains_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -539,7 +545,7 @@ pub fn validate<'type_checker>(
             let node_type: &Type = value.get_value_type()?;
 
             if node_type.contains_void_type() || node_type.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -548,7 +554,7 @@ pub fn validate<'type_checker>(
             }
 
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -560,7 +566,7 @@ pub fn validate<'type_checker>(
         }
         Ast::Reference { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -572,7 +578,7 @@ pub fn validate<'type_checker>(
         }
         Ast::Integer { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -584,7 +590,7 @@ pub fn validate<'type_checker>(
         }
         Ast::Boolean { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -596,7 +602,7 @@ pub fn validate<'type_checker>(
         }
         Ast::CString { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -608,7 +614,7 @@ pub fn validate<'type_checker>(
         }
         Ast::CNString { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -620,7 +626,7 @@ pub fn validate<'type_checker>(
         }
         Ast::Float { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -632,7 +638,7 @@ pub fn validate<'type_checker>(
         }
         Ast::NullPtr { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -644,7 +650,7 @@ pub fn validate<'type_checker>(
         }
         Ast::Char { kind, .. } => {
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -658,7 +664,7 @@ pub fn validate<'type_checker>(
             let expr_type: &Type = expr.get_value_type()?;
 
             if expr_type.contains_void_type() || expr_type.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -667,7 +673,7 @@ pub fn validate<'type_checker>(
             }
 
             if kind.contains_void_type() || kind.is_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,

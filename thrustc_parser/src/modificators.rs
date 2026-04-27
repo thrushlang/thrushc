@@ -23,9 +23,9 @@ use thrustc_typesystem::type_modificators::{
     GCCStructureTypeModificator, LLVMStructureTypeModificator, StructureTypeModificator,
 };
 
+use thrustc_ast_modificators::{Modificator, Modificators};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::{atomicord::ThrustAtomicOrdering, threadmode::ThrustThreadMode};
-use thrustc_modificators::{Modificator, Modificators};
 use thrustc_token::traits::TokenExtensions;
 use thrustc_token_type::TokenType;
 

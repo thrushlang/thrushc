@@ -17,7 +17,7 @@ thrustc_parser_context = { path = "../thrustc_parser_context" }
 thrustc_parser_table = { path = "../thrustc_parser_table" }
 thrustc_preprocessor = { path = "../thrustc_preprocessor" }
 thrustc_entities = { path = "../thrustc_entities" }
-thrustc_modificators = { path = "../thrustc_modificators" }
+thrustc_ast_modificators = { path = "../thrustc_ast_modificators" }
 thrustc_mir = { path = "../thrustc_mir" }
 thrustc_frontend_abort = { path = "../thrustc_frontend_abort" }
 thrustc_attributes = { path = "../thrustc_attributes" }

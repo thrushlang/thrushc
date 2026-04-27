@@ -18,10 +18,10 @@
 */
 
 use thrustc_ast::{Ast, NodeId, metadata::LocalMetadata, traits::AstGetType};
+use thrustc_ast_modificators::{Modificators, traits::ModificatorsExtensions};
 use thrustc_attributes::ThrustAttributes;
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
 use thrustc_mir::atomicord::ThrustAtomicOrdering;
-use thrustc_modificators::{Modificators, traits::ModificatorsExtensions};
 use thrustc_parser_context::{
     Position,
     traits::{ControlContextExtensions, TypeContextExtensions},

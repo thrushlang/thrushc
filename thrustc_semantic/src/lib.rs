@@ -17,7 +17,6 @@
 
 */
 
-
 use thrustc_analyzer::Analyzer;
 use thrustc_ast::Ast;
 use thrustc_ast_verifier::AstVerifier;
@@ -34,7 +33,6 @@ pub struct SemanticAnalysis<'semantic_analyzer> {
     attr_checker: AttributeChecker<'semantic_analyzer>,
     scoper: Scoper<'semantic_analyzer>,
     verifier: AstVerifier<'semantic_analyzer>,
-
     linter: Linter<'semantic_analyzer>,
 }
 

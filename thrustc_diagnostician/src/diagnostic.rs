@@ -95,7 +95,7 @@ pub(crate) fn generate_basic(
         if let Some(prev_line) = lines.get(line_idx.saturating_sub(1)) {
             signaler.push_str(&format!(
                 "{:>4} │ {}\n",
-                span.line - 1,
+                span.line.saturating_sub(1),
                 prev_line.bright_black()
             ));
         }
@@ -163,8 +163,12 @@ pub(crate) fn generate(
     let mut signaler: String = String::new();
 
     if line_idx > 0 {
-        if let Some(prev) = lines.get(line_idx - 1) {
-            signaler.push_str(&format!("{:>4} │ {}\n", line_num - 1, prev.bright_black()));
+        if let Some(prev) = lines.get(line_idx.saturating_sub(1)) {
+            signaler.push_str(&format!(
+                "{:>4} │ {}\n",
+                line_num.saturating_sub(1),
+                prev.bright_black()
+            ));
         }
     }
 
@@ -192,8 +196,12 @@ pub(crate) fn generate(
 
     signaler.push_str(&format!(" {}{}\n", notificator, message.bright_yellow()));
 
-    if let Some(next) = lines.get(line_idx + 1) {
-        signaler.push_str(&format!("{:>4} │ {}\n", line_num + 1, next.bright_black()));
+    if let Some(next) = lines.get(line_idx.saturating_add(1)) {
+        signaler.push_str(&format!(
+            "{:>4} │ {}\n",
+            line_num.saturating_add(1),
+            next.bright_black()
+        ));
     }
 
     signaler.push('\n');

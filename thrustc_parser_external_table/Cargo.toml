@@ -15,7 +15,6 @@ either = "1.15.0"
 
 thrustc_preprocessor = { path = "../thrustc_preprocessor" }
 thrustc_entities = { path = "../thrustc_entities" }
-thrustc_modificators = { path = "../thrustc_modificators" }
 thrustc_ast = { path = "../thrustc_ast" }
 thrustc_typesystem = { path = "../thrustc_typesystem" }
 thrustc_errors = { path = "../thrustc_errors" }

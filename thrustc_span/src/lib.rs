@@ -17,8 +17,6 @@
 
 */
 
-use std::fmt::{self, Display};
-
 #[cfg(feature = "fuzz")]
 use arbitrary::Arbitrary;
 
@@ -29,8 +27,8 @@ pub struct Span {
     pub span: (u32, u32),
 }
 
-impl Display for Span {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for Span {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:{}:{}", self.line, self.span.0, self.span.1)
     }
 }

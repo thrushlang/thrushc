@@ -56,7 +56,7 @@ impl<'call_conv_checker> LLVMCallConventionsChecker<'call_conv_checker> {
         Self {
             ast,
             options,
-            errors: Vec::with_capacity(100),
+            errors: Vec::with_capacity(u8::MAX as usize),
             diagnostician: Diagnostician::new(file, options),
         }
     }
@@ -64,8 +64,10 @@ impl<'call_conv_checker> LLVMCallConventionsChecker<'call_conv_checker> {
 
 impl<'call_conv_checker> LLVMCallConventionsChecker<'call_conv_checker> {
     pub fn analyze(&mut self) -> bool {
-        for node in self.ast.iter() {
-            self.visit_node(node);
+        {
+            for node in self.ast.iter() {
+                self.visit_node(node);
+            }
         }
 
         self.verify()
@@ -195,6 +197,10 @@ impl LLVMCallConventionsChecker<'_> {
         const WASM_CALL_CONVENTIONS: &[LLVMCallConvention] =
             &[LLVMCallConvention::WASM_EmscriptenInvoke];
 
+        let formatted_target_triple: String = format!(
+            "{}-{}-{}-{}",
+            target_triple.0, target_triple.1, target_triple.2, target_triple.3
+        );
         let lower_arch: String = target_triple.0.to_lowercase();
         let arch: &str = lower_arch.trim();
 
@@ -205,9 +211,12 @@ impl LLVMCallConventionsChecker<'_> {
                 match arch {
                     arch if arch.contains("x86") => {
                         if !X86_64_CALL_CONVENTIONS.contains(&call_conv) {
-                            self.add_error(CompilationIssue::Error(
+                            self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
-                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                format!(
+                                    "Unsupported calling convention '{}' for target '{}'",
+                                    arch, formatted_target_triple
+                                ),
                                 None,
                                 span,
                             ));
@@ -215,9 +224,12 @@ impl LLVMCallConventionsChecker<'_> {
                     }
                     arch if arch.contains("arm") => {
                         if !ARM_CALL_CONVENTIONS.contains(&call_conv) {
-                            self.add_error(CompilationIssue::Error(
+                            self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
-                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                format!(
+                                    "Unsupported calling convention '{}' for target '{}'",
+                                    arch, formatted_target_triple
+                                ),
                                 None,
                                 span,
                             ));
@@ -225,9 +237,12 @@ impl LLVMCallConventionsChecker<'_> {
                     }
                     arch if arch.contains("riscv") => {
                         if !RISCV_CALL_CONVENTIONS.contains(&call_conv) {
-                            self.add_error(CompilationIssue::Error(
+                            self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
-                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                format!(
+                                    "Unsupported calling convention '{}' for target '{}'",
+                                    arch, formatted_target_triple
+                                ),
                                 None,
                                 span,
                             ));
@@ -235,9 +250,12 @@ impl LLVMCallConventionsChecker<'_> {
                     }
                     arch if arch.contains("aarch64") => {
                         if !AARCH64_CALL_CONVENTIONS.contains(&call_conv) {
-                            self.add_error(CompilationIssue::Error(
+                            self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
-                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                format!(
+                                    "Unsupported calling convention '{}' for target '{}'",
+                                    arch, formatted_target_triple
+                                ),
                                 None,
                                 span,
                             ));
@@ -245,9 +263,12 @@ impl LLVMCallConventionsChecker<'_> {
                     }
                     arch if arch.starts_with("amd") => {
                         if !AMDGPU_CALL_CONVENTIONS.contains(&call_conv) {
-                            self.add_error(CompilationIssue::Error(
+                            self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
-                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                format!(
+                                    "Unsupported calling convention '{}' for target '{}'",
+                                    arch, formatted_target_triple
+                                ),
                                 None,
                                 span,
                             ));
@@ -256,9 +277,12 @@ impl LLVMCallConventionsChecker<'_> {
 
                     arch if arch.contains("wasm") => {
                         if !WASM_CALL_CONVENTIONS.contains(&call_conv) {
-                            self.add_error(CompilationIssue::Error(
+                            self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
-                                format!("This calling convention is not supported on the '{}' current target architecture. Select another one or change the target architecture.", arch),
+                                format!(
+                                    "Unsupported calling convention '{}' for target '{}'",
+                                    arch, formatted_target_triple
+                                ),
                                 None,
                                 span,
                             ));
@@ -283,7 +307,7 @@ impl LLVMCallConventionsChecker<'_> {
 
 impl LLVMCallConventionsChecker<'_> {
     #[inline]
-    fn add_error(&mut self, error: CompilationIssue) {
+    fn add_error_report(&mut self, error: CompilationIssue) {
         self.errors.push(error);
     }
 }

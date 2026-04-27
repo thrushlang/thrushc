@@ -157,7 +157,7 @@ impl<'parser> SymbolTable<'parser> {
                     if self.parameters.contains_key(id) {
                         return Err(CompilationIssue::Error(
                             CompilationIssueCode::E0004,
-                            format!("'{}' parameter was already declared before.", id),
+                            format!("'{}' parameter was declared before.", id),
                             None,
                             *span,
                         ));
@@ -204,7 +204,7 @@ impl<'parser> SymbolTable<'parser> {
         if self.global_statics.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("Static '{}' was already declared before.", id),
+                format!("Static '{}' was declared before.", id),
                 None,
                 span,
             ));
@@ -246,7 +246,7 @@ impl<'parser> SymbolTable<'parser> {
         if self.global_constants.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("Constant '{}' was already declared before.", id),
+                format!("Constant '{}' was declared before.", id),
                 None,
                 span,
             ));
@@ -288,7 +288,7 @@ impl<'parser> SymbolTable<'parser> {
         if self.global_custom_types.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("Type '{}' was already declared before.", id),
+                format!("Type '{}' was declared before.", id),
                 None,
                 span,
             ));
@@ -330,7 +330,7 @@ impl<'parser> SymbolTable<'parser> {
         if self.global_structs.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("Structure '{}' was already declared before.", id),
+                format!("Structure '{}' was declared before.", id),
                 None,
                 span,
             ));
@@ -351,7 +351,7 @@ impl<'parser> SymbolTable<'parser> {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
                     CompilationIssueCode::E0004,
-                    format!("Structure '{}' was already declared before.", id),
+                    format!("Structure '{}' was declared before.", id),
                     None,
                     span,
                 ));
@@ -381,7 +381,7 @@ impl<'parser> SymbolTable<'parser> {
         if self.global_enums.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("Enum '{}' was already declared before.", id),
+                format!("Enum '{}' was declared before.", id),
                 None,
                 span,
             ));
@@ -402,7 +402,7 @@ impl<'parser> SymbolTable<'parser> {
             if last_scope.contains_key(id) {
                 return Err(CompilationIssue::Error(
                     CompilationIssueCode::E0004,
-                    format!("Enum '{}' was already declared before.", id),
+                    format!("Enum '{}' was declared before.", id),
                     None,
                     span,
                 ));
@@ -432,7 +432,7 @@ impl<'parser> SymbolTable<'parser> {
         if self.asm_functions.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' assembler function was already declared before.", id),
+                format!("'{}' assembler function was declared before.", id),
                 None,
                 span,
             ));
@@ -452,7 +452,7 @@ impl<'parser> SymbolTable<'parser> {
         if self.functions.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' function was already declared before.", id),
+                format!("'{}' function was declared before.", id),
                 None,
                 span,
             ));
@@ -472,7 +472,7 @@ impl<'parser> SymbolTable<'parser> {
         if self.intrinsics.contains_key(id) {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0004,
-                format!("'{}' intrinsic was already declared before.", id),
+                format!("'{}' intrinsic was declared before.", id),
                 None,
                 span,
             ));
@@ -946,7 +946,7 @@ impl<'parser> SymbolTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("Local '{}' not found in this scope.", local_id),
+            format!("Variable '{}' not found in this scope.", local_id),
             None,
             span,
         ))

@@ -45,7 +45,7 @@ pub fn validate<'type_checker>(
     let var_args: bool = attributes.has_ignore_attribute();
 
     if return_type.contains_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -54,7 +54,7 @@ pub fn validate<'type_checker>(
     }
 
     if parameter_types.iter().any(|ty| ty.contains_void_type()) {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -63,7 +63,7 @@ pub fn validate<'type_checker>(
     }
 
     if required_count != provided_count && !var_args {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0022,
             format!(
                 "Expected arguments total '{}', not '{}'. You should try to fill it in.",
@@ -79,7 +79,7 @@ pub fn validate<'type_checker>(
             .collect::<Vec<_>>()
             .join(", ");
 
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0023,
             format!(
                 "Arguments were expected in the order '{}'. You must reorder it.",
@@ -102,7 +102,9 @@ pub fn validate<'type_checker>(
                 let control_context: &mut TypeCheckerControlContext =
                     typechecker.get_mut_control_context();
 
-                check::check_type_together(
+                control_context.reset_checking_depth();
+
+                if let Err(error) = check::check_type_together(
                     target_type,
                     from_type,
                     Some(expr),
@@ -110,9 +112,9 @@ pub fn validate<'type_checker>(
                     expr_metadata,
                     expr.get_span(),
                     control_context,
-                )?;
-
-                control_context.reset_checking_depth();
+                ) {
+                    typechecker.add_error_report(error);
+                }
             }
         }
     }

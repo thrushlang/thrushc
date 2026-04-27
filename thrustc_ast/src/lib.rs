@@ -20,8 +20,8 @@
 use std::sync::atomic::AtomicU64;
 
 use thrustc_ast_external::ExternalSymbol;
+use thrustc_ast_modificators::Modificators;
 use thrustc_attributes::ThrustAttributes;
-use thrustc_modificators::Modificators;
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;

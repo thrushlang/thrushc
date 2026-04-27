@@ -1,5 +1,5 @@
 [package]
-name = "thrustc_modificators"
+name = "thrustc_ast_modificators"
 description.workspace = true
 edition.workspace = true
 license.workspace = true

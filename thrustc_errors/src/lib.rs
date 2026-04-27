@@ -132,7 +132,7 @@ pub enum CompilationIssueCode {
     E0015, // Terminator declared before.
     E0016, // Invalid Scope Position.
     E0017, // Loop Control Flow outside of a loop
-    E0018, // Function terminator outside of function.
+    E0018, // NoSense Statatemt
     E0019, // Type Error
     E0020, // Mismatched Types
     E0021, // Mismatched attributes
@@ -219,10 +219,7 @@ impl CompilationIssueCode {
             CompilationIssueCode::E0017 => {
                 format!("LOOP CONTROL FLOW OUTSIDE LOOP - {}", "E0017".bright_red())
             }
-            CompilationIssueCode::E0018 => format!(
-                "FUNCTION TERMINATOR OUTSIDE FUNCTION - {}",
-                "E0018".bright_red()
-            ),
+            CompilationIssueCode::E0018 => format!("NOSENSE STATEMENT - {}", "E0018".bright_red()),
             CompilationIssueCode::E0019 => format!("TYPE ERROR - {}", "E0019".bright_red()),
             CompilationIssueCode::E0020 => format!("MISMATCHED TYPES - {}", "E0020".bright_red()),
             CompilationIssueCode::E0021 => {

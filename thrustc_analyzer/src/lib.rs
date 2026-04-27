@@ -115,7 +115,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                 if parameters.len() > 12 {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0036,
-                        "Too many parameters for the assembler function. Package them in structures or use them through pointers.".into(),
+                        "Too many arguments for a single function signature.".into(),
                         None,
                         *span,
                     ));
@@ -130,10 +130,10 @@ impl<'analyzer> Analyzer<'analyzer> {
                 span,
                 ..
             } => {
-                if parameters.len() > 12 {
+                if parameters.len() > 8 {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0036,
-                        "Too many parameters for the function. Package them in structures or use them through pointers.".into(),
+                        "Too many arguments for a single function signature.".into(),
                         None,
                         *span,
                     ));
@@ -150,7 +150,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                 if self.get_context().has_global_assembler() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0005,
-                        "Global assembler is already defined before. One per file is expected. Remove one.".into(),
+                        "Multiple global assembler inyection are not allowed.".into(),
                         None,
                         *span,
                     ));
@@ -169,8 +169,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                         if !expr.is_constant_value() {
                             self.add_error(CompilationIssue::Error(
                                 CompilationIssueCode::E0006,
-                                "Expected a valid constant value or reference to a constant value."
-                                    .into(),
+                                "Expected constant expression.".into(),
                                 None,
                                 span,
                             ));
@@ -189,8 +188,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                     if !value.is_constant_value() {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0006,
-                            "Expected a valid constant value or reference to a constant value."
-                                .into(),
+                            "Expected constant expression.".into(),
                             None,
                             span,
                         ));
@@ -207,7 +205,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                 if !value.is_constant_value() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0006,
-                        "Expected a valid constant value or reference to a constant value.".into(),
+                        "Expected constant expression.".into(),
                         None,
                         span,
                     ));
@@ -232,8 +230,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                         if !expr.is_constant_value() {
                             self.add_error(CompilationIssue::Error(
                                 CompilationIssueCode::E0006,
-                                "Expected a valid constant value or reference to a constant value."
-                                    .into(),
+                                "Expected constant expression.".into(),
                                 None,
                                 span,
                             ));
@@ -250,8 +247,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                     if !value.is_constant_value() {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0006,
-                            "Expected a valid constant value or reference to a constant value."
-                                .into(),
+                            "Expected constant expression.".into(),
                             None,
                             value.get_span(),
                         ));
@@ -268,7 +264,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                 if !value.is_constant_value() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0006,
-                        "Expected a valid constant value or reference to a constant value.".into(),
+                        "Expected constant expression.".into(),
                         None,
                         span,
                     ));

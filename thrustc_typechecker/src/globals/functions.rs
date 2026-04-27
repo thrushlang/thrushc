@@ -51,7 +51,7 @@ pub fn validate<'type_checker>(
             }
 
             if return_type.contains_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -65,7 +65,7 @@ pub fn validate<'type_checker>(
                     let span: Span = node.get_span();
 
                     if type_.contains_void_type() || type_.is_void_type() {
-                        typechecker.add_error(CompilationIssue::Error(
+                        typechecker.add_error_report(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
                             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                             None,
@@ -93,7 +93,7 @@ pub fn validate<'type_checker>(
             }
 
             if return_type.contains_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -107,7 +107,7 @@ pub fn validate<'type_checker>(
                     let span: Span = node.get_span();
 
                     if type_.contains_void_type() || type_.is_void_type() {
-                        typechecker.add_error(CompilationIssue::Error(
+                        typechecker.add_error_report(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
                             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                             None,
@@ -146,7 +146,7 @@ pub fn validate<'type_checker>(
                     let span: Span = node.get_span();
 
                     if type_.contains_void_type() || type_.is_void_type() {
-                        typechecker.add_error(CompilationIssue::Error(
+                        typechecker.add_error_report(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
                             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                             None,
@@ -157,7 +157,7 @@ pub fn validate<'type_checker>(
             }
 
             if return_type.contains_void_type() {
-                typechecker.add_error(CompilationIssue::Error(
+                typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
                     None,
@@ -169,7 +169,7 @@ pub fn validate<'type_checker>(
                 typechecker.analyze_stmt(body)?;
 
                 if !body.has_terminator() && !return_type.is_void_type() {
-                    typechecker.add_error(CompilationIssue::Error(
+                    typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         format!("Expected return with type '{}'.", return_type),
                         None,

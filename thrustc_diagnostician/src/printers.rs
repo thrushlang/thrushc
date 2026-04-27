@@ -17,7 +17,6 @@
 
 */
 
-
 use crate::diagnostic::Diagnostic;
 use crate::errors::BackendError;
 use crate::errors::Error;
@@ -88,16 +87,8 @@ pub fn print_compiler_frontend_bug(diagnostic: &Diagnostic, error: FrontendError
     let code: &str = diagnostic.get_code();
     let signaler: &str = diagnostic.get_signaler();
 
-    let line: usize = diagnostic
-        .get_span()
-        .get_line()
-        .try_into()
-        .unwrap_or_default();
-    let start: usize = diagnostic
-        .get_span()
-        .get_span_start()
-        .try_into()
-        .unwrap_or_default();
+    let line: u32 = diagnostic.get_span().get_line();
+    let start: u32 = diagnostic.get_span().get_span_start();
 
     thrustc_logging::write(
         OutputIn::Stderr,
@@ -153,16 +144,8 @@ pub fn print_compiler_backend_bug(diagnostic: &Diagnostic, error: BackendError<'
     let code: &str = diagnostic.get_code();
     let signaler: &str = diagnostic.get_signaler();
 
-    let line: usize = diagnostic
-        .get_span()
-        .get_line()
-        .try_into()
-        .unwrap_or_default();
-    let start: usize = diagnostic
-        .get_span()
-        .get_span_start()
-        .try_into()
-        .unwrap_or_default();
+    let line: u32 = diagnostic.get_span().get_line();
+    let start: u32 = diagnostic.get_span().get_span_start();
 
     thrustc_logging::write(
         OutputIn::Stderr,

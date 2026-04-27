@@ -81,7 +81,7 @@ pub fn validate<'analyzer>(
             if source.is_reference() && !source.is_memory_assigned_value()? {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0007,
-                    "An reference with memory address was expected. Try to allocate it.".into(),
+                    "An reference with memory address was expected.".into(),
                     None,
                     source.get_span(),
                 ));
@@ -93,7 +93,7 @@ pub fn validate<'analyzer>(
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
                     format!(
-                        "An value with memory address was expected, got '{}'. Try to allocate it.",
+                        "An value with memory address was expected, got '{}'.",
                         source_type
                     ),
                     None,
@@ -141,7 +141,7 @@ pub fn validate<'analyzer>(
             if expr.is_reference() && !expr.is_memory_assigned_value()? {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0007,
-                    "An reference with memory address was expected. Try to allocate it.".into(),
+                    "An reference with memory address was expected.".into(),
                     None,
                     *span,
                 ));
@@ -149,7 +149,7 @@ pub fn validate<'analyzer>(
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
                     format!(
-                        "An value with memory address was expected, got '{}'. Try to allocate it.",
+                        "An value with memory address was expected, got '{}'.",
                         expr_type
                     ),
                     None,

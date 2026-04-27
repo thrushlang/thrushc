@@ -84,7 +84,7 @@ impl<'scoper> Scoper<'scoper> {
         if !node.is_declaration_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
-                "This expression, statement, or declaration should not be in the main scope. It should be in a local scope. Reposition it.".into(),
+                "Statements and expressions are not allowed at module scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -105,7 +105,7 @@ impl<'scoper> Scoper<'scoper> {
         if node.is_function_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
-                "This function should not be in a local scope. It should be in the main scope. Reposition it.".into(),
+                "Function is only allowed at module scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -114,7 +114,7 @@ impl<'scoper> Scoper<'scoper> {
         if node.is_asm_function() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
-                "This assembler function should not be in a local scope. It should be in the main scope. Reposition it.".into(),
+                "Assembler function is only allowed at module scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -123,7 +123,7 @@ impl<'scoper> Scoper<'scoper> {
         if node.is_type_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
-                "This type should not be in a local scope. It should be in the main scope. Reposition it.".into(),
+                "Type is only allowed at module scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -132,7 +132,7 @@ impl<'scoper> Scoper<'scoper> {
         if node.is_global_asm_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
-                "This global module assembler should not be in a local scope. It should be in the main scope. Reposition it.".into(),
+                "Global assembler is only allowed at module scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -141,7 +141,7 @@ impl<'scoper> Scoper<'scoper> {
         if node.is_enum_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
-                "This enumeration should not be in a local scope. It should be in the main scope. Reposition it.".into(),
+                "Enum is only allowed at module scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -150,7 +150,7 @@ impl<'scoper> Scoper<'scoper> {
         if node.is_import_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
-                "This module import should not be in a local scope. It should be in the main scope. Reposition it.".into(),
+                "Module importation is only allowed at module scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -159,7 +159,7 @@ impl<'scoper> Scoper<'scoper> {
         if node.is_intrinsic_keyword() {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
-                "This compiler intrinsic should not be in a local scope. It should be in the main scope. Reposition it.".into(),
+                "Compiler intrinsic is only allowed at module scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -225,21 +225,19 @@ impl<'scoper> Scoper<'scoper> {
             | Ast::Break { .. }
             | Ast::BreakAll { .. } => {
                 if !self.get_context().is_inside_loop() {
-                    self.add_error(
-                        CompilationIssue::Error(
-                            CompilationIssueCode::E0017,
-                            "Only loop controlers can be inside a loop. The instruction inside a loop was expected. Reposition it inside a loop.".into(),
-                            None,
-                            node.get_span(),
-                        )
-                    );
+                    self.add_error(CompilationIssue::Error(
+                        CompilationIssueCode::E0018,
+                        "Loop control statement outside of a loop.".into(),
+                        None,
+                        node.get_span(),
+                    ));
                 }
             }
             Ast::Return { span, .. } => {
                 if !self.get_context().is_inside_function() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0018,
-                        "Expected function terminator inside of a function. Reposition it.".into(),
+                        "Terminator statement outside of a function.".into(),
                         None,
                         *span,
                     ));

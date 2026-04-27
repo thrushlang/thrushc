@@ -76,7 +76,7 @@ pub fn validate_memmove<'type_checker>(
     let size_span: Span = size.get_span();
 
     if source_type.contains_void_type() || source_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -85,7 +85,7 @@ pub fn validate_memmove<'type_checker>(
     }
 
     if destination_type.contains_void_type() || destination_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -94,7 +94,7 @@ pub fn validate_memmove<'type_checker>(
     }
 
     if size_type.contains_void_type() || size_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -103,7 +103,7 @@ pub fn validate_memmove<'type_checker>(
     }
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             format!(
                 "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', got '{}' type.",
@@ -115,7 +115,7 @@ pub fn validate_memmove<'type_checker>(
     }
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             format!(
                 "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', got '{}' type.",
@@ -127,7 +127,7 @@ pub fn validate_memmove<'type_checker>(
     }
 
     if !size_type.is_unsigned_integer_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
@@ -158,7 +158,7 @@ pub fn validate_memcpy<'type_checker>(
     let size_span: Span = size.get_span();
 
     if source_type.contains_void_type() || source_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -167,7 +167,7 @@ pub fn validate_memcpy<'type_checker>(
     }
 
     if destination_type.contains_void_type() || destination_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -176,7 +176,7 @@ pub fn validate_memcpy<'type_checker>(
     }
 
     if size_type.contains_void_type() || size_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -185,7 +185,7 @@ pub fn validate_memcpy<'type_checker>(
     }
 
     if !source_type.is_ptr_type() && !source_type.is_address_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             format!(
                 "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', got '{}' type.",
@@ -197,7 +197,7 @@ pub fn validate_memcpy<'type_checker>(
     }
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr'.".into(),
             None,
@@ -206,7 +206,7 @@ pub fn validate_memcpy<'type_checker>(
     }
 
     if size_type.is_unsigned_integer_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
@@ -237,7 +237,7 @@ pub fn validate_memset<'type_checker>(
     let size_span: Span = size.get_span();
 
     if destination_type.contains_void_type() || destination_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -246,7 +246,7 @@ pub fn validate_memset<'type_checker>(
     }
 
     if new_size_type.contains_void_type() || new_size_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -255,7 +255,7 @@ pub fn validate_memset<'type_checker>(
     }
 
     if size_type.contains_void_type() || size_type.is_void_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
             None,
@@ -264,7 +264,7 @@ pub fn validate_memset<'type_checker>(
     }
 
     if !destination_type.is_ptr_type() && !destination_type.is_address_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             format!(
                 "Expected raw typed pointer 'ptr[T]', raw pointer 'ptr', got '{}' type.",
@@ -276,7 +276,7 @@ pub fn validate_memset<'type_checker>(
     }
 
     if !new_size_type.is_unsigned_integer_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             format!(
                 "Expected unsigned integer type, got '{}' type.",
@@ -288,7 +288,7 @@ pub fn validate_memset<'type_checker>(
     }
 
     if !size_type.is_unsigned_integer_type() {
-        typechecker.add_error(CompilationIssue::Error(
+        typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
             format!("Expected unsigned integer type, got '{}' type.", size_type),
             None,
