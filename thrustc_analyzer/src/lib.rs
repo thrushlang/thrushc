@@ -116,6 +116,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0036,
                         "Too many arguments for a single function signature.".into(),
+                        "You should pass them through pointers".into(),
                         None,
                         *span,
                     ));
@@ -134,6 +135,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0036,
                         "Too many arguments for a single function signature.".into(),
+                        "You should pass them through pointers".into(),
                         None,
                         *span,
                     ));
@@ -151,6 +153,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0005,
                         "Multiple global assembler inyection are not allowed.".into(),
+                        "Remove all; keep one.".into(),
                         None,
                         *span,
                     ));
@@ -170,6 +173,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                             self.add_error(CompilationIssue::Error(
                                 CompilationIssueCode::E0006,
                                 "Expected constant expression.".into(),
+                                "You should pass a constant expression".into(),
                                 None,
                                 span,
                             ));
@@ -189,6 +193,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0006,
                             "Expected constant expression.".into(),
+                            "You should pass a constant expression".into(),
                             None,
                             span,
                         ));
@@ -206,6 +211,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0006,
                         "Expected constant expression.".into(),
+                        "You should pass a constant expression".into(),
                         None,
                         span,
                     ));
@@ -231,6 +237,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                             self.add_error(CompilationIssue::Error(
                                 CompilationIssueCode::E0006,
                                 "Expected constant expression.".into(),
+                                "You should pass a constant expression".into(),
                                 None,
                                 span,
                             ));
@@ -248,6 +255,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0006,
                             "Expected constant expression.".into(),
+                            "You should pass a constant expression".into(),
                             None,
                             value.get_span(),
                         ));
@@ -265,6 +273,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0006,
                         "Expected constant expression.".into(),
+                        "You should pass a constant expression".into(),
                         None,
                         span,
                     ));
@@ -370,7 +379,8 @@ impl<'analyzer> Analyzer<'analyzer> {
                 if source.is_reference() && !source.is_memory_assigned_value()? {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0007,
-                        "An reference with memory address was expected. Try to allocate it.".into(),
+                        "An reference with memory address was expected.".into(),
+                        "You should try to allocate it and pass it as a direct reference.".into(),
                         None,
                         source.get_span(),
                     ));
@@ -381,10 +391,8 @@ impl<'analyzer> Analyzer<'analyzer> {
                 {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0008,
-                        format!(
-                            "An value with memory address was expected, got '{}'. Try to allocate it.",
-                            source_type
-                        ),
+                        "An value with memory address was expected".into(),
+                        "You should try to allocate it and pass it as a direct reference.".into(),
                         None,
                         source.get_span(),
                     ));
@@ -396,7 +404,8 @@ impl<'analyzer> Analyzer<'analyzer> {
                             if metadata.is_static_ref() && !metadata.is_mutable() {
                                 self.add_error(CompilationIssue::Error(
                                     CompilationIssueCode::E0038,
-                                    "It is missing mutability; you should mark it as mutable using 'mut.'".into(),
+                                    "Missing mutability.'".into(),
+                                    "You should mark it as mutable using 'mut keyword".into(),
                                     None,
                                     source.get_span(),
                                 ));

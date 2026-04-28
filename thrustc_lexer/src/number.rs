@@ -33,6 +33,7 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilation
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             "Floating-point number only expects a one decimal marker.".into(),
+            "You should delete the extra dot.".into(),
             None,
             span,
         ));
@@ -45,6 +46,7 @@ pub fn check_float_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilation
     Err(CompilationIssue::Error(
         CompilationIssueCode::E0001,
         "Literal is too large to be represented in a standard float-point type.".into(),
+        "You can shorten it.".into(),
         None,
         span,
     ))
@@ -84,6 +86,7 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilati
         Ok(_) => Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             "Literal is too large to be represented in a integer type.".into(),
+            "You can shorten it.".into(),
             None,
             span,
         )),
@@ -99,12 +102,14 @@ pub fn check_integer_format(lexer: &Lexer, lexeme: &str) -> Result<(), Compilati
             Ok(_) => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Literal is too large to be represented in a integer type.".into(),
+                "You can shorten it.".into(),
                 None,
                 span,
             )),
             Err(_) => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Literal is too large to be represented in a integer type.".into(),
+                "You can shorten it.".into(),
                 None,
                 span,
             )),
@@ -139,6 +144,7 @@ fn check_integer_radix_format(
         Ok(_) => Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             format!("Integer out of bounds signed {} format.", prefix_name),
+            "You can shorten it.".into(),
             None,
             span,
         )),
@@ -149,12 +155,14 @@ fn check_integer_radix_format(
             Ok(_) => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 format!("Integer out of bounds unsigned {} format.", prefix_name),
+                "You can shorten it.".into(),
                 None,
                 span,
             )),
             Err(_) => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 format!("Integer invalid {} format.", prefix_name),
+                format!("It is not in {} format.", prefix_name),
                 None,
                 span,
             )),
@@ -174,6 +182,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Integer hexadecimal prefix '0x' cannot be repeated.".into(),
+                "Remove it.".into(),
                 None,
                 Span::new(lexer.span()),
             ));
@@ -185,6 +194,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Integer binary prefix '0b' cannot be repeated.".into(),
+                "Remove it.".into(),
                 None,
                 Span::new(lexer.span()),
             ));
@@ -196,6 +206,7 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Integer octal prefix '0o' cannot be repeated.".into(),
+                "Remove it.".into(),
                 None,
                 Span::new(lexer.span()),
             ));

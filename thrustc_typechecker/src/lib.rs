@@ -378,7 +378,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 if local_type.contains_void_type() || local_type.is_void_type() {
                     self.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                        "Cannot use 'void' as a value.".into(),
+                        "You should remove whatever type or value where void type belongs.".into(),
                         None,
                         *span,
                     ));
@@ -652,8 +653,8 @@ impl<'type_checker> TypeChecker<'type_checker> {
                 else {
                     return Err(CompilationIssue::Error(
                         CompilationIssueCode::E0018,
-                        "The expected terminator is outside a function. Reposition inside it."
-                            .into(),
+                        "Terminator is outside a function.".into(),
+                        "It should be inside a function. Reposition inside it.".into(),
                         None,
                         expr.get_span(),
                     ));

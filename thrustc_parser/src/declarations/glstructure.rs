@@ -125,11 +125,8 @@ pub fn build_structure<'parser>(
     )?;
 
     if parse_forward {
-        ctx.get_mut_symbols().new_global_struct(
-            name,
-            (name, data.1, attributes, modificator, span),
-            span,
-        )?;
+        ctx.get_mut_symbols()
+            .new_global_struct(name, (name, data.1, attributes, modificator, span))?;
 
         Ok(Ast::new_nullptr(span))
     } else {

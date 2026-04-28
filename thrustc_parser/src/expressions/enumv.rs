@@ -74,7 +74,9 @@ pub fn build_enum_value<'parser>(
                         None => {
                             ctx.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0028,
-                                format!("'{}' not found as field member.", field_name),
+                                "Unknown field.".into(),
+                                "You should make sure that it existion in the enum definition."
+                                    .into(),
                                 None,
                                 field_span,
                             ));

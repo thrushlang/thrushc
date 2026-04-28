@@ -96,7 +96,9 @@ pub fn build_constructor<'parser>(
                             if !object.contains_field(field_name) {
                                 ctx.add_error_report(CompilationIssue::Error(
                                     CompilationIssueCode::E0001,
-                                    "Expected existing field name.".into(),
+                                    "Unknown field.".into(),
+                                    "You should make sure that it exist in the structure type"
+                                        .into(),
                                     None,
                                     field_span,
                                 ));
@@ -111,6 +113,7 @@ pub fn build_constructor<'parser>(
                                         "Expected '{}' fields, not '{}' fields.",
                                         required, count
                                     ),
+                                    "You should reorder it and fill it out.".into(),
                                     None,
                                     span,
                                 ));
@@ -167,6 +170,7 @@ pub fn build_constructor<'parser>(
                                 "Expected '{}' arguments, but '{}' was gived.",
                                 required, provided
                             ),
+                            "You fill it out.".into(),
                             None,
                             span,
                         ));

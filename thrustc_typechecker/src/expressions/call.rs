@@ -47,7 +47,8 @@ pub fn validate<'type_checker>(
     if return_type.contains_void_type() {
         typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
-            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            "Cannot use 'void' as a value.".into(),
+            "You should remove whatever type or value where void type belongs.".into(),
             None,
             *span,
         ));
@@ -56,7 +57,8 @@ pub fn validate<'type_checker>(
     if parameter_types.iter().any(|ty| ty.contains_void_type()) {
         typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0019,
-            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+            "Cannot use 'void' as a value.".into(),
+            "You should remove whatever type or value where void type belongs.".into(),
             None,
             *span,
         ));
@@ -66,9 +68,10 @@ pub fn validate<'type_checker>(
         typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0022,
             format!(
-                "Expected arguments total '{}', not '{}'. You should try to fill it in.",
+                "Expected arguments total '{}', not '{}'.",
                 required_count, provided_count
             ),
+            "You should try to filling it out using the equals type.".into(),
             None,
             *span,
         ));
@@ -81,10 +84,8 @@ pub fn validate<'type_checker>(
 
         typechecker.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0023,
-            format!(
-                "Arguments were expected in the order '{}'. You must reorder it.",
-                expected_types
-            ),
+            format!("Arguments were expected in the order '{}'.", expected_types),
+            "You should reorder it equals to its type.".into(),
             None,
             *span,
         ));

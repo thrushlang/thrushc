@@ -65,7 +65,7 @@ pub fn build_custom_type<'parser>(
 
     if parse_forward {
         ctx.get_mut_symbols()
-            .new_global_custom_type(name, (custom_type, attributes), span)?;
+            .new_global_custom_type(name, (custom_type, attributes))?;
 
         Ok(Ast::new_nullptr(span))
     } else {

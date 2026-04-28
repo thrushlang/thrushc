@@ -39,6 +39,7 @@ pub fn validate_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Compil
                 "'{}{}' isn't a valid arithmetic or logical operation.",
                 op, a
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -54,6 +55,7 @@ fn validate_not_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Compil
     Err(CompilationIssue::Error(
         CompilationIssueCode::E0030,
         format!("'{}{}' isn't a logical valid operation.", op, a),
+        "It doesn't follow any rule, you should remove or change it.".into(),
         None,
         span,
     ))
@@ -68,6 +70,7 @@ fn validate_general_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Co
     Err(CompilationIssue::Error(
         CompilationIssueCode::E0030,
         format!("'{}{}' isn't a valid arithmetic operation.", op, a),
+        "It doesn't follow any rule, you should remove or change it.".into(),
         None,
         span,
     ))
@@ -82,6 +85,7 @@ fn validate_bang_unary(op: &TokenType, a: &Type, span: Span) -> Result<(), Compi
     Err(CompilationIssue::Error(
         CompilationIssueCode::E0030,
         format!("'{}{}' isn't a valid logical operation.", op, a),
+        "It doesn't follow any rule, you should remove or change it.".into(),
         None,
         span,
     ))

@@ -26,6 +26,7 @@ pub fn floating_point(lexeme: &str, span: Span) -> Result<(Type, f64), Compilati
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             "Floating-point number only expects a one decimal marker.".into(),
+            "You should delete the extra dot.".into(),
             None,
             span,
         ))
@@ -39,6 +40,7 @@ pub fn floating_point(lexeme: &str, span: Span) -> Result<(Type, f64), Compilati
                     CompilationIssueCode::E0001,
                     "Literal is too large to be represented in a standard floating-point type."
                         .into(),
+                    "You can shorten it.".into(),
                     None,
                     span,
                 )
@@ -68,6 +70,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
             _ => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Literal is too large to be represented in a integer type.".into(),
+                "You can shorten it.".into(),
                 None,
                 span,
             )),
@@ -84,6 +87,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
             _ => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Literal is too large to be represented in a integer type.".into(),
+                "You can shorten it.".into(),
                 None,
                 span,
             )),
@@ -134,6 +138,16 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
                     "binary"
                 }
             ),
+            format!(
+                "It is not in {} format.",
+                if hexadecimal {
+                    "hexadecimal"
+                } else if octal {
+                    "octal"
+                } else {
+                    "binary"
+                }
+            ),
             None,
             span,
         ))
@@ -148,6 +162,7 @@ pub fn integer(lexeme: &str, span: Span) -> Result<(Type, u64), CompilationIssue
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             "Literal is too large to be represented in a integer type.".into(),
+            "You can shorten it.".into(),
             None,
             span,
         ))

@@ -85,6 +85,7 @@ impl<'scoper> Scoper<'scoper> {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "Statements and expressions are not allowed at module scope.".into(),
+                "Remove it from this scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -106,6 +107,7 @@ impl<'scoper> Scoper<'scoper> {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "Function is only allowed at module scope.".into(),
+                "Remove it from this scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -115,6 +117,7 @@ impl<'scoper> Scoper<'scoper> {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "Assembler function is only allowed at module scope.".into(),
+                "Remove it from this scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -124,6 +127,7 @@ impl<'scoper> Scoper<'scoper> {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "Type is only allowed at module scope.".into(),
+                "Remove it from this scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -133,6 +137,7 @@ impl<'scoper> Scoper<'scoper> {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "Global assembler is only allowed at module scope.".into(),
+                "Remove it from this scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -142,6 +147,7 @@ impl<'scoper> Scoper<'scoper> {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "Enum is only allowed at module scope.".into(),
+                "Remove it from this scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -151,6 +157,7 @@ impl<'scoper> Scoper<'scoper> {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "Module importation is only allowed at module scope.".into(),
+                "Remove it from this scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -160,6 +167,7 @@ impl<'scoper> Scoper<'scoper> {
             self.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0016,
                 "Compiler intrinsic is only allowed at module scope.".into(),
+                "Remove it from this scope.".into(),
                 None,
                 node.get_span(),
             ));
@@ -228,6 +236,7 @@ impl<'scoper> Scoper<'scoper> {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0018,
                         "Loop control statement outside of a loop.".into(),
+                        "It should be inside a loop. Reposition inside it.".into(),
                         None,
                         node.get_span(),
                     ));
@@ -237,7 +246,8 @@ impl<'scoper> Scoper<'scoper> {
                 if !self.get_context().is_inside_function() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0018,
-                        "Terminator statement outside of a function.".into(),
+                        "Terminator is outside a function.".into(),
+                        "It should be inside a function. Reposition inside it.".into(),
                         None,
                         *span,
                     ));

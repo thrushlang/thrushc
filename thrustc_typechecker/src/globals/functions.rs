@@ -53,7 +53,8 @@ pub fn validate<'type_checker>(
             if return_type.contains_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     return_type.get_span(),
                 ));
@@ -67,7 +68,9 @@ pub fn validate<'type_checker>(
                     if type_.contains_void_type() || type_.is_void_type() {
                         typechecker.add_error_report(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
-                            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                            "Cannot use 'void' as a value.".into(),
+                            "You should remove whatever type or value where void type belongs."
+                                .into(),
                             None,
                             span,
                         ));
@@ -95,7 +98,8 @@ pub fn validate<'type_checker>(
             if return_type.contains_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     return_type.get_span(),
                 ));
@@ -109,7 +113,9 @@ pub fn validate<'type_checker>(
                     if type_.contains_void_type() || type_.is_void_type() {
                         typechecker.add_error_report(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
-                            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                            "Cannot use 'void' as a value.".into(),
+                            "You should remove whatever type or value where void type belongs."
+                                .into(),
                             None,
                             span,
                         ));
@@ -148,7 +154,9 @@ pub fn validate<'type_checker>(
                     if type_.contains_void_type() || type_.is_void_type() {
                         typechecker.add_error_report(CompilationIssue::Error(
                             CompilationIssueCode::E0019,
-                            "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                            "Cannot use 'void' as a value.".into(),
+                            "You should remove whatever type or value where void type belongs."
+                                .into(),
                             None,
                             span,
                         ));
@@ -159,7 +167,8 @@ pub fn validate<'type_checker>(
             if return_type.contains_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     return_type.get_span(),
                 ));
@@ -172,6 +181,7 @@ pub fn validate<'type_checker>(
                     typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
                         format!("Expected return with type '{}'.", return_type),
+                        format!("It should be return '{}'.", return_type),
                         None,
                         *span,
                     ));

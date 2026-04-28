@@ -66,7 +66,7 @@ pub fn print_to_string(diagnostic: &Diagnostic, error: Error<'_>) -> String {
         logging_type.text_with_color(&start.to_string()),
     ));
 
-    buffer.push_str(&format!("\n{}\n", title.to_uppercase()));
+    buffer.push_str(&format!("\n{}\n", title));
     buffer.push_str(&format!("\n{}\n{}", code, signaler));
 
     if let Some(note) = note {

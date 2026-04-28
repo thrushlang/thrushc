@@ -159,6 +159,7 @@ fn build_align_attribute<'parser>(
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
             "Expected literal unsigned integer.".into(),
+            "You should try to pass a unsigned integer type.".into(),
             None,
             expr.get_span(),
         ))

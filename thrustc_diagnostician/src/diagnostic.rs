@@ -64,6 +64,7 @@ pub(crate) fn build(
     code: &str,
     span: Span,
     message: &str,
+    help: &str,
     notificator: Notificator,
     logging_type: LoggingType,
 ) -> Diagnostic {
@@ -73,8 +74,15 @@ pub(crate) fn build(
         span.get_span_end().try_into().unwrap_or(usize::MAX),
     );
 
-    self::generate(code, code_position, message, notificator, logging_type)
-        .unwrap_or_else(|| self::generate_basic(code, span, message, notificator))
+    self::generate(
+        code,
+        code_position,
+        message,
+        help,
+        notificator,
+        logging_type,
+    )
+    .unwrap_or_else(|| self::generate_basic(code, span, message, notificator))
 }
 
 pub(crate) fn generate_basic(
@@ -84,7 +92,7 @@ pub(crate) fn generate_basic(
     notificator: Notificator,
 ) -> Diagnostic {
     let lines: Vec<&str> = code.lines().collect();
-    let line_idx: usize = span.line.saturating_sub(1).try_into().unwrap();
+    let line_idx: usize = span.line.saturating_sub(1).try_into().unwrap_or_default();
 
     let line: u32 = span.get_line();
     let code_line: &str = lines.get(line_idx).map(|s| s.trim_start()).unwrap_or("");
@@ -133,6 +141,7 @@ pub(crate) fn generate(
     code: &str,
     position: CodePosition,
     message: &str,
+    help: &str,
     notificator: Notificator,
     logging_type: LoggingType,
 ) -> Option<Diagnostic> {
@@ -195,6 +204,36 @@ pub(crate) fn generate(
     }
 
     signaler.push_str(&format!(" {}{}\n", notificator, message.bright_yellow()));
+
+    let down_depth: u8 = fastrand::u8(2..4);
+
+    for _ in 0..down_depth {
+        signaler.push_str(&format!("{:>4} │ ", ""));
+
+        for _ in 0..visible_start {
+            signaler.push(' ');
+        }
+
+        signaler.push_str("|\n");
+    }
+
+    signaler.push_str(&format!("{:>4} │ ", ""));
+
+    {
+        let right_depth: usize = fastrand::usize(15..30);
+
+        for _ in 0..visible_start {
+            signaler.push(' ');
+        }
+
+        signaler.push_str(&format!(
+            "{:->width$} {}: {}\n",
+            "",
+            "HELP".bright_green().bold().underline(),
+            help,
+            width = right_depth
+        ));
+    }
 
     if let Some(next) = lines.get(line_idx.saturating_add(1)) {
         signaler.push_str(&format!(

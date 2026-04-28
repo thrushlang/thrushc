@@ -145,10 +145,11 @@ pub fn build_assembler_function<'parser>(
         let raw_str: Ast = expressions::parse_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        if !raw_str.is_cnstring() {
+        if !raw_str.is_cstring() {
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected string literal value with null termination.".into(),
+                "It is not a null terminated.".into(),
+                "You should write a literal string with null termination.".into(),
                 None,
                 raw_str_span,
             ));
@@ -202,10 +203,11 @@ pub fn build_assembler_function<'parser>(
         let raw_str: Ast = expressions::parse_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        if !raw_str.is_cnstring() {
+        if !raw_str.is_cstring() {
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected string literal value with null termination.".into(),
+                "It is not a null terminated.".into(),
+                "You should write a literal string with null termination.".into(),
                 None,
                 raw_str_span,
             ));
@@ -249,7 +251,6 @@ pub fn build_assembler_function<'parser>(
         ctx.get_mut_symbols().new_asm_function(
             asm_function_name,
             (return_type, parameters_types_repr, is_public),
-            span,
         )?;
 
         Ok(Ast::new_nullptr(span))

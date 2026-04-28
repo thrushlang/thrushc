@@ -42,6 +42,7 @@ pub fn check_type_together(
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0037,
             "Too many type depth, the expression exceeds type checking bounds!".into(),
+            "You should remove nested types.".into(),
             None,
             span,
         ));
@@ -50,6 +51,7 @@ pub fn check_type_together(
     let error: CompilationIssue = CompilationIssue::Error(
         CompilationIssueCode::E0020,
         format!("Expected '{}' type, got '{}' type.", target, provided),
+        "You should make the type match.".into(),
         None,
         span,
     );
@@ -132,6 +134,8 @@ pub fn check_type_together(
                         "Expected structure type with '{}' attributes but found '{}'.",
                         mod1, mod2
                     ),
+                    "You should compare them and see which specific one doesn't follow the expected."
+                        .into(),
                     None,
                     span,
                 ));
@@ -172,6 +176,7 @@ pub fn check_type_together(
                         "Expected function reference type with '{}' attributes but found '{}'.",
                         mod1, mod2
                     ),
+                    "You should compare them and see which specific one doesn't follow the expected.".into(),
                     None,
                     span,
                 ));
@@ -767,6 +772,7 @@ pub fn check_type_cast(
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0037,
             "Too many type depth, the type exceeds type checking bounds!".into(),
+            "You should remove nested types.".into(),
             None,
             *span,
         ));
@@ -902,6 +908,8 @@ pub fn check_type_cast(
                 "Cannot cast type '{}' to '{}'. Types are incompatible for cast.",
                 from_type, cast_type
             ),
+            "You should try again with other targets or values or you could also use other approaches."
+                .into(),
             None,
             *span,
         )),

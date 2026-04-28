@@ -24,7 +24,7 @@ use thrustc_span::Span;
 
 #[derive(Debug, Clone)]
 pub enum CompilationIssue {
-    Error(CompilationIssueCode, String, Option<String>, Span),
+    Error(CompilationIssueCode, String, String, Option<String>, Span),
     Warning(CompilationIssueCode, String, Span),
 
     FrontEndBug(

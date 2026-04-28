@@ -56,7 +56,8 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
                 return Err(CompilationIssue::Error(
                     CompilationIssueCode::E0001,
-                    "Expected '*/'.".into(),
+                    "Expected comment closer.".into(),
+                    "You should write a comment closer '*/'.".into(),
                     None,
                     span,
                 ));
@@ -119,7 +120,8 @@ pub fn analyze(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "This character isn't recognized.".into(),
+                "It isn't recognized as a character.".into(),
+                "You must use an available character in the language grammar.".into(),
                 None,
                 span,
             ));

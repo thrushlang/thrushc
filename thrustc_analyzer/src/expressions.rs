@@ -82,6 +82,7 @@ pub fn validate<'analyzer>(
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0007,
                     "An reference with memory address was expected.".into(),
+                    "You should try to allocate it and pass it as a direct reference.".into(),
                     None,
                     source.get_span(),
                 ));
@@ -92,10 +93,8 @@ pub fn validate<'analyzer>(
             {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
-                    format!(
-                        "An value with memory address was expected, got '{}'.",
-                        source_type
-                    ),
+                    "An value with memory address was expected".into(),
+                    "You should try to allocate it and pass it as a direct reference.".into(),
                     None,
                     source.get_span(),
                 ));
@@ -142,16 +141,15 @@ pub fn validate<'analyzer>(
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0007,
                     "An reference with memory address was expected.".into(),
+                    "You should try to allocate it and pass it as a direct reference.".into(),
                     None,
                     *span,
                 ));
             } else if !expr.is_reference() && !expr_type.is_ptr_like_type() {
                 analyzer.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
-                    format!(
-                        "An value with memory address was expected, got '{}'.",
-                        expr_type
-                    ),
+                    "An value with memory address was expected".into(),
+                    "You should try to allocate it and pass it as a direct reference.".into(),
                     None,
                     *span,
                 ));

@@ -96,7 +96,7 @@ pub fn build_global_const<'parser>(
 
     if parse_forward {
         ctx.get_mut_symbols()
-            .new_global_constant(name, (const_type, attributes), span)?;
+            .new_global_constant(name, (const_type, attributes))?;
 
         Ok(Ast::new_nullptr(span))
     } else {

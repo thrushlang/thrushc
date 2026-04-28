@@ -42,12 +42,11 @@ pub fn lex(lexer: &mut Lexer) -> Result<(), CompilationIssue> {
 
     lexer.advance_only();
 
-    println!("{}", lexer.current);
-
     if lexer.previous() != '\'' {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            "Unclosed char. Did you forget to close the char with a '\''?.".into(),
+            "Unclosed character".into(),
+            "You should close the literal character using '\'' at the final.".into(),
             None,
             span,
         ));
@@ -75,7 +74,8 @@ fn handle_char_scape_sequence(lexer: &mut Lexer, span: Span) -> Result<char, Com
 
         _ => Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            "Invalid escape sequence. Valid escapes are '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
+            "Invalid escape sequence".into(),
+            "You must utilize either '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
             None,
             span,
         )),

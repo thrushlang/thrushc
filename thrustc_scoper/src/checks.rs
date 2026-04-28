@@ -45,6 +45,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0015,
                 "Multiple unreachable instructions; only one is allowed.".into(),
+                "Remove all; keep one.".into(),
                 None,
                 node.get_span(),
             ));
@@ -62,6 +63,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0015,
                 "Multiple terminator instructions; only one is allowed.".into(),
+                "Remove all; keep one.".into(),
                 None,
                 node.get_span(),
             ));
@@ -79,6 +81,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0015,
                 "Multiple loop controller instructions; only one is allowed.".into(),
+                "Remove all; keep one.".into(),
                 None,
                 node.get_span(),
             ));
@@ -96,6 +99,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0015,
                 "Multiple loop controller instructions; only one is allowed.".into(),
+                "Remove all; keep one.".into(),
                 None,
                 node.get_span(),
             ));
@@ -113,6 +117,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0015,
                 "Multiple loop controller instructions; only one is allowed.".into(),
+                "Remove all; keep one.".into(),
                 None,
                 node.get_span(),
             ));
@@ -130,6 +135,7 @@ pub fn check_for_multiple_terminators(scoper: &mut Scoper, node: &Ast) {
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0015,
                 "Multiple loop controller instructions; only one is allowed.".into(),
+                "Remove all; keep one.".into(),
                 None,
                 node.get_span(),
             ));
@@ -166,6 +172,7 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0014,
                 "Instruction will never be executed.".to_string(),
+                "Remove it.".into(),
                 None,
                 unreachable_node.get_span(),
             ));
@@ -256,6 +263,7 @@ pub fn check_for_unreachable_code_instructions(scoper: &mut Scoper, node: &Ast) 
             scoper.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0014,
                 "Instruction will never be executed.".to_string(),
+                "Remove it.".into(),
                 None,
                 unreachable_node.get_span(),
             ));

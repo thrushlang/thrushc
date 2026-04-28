@@ -95,6 +95,7 @@ pub fn build_enum<'parser>(
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected identifier in enum field.".into(),
+                "You should make it match.".into(),
                 None,
                 span,
             ));
@@ -109,7 +110,7 @@ pub fn build_enum<'parser>(
 
     if parse_forward {
         ctx.get_mut_symbols()
-            .new_global_enum(name, (data, attributes), span)?;
+            .new_global_enum(name, (data, attributes))?;
 
         Ok(Ast::new_nullptr(span))
     } else {

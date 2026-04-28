@@ -62,6 +62,7 @@ pub fn validate_binary(
                 "'{}{}{}' isn't a valid arithmetic or logical operation.",
                 right, operator, left
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -105,6 +106,7 @@ fn validate_band_expression(
                 "'{} {} {}' isn't a valid bit operation.",
                 left, operator, right
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -148,6 +150,7 @@ fn validate_bor_expression(
                 "'{} {} {}' isn't a valid bit operation.",
                 left, operator, right
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -189,6 +192,7 @@ fn validate_xor_expression(
                 "'{} {} {}' isn't a valid bit operation.",
                 left, operator, right
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -211,6 +215,7 @@ fn validate_binary_gate_expression(
                 "'{} {} {}' isn't a valid logical operation.",
                 right, operator, left
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -256,6 +261,7 @@ fn validate_binary_shift_expression(
                 "'{} {} {}' isn't a valid arithmetic operation.",
                 left, operator, right
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -305,6 +311,7 @@ fn validate_binary_comparasion_expression(
                 "'{} {} {}' isn't a valid relational operation.",
                 left, operator, right
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -358,6 +365,7 @@ fn validate_binary_equality_expression(
                 "'{} {} {}' isn't a valid relational operation.",
                 left, operator, right
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),
@@ -408,6 +416,7 @@ fn validate_binary_arithmetic_expression(
                 "'{} {} {}' isn't a valid arithmetic operation.",
                 left, operator, right
             ),
+            "It doesn't follow any rule, you should remove or change it.".into(),
             None,
             span,
         )),

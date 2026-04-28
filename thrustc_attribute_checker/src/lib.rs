@@ -107,7 +107,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if let Some(span) = attributes.match_attr(ThrustAttributeComparator::Extern) {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "FFI external functions cannot have a body. Remove it.".into(),
+                            "FFI functions cannot have a body.".into(),
+                            "You should remove the body '{...}.".into(),
                             None,
                             span,
                         ));
@@ -117,7 +118,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if body.is_none() && !attributes.has_extern_attribute() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0011,
-                        "A FFI function without body always need the external attribute. Add the '@extern(\"externalName\")' attribute.".into(),
+                        "A FFI function without body always need the external attribute.".into(),
+                        " Add the '@extern(\"externalName\")' attribute.".into(),
                         None,
                         *span,
                     ));
@@ -175,6 +177,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0013,
                         "Local constant cannot have public visibility.".into(),
+                        "Remove the '@public' attribute.".into(),
                         None,
                         *span,
                     ));
@@ -196,6 +199,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0013,
                         "Local static cannot have public visibility.".into(),
+                        "Remove the '@public' attribute.".into(),
                         None,
                         *span,
                     ));
@@ -256,7 +260,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if !return_type.is_void_type() {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "Functions that execute before the entry point should not return anything. Rewrite it to a void type.".into(),
+                            "Functions that execute before the entry point should not return anything.".into(),
+                            "You should rewrite it to return a void type.".into(),
                             None,
                             attr.get_span(),
                         ));
@@ -265,8 +270,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if !attributes.has_public_attribute() {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "Functions that run before the entry point must be public. Add '@public' attribute."
-                                .into(),
+                            "Functions that run before the entry point must be public.".into(),
+                            "Add '@public' attribute.".into(),
                             None,
                             attr.get_span(),
                         ));
@@ -275,7 +280,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if let Some(attr) = attributes.get_attr(ThrustAttributeComparator::Extern) {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "Functions that run before the entry point cannot be external. Remove the attribute.".into(),
+                            "Functions that run before the entry point cannot be external.".into(),
+                            "You should remove it.".into(),
                             None,
                             attr.get_span(),
                         ));
@@ -284,7 +290,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if let Some(attr) = attributes.get_attr(ThrustAttributeComparator::Linkage) {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "Functions that run before the entrypoint cannot have custom linkage. Remove it.".into(),
+                            "Functions that run before the entrypoint cannot have custom linkage."
+                                .into(),
+                            "You should remove it.".into(),
                             None,
                             attr.get_span(),
                         ));
@@ -295,7 +303,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if !return_type.is_void_type() {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "Functions that execute after the entry point should not return anything. Rewrite them to a void type.".into(),
+                            "Functions that execute after the entry point should not return anything.".into(),
+                            "You should rewrite to return a void type.".into(),
                             None,
                             attr.get_span(),
                         ));
@@ -304,8 +313,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if !attributes.has_public_attribute() {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "Functions that run after the entry point must be public. Add '@public' attribute."
-                                .into(),
+                            "Functions that run after the entry point must be public.".into(),
+                            "Add '@public' attribute.".into(),
                             None,
                             attr.get_span(),
                         ));
@@ -314,7 +323,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if let Some(attr) = attributes.get_attr(ThrustAttributeComparator::Extern) {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "Functions that run after the entry point cannot be external. Remove it.".into(),
+                            "Functions that run after the entry point cannot be external.".into(),
+                            "You should remove it.".into(),
                             None,
                             attr.get_span(),
                         ));
@@ -323,7 +333,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if let Some(attr) = attributes.get_attr(ThrustAttributeComparator::Linkage) {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0013,
-                            "Functions that run after the entrypoint cannot have custom linkage. Remove it.".into(),
+                            "Functions that run after the entrypoint cannot have custom linkage."
+                                .into(),
+                            "You should remove it.".into(),
                             None,
                             attr.get_span(),
                         ));
@@ -333,6 +345,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
+                        "Attribute conflict".into(),
                         "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
@@ -347,7 +360,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 if !attributes.has_public_attribute() {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0013,
-                        "Intrinsic qualities should always have public visibility.".into(),
+                        "Missing attribute".into(),
+                        "Compiler intrinsic should always have public visibility.".into(),
                         None,
                         span,
                     ));
@@ -356,6 +370,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
+                        "Attribute conflict".into(),
                         "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
@@ -370,6 +385,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
+                        "Attribute conflict".into(),
                         "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
@@ -385,6 +401,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     if let Some(span) = attributes.match_attr(ThrustAttributeComparator::Extern) {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0011,
+                            "Missing attribute".into(),
                             "A pure assembler function always have syntax mode. Add the '@asmsyntax' attribute.".into(),
                             None,
                             span,
@@ -398,9 +415,12 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                     const INLINE_ASSEMBLER_SYNTAXES: [&str; 2] = ["Intel", "AT&T"];
 
                     if !INLINE_ASSEMBLER_SYNTAXES.contains(&syntax.as_str()) {
+                        let displayed: String = INLINE_ASSEMBLER_SYNTAXES.join("or ");
+
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0012,
-                            format!("Expected a valid assembler syntax, got '{}'.", syntax),
+                            "Expected a valid assembler syntax".into(),
+                            format!("You should utilize either '{}'.", displayed),
                             None,
                             span,
                         ));
@@ -424,6 +444,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
+                        "Attribute conflict".into(),
                         "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
@@ -441,6 +462,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                 self.get_repeated_attrs(attributes).iter().for_each(|attr| {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0033,
+                        "Attribute conflict".into(),
                         "Repetitive attributes are disallowed. Remove each one.".into(),
                         None,
                         attr.get_span(),
@@ -644,6 +666,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::Extern) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0013,
+                    "Attribute conflict".into(),
                     "A external symbol always have public visibility. Add the '@public' attribute."
                         .into(),
                     None,
@@ -754,7 +777,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::Destructor) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0012,
-                    "A symbol cannot be both a constructor and a destructor at the same time. Remove an attribute.".into(),
+                    "A symbol cannot be both a constructor and a destructor at the same time."
+                        .into(),
+                    "You should remove an attribute.".into(),
                     None,
                     span,
                 ));
@@ -765,7 +790,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::Ignore) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0013,
-                    "The @arbitraryArgs attribute requires a FFI symbol. Missing the external FFI attribute '@extern(\"externalName\")'.".into(),
+                    "Attribute conflict".into(),
+                    "The @arbitraryArgs attribute requires a FFI symbol. You should add the external FFI attribute '@extern(\"externalName\")'.".into(),
                     None,
                     span,
                 ));
@@ -776,7 +802,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::InlineHint) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "Use either '@alwaysInline' or '@inline' attribute.".into(),
+                    "Attribute conflict".into(),
+                    "You should use either '@alwaysInline' or '@inline' attribute.".into(),
                     None,
                     span,
                 ));
@@ -787,7 +814,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::NoInline) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "Use either '@noInline' or '@inline' attribute.".into(),
+                    "Attribute conflict".into(),
+                    "You should use either '@noInline' or '@inline' attribute.".into(),
                     None,
                     span,
                 ));
@@ -798,7 +826,8 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
             if let Some(span) = attributes.match_attr(ThrustAttributeComparator::NoInline) {
                 self.add_error(CompilationIssue::Error(
                     CompilationIssueCode::E0033,
-                    "Use either '@alwaysInline' or '@inline' attribute.".into(),
+                    "Attribute conflict".into(),
+                    "You should use either '@alwaysInline' or '@inline' attribute.".into(),
                     None,
                     span,
                 ));
@@ -809,8 +838,9 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
 
 impl<'attr_checker> AttributeChecker<'attr_checker> {
     fn get_repeated_attrs(&self, attributes: &'attr_checker ThrustAttributes) -> ThrustAttributes {
-        let mut storage: HashSet<ThrustAttributeComparator> = HashSet::with_capacity(20);
-        let mut repeated_attrs: ThrustAttributes = Vec::with_capacity(20);
+        let mut storage: HashSet<ThrustAttributeComparator> =
+            HashSet::with_capacity(u8::MAX as usize);
+        let mut repeated_attrs: ThrustAttributes = Vec::with_capacity(u8::MAX as usize);
 
         {
             for attribute in attributes.iter() {

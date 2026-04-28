@@ -272,6 +272,7 @@ pub fn build_reference<'parser>(
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0028,
                 format!("'{}' not found.", name),
+                "You should make sure that it exist at this scope.".into(),
                 None,
                 span,
             ));

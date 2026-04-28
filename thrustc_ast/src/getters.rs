@@ -218,6 +218,7 @@ impl AstGetType for Ast<'_> {
             _ => Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected a value, not anything else.".into(),
+                "It should be an expression!".into(),
                 None,
                 self.get_span(),
             )),

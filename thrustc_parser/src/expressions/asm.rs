@@ -91,10 +91,11 @@ pub fn build_asm_code_block<'parser>(
         let raw_str: Ast = expressions::parse_expr(ctx)?;
         let raw_str_span: Span = raw_str.get_span();
 
-        if !raw_str.is_cnstring() {
+        if !raw_str.is_cstring() {
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected string literal value with null termination.".into(),
+                "It is not a null terminated.".into(),
+                "You should write a literal string with null termination.".into(),
                 None,
                 raw_str_span,
             ));
@@ -151,7 +152,8 @@ pub fn build_asm_code_block<'parser>(
         if !raw_str.is_cnstring() {
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected string literal value with null termination.".into(),
+                "It is not a null terminated.".into(),
+                "You should write a literal string with null termination.".into(),
                 None,
                 raw_str_span,
             ));

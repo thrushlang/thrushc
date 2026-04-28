@@ -299,6 +299,7 @@ pub fn lower_precedence<'parser>(
                     "It is not recognized '{}' as an expression at this point.",
                     previous.get_lexeme()
                 ),
+                "You should remove it".into(),
                 None,
                 span,
             ));

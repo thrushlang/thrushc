@@ -72,10 +72,11 @@ impl Diagnostician {
 impl Diagnostician {
     pub fn dispatch_diagnostic(&mut self, error: &CompilationIssue, logging_type: LoggingType) {
         match error {
-            CompilationIssue::Error(title, help, note, span) => {
+            CompilationIssue::Error(title, message, help, note, span) => {
                 let diagnostic: Diagnostic = diagnostic::build(
                     &self.code,
                     *span,
+                    message,
                     help,
                     Notificator::CommonError,
                     logging_type,
@@ -118,6 +119,7 @@ impl Diagnostician {
                     &self.code,
                     *span,
                     help,
+                    "",
                     Notificator::CommonError,
                     logging_type,
                 );
@@ -154,6 +156,7 @@ impl Diagnostician {
                     &self.code,
                     *span,
                     info,
+                    "",
                     Notificator::CompilerFrontendBug,
                     logging_type,
                 );
@@ -169,6 +172,7 @@ impl Diagnostician {
                     &self.code,
                     *span,
                     info,
+                    "",
                     Notificator::CompilerBackendBug,
                     logging_type,
                 );

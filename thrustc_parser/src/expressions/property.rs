@@ -144,7 +144,8 @@ fn decompose_structure_property<'parser>(
         let Some((index, (_, field_type, ..))) = field else {
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0028,
-                format!("'{}' not found", current_property_name),
+                "Unknown property".into(),
+                "You should make sure that it exist in the structure type reference.".into(),
                 None,
                 span,
             ));
@@ -202,7 +203,8 @@ fn decompose_structure_property<'parser>(
     if position < property_names.len() {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            format!("'{}' not found", current_property_name),
+            "Unknown property".into(),
+            "You should make sure that it exist in the structure type reference.".into(),
             None,
             span,
         ));

@@ -61,10 +61,11 @@ pub fn build_global_assembler<'parser>(
         "Expected ';'.".into(),
     )?;
 
-    if !assembler.is_cnstring() {
+    if !assembler.is_cstring() {
         ctx.add_error_report(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            "Expected string literal value with null termination.".into(),
+            "It is not a null terminated.".into(),
+            "You should write a literal string with null termination.".into(),
             None,
             asssembler_span,
         ));

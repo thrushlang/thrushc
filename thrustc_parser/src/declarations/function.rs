@@ -156,7 +156,6 @@ pub fn build_function<'parser>(
                 FunctionParametersTypes(parameters_types),
                 function_has_ignore,
             ),
-            span,
         )?;
 
         if ctx.match_token(TokenType::SemiColon)? {

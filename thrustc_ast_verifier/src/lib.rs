@@ -330,6 +330,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
             self.add_error(CompilationIssue::Error(
                 thrustc_errors::CompilationIssueCode::E0001,
                 "Expected a statement, not a declaration, and never a top entity.".into(),
+                "You should remove it.".into(),
                 None,
                 node.get_span(),
             ));
@@ -341,6 +342,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
             self.add_error(CompilationIssue::Error(
                 thrustc_errors::CompilationIssueCode::E0001,
                 "Expected a statement or a expression, and never a top entity.".into(),
+                "You should remove it.".into(),
                 None,
                 node.get_span(),
             ));
@@ -352,6 +354,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
             self.add_error(CompilationIssue::Error(
                 thrustc_errors::CompilationIssueCode::E0001,
                 "Expected a expression, not a statement, and never a top entity.".into(),
+                "You should remove it.".into(),
                 None,
                 node.get_span(),
             ));

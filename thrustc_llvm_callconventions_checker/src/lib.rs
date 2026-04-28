@@ -211,12 +211,20 @@ impl LLVMCallConventionsChecker<'_> {
                 match arch {
                     arch if arch.contains("x86") => {
                         if !X86_64_CALL_CONVENTIONS.contains(&call_conv) {
+                            let transformed: Vec<String> = X86_64_CALL_CONVENTIONS
+                                .iter()
+                                .map(|callconv| callconv.to_string())
+                                .collect();
+
+                            let displayed: String = transformed.join(", ");
+
                             self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
                                 format!(
                                     "Unsupported calling convention '{}' for target '{}'",
                                     arch, formatted_target_triple
                                 ),
+                                format!("You can use any: '{}'.", displayed),
                                 None,
                                 span,
                             ));
@@ -224,12 +232,20 @@ impl LLVMCallConventionsChecker<'_> {
                     }
                     arch if arch.contains("arm") => {
                         if !ARM_CALL_CONVENTIONS.contains(&call_conv) {
+                            let transformed: Vec<String> = ARM_CALL_CONVENTIONS
+                                .iter()
+                                .map(|callconv| callconv.to_string())
+                                .collect();
+
+                            let displayed: String = transformed.join(", ");
+
                             self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
                                 format!(
                                     "Unsupported calling convention '{}' for target '{}'",
                                     arch, formatted_target_triple
                                 ),
+                                format!("You can use any: '{}'.", displayed),
                                 None,
                                 span,
                             ));
@@ -237,12 +253,20 @@ impl LLVMCallConventionsChecker<'_> {
                     }
                     arch if arch.contains("riscv") => {
                         if !RISCV_CALL_CONVENTIONS.contains(&call_conv) {
+                            let transformed: Vec<String> = RISCV_CALL_CONVENTIONS
+                                .iter()
+                                .map(|callconv| callconv.to_string())
+                                .collect();
+
+                            let displayed: String = transformed.join(", ");
+
                             self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
                                 format!(
                                     "Unsupported calling convention '{}' for target '{}'",
                                     arch, formatted_target_triple
                                 ),
+                                format!("You can use any '{}'.", displayed),
                                 None,
                                 span,
                             ));
@@ -250,12 +274,20 @@ impl LLVMCallConventionsChecker<'_> {
                     }
                     arch if arch.contains("aarch64") => {
                         if !AARCH64_CALL_CONVENTIONS.contains(&call_conv) {
+                            let transformed: Vec<String> = AARCH64_CALL_CONVENTIONS
+                                .iter()
+                                .map(|callconv| callconv.to_string())
+                                .collect();
+
+                            let displayed: String = transformed.join(", ");
+
                             self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
                                 format!(
                                     "Unsupported calling convention '{}' for target '{}'",
                                     arch, formatted_target_triple
                                 ),
+                                format!("You can use any '{}'.", displayed),
                                 None,
                                 span,
                             ));
@@ -263,12 +295,20 @@ impl LLVMCallConventionsChecker<'_> {
                     }
                     arch if arch.starts_with("amd") => {
                         if !AMDGPU_CALL_CONVENTIONS.contains(&call_conv) {
+                            let transformed: Vec<String> = AMDGPU_CALL_CONVENTIONS
+                                .iter()
+                                .map(|callconv| callconv.to_string())
+                                .collect();
+
+                            let displayed: String = transformed.join(", ");
+
                             self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
                                 format!(
                                     "Unsupported calling convention '{}' for target '{}'",
                                     arch, formatted_target_triple
                                 ),
+                                format!("You can use any '{}'.", displayed),
                                 None,
                                 span,
                             ));
@@ -277,12 +317,20 @@ impl LLVMCallConventionsChecker<'_> {
 
                     arch if arch.contains("wasm") => {
                         if !WASM_CALL_CONVENTIONS.contains(&call_conv) {
+                            let transformed: Vec<String> = WASM_CALL_CONVENTIONS
+                                .iter()
+                                .map(|callconv| callconv.to_string())
+                                .collect();
+
+                            let displayed: String = transformed.join(", ");
+
                             self.add_error_report(CompilationIssue::Error(
                                 CompilationIssueCode::E0024,
                                 format!(
                                     "Unsupported calling convention '{}' for target '{}'",
                                     arch, formatted_target_triple
                                 ),
+                                format!("You can use any '{}'.", displayed),
                                 None,
                                 span,
                             ));

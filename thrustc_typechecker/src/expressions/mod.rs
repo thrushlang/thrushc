@@ -68,7 +68,8 @@ pub fn validate<'type_checker>(
             {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     left_type.get_span(),
                 ));
@@ -77,7 +78,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -102,7 +104,8 @@ pub fn validate<'type_checker>(
             if expr_type.contains_void_type() || expr_type.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     expr_type.get_span(),
                 ));
@@ -111,7 +114,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -126,7 +130,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -142,13 +147,15 @@ pub fn validate<'type_checker>(
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "An element is expected for type inference.".into(),
+                    "It must have at least one element.".into(),
                     None,
                     *span,
                 ));
             } else if kind.contains_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -194,13 +201,15 @@ pub fn validate<'type_checker>(
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     "An element is expected for type inference.".into(),
+                    "It must have at least one element.".into(),
                     None,
                     *span,
                 ));
             } else if kind.contains_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -215,11 +224,12 @@ pub fn validate<'type_checker>(
 
                 if item_type.contains_void_type() || item_type.is_void_type() {
                     typechecker.add_error_report(CompilationIssue::Error(
-                    CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
-                    None,
-                    item_type.get_span(),
-                ));
+                        CompilationIssueCode::E0019,
+                        "Cannot use 'void' as a value.".into(),
+                        "You should remove whatever type or value where void type belongs.".into(),
+                        None,
+                        item_type.get_span(),
+                    ));
                 }
 
                 {
@@ -256,6 +266,7 @@ pub fn validate<'type_checker>(
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
                     format!("Expected integer value, got '{}'.", index_type),
+                    "You should make it match in an integer value.".into(),
                     None,
                     span,
                 ));
@@ -271,7 +282,8 @@ pub fn validate<'type_checker>(
             {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     index_type.get_span(),
                 ));
@@ -286,7 +298,8 @@ pub fn validate<'type_checker>(
             if !source_type.is_struct_type() && !source_type.is_ptr_struct_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    format!("A structure type was expected within a structure 'struct T' type, or raw typed pointer structure pointer 'ptr[struct T]', got '{}'.", source_type),
+                    format!("A structure type was expected within a structure 'struct T' type, or structure pointer 'ptr[struct T]', got '{}' type.", source_type),
+                    "It should be a structure or structure pointer reference; make it match.".into(),
                     None,
                     source_span,
                 ));
@@ -296,8 +309,9 @@ pub fn validate<'type_checker>(
 
             if source_type.contains_void_type() || source_type.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
-                CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    CompilationIssueCode::E0019,
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     source_type.get_span(),
                 ));
@@ -307,7 +321,8 @@ pub fn validate<'type_checker>(
                 if ty.contains_void_type() || ty.is_void_type() {
                     typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                        "Cannot use 'void' as a value.".into(),
+                        "You should remove whatever type or value where void type belongs.".into(),
                         None,
                         ty.get_span(),
                     ));
@@ -316,7 +331,8 @@ pub fn validate<'type_checker>(
                 if subtype.contains_void_type() || subtype.is_void_type() {
                     typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                        "Cannot use 'void' as a value.".into(),
+                        "You should remove whatever type or value where void type belongs.".into(),
                         None,
                         subtype.get_span(),
                     ));
@@ -325,7 +341,8 @@ pub fn validate<'type_checker>(
                 if !ty.is_struct_type() && !ty.is_ptr_struct_type() {
                     typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "Expected a structure value or pointer to structure value.".into(),
+                        format!("A structure type was expected within a structure 'struct T' type, or structure pointer 'ptr[struct T]', got '{}' type.", source_type),
+                        "It should be a structure or structure pointer reference; make it match.".into(),
                         None,
                         node.get_span(),
                     ));
@@ -367,7 +384,8 @@ pub fn validate<'type_checker>(
                 if target_type.contains_void_type() || target_type.is_void_type() {
                     typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                        "Cannot use 'void' as a value.".into(),
+                        "You should remove whatever type or value where void type belongs.".into(),
                         None,
                         target_type.get_span(),
                     ));
@@ -376,7 +394,8 @@ pub fn validate<'type_checker>(
                 if from_type.contains_void_type() || from_type.is_void_type() {
                     typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                        "Cannot use 'void' as a value.".into(),
+                        "You should remove whatever type or value where void type belongs.".into(),
                         None,
                         from_type.get_span(),
                     ));
@@ -422,7 +441,8 @@ pub fn validate<'type_checker>(
             if !function_type.is_function_reference_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "Expected  valid function reference for call anonymously.".into(),
+                    "Expected function reference type for call anonymously.".into(),
+                    "It should be a function type refernce.".into(),
                     None,
                     function.get_span(),
                 ));
@@ -443,10 +463,8 @@ pub fn validate<'type_checker>(
             if !value_type.is_ptr_like_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
-                    format!(
-                        "An value with memory address was expected, got '{}'. Try to allocate it.",
-                        value_type
-                    ),
+                    "An value with memory address was expected".into(),
+                    "You should try to allocate it and pass it as a direct reference.".into(),
                     None,
                     value.get_span(),
                 ));
@@ -457,7 +475,8 @@ pub fn validate<'type_checker>(
             if value_type.contains_void_type() || value_type.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     value_type.get_span(),
                 ));
@@ -466,7 +485,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -495,7 +515,8 @@ pub fn validate<'type_checker>(
             if cast_type.contains_void_type() || cast_type.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     cast_type.get_span(),
                 ));
@@ -504,7 +525,8 @@ pub fn validate<'type_checker>(
             if from_type.contains_void_type() || from_type.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     from_type.get_span(),
                 ));
@@ -522,7 +544,8 @@ pub fn validate<'type_checker>(
                 if node_type.contains_void_type() || node_type.is_void_type() {
                     typechecker.add_error_report(CompilationIssue::Error(
                         CompilationIssueCode::E0019,
-                        "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                        "Cannot use 'void' as a value.".into(),
+                        "You should remove whatever type or value where void type belongs.".into(),
                         None,
                         node_type.get_span(),
                     ));
@@ -532,7 +555,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -547,7 +571,8 @@ pub fn validate<'type_checker>(
             if node_type.contains_void_type() || node_type.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     node_type.get_span(),
                 ));
@@ -556,7 +581,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -568,7 +594,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -580,7 +607,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -592,7 +620,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -604,7 +633,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -616,7 +646,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -628,7 +659,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -640,7 +672,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -652,7 +685,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));
@@ -666,7 +700,8 @@ pub fn validate<'type_checker>(
             if expr_type.contains_void_type() || expr_type.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     expr_type.get_span(),
                 ));
@@ -675,7 +710,8 @@ pub fn validate<'type_checker>(
             if kind.contains_void_type() || kind.is_void_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0019,
-                    "The void type is not a value. It cannot contain a value. The type it represents contains it. Remove it.".into(),
+                    "Cannot use 'void' as a value.".into(),
+                    "You should remove whatever type or value where void type belongs.".into(),
                     None,
                     kind.get_span(),
                 ));

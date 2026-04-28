@@ -42,11 +42,14 @@ pub fn build_builtin<'parser>(
         TokenType::AbiAlignOf => self::build_abi_align_of(ctx),
 
         _ => {
-            let span: Span = ctx.advance()?.get_span();
+            let token: &Token = ctx.advance()?;
+            let lexeme: &str = token.get_lexeme();
+            let span: Span = token.get_span();
 
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0003,
-                format!("Unknown '{}' compiler builtin.", span),
+                format!("Unknown compiler intrinsic '{}'.", lexeme),
+                "Compiler intrinsic doesn't exist on the compiler.".into(),
                 None,
                 span,
             ));

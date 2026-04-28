@@ -181,7 +181,8 @@ fn parse_array_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> 
         if !size.is_integer() {
             ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected literal integer value as a max size indicator.".into(),
+                "Expected literal integer value as a size indicator.".into(),
+                "You should pass an integer expression.".into(),
                 None,
                 span,
             ));
@@ -191,6 +192,7 @@ fn parse_array_type(ctx: &mut ModuleParser<'_>, span: Span) -> Result<Type, ()> 
             ctx.add_error(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
                 "Expected unsigned integer value less than or equal to 32 bits.".into(),
+                "You should pass an integer expression.".into(),
                 None,
                 span,
             ));

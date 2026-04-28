@@ -80,7 +80,7 @@ fn main() s32 @public {
         return 1;
     }
 
-    window = glfwCreateWindow(800, 600, "Thrust OpenGL - Triángulo RGB", nullptr, nullptr);
+    window = glfwCreateWindow(800, 600, "Thrust OpenGL - Triangle RGB", nullptr, nullptr);
 
     if ((deref window) == nullptr) {
         perror("glfwCreateWindow failed");
@@ -128,7 +128,7 @@ fn main() s32 @public {
     printf("Press ESC or close window to exit.\n\n");
 
     while !glfwWindowShouldClose(deref window) {
-        glClearColor(0.1, 0.1, 0.2, 1.0);
+        glClearColor(0.0, 0.0, 0.0, 0.0);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glBindVertexArray(VAO);

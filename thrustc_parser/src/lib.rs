@@ -297,6 +297,7 @@ impl<'parser> ParserContext<'parser> {
         Err(CompilationIssue::Error(
             code,
             help,
+            "You should make it match.".into(),
             None,
             self.previous().get_span(),
         ))
@@ -316,6 +317,7 @@ impl<'parser> ParserContext<'parser> {
         Err(CompilationIssue::Error(
             code,
             help,
+            "You should make it match.".into(),
             None,
             self.previous().get_span(),
         ))
@@ -345,6 +347,7 @@ impl<'parser> ParserContext<'parser> {
             Err(CompilationIssue::Error(
                 CompilationIssueCode::E0002,
                 "EOF has been reached.".into(),
+                "EOF".into(),
                 None,
                 self.peek().get_span(),
             ))
@@ -360,6 +363,7 @@ impl<'parser> ParserContext<'parser> {
             Err(CompilationIssue::Error(
                 CompilationIssueCode::E0002,
                 "EOF has been reached.".into(),
+                "EOF".into(),
                 None,
                 self.peek().get_span(),
             ))
@@ -378,7 +382,8 @@ impl<'parser> ParserContext<'parser> {
 
             return Err(CompilationIssue::Error(
                 CompilationIssueCode::E0037,
-                "Too many depth for a expression. Try to remove some the nesting.".into(),
+                "Too many depth for a expression.".into(),
+                "You should remove the expression nesting".into(),
                 None,
                 span,
             ));

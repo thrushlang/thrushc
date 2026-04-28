@@ -17,7 +17,6 @@
 
 */
 
-
 use inkwell::intrinsics::Intrinsic;
 
 use thrustc_ast::Ast;
@@ -66,7 +65,8 @@ impl<'llvm> LLVMIntrinsicChecker<'llvm> {
                     if is_bad_overloaded {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0034,
-                            "This overloaded compiler intrinsic has an invalid syntax. Try to fix it using the correct points.".into(),
+                            "Invalid syntax in overloaded intrinsic.".into(),
+                            "Overloaded intrinsic always utilize dot next to an identifier. You should check out it is following that schema.".into(),
                             None,
                             *span,
                         ));
@@ -75,7 +75,8 @@ impl<'llvm> LLVMIntrinsicChecker<'llvm> {
                     if intrinsic.is_none() {
                         self.add_error(CompilationIssue::Error(
                             CompilationIssueCode::E0025,
-                            "This compiler intrinsic is not recognized. Try another name.".into(),
+                            format!("Unknown compiler intrinsic '{}'.", ffi_name),
+                            "Compiler intrinsic doesn't exist on the compiler.".into(),
                             None,
                             *span,
                         ));

@@ -142,7 +142,6 @@ pub fn build_compiler_intrinsic<'parser>(
         ctx.get_mut_symbols().new_intrinsic(
             name,
             (return_type, intrinsic_parameters_types_repr, has_ignore),
-            span,
         )?;
 
         Ok(Ast::new_nullptr(span))

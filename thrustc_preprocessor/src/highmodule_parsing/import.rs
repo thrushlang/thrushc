@@ -61,6 +61,7 @@ pub fn parse_import<'preprocessor>(
         parser.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0035,
             "The module cannot be imported itself.".into(),
+            "You should remove it.".into(),
             None,
             span,
         ));
@@ -77,7 +78,8 @@ pub fn parse_import<'preprocessor>(
     if !module_path.exists() {
         parser.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0035,
-            "The path does not exist. Make sure it is a valid path.".into(),
+            "The path does not exist.".into(),
+            "You should make sure it is a valid path.".into(),
             None,
             span,
         ));
@@ -88,7 +90,8 @@ pub fn parse_import<'preprocessor>(
     if !module_path.is_file() {
         parser.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0035,
-            "The path does not point to a file. Make sure it is a valid path to file.".into(),
+            "The path does not point to a file.".into(),
+            "You should make sure it is a valid path to file.".into(),
             None,
             span,
         ));
@@ -99,7 +102,8 @@ pub fn parse_import<'preprocessor>(
     if module_path.file_stem().is_none() {
         parser.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0035,
-            "An name was expected in the path. Check that it points to a file with a valid the name.".into(),
+            "An name was expected in the path.".into(),
+            "You should check that it points to a file with a valid the name.".into(),
             None,
             span,
         ));
@@ -110,7 +114,8 @@ pub fn parse_import<'preprocessor>(
     if module_path.extension().is_none() {
         parser.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0035,
-            "An extension was expected in the path. Check that it points to a file with a valid the extension.".into(),
+            "An extension was expected in the path.".into(),
+            "You should check that it points to a file with a valid the extension.".into(),
             None,
             span,
         ));
@@ -123,7 +128,8 @@ pub fn parse_import<'preprocessor>(
     }) {
         parser.add_error(CompilationIssue::Error(
             CompilationIssueCode::E0035,
-            "It was expected files ended with '.thrust' or '.🐦' extension.".into(),
+            "It has an invalid extension.".into(),
+            "You should make sure they are valid thrust files.".into(),
             None,
             span,
         ));

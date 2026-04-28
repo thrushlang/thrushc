@@ -51,6 +51,7 @@ pub fn lex(lexer: &mut Lexer, null_terminated: bool) -> Result<(), CompilationIs
             CompilationIssueCode::E0001,
             "Invalid non null terminated string literal. The literal contains a null character."
                 .into(),
+            "You should remove the null character.".into(),
             None,
             span,
         ));
@@ -82,6 +83,7 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             "Unexpected EOF after escape character.".into(),
+            "EOF".into(),
             None,
             span,
         ));
@@ -105,7 +107,9 @@ fn handle_escape_sequence(lexer: &mut Lexer) -> Result<char, CompilationIssue> {
 
             Err(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Invalid escape sequence. Valid escapes are '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'.".into(),
+                "Invalid escape sequence".into(),
+                "You must utilize either '\\n', '\\t', '\\r', '\\0', '\\\\', '\\'', and '\\\"'."
+                    .into(),
                 None,
                 span,
             ))
@@ -134,7 +138,8 @@ fn validate_and_finalize_string(
     if !found_end_quote {
         return Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            "Unclosed literal string. Did you forget to close it with a '\"'?".into(),
+            "Unclosed literal string.".into(),
+            "You should close the literal string using '\"' at the final.".into(),
             None,
             span,
         ));

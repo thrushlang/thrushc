@@ -89,11 +89,8 @@ pub fn build_global_static<'parser>(
         );
 
         if parse_forward {
-            ctx.get_mut_symbols().new_global_static(
-                name,
-                (static_type, metadata, attributes),
-                span,
-            )?;
+            ctx.get_mut_symbols()
+                .new_global_static(name, (static_type, metadata, attributes))?;
 
             Ok(Ast::new_nullptr(span))
         } else {
@@ -142,11 +139,8 @@ pub fn build_global_static<'parser>(
         );
 
         if parse_forward {
-            ctx.get_mut_symbols().new_global_static(
-                name,
-                (static_type, metadata, attributes),
-                span,
-            )?;
+            ctx.get_mut_symbols()
+                .new_global_static(name, (static_type, metadata, attributes))?;
 
             Ok(Ast::new_nullptr(span))
         } else {

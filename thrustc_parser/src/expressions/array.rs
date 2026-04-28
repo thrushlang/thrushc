@@ -93,10 +93,8 @@ pub fn build_array<'parser>(
         if size.is_err() {
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                format!(
-                    "Array size is out of bounds, it is superior to '{}'.'",
-                    u32::MAX
-                ),
+                "Array size is out of bounds".into(),
+                "You must reduce the size of it".into(),
                 None,
                 span,
             ));

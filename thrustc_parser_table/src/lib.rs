@@ -158,6 +158,7 @@ impl<'parser> SymbolTable<'parser> {
                         return Err(CompilationIssue::Error(
                             CompilationIssueCode::E0004,
                             format!("'{}' parameter was declared before.", id),
+                            "You should rename it or remove the copy.".into(),
                             None,
                             *span,
                         ));
@@ -199,17 +200,7 @@ impl<'parser> SymbolTable<'parser> {
         &mut self,
         id: &'parser str,
         static_: StaticSymbol<'parser>,
-        span: Span,
     ) -> Result<(), CompilationIssue> {
-        if self.global_statics.contains_key(id) {
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0004,
-                format!("Static '{}' was declared before.", id),
-                None,
-                span,
-            ));
-        }
-
         self.global_statics.insert(id, static_);
 
         Ok(())
@@ -241,17 +232,7 @@ impl<'parser> SymbolTable<'parser> {
         &mut self,
         id: &'parser str,
         constant: ConstantSymbol<'parser>,
-        span: Span,
     ) -> Result<(), CompilationIssue> {
-        if self.global_constants.contains_key(id) {
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0004,
-                format!("Constant '{}' was declared before.", id),
-                None,
-                span,
-            ));
-        }
-
         self.global_constants.insert(id, constant);
 
         Ok(())
@@ -283,17 +264,7 @@ impl<'parser> SymbolTable<'parser> {
         &mut self,
         id: &'parser str,
         ctype: CustomTypeSymbol<'parser>,
-        span: Span,
     ) -> Result<(), CompilationIssue> {
-        if self.global_custom_types.contains_key(id) {
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0004,
-                format!("Type '{}' was declared before.", id),
-                None,
-                span,
-            ));
-        }
-
         self.global_custom_types.insert(id, ctype);
 
         Ok(())
@@ -325,17 +296,7 @@ impl<'parser> SymbolTable<'parser> {
         &mut self,
         id: &'parser str,
         fields: Struct<'parser>,
-        span: Span,
     ) -> Result<(), CompilationIssue> {
-        if self.global_structs.contains_key(id) {
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0004,
-                format!("Structure '{}' was declared before.", id),
-                None,
-                span,
-            ));
-        }
-
         self.global_structs.insert(id, fields);
 
         Ok(())
@@ -348,15 +309,6 @@ impl<'parser> SymbolTable<'parser> {
         span: Span,
     ) -> Result<(), CompilationIssue> {
         if let Some(last_scope) = self.local_structs.last_mut() {
-            if last_scope.contains_key(id) {
-                return Err(CompilationIssue::Error(
-                    CompilationIssueCode::E0004,
-                    format!("Structure '{}' was declared before.", id),
-                    None,
-                    span,
-                ));
-            }
-
             last_scope.insert(id, fields);
 
             Ok(())
@@ -376,17 +328,7 @@ impl<'parser> SymbolTable<'parser> {
         &mut self,
         id: &'parser str,
         union: EnumSymbol<'parser>,
-        span: Span,
     ) -> Result<(), CompilationIssue> {
-        if self.global_enums.contains_key(id) {
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0004,
-                format!("Enum '{}' was declared before.", id),
-                None,
-                span,
-            ));
-        }
-
         self.global_enums.insert(id, union);
 
         Ok(())
@@ -403,6 +345,7 @@ impl<'parser> SymbolTable<'parser> {
                 return Err(CompilationIssue::Error(
                     CompilationIssueCode::E0004,
                     format!("Enum '{}' was declared before.", id),
+                    "You should rename it or remove the copy.".into(),
                     None,
                     span,
                 ));
@@ -427,17 +370,7 @@ impl<'parser> SymbolTable<'parser> {
         &mut self,
         id: &'parser str,
         function: AssemblerFunction<'parser>,
-        span: Span,
     ) -> Result<(), CompilationIssue> {
-        if self.asm_functions.contains_key(id) {
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0004,
-                format!("'{}' assembler function was declared before.", id),
-                None,
-                span,
-            ));
-        }
-
         self.asm_functions.insert(id, function);
 
         Ok(())
@@ -447,17 +380,7 @@ impl<'parser> SymbolTable<'parser> {
         &mut self,
         id: &'parser str,
         function: Function<'parser>,
-        span: Span,
     ) -> Result<(), CompilationIssue> {
-        if self.functions.contains_key(id) {
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0004,
-                format!("'{}' function was declared before.", id),
-                None,
-                span,
-            ));
-        }
-
         self.functions.insert(id, function);
 
         Ok(())
@@ -467,17 +390,7 @@ impl<'parser> SymbolTable<'parser> {
         &mut self,
         id: &'parser str,
         intrinsic: Intrinsic<'parser>,
-        span: Span,
     ) -> Result<(), CompilationIssue> {
-        if self.intrinsics.contains_key(id) {
-            return Err(CompilationIssue::Error(
-                CompilationIssueCode::E0004,
-                format!("'{}' intrinsic was declared before.", id),
-                None,
-                span,
-            ));
-        }
-
         self.intrinsics.insert(id, intrinsic);
 
         Ok(())
@@ -759,6 +672,7 @@ impl<'parser> SymbolTable<'parser> {
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
             format!("'{}' not found", id),
+            "You should either create it or reference it correctly.".into(),
             None,
             span,
         ))
@@ -791,6 +705,7 @@ impl<'parser> SymbolTable<'parser> {
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
             String::from("LLI not found."),
+            "You should either create it or reference it correctly.".into(),
             None,
             span,
         ))
@@ -803,15 +718,16 @@ impl<'parser> SymbolTable<'parser> {
         id: &'parser str,
     ) -> Result<AssemblerFunction<'parser>, CompilationIssue> {
         if let Some(asm_function) = self.asm_functions.get(id).cloned() {
-            return Ok(asm_function);
+            Ok(asm_function)
+        } else {
+            Err(CompilationIssue::Error(
+                CompilationIssueCode::E0028,
+                format!("Assembler function '{}' not found in this scope.", id),
+                "You should either create it or reference it correctly.".into(),
+                None,
+                span,
+            ))
         }
-
-        Err(CompilationIssue::Error(
-            CompilationIssueCode::E0028,
-            format!("Assembler function '{}' not found in this scope.", id),
-            None,
-            span,
-        ))
     }
 
     #[inline]
@@ -821,15 +737,16 @@ impl<'parser> SymbolTable<'parser> {
         id: &'parser str,
     ) -> Result<Function<'parser>, CompilationIssue> {
         if let Some(function) = self.functions.get(id).cloned() {
-            return Ok(function);
+            Ok(function)
+        } else {
+            Err(CompilationIssue::Error(
+                CompilationIssueCode::E0028,
+                format!("Function '{}' not found in this scope.", id),
+                "You should either create it or reference it correctly.".into(),
+                None,
+                span,
+            ))
         }
-
-        Err(CompilationIssue::Error(
-            CompilationIssueCode::E0028,
-            format!("Function '{}' not found in this scope.", id),
-            None,
-            span,
-        ))
     }
 
     #[inline]
@@ -839,15 +756,16 @@ impl<'parser> SymbolTable<'parser> {
         id: &'parser str,
     ) -> Result<Intrinsic<'parser>, CompilationIssue> {
         if let Some(intrinsic) = self.intrinsics.get(id).cloned() {
-            return Ok(intrinsic);
+            Ok(intrinsic)
+        } else {
+            Err(CompilationIssue::Error(
+                CompilationIssueCode::E0028,
+                format!("Compiler intrinsic '{}' not found in this scope.", id),
+                "You should either create it or reference it correctly.".into(),
+                None,
+                span,
+            ))
         }
-
-        Err(CompilationIssue::Error(
-            CompilationIssueCode::E0028,
-            format!("Compiler intrinsic '{}' not found in this scope.", id),
-            None,
-            span,
-        ))
     }
 
     #[inline]
@@ -880,7 +798,8 @@ impl<'parser> SymbolTable<'parser> {
 
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
-            "Enum reference not found.".into(),
+            format!("Enum '{}' not found.", id),
+            "You should either create it or reference it correctly.".into(),
             None,
             span,
         ))
@@ -917,6 +836,7 @@ impl<'parser> SymbolTable<'parser> {
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
             format!("Type '{}' not found in this scope.", id),
+            "You should either create it or reference it correctly.".into(),
             None,
             span,
         ))
@@ -947,6 +867,7 @@ impl<'parser> SymbolTable<'parser> {
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
             format!("Variable '{}' not found in this scope.", local_id),
+            "You should either create it or reference it correctly.".into(),
             None,
             span,
         ))
@@ -983,6 +904,7 @@ impl<'parser> SymbolTable<'parser> {
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
             format!("Static '{}' not found in this scope.", id),
+            "You should either create it or reference it correctly.".into(),
             None,
             span,
         ))
@@ -1019,6 +941,7 @@ impl<'parser> SymbolTable<'parser> {
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
             format!("Constant '{}' not found in this scope.", id),
+            "You should either create it or reference it correctly.".into(),
             None,
             span,
         ))
@@ -1031,15 +954,16 @@ impl<'parser> SymbolTable<'parser> {
         span: Span,
     ) -> Result<ParameterSymbol<'parser>, CompilationIssue> {
         if let Some(parameter) = self.parameters.get(parameter_id).cloned() {
-            return Ok(parameter);
+            Ok(parameter)
+        } else {
+            Err(CompilationIssue::Error(
+                CompilationIssueCode::E0028,
+                format!("Parameter '{}' not found in this scope.", parameter_id),
+                "You should either create it or reference it correctly.".into(),
+                None,
+                span,
+            ))
         }
-
-        Err(CompilationIssue::Error(
-            CompilationIssueCode::E0028,
-            format!("Parameter '{}' not found in this scope.", parameter_id),
-            None,
-            span,
-        ))
     }
 
     #[inline]
@@ -1073,6 +997,7 @@ impl<'parser> SymbolTable<'parser> {
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0028,
             format!("'{}' structure not found in this scope.", id),
+            "You should either create it or reference it correctly.".into(),
             None,
             span,
         ))

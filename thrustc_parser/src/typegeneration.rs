@@ -103,6 +103,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                             if !support {
                                 ctx.add_error_report(CompilationIssue::Error(
                                     CompilationIssueCode::E0039,
+                                    "Unsupported type".into(),
                                     "Type isn't supported on the current target architecture."
                                         .into(),
                                     None,
@@ -129,6 +130,7 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                             if !support {
                                 ctx.add_error_report(CompilationIssue::Error(
                                     CompilationIssueCode::E0039,
+                                    "Unsupported type".into(),
                                     "Type isn't supported on the current target architecture."
                                         .into(),
                                     None,
@@ -146,7 +148,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
 
                     any => Err(CompilationIssue::Error(
                         CompilationIssueCode::E0001,
-                        format!("Not found type '{}'.", any),
+                        format!("Unknown type '{}'.", any),
+                        "You should make sure that it exist at this scope.".into(),
                         None,
                         span,
                     )),
@@ -172,7 +175,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                     let Ok(object) = reference else {
                         return Err(CompilationIssue::Error(
                             CompilationIssueCode::E0001,
-                            format!("Not found type '{}'.", name),
+                            format!("Unknown type '{}'.", name),
+                            "You should make sure that it exist at this scope.".into(),
                             None,
                             span,
                         ));
@@ -190,7 +194,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                     let Ok(object) = reference else {
                         return Err(CompilationIssue::Error(
                             CompilationIssueCode::E0001,
-                            format!("Not found type '{}'.", name),
+                            format!("Unknown type '{}'.", name),
+                            "You should make sure that it exist at this scope.".into(),
                             None,
                             span,
                         ));
@@ -208,7 +213,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                     let Ok(object) = reference else {
                         return Err(CompilationIssue::Error(
                             CompilationIssueCode::E0001,
-                            format!("Not found type '{}'.", name),
+                            format!("Unknown type '{}'.", name),
+                            "You should make sure that it exist at this scope.".into(),
                             None,
                             span,
                         ));
@@ -226,7 +232,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                     let Ok(object) = reference.cloned() else {
                         return Err(CompilationIssue::Error(
                             CompilationIssueCode::E0001,
-                            format!("Not found type '{}'.", name),
+                            format!("Unknown type '{}'.", name),
+                            "You should make sure that it exist at this scope.".into(),
                             None,
                             span,
                         ));
@@ -244,7 +251,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                     let Ok(object) = reference else {
                         return Err(CompilationIssue::Error(
                             CompilationIssueCode::E0001,
-                            format!("Not found type '{}'.", name),
+                            format!("Unknown type '{}'.", name),
+                            "You should make sure that it exist at this scope.".into(),
                             None,
                             span,
                         ));
@@ -262,7 +270,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
                     let Ok(object) = reference else {
                         return Err(CompilationIssue::Error(
                             CompilationIssueCode::E0001,
-                            format!("Not found type '{}'.", name),
+                            format!("Unknown type '{}'.", name),
+                            "You should make sure that it exist at this scope.".into(),
                             None,
                             span,
                         ));
@@ -275,7 +284,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
 
                 _ => Err(CompilationIssue::Error(
                     CompilationIssueCode::E0001,
-                    format!("Not found type '{}'.", name),
+                    format!("Unknown type '{}'.", name),
+                    "You should make sure that it exist at this scope.".into(),
                     None,
                     span,
                 )),
@@ -286,7 +296,8 @@ pub fn build_type(ctx: &mut ParserContext<'_>, parse_expr: bool) -> Result<Type,
 
         any => Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
-            format!("Not found type '{}'.", any),
+            format!("Unknown type '{}'.", any),
+            "You should make sure that it exist at this scope.".into(),
             None,
             ctx.peek().get_span(),
         )),
@@ -382,7 +393,8 @@ fn parse_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         if !size.is_integer() {
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected literal integer value as a max size indicator.".into(),
+                "Expected literal integer value".into(),
+                "You should pass an integer expression.".into(),
                 None,
                 span,
             ));
@@ -391,7 +403,8 @@ fn parse_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         if !size_type.is_unsigned_integer_type() || !size_type.is_lesseq_unsigned32bit_integer() {
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected unsigned integer value less than or equal to 32 bits.".into(),
+                "Expected unsigned integer value.".into(),
+                "You should pass a unsigned integer value less than or equal to 32 bits.".into(),
                 None,
                 span,
             ));
@@ -408,7 +421,8 @@ fn parse_array_type(ctx: &mut ParserContext<'_>, span: Span) -> Result<Type, Com
         if array_size.is_err() {
             ctx.add_error_report(CompilationIssue::Error(
                 CompilationIssueCode::E0001,
-                "Expected any unsigned 32 bits integer value.".into(),
+                "Expected literal integer value".into(),
+                "You should pass an integer expression.".into(),
                 None,
                 span,
             ));
@@ -469,6 +483,7 @@ fn parse_pointer_type(
         Err(CompilationIssue::Error(
             CompilationIssueCode::E0001,
             format!("Expected pointer type, not '{}'", before_type),
+            "You should pass a pointer type.".into(),
             None,
             ctx.previous().span,
         ))
