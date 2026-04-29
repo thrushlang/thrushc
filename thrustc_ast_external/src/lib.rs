@@ -2,6 +2,10 @@ use thrustc_attributes::ThrustAttributes;
 use thrustc_span::Span;
 use thrustc_typesystem::Type;
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
 pub struct ExternalSymbol {
     pub name: String,
@@ -20,6 +24,7 @@ impl ExternalSymbol {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ExternalVariant {
     Function,
@@ -30,6 +35,7 @@ pub enum ExternalVariant {
     Unavailable,
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
 pub enum ExternalSignature {
     Function {

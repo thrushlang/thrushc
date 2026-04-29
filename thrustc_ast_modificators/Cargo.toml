@@ -15,4 +15,7 @@ thrustc_mir = { path = "../thrustc_mir" }
 arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
 
 [features]
-fuzz = ["dep:arbitrary"]
+fuzz = [
+    "dep:arbitrary",
+    "thrustc_mir/fuzz"
+]

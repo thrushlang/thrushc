@@ -76,6 +76,7 @@ pub trait AstStandardExtensions {
     fn is_continue_keyword(&self) -> bool;
     fn is_continueall_keyword(&self) -> bool;
     fn is_conditional_keyword(&self) -> bool;
+    fn is_function_parameter(&self) -> bool;
     fn is_defer_keyword(&self) -> bool;
 }
 

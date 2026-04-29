@@ -47,7 +47,7 @@ pub fn compile<'ctx>(
 
         what => abort::abort_codegen(
             context,
-            &format!("Failed to compile '{}' float type!", what),
+            &format!("Failed to compile '{}' as float value!", what),
             span,
             std::path::PathBuf::from(file!()),
             line!(),

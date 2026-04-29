@@ -17,9 +17,12 @@
 
 */
 
-
 #![allow(clippy::enum_variant_names)]
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub enum ThrustThreadMode {
     GeneralDynamicTLSModel,

@@ -12,4 +12,14 @@ repository.workspace = true
 [dependencies]
 thrustc_span = { path = "../thrustc_span" }
 thrustc_typesystem = { path = "../thrustc_typesystem" }
-thrustc_attributes = { path = "../thrustc_attributes"}
+thrustc_attributes = { path = "../thrustc_attributes" }
+
+arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
+
+[features]
+fuzz = [
+    "dep:arbitrary",
+    "thrustc_span/fuzz",
+    "thrustc_typesystem/fuzz",
+    "thrustc_attributes/fuzz",
+]

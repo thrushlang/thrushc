@@ -1,8 +1,8 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use thrushc_lexer::Lexer;
-use thrushc_options::{CompilationUnit, CompilerOptions};
+use thrustc_lexer::Lexer;
+use thrustc_options::{CompilationUnit, CompilerOptions};
 
 fuzz_target!(|data: &[u8]| {
     if let Ok(source) = std::str::from_utf8(data) {

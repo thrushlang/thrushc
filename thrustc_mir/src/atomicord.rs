@@ -17,9 +17,12 @@
 
 */
 
-
 use inkwell::AtomicOrdering;
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, Clone, Copy)]
 pub enum ThrustAtomicOrdering {

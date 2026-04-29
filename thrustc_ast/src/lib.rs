@@ -617,6 +617,7 @@ impl<'ast> Ast<'ast> {
     }
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
 pub enum ModuleExpressionValues<'ast> {
     Call {
@@ -629,6 +630,7 @@ pub enum ModuleExpressionValues<'ast> {
     },
 }
 
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone, Copy)]
 pub struct NodeId {
     pub discriminat: u64,

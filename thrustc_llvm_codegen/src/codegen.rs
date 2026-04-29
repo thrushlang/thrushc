@@ -61,7 +61,7 @@ pub struct LLVMCodegen<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
-    pub fn generate(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
+    pub fn codegen(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
         Self { context, ast }.compile();
     }
 }
@@ -70,20 +70,22 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
     fn compile(&mut self) {
         self.init_top_entities();
 
-        self::init_llvm_constructors(self.get_mut_context());
-        self::init_llvm_destructors(self.get_mut_context());
+        self::compile_constructors(self.get_mut_context());
+        self::compile_destructors(self.get_mut_context());
 
         {
             for node in self.ast.iter() {
-                self.codegen(node);
+                self.codegen_top(node);
             }
         }
 
-        if let Some(dbg_context) = self.get_context().get_debug_context() {
-            dbg_context.finalize()
-        }
+        {
+            if let Some(dbg_context) = self.get_context().get_debug_context() {
+                dbg_context.finalize()
+            }
 
-        LLVMMetadata::setup_platform_specific(self.get_context());
+            LLVMMetadata::setup_platform_specific_metadata(self.get_context());
+        }
     }
 
     fn init_top_entities(&mut self) {
@@ -245,7 +247,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
 }
 
 impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
-    fn codegen(&mut self, node: &'ctx Ast) {
+    fn codegen_top(&mut self, node: &'ctx Ast) {
         self.codegen_declaration(node);
     }
 
@@ -1261,7 +1263,7 @@ pub fn compile_as_ptr_value<'ctx>(
     }
 }
 
-pub fn init_llvm_constructors<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+pub fn compile_constructors<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     if context.get_llvm_ctors().is_empty() {
         return;
     }
@@ -1309,7 +1311,7 @@ pub fn init_llvm_constructors<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>) 
     global.set_initializer(&ctor_type.const_array(&llvm_ctors));
 }
 
-pub fn init_llvm_destructors<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>) {
+pub fn compile_destructors<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>) {
     if context.get_llvm_dtors().is_empty() {
         return;
     }

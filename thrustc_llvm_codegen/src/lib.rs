@@ -58,7 +58,7 @@ pub struct LLVMCompiler;
 impl<'a, 'ctx> LLVMCompiler {
     #[inline]
     pub fn compile(context: &'a mut LLVMCodeGenContext<'a, 'ctx>, ast: &'ctx [Ast<'ctx>]) {
-        LLVMMetadata::setup_platform_independent(context);
-        LLVMCodegen::generate(context, ast);
+        LLVMMetadata::setup_platform_independent_metadata(context);
+        LLVMCodegen::codegen(context, ast);
     }
 }

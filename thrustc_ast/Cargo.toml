@@ -8,7 +8,6 @@ rust-version.workspace = true
 
 [dependencies]
 colored = "3.0.0"
-arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
 clipboard = { version = "0.5.0", optional = true }
 
 thrustc_ast_external = { path = "../thrustc_ast_external"}
@@ -22,5 +21,16 @@ thrustc_errors = { path = "../thrustc_errors" }
 thrustc_token_type = { path = "../thrustc_token_type" }
 thrustc_logging = { path = "../thrustc_logging" }
 
+arbitrary =  { version = "1.4.2", features = ["derive"], optional = true }
+
 [features]
-fuzz = ["dep:arbitrary"]
+fuzz = [
+    "dep:arbitrary",
+    "thrustc_span/fuzz",
+    "thrustc_typesystem/fuzz",
+    "thrustc_attributes/fuzz",
+    "thrustc_token/fuzz",
+    "thrustc_token_type/fuzz",
+    "thrustc_ast_external/fuzz",
+    "thrustc_ast_modificators/fuzz"
+]

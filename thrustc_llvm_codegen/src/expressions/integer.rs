@@ -55,7 +55,7 @@ pub fn compile<'ctx>(
 
         what => abort::abort_codegen(
             context,
-            &format!("Failed to compile '{}' integer type!", what),
+            &format!("Failed to compile '{}' as integer value!", what),
             span,
             std::path::PathBuf::from(file!()),
             line!(),

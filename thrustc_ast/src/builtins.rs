@@ -22,6 +22,10 @@ use thrustc_typesystem::Type;
 
 use crate::Ast;
 
+#[cfg(feature = "fuzz")]
+use arbitrary::Arbitrary;
+
+#[cfg_attr(feature = "fuzz", derive(Arbitrary))]
 #[derive(Debug, Clone)]
 pub enum AstBuiltin<'mir> {
     Halloc {

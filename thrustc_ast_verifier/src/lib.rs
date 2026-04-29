@@ -17,10 +17,14 @@
 
 */
 
+#![allow(clippy::collapsible_match)]
+
 use thrustc_ast::{
     Ast,
     builtins::AstBuiltin,
-    traits::{AstCodeLocation, AstExpressionExtensions, AstStatementExtensions},
+    traits::{
+        AstCodeLocation, AstExpressionExtensions, AstStandardExtensions, AstStatementExtensions,
+    },
 };
 use thrustc_diagnostician::Diagnostician;
 use thrustc_errors::CompilationIssue;
@@ -52,12 +56,88 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
     pub fn analyze_top(&mut self) -> bool {
         {
             for node in self.ast.iter() {
-                if let Ast::Function {
-                    body: Some(body), ..
-                } = node
-                {
-                    self.expected_statement(body);
-                    self.analyze_stmt(body);
+                match node {
+                    Ast::Function {
+                        parameters, body, ..
+                    } => {
+                        if let Some(body) = body {
+                            self.expected_statement(body);
+                            self.analyze_stmt(body);
+                        }
+
+                        for parameter in parameters.iter() {
+                            if !parameter.is_function_parameter() {
+                                self.add_error(CompilationIssue::Error(
+                                    thrustc_errors::CompilationIssueCode::E0001,
+                                    "Expected a parameter.".into(),
+                                    "You should remove it.".into(),
+                                    None,
+                                    node.get_span(),
+                                ));
+                            }
+                        }
+                    }
+
+                    Ast::Intrinsic { parameters, .. } => {
+                        for parameter in parameters.iter() {
+                            if !parameter.is_function_parameter() {
+                                self.add_error(CompilationIssue::Error(
+                                    thrustc_errors::CompilationIssueCode::E0001,
+                                    "Expected a parameter.".into(),
+                                    "You should remove it.".into(),
+                                    None,
+                                    node.get_span(),
+                                ));
+                            }
+                        }
+                    }
+
+                    Ast::AssemblerFunction { parameters, .. } => {
+                        for parameter in parameters.iter() {
+                            if !parameter.is_function_parameter() {
+                                self.add_error(CompilationIssue::Error(
+                                    thrustc_errors::CompilationIssueCode::E0001,
+                                    "Expected a parameter.".into(),
+                                    "You should remove it.".into(),
+                                    None,
+                                    node.get_span(),
+                                ));
+                            }
+                        }
+                    }
+
+                    Ast::Const { value, .. } => {
+                        self.analyze_expression(value);
+                    }
+
+                    Ast::Static { value, .. } => {
+                        if let Some(value) = value {
+                            self.analyze_expression(value);
+                        }
+                    }
+
+                    Ast::Enum { data, .. } => {
+                        for (_, _, node, ..) in data.iter() {
+                            self.analyze_expression(node);
+                        }
+                    }
+
+                    Ast::GlobalAssembler { .. }
+                    | Ast::CustomType { .. }
+                    | Ast::Import { .. }
+                    | Ast::Embedded { .. }
+                    | Ast::Struct { .. } => {}
+
+                    _ => {
+                        self.add_error(CompilationIssue::Error(
+                            thrustc_errors::CompilationIssueCode::E0001,
+                            "Expected a top entity, not a statement, and never an expression"
+                                .into(),
+                            "You should remove it.".into(),
+                            None,
+                            node.get_span(),
+                        ));
+                    }
                 }
             }
         }
@@ -80,6 +160,16 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
                         self.expected_statement_or_loose_expression(node);
                         self.analyze_stmt(node);
                     }
+                }
+            }
+
+            Ast::Const { value, .. } => {
+                self.analyze_expression(value);
+            }
+
+            Ast::Static { value, .. } => {
+                if let Some(value) = value {
+                    self.analyze_expression(value);
                 }
             }
 
@@ -166,7 +256,8 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
             Ast::Continue { .. }
             | Ast::ContinueAll { .. }
             | Ast::Break { .. }
-            | Ast::BreakAll { .. } => {}
+            | Ast::BreakAll { .. }
+            | Ast::Struct { .. } => {}
 
             Ast::Return { expression, .. } => {
                 if let Some(node) = expression {
@@ -329,7 +420,7 @@ impl<'ast_verifier> AstVerifier<'ast_verifier> {
         if !node.is_statement_keyword() {
             self.add_error(CompilationIssue::Error(
                 thrustc_errors::CompilationIssueCode::E0001,
-                "Expected a statement, not a declaration, and never a top entity.".into(),
+                "Expected a statement, not an expression, and never a top entity.".into(),
                 "You should remove it.".into(),
                 None,
                 node.get_span(),

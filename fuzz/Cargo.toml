@@ -1,5 +1,5 @@
 [package]
-name = "thrushc_compiler_fuzz"
+name = "thrustc_compiler_fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
@@ -9,11 +9,14 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+chrono = "0.4.44"
 
 arbitrary = { version = "1.4.2", features = ["derive"] }
 
-thrushc_lexer = { path = "../thrushc_lexer" }
-thrushc_options = { path = "../thrushc_options" }
+thrustc_lexer = { path = "../thrustc_lexer" }
+thrustc_options = { path = "../thrustc_options" }
+thrustc_ast = { path = "../thrustc_ast" , features = ["fuzz"] }
+thrustc_semantic = { path = "../thrustc_semantic" }
 
 [[bin]]
 name = "lexer-fuzz"
@@ -23,8 +26,8 @@ doc = false
 bench = false
 
 [[bin]]
-name = "parser"
-path = "fuzz_targets/parser.rs"
+name = "pipeline"
+path = "fuzz_targets/pipeline.rs"
 test = false
 doc = false
 bench = false

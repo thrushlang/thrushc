@@ -41,13 +41,13 @@ pub struct LLVMMetadata<'a, 'ctx> {
 
 impl<'a, 'ctx> LLVMMetadata<'a, 'ctx> {
     #[inline]
-    pub fn setup_platform_independent(context: &'a LLVMCodeGenContext<'a, 'ctx>) {
+    pub fn setup_platform_independent_metadata(context: &'a LLVMCodeGenContext<'a, 'ctx>) {
         let inner: LLVMMetadata<'a, 'ctx> = Self { context };
 
         inner.setup_metadata();
     }
 
-    pub fn setup_platform_specific(context: &'a LLVMCodeGenContext<'a, 'ctx>) {
+    pub fn setup_platform_specific_metadata(context: &'a LLVMCodeGenContext<'a, 'ctx>) {
         let inner: LLVMMetadata<'a, 'ctx> = Self { context };
 
         inner.setup_target_specific_metadata_or_attributes();

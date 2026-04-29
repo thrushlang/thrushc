@@ -144,6 +144,15 @@ impl AstStandardExtensions for Ast<'_> {
         matches!(self, Ast::Import { .. })
     }
 
+    fn is_function_parameter(&self) -> bool {
+        matches!(
+            self,
+            Ast::FunctionParameter { .. }
+                | Ast::AssemblerFunctionParameter { .. }
+                | Ast::IntrinsicParameter { .. }
+        )
+    }
+
     #[inline]
     fn is_conditional_keyword(&self) -> bool {
         matches!(self, Ast::If { .. } | Ast::Elif { .. } | Ast::Else { .. })
