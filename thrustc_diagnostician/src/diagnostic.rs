@@ -22,7 +22,7 @@ use colored::Colorize;
 use thrustc_logging::LoggingType;
 use thrustc_span::Span;
 
-use crate::{Notificator, position::CodePosition};
+use crate::{DiagnosticType, Notificator, position::CodePosition};
 
 #[derive(Debug)]
 pub struct Diagnostic {
@@ -65,6 +65,7 @@ pub(crate) fn build(
     span: Span,
     message: &str,
     help: &str,
+    r#type: DiagnosticType,
     notificator: Notificator,
     logging_type: LoggingType,
 ) -> Diagnostic {
@@ -79,6 +80,7 @@ pub(crate) fn build(
         code_position,
         message,
         help,
+        r#type,
         notificator,
         logging_type,
     )
@@ -142,6 +144,7 @@ pub(crate) fn generate(
     position: CodePosition,
     message: &str,
     help: &str,
+    r#type: DiagnosticType,
     notificator: Notificator,
     logging_type: LoggingType,
 ) -> Option<Diagnostic> {
@@ -205,34 +208,36 @@ pub(crate) fn generate(
 
     signaler.push_str(&format!(" {}{}\n", notificator, message.bright_yellow()));
 
-    let down_depth: u8 = fastrand::u8(2..4);
+    if let DiagnosticType::Error = r#type {
+        let down_depth: u8 = fastrand::u8(2..4);
 
-    for _ in 0..down_depth {
+        for _ in 0..down_depth {
+            signaler.push_str(&format!("{:>4} │ ", ""));
+
+            for _ in 0..visible_start {
+                signaler.push(' ');
+            }
+
+            signaler.push_str("|\n");
+        }
+
         signaler.push_str(&format!("{:>4} │ ", ""));
 
-        for _ in 0..visible_start {
-            signaler.push(' ');
+        {
+            let right_depth: usize = fastrand::usize(15..30);
+
+            for _ in 0..visible_start {
+                signaler.push(' ');
+            }
+
+            signaler.push_str(&format!(
+                "{:->width$} {}: {}\n",
+                "",
+                "HELP".bright_green().bold().underline(),
+                help,
+                width = right_depth
+            ));
         }
-
-        signaler.push_str("|\n");
-    }
-
-    signaler.push_str(&format!("{:>4} │ ", ""));
-
-    {
-        let right_depth: usize = fastrand::usize(15..30);
-
-        for _ in 0..visible_start {
-            signaler.push(' ');
-        }
-
-        signaler.push_str(&format!(
-            "{:->width$} {}: {}\n",
-            "",
-            "HELP".bright_green().bold().underline(),
-            help,
-            width = right_depth
-        ));
     }
 
     if let Some(next) = lines.get(line_idx.saturating_add(1)) {

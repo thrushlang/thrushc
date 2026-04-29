@@ -19,6 +19,7 @@
 
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
+use thrustc_ast::traits::AstMemoryExtensions;
 use thrustc_backends::llvm::LLVMBackend;
 use thrustc_entities::UnaryOperation;
 use thrustc_options::CompilerOptions;
@@ -26,7 +27,6 @@ use thrustc_span::Span;
 use thrustc_token_type::TokenType;
 use thrustc_typesystem::Type;
 use thrustc_typesystem::traits::TypeIsExtensions;
-use thrustc_typesystem::traits::TypePointerExtensions;
 
 use crate::abort;
 use crate::cast;
@@ -447,7 +447,7 @@ fn compile_logical_negation<'ctx>(
 
     let kind: &Type = expr.get_type_for_llvm();
 
-    let value: BasicValueEnum = if kind.is_ptr_like_type() {
+    let value: BasicValueEnum = if expr.is_memory_assigned_value().unwrap_or(false) {
         codegen::compile_as_ptr_value(context, expr, cast_type)
     } else {
         codegen::compile_as_value(context, expr, cast_type)
@@ -457,9 +457,9 @@ fn compile_logical_negation<'ctx>(
 
     match kind {
         kind if kind.is_bool_type() => {
-            let int: IntValue = value.into_int_value();
+            let int_value: IntValue = value.into_int_value();
 
-            let result: IntValue = llvm_builder.build_not(int, "").unwrap_or_else(|_| {
+            let new_value: IntValue = llvm_builder.build_not(int_value, "").unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
                     "Failed to compile the operation!",
@@ -469,14 +469,15 @@ fn compile_logical_negation<'ctx>(
                 )
             });
 
-            cast::try_smart_cast(context, cast_type, kind, result.into(), span)
+            cast::try_smart_cast(context, cast_type, kind, new_value.into(), span)
         }
 
         kind if kind.is_ptr_type() => {
-            let ptr: PointerValue<'_> = value.into_pointer_value();
+            let ptr_value: PointerValue<'_> = value.into_pointer_value();
 
-            let result: IntValue<'_> =
-                llvm_builder.build_is_not_null(ptr, "").unwrap_or_else(|_| {
+            let new_value: IntValue<'_> = llvm_builder
+                .build_is_not_null(ptr_value, "")
+                .unwrap_or_else(|_| {
                     abort::abort_codegen(
                         context,
                         "Failed to compile the operation!",
@@ -486,7 +487,7 @@ fn compile_logical_negation<'ctx>(
                     )
                 });
 
-            cast::try_smart_cast(context, cast_type, kind, result.into(), span)
+            cast::try_smart_cast(context, cast_type, kind, new_value.into(), span)
         }
 
         _ => abort::abort_codegen(

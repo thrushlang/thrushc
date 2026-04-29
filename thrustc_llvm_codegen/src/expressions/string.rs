@@ -17,8 +17,6 @@
 
 */
 
-use std::path::PathBuf;
-
 use inkwell::values::PointerValue;
 
 use inkwell::AddressSpace;
@@ -45,9 +43,9 @@ pub fn compile<'ctx>(
     let parsed_size: u32 = u32::try_from(bytes.len()).unwrap_or_else(|_| {
         abort::abort_codegen(
             context,
-            "Failed to extract the from struct!",
+            "Failed to compile string literal!",
             span,
-            PathBuf::from(file!()),
+            std::path::PathBuf::from(file!()),
             line!(),
         )
     });
@@ -61,7 +59,7 @@ pub fn compile<'ctx>(
     let cstr_type: ArrayType = llvm_context.i8_type().array_type(fixed_cstr_size);
 
     let cstr_name: String = format!(
-        "str{}",
+        "cstr{}",
         utils::generate_string(context, utils::SHORT_RANGE_OBFUSCATION)
     );
 

@@ -29,31 +29,30 @@ use std::path::PathBuf;
 use crate::context::LLVMCodeGenContext;
 use crate::{abort, heap, typegeneration};
 
-pub fn local_variable<'ctx>(
+pub fn allocate_variable<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    ascii_name: &str,
+    llvm_name: &str,
     kind: &Type,
     attributes: &ThrustAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
+    let llvm_name: String = format!("local.{}", llvm_name);
     let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, kind);
-
-    let name: String = format!("local.{}", ascii_name);
 
     context.mark_dbg_location(span);
 
     if attributes.has_heap_attr() {
-        heap::try_alloc_at_heap(context, llvm_type, &name, attributes, span)
+        heap::try_allocate_at_heap(context, &llvm_name, llvm_type, attributes, span)
     } else {
-        self::try_alloc_at_stack(context, llvm_type, &name, attributes, span)
+        self::try_allocate_at_stack(context, &llvm_name, llvm_type, attributes, span)
     }
 }
 
 #[inline]
-fn try_alloc_at_stack<'ctx>(
+fn try_allocate_at_stack<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    llvm_name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
-    ascii_name: &str,
     attributes: &ThrustAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
@@ -61,7 +60,7 @@ fn try_alloc_at_stack<'ctx>(
 
     if let Ok(ptr) = context
         .get_llvm_builder()
-        .build_alloca(llvm_type, ascii_name)
+        .build_alloca(llvm_type, llvm_name)
     {
         if let Some(align_attr) =
             attributes.get_attr(thrustc_attributes::ThrustAttributeComparator::Align)

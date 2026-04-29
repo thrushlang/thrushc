@@ -45,6 +45,14 @@ enum Notificator {
     CompilerBackendBug,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum DiagnosticType {
+    Warning,
+    Error,
+    FrontendBug,
+    BackendBug,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Diagnostician {
     path: PathBuf,
@@ -78,11 +86,12 @@ impl Diagnostician {
                     *span,
                     message,
                     help,
+                    DiagnosticType::Error,
                     Notificator::CommonError,
                     logging_type,
                 );
 
-                let generated: String = printers::print_to_string(
+                let generated_diagnostic: String = printers::print_to_string(
                     &diagnostic,
                     (
                         &title.to_title(),
@@ -107,24 +116,25 @@ impl Diagnostician {
                     if let Ok(mut file_diag) =
                         OpenOptions::new().create(true).append(true).open(full_path)
                     {
-                        let _ = file_diag.write(generated.as_bytes());
+                        let _ = file_diag.write(generated_diagnostic.as_bytes());
                     }
                 }
 
-                thrustc_logging::write(OutputIn::Stderr, &generated);
+                thrustc_logging::write(OutputIn::Stderr, &generated_diagnostic);
             }
 
-            CompilationIssue::Warning(title, help, span) => {
+            CompilationIssue::Warning(title, message, span) => {
                 let diagnostic: Diagnostic = diagnostic::build(
                     &self.code,
                     *span,
-                    help,
+                    message,
                     "",
+                    DiagnosticType::Warning,
                     Notificator::CommonError,
                     logging_type,
                 );
 
-                let generated: String = printers::print_to_string(
+                let generated_diagnostic: String = printers::print_to_string(
                     &diagnostic,
                     (&title.to_title(), &self.path, None, logging_type),
                 );
@@ -144,19 +154,20 @@ impl Diagnostician {
                     if let Ok(mut file_diag) =
                         OpenOptions::new().create(true).append(true).open(full_path)
                     {
-                        let _ = file_diag.write(generated.as_bytes());
+                        let _ = file_diag.write(generated_diagnostic.as_bytes());
                     }
                 }
 
-                thrustc_logging::write(OutputIn::Stderr, &generated);
+                thrustc_logging::write(OutputIn::Stderr, &generated_diagnostic);
             }
 
-            CompilationIssue::FrontEndBug(title, info, span, position, path, line) => {
+            CompilationIssue::FrontEndBug(title, message, span, position, path, line) => {
                 let diagnostic: Diagnostic = diagnostic::build(
                     &self.code,
                     *span,
-                    info,
+                    message,
                     "",
+                    DiagnosticType::FrontendBug,
                     Notificator::CompilerFrontendBug,
                     logging_type,
                 );
@@ -167,12 +178,13 @@ impl Diagnostician {
                 );
             }
 
-            CompilationIssue::BackenEndBug(title, info, span, position, path, line) => {
+            CompilationIssue::BackenEndBug(title, message, span, position, path, line) => {
                 let diagnostic: Diagnostic = diagnostic::build(
                     &self.code,
                     *span,
-                    info,
+                    message,
                     "",
+                    DiagnosticType::BackendBug,
                     Notificator::CompilerBackendBug,
                     logging_type,
                 );

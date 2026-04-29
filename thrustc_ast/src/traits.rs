@@ -92,6 +92,7 @@ pub trait AstCodeBlockEntensions {
 
 pub trait AstMemoryExtensions {
     fn is_memory_assigned_value(&self) -> Result<bool, CompilationIssue>;
+    fn is_memory_assigned_reference(&self) -> bool;
 }
 
 pub trait AstConstantExtensions {

@@ -26,7 +26,7 @@ use crate::predicates;
 
 use inkwell::values::PointerValue;
 use thrustc_ast::Ast;
-use thrustc_ast::traits::AstStandardExtensions;
+use thrustc_ast::traits::AstMemoryExtensions;
 use thrustc_entities::BinaryOperation;
 use thrustc_span::Span;
 use thrustc_token_type::TokenType;
@@ -49,7 +49,7 @@ pub fn compile_float_operation<'ctx>(
 
     match operator {
         TokenType::PlusEq => {
-            if lhs.is_reference() {
+            if lhs.is_memory_assigned_reference() {
                 let reference: BasicValueEnum<'_> =
                     codegen::compile_as_ptr_value(context, lhs, cast);
 
@@ -109,7 +109,7 @@ pub fn compile_float_operation<'ctx>(
         }
 
         TokenType::MinusEq => {
-            if lhs.is_reference() {
+            if lhs.is_memory_assigned_reference() {
                 let reference: BasicValueEnum<'_> =
                     codegen::compile_as_ptr_value(context, lhs, cast);
 

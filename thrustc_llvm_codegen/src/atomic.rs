@@ -17,8 +17,10 @@
 
 */
 
-
 use inkwell::{AtomicOrdering, values::InstructionValue};
+use thrustc_span::Span;
+
+use crate::{abort, context::LLVMCodeGenContext};
 
 #[derive(Debug, Clone, Copy)]
 pub struct LLVMAtomicModificators {
@@ -27,15 +29,35 @@ pub struct LLVMAtomicModificators {
 }
 
 #[inline]
-pub fn configure_atomic_modificators<'ctx>(
-    instr: InstructionValue<'ctx>,
+pub fn set_atomic_behavior<'ctx>(
+    context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    instruction: InstructionValue<'ctx>,
     modificators: LLVMAtomicModificators,
+    span: Span,
 ) {
     if modificators.atomic_volatile {
-        let _ = instr.set_volatile(true);
+        instruction.set_volatile(true).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to compile an atomic behavior!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
     }
 
     if let Some(ordering) = modificators.atomic_ord {
-        let _ = instr.set_atomic_ordering(ordering);
+        instruction
+            .set_atomic_ordering(ordering)
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to compile an atomic behavior!",
+                    span,
+                    std::path::PathBuf::from(file!()),
+                    line!(),
+                )
+            });
     }
 }

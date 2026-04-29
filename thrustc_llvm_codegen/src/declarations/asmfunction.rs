@@ -69,10 +69,10 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, asm_fn: Assembl
     let can_throw: bool = attributes.has_asmthrow_attribute();
     let is_public: bool = attributes.has_public_attribute();
 
-    let call_convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
+    let call_convention: u32 = if let Some(LLVMAttribute::Convention(convention, ..)) =
         attributes.get_attr(LLVMAttributeComparator::Convention)
     {
-        conv as u32
+        convention as u32
     } else {
         LLVMCallConvention::Standard as u32
     };

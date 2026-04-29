@@ -50,7 +50,9 @@ use crate::{
 use thrustc_ast::Ast;
 use thrustc_ast::traits::AstCodeLocation;
 use thrustc_typesystem::Type;
-use thrustc_typesystem::traits::{DereferenceExtensions, TypeIsExtensions, TypeStructExtensions};
+use thrustc_typesystem::traits::{
+    DereferenceExtensions, TypeIsExtensions, TypePointerExtensions, TypeStructExtensions,
+};
 
 #[derive(Debug)]
 pub struct LLVMCodegen<'a, 'ctx> {
@@ -427,7 +429,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let symbol_attributes: memory::SymbolAttributes =
                         memory::into_symbol_attributes(&llvm_attributes);
 
-                    let ptr: PointerValue = stack::local_variable(
+                    let ptr: PointerValue = stack::allocate_variable(
                         self.get_mut_context(),
                         ascii_name,
                         kind,
@@ -463,7 +465,7 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     let symbol_attributes: memory::SymbolAttributes =
                         memory::into_symbol_attributes(&llvm_attributes);
 
-                    let ptr: PointerValue = stack::local_variable(
+                    let ptr: PointerValue = stack::allocate_variable(
                         self.get_mut_context(),
                         ascii_name,
                         kind,
@@ -967,21 +969,29 @@ pub fn compile_as_value<'ctx>(
             span,
             ..
         } => {
-            let value: BasicValueEnum = self::compile_as_ptr_value(context, value, Some(kind));
+            let value_type: &Type = value.get_type_for_llvm();
 
-            let deref_value: BasicValueEnum = if value.is_pointer_value() {
-                memory::dereference(
-                    context,
-                    value.into_pointer_value(),
-                    kind,
-                    metadata.get_llvm_metadata(),
-                    *span,
-                )
+            if value_type.is_ptr_like_type() {
+                let value: BasicValueEnum = self::compile_as_ptr_value(context, value, Some(kind));
+
+                let deref_value: BasicValueEnum = if value.is_pointer_value() {
+                    memory::dereference(
+                        context,
+                        value.into_pointer_value(),
+                        kind,
+                        metadata.get_llvm_metadata(),
+                        *span,
+                    )
+                } else {
+                    value
+                };
+
+                cast::try_smart_cast(context, cast_type, kind, deref_value, *span)
             } else {
-                value
-            };
+                let value: BasicValueEnum = self::compile_as_value(context, value, Some(kind));
 
-            cast::try_smart_cast(context, cast_type, kind, deref_value, *span)
+                cast::try_smart_cast(context, cast_type, kind, value, *span)
+            }
         }
 
         // Array Operations

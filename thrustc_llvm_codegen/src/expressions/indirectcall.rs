@@ -39,8 +39,9 @@ pub fn compile<'ctx>(
     cast_type: Option<&Type>,
 ) -> BasicValueEnum<'ctx> {
     let llvm_builder: &Builder<'_> = context.get_llvm_builder();
-    let function_ptr: PointerValue<'_> =
-        codegen::compile_as_ptr_value(context, pointer, cast_type).into_pointer_value();
+    let source_value: BasicValueEnum<'_> =
+        codegen::compile_as_ptr_value(context, pointer, cast_type);
+    let function_ptr_value: PointerValue<'_> = source_value.into_pointer_value();
 
     if let Type::Fn(parameters, kind, modificator, ..) = function_type {
         let need_ignore: bool = modificator.llvm().has_ignore();
@@ -62,36 +63,39 @@ pub fn compile<'ctx>(
             })
             .collect();
 
-        let fn_value: BasicValueEnum<'_> =
-            match llvm_builder.build_indirect_call(function_type, function_ptr, &compiled_args, "")
-            {
-                Ok(call) => {
-                    if !kind.is_void_type() {
-                        call.try_as_basic_value().left().unwrap_or_else(|| {
-                            abort::abort_codegen(
-                                context,
-                                "Failed to compile indirect function call!",
-                                span,
-                                std::path::PathBuf::from(file!()),
-                                line!(),
-                            )
-                        })
-                    } else {
-                        context
-                            .get_llvm_context()
-                            .ptr_type(AddressSpace::default())
-                            .const_null()
-                            .into()
-                    }
+        let fn_value: BasicValueEnum<'_> = match llvm_builder.build_indirect_call(
+            function_type,
+            function_ptr_value,
+            &compiled_args,
+            "",
+        ) {
+            Ok(call) => {
+                if !kind.is_void_type() {
+                    call.try_as_basic_value().left().unwrap_or_else(|| {
+                        abort::abort_codegen(
+                            context,
+                            "Failed to compile indirect function call!",
+                            span,
+                            std::path::PathBuf::from(file!()),
+                            line!(),
+                        )
+                    })
+                } else {
+                    context
+                        .get_llvm_context()
+                        .ptr_type(AddressSpace::default())
+                        .const_null()
+                        .into()
                 }
-                Err(_) => abort::abort_codegen(
-                    context,
-                    "Failed to compile indirect function call!",
-                    span,
-                    std::path::PathBuf::from(file!()),
-                    line!(),
-                ),
-            };
+            }
+            Err(_) => abort::abort_codegen(
+                context,
+                "Failed to compile indirect function call!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            ),
+        };
 
         cast::try_smart_cast(context, cast_type, kind, fn_value, span)
     } else {

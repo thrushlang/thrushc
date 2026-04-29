@@ -303,6 +303,15 @@ impl AstMemoryExtensions for Ast<'_> {
             _ => Ok(self.get_value_type()?.is_ptr_like_type()),
         }
     }
+
+    #[inline]
+    fn is_memory_assigned_reference(&self) -> bool {
+        if let Ast::Reference { metadata, .. } = self {
+            return metadata.is_allocated();
+        }
+
+        false
+    }
 }
 
 impl AstPropertyDataExtensions for PropertyData {

@@ -50,10 +50,10 @@ pub fn compile<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, intrinsic: Intr
 
     let ignore_args: bool = attributes.has_ignore_attribute();
 
-    let convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
+    let convention: u32 = if let Some(LLVMAttribute::Convention(convention, ..)) =
         attributes.get_attr(LLVMAttributeComparator::Convention)
     {
-        conv as u32
+        convention as u32
     } else {
         LLVMCallConvention::Standard as u32
     };

@@ -908,8 +908,7 @@ pub fn check_type_cast(
                 "Cannot cast type '{}' to '{}'. Types are incompatible for cast.",
                 from_type, cast_type
             ),
-            "You should try again with other targets or values or you could also use other approaches."
-                .into(),
+            "You should try other approach.".into(),
             None,
             *span,
         )),

@@ -30,10 +30,10 @@ use crate::abort;
 use crate::context::LLVMCodeGenContext;
 
 #[inline]
-pub fn try_alloc_at_heap<'ctx>(
+pub fn try_allocate_at_heap<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
+    llvm_name: &str,
     llvm_type: BasicTypeEnum<'ctx>,
-    ascii_name: &str,
     attributes: &ThrustAttributes,
     span: Span,
 ) -> PointerValue<'ctx> {
@@ -43,7 +43,7 @@ pub fn try_alloc_at_heap<'ctx>(
 
     if let Ok(ptr) = context
         .get_llvm_builder()
-        .build_malloc(llvm_type, ascii_name)
+        .build_malloc(llvm_type, llvm_name)
     {
         if let Some(align_attr) =
             attributes.get_attr(thrustc_attributes::ThrustAttributeComparator::Align)

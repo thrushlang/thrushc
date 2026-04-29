@@ -28,7 +28,7 @@ use thrustc_typesystem::traits::TypeStructExtensions;
 use crate::anchor::PointerAnchor;
 use crate::context::LLVMCodeGenContext;
 use crate::memory::LLVMAllocationSite;
-use crate::{codegen, memory, typegeneration};
+use crate::{abort, codegen, memory, typegeneration};
 
 pub fn compile<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
@@ -54,26 +54,42 @@ fn compile_with_anchor<'ctx>(
     context.mark_pointer_anchor();
 
     let ptr_type: BasicTypeEnum<'_> = typegeneration::generate_type(context, struct_type);
-    let ptr: PointerValue<'_> = anchor.get_pointer();
+    let ptr_value: PointerValue<'_> = anchor.get_pointer();
 
     let fields_types: &[Type] = struct_type.get_struct_fields();
 
     let fields: Vec<_> = data
         .iter()
         .zip(fields_types)
-        .map(|((_, field, _, _), kind)| codegen::compile_as_value(context, field, Some(kind)))
+        .map(|((_, field, _, _), field_target_type)| {
+            codegen::compile_as_value(context, field, Some(field_target_type))
+        })
         .collect();
 
     for (idx, value) in fields.iter().enumerate() {
-        if let Ok(field_ptr) = context
+        let index: u32 = idx.try_into().unwrap_or(u32::MAX);
+
+        let field_ptr_value: PointerValue<'_> = context
             .get_llvm_builder()
-            .build_struct_gep(ptr_type, ptr, idx as u32, "")
-        {
-            memory::store_anon(context, field_ptr, *value, span);
-        }
+            .build_struct_gep(ptr_type, ptr_value, index, "")
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to get the field pointer!",
+                    span,
+                    std::path::PathBuf::from(file!()),
+                    line!(),
+                )
+            });
+
+        memory::store_anon(context, field_ptr_value, *value, span);
     }
 
-    self::compile_null_ptr(context)
+    context
+        .get_llvm_context()
+        .ptr_type(AddressSpace::default())
+        .const_null()
+        .into()
 }
 
 fn compile_without_anchor<'ctx>(
@@ -83,7 +99,7 @@ fn compile_without_anchor<'ctx>(
     span: Span,
 ) -> BasicValueEnum<'ctx> {
     let ptr_type: BasicTypeEnum<'_> = typegeneration::generate_type(context, struct_type);
-    let ptr: PointerValue<'_> =
+    let ptr_value: PointerValue<'_> =
         memory::alloc_anon(context, LLVMAllocationSite::Stack, struct_type, span);
 
     let fields_types: &[Type] = struct_type.get_struct_fields();
@@ -91,25 +107,29 @@ fn compile_without_anchor<'ctx>(
     let fields: Vec<_> = data
         .iter()
         .zip(fields_types)
-        .map(|((_, field, _, _), kind)| codegen::compile_as_value(context, field, Some(kind)))
+        .map(|((_, field, _, _), field_target_type)| {
+            codegen::compile_as_value(context, field, Some(field_target_type))
+        })
         .collect();
 
     for (idx, value) in fields.iter().enumerate() {
-        if let Ok(field_ptr) = context
+        let index: u32 = idx.try_into().unwrap_or(u32::MAX);
+
+        let field_ptr_value: PointerValue<'_> = context
             .get_llvm_builder()
-            .build_struct_gep(ptr_type, ptr, idx as u32, "")
-        {
-            memory::store_anon(context, field_ptr, *value, span);
-        }
+            .build_struct_gep(ptr_type, ptr_value, index, "")
+            .unwrap_or_else(|_| {
+                abort::abort_codegen(
+                    context,
+                    "Failed to get the field pointer!",
+                    span,
+                    std::path::PathBuf::from(file!()),
+                    line!(),
+                )
+            });
+
+        memory::store_anon(context, field_ptr_value, *value, span);
     }
 
-    memory::load_anon(context, ptr, struct_type, span)
-}
-
-fn compile_null_ptr<'ctx>(context: &LLVMCodeGenContext<'_, 'ctx>) -> BasicValueEnum<'ctx> {
-    context
-        .get_llvm_context()
-        .ptr_type(AddressSpace::default())
-        .const_null()
-        .into()
+    memory::load_anon(context, ptr_value, struct_type, span)
 }

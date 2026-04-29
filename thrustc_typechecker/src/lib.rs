@@ -431,7 +431,7 @@ impl<'type_checker> TypeChecker<'type_checker> {
 
                         if let Err(error) = check::check_type_together(
                             local_type,
-                            local_type,
+                            value_type,
                             Some(value),
                             None,
                             type_metadata,

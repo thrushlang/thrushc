@@ -391,7 +391,7 @@ impl<'analyzer> Analyzer<'analyzer> {
                 {
                     self.add_error(CompilationIssue::Error(
                         CompilationIssueCode::E0008,
-                        "An value with memory address was expected".into(),
+                        "An value with memory address was expected.".into(),
                         "You should try to allocate it and pass it as a direct reference.".into(),
                         None,
                         source.get_span(),

@@ -136,25 +136,25 @@ fn compile_array_without_anchor<'ctx>(
 ) -> BasicValueEnum<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let base_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: Type = base_type.get_array_base_type();
+    let array_type: &Type = cast_type.unwrap_or(array_type);
+    let base_type: Type = array_type.get_array_base_type();
 
     let array_size: u32 = u32::try_from(items.len()).unwrap_or_else(|_| {
         abort::abort_codegen(
             context,
-            "Failed to parse the size!",
+            "Failed to compile the array!",
             span,
             std::path::PathBuf::from(file!()),
             line!(),
         )
     });
 
-    let array_type: Type = Type::FixedArray(items_type.clone().into(), array_size, span);
+    let fixed_array_type: Type = Type::FixedArray(base_type.clone().into(), array_size, span);
 
-    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, &array_type);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, &fixed_array_type);
 
     let array_ptr: PointerValue =
-        memory::alloc_anon(context, LLVMAllocationSite::Stack, &array_type, span);
+        memory::alloc_anon(context, LLVMAllocationSite::Stack, &fixed_array_type, span);
 
     if items.is_empty() {
         memory::store_anon(context, array_ptr, llvm_type.const_zero(), span);
@@ -163,7 +163,7 @@ fn compile_array_without_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile_as_value(context, item, Some(&items_type)))
+        .map(|item| codegen::compile_as_value(context, item, Some(&base_type)))
         .collect();
 
     for (n, value) in items.iter().enumerate() {
@@ -182,7 +182,7 @@ fn compile_array_without_anchor<'ctx>(
         let ptr: PointerValue = memory::gep_anon(
             context,
             array_ptr,
-            &array_type,
+            &fixed_array_type,
             &[llvm_context.i32_type().const_zero(), index],
             span,
         );
@@ -208,18 +208,18 @@ fn compile_array_with_anchor<'ctx>(
     let array_size: u32 = u32::try_from(items.len()).unwrap_or_else(|_| {
         abort::abort_codegen(
             context,
-            "Failed to parse the size!",
+            "Failed to compile the array!",
             span,
             std::path::PathBuf::from(file!()),
             line!(),
         )
     });
 
-    let base_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: Type = base_type.get_array_base_type();
+    let array_type: &Type = cast_type.unwrap_or(array_type);
+    let base_type: Type = array_type.get_array_base_type();
 
-    let array_type: Type = Type::FixedArray(items_type.clone().into(), array_size, span);
-    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, &array_type);
+    let fixed_array_type: Type = Type::FixedArray(base_type.clone().into(), array_size, span);
+    let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, &fixed_array_type);
 
     context.set_pointer_anchor(PointerAnchor::new(anchor, true));
 
@@ -230,17 +230,17 @@ fn compile_array_with_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile_as_value(context, item, Some(&items_type)))
+        .map(|item| codegen::compile_as_value(context, item, Some(&base_type)))
         .collect();
 
-    let ptr: Option<PointerValue> = items
+    let ptr_value: Option<PointerValue> = items
         .iter()
         .enumerate()
         .map(|(n, value)| {
             let idx: u64 = u64::try_from(n).unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
-                    "Failed to parse the build index!",
+                    "Failed to compile the array!",
                     span,
                     std::path::PathBuf::from(file!()),
                     line!(),
@@ -252,7 +252,7 @@ fn compile_array_with_anchor<'ctx>(
             let ptr: PointerValue = memory::gep_anon(
                 context,
                 anchor,
-                &array_type,
+                &fixed_array_type,
                 &[llvm_context.i32_type().const_zero(), index],
                 span,
             );
@@ -263,11 +263,12 @@ fn compile_array_with_anchor<'ctx>(
         })
         .last();
 
-    ptr.unwrap_or(
-        context
-            .get_llvm_context()
-            .ptr_type(AddressSpace::default())
-            .const_null(),
-    )
-    .into()
+    ptr_value
+        .unwrap_or(
+            context
+                .get_llvm_context()
+                .ptr_type(AddressSpace::default())
+                .const_null(),
+        )
+        .into()
 }

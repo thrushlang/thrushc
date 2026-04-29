@@ -70,10 +70,10 @@ pub fn compile_top<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: F
     let ignore_args: bool = attributes.has_ignore_attribute();
     let is_public: bool = attributes.has_public_attribute();
 
-    let call_convention: u32 = if let Some(LLVMAttribute::Convention(conv, ..)) =
+    let call_convention: u32 = if let Some(LLVMAttribute::Convention(convention, ..)) =
         attributes.get_attr(LLVMAttributeComparator::Convention)
     {
-        conv as u32
+        convention as u32
     } else {
         LLVMCallConvention::Standard as u32
     };
@@ -144,12 +144,12 @@ pub fn compile_down<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
         .get_llvm_backend()
         .needs_stack_protector()
     {
-        let stackprotector_ptr: PointerValue<'_> =
+        let stack_protector_ptr_value: PointerValue<'_> =
             self::emit_stack_protector_prologue(codegen.get_mut_context(), span);
 
         codegen
             .get_mut_context()
-            .set_function_stackguard_protector_pointer(stackprotector_ptr);
+            .set_function_stackguard_protector_pointer(stack_protector_ptr_value);
     }
 
     {

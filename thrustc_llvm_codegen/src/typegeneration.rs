@@ -30,7 +30,6 @@ use inkwell::types::FunctionType;
 
 use thrustc_ast::Ast;
 use thrustc_typesystem::Type;
-use thrustc_typesystem::traits::InfererTypeExtensions;
 use thrustc_typesystem::traits::TypeCodeLocation;
 use thrustc_typesystem::traits::TypeIsExtensions;
 use thrustc_typesystem::traits::TypePointerExtensions;
@@ -50,14 +49,16 @@ pub fn compile_as_function_type<'ctx>(
 ) -> FunctionType<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let mut parameters_types: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(parameters.len());
+    let mut llvm_parameters_types: Vec<BasicMetadataTypeEnum> =
+        Vec::with_capacity(parameters.len());
 
     for parameter in parameters {
         match parameter {
             Ast::FunctionParameter { kind, .. }
             | Ast::IntrinsicParameter { kind, .. }
             | Ast::AssemblerFunctionParameter { kind, .. } => {
-                parameters_types.push(self::generate_type(context, kind).into());
+                let generated_type: BasicTypeEnum<'_> = self::generate_type(context, kind);
+                llvm_parameters_types.push(generated_type.into());
             }
 
             _ => {}
@@ -67,9 +68,9 @@ pub fn compile_as_function_type<'ctx>(
     if kind.is_void_type() {
         llvm_context
             .void_type()
-            .fn_type(&parameters_types, is_var_args)
+            .fn_type(&llvm_parameters_types, is_var_args)
     } else {
-        self::generate_type(context, kind).fn_type(&parameters_types, is_var_args)
+        self::generate_type(context, kind).fn_type(&llvm_parameters_types, is_var_args)
     }
 }
 
@@ -77,23 +78,25 @@ pub fn compile_as_function_type<'ctx>(
 pub fn generate_type_function_type_to_function_type<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
     kind: &Type,
-    parameters: &[Type],
+    parameter_types: &[Type],
     is_var_args: bool,
 ) -> FunctionType<'ctx> {
     let llvm_context: &Context = context.get_llvm_context();
 
-    let mut parameters_types: Vec<BasicMetadataTypeEnum> = Vec::with_capacity(parameters.len());
+    let mut llvm_parameters_types: Vec<BasicMetadataTypeEnum> =
+        Vec::with_capacity(parameter_types.len());
 
-    for ty in parameters.iter() {
-        parameters_types.push(self::generate_type(context, ty).into())
+    for ty in parameter_types.iter() {
+        let generated_type: BasicTypeEnum<'_> = self::generate_type(context, ty);
+        llvm_parameters_types.push(generated_type.into())
     }
 
     if kind.is_void_type() {
         llvm_context
             .void_type()
-            .fn_type(&parameters_types, is_var_args)
+            .fn_type(&llvm_parameters_types, is_var_args)
     } else {
-        self::generate_type(context, kind).fn_type(&parameters_types, is_var_args)
+        self::generate_type(context, kind).fn_type(&llvm_parameters_types, is_var_args)
     }
 }
 
@@ -276,7 +279,7 @@ pub fn compile_as_dbg_type<'ctx>(
 
     match llvm_type {
         BasicTypeEnum::ArrayType(array_ty) => {
-            let mut subscripts: Vec<std::ops::Range<i64>> = Vec::with_capacity(10);
+            let mut subscripts: Vec<std::ops::Range<i64>> = Vec::with_capacity(u8::MAX as usize);
 
             fn calculate_inner_size<'ctx>(
                 array_ty: BasicTypeEnum<'ctx>,
@@ -407,9 +410,7 @@ pub fn generate_pointer_arithmetic_type<'ctx>(
         Type::Array {
             infered_type: Some((infered_type, _)),
             ..
-        } if kind.is_inferer_inner_type_is_not_array_decay() => {
-            self::generate_type(context, infered_type)
-        }
+        } => self::generate_type(context, infered_type),
         Type::Array {
             base_type: subtype, ..
         } => self::generate_type(context, subtype),

@@ -463,7 +463,7 @@ pub fn validate<'type_checker>(
             if !value_type.is_ptr_like_type() {
                 typechecker.add_error_report(CompilationIssue::Error(
                     CompilationIssueCode::E0008,
-                    "An value with memory address was expected".into(),
+                    "An value with memory address was expected.".into(),
                     "You should try to allocate it and pass it as a direct reference.".into(),
                     None,
                     value.get_span(),

@@ -30,7 +30,7 @@ use crate::traits::AstLLVMGetType;
 use crate::typegeneration;
 
 use thrustc_ast::Ast;
-use thrustc_ast::traits::AstStandardExtensions;
+use thrustc_ast::traits::AstMemoryExtensions;
 use thrustc_backends::llvm::LLVMBackend;
 use thrustc_entities::BinaryOperation;
 use thrustc_options::CompilerOptions;
@@ -60,7 +60,7 @@ fn compile_int_operation<'ctx>(
 
     match operator {
         TokenType::PlusEq => {
-            if lhs.is_reference() {
+            if lhs.is_memory_assigned_reference() {
                 let reference: BasicValueEnum<'_> =
                     codegen::compile_as_ptr_value(context, lhs, cast_type);
 
@@ -155,7 +155,7 @@ fn compile_int_operation<'ctx>(
         }
 
         TokenType::MinusEq => {
-            if lhs.is_reference() {
+            if lhs.is_memory_assigned_reference() {
                 let reference: BasicValueEnum<'_> =
                     codegen::compile_as_ptr_value(context, lhs, cast_type);
 

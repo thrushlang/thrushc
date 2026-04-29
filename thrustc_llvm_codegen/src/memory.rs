@@ -196,19 +196,18 @@ impl<'ctx> SymbolAllocated<'ctx> {
         } = self
         {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                if let Some(instr) = loaded_value.as_instruction_value() {
-                    atomic::configure_atomic_modificators(
-                        instr,
-                        LLVMAtomicModificators {
-                            atomic_volatile: metadata.volatile,
-                            atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
-                        },
-                    );
+                if let Some(instruction) = loaded_value.as_instruction_value() {
+                    let atomic_config: LLVMAtomicModificators = LLVMAtomicModificators {
+                        atomic_volatile: metadata.volatile,
+                        atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
+                    };
+
+                    atomic::set_atomic_behavior(context, instruction, atomic_config, span);
 
                     if attributes.has_explicit_memory_alignment() {
                         if let Some(explicit_alignment) = attributes.get_explicit_memory_alignment()
                         {
-                            instr
+                            instruction
                                 .set_alignment(explicit_alignment.try_into().unwrap_or(alignment))
                                 .unwrap_or_else(|_| {
                                     abort::abort_codegen(
@@ -220,7 +219,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                                     );
                                 });
                         } else {
-                            instr.set_alignment(alignment).unwrap_or_else(|_| {
+                            instruction.set_alignment(alignment).unwrap_or_else(|_| {
                                 abort::abort_codegen(
                                     context,
                                     "Failed to set memory type alignment!",
@@ -231,7 +230,7 @@ impl<'ctx> SymbolAllocated<'ctx> {
                             });
                         }
                     } else {
-                        instr.set_alignment(alignment).unwrap_or_else(|_| {
+                        instruction.set_alignment(alignment).unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
                                 "Failed to set type alignment!",
@@ -249,16 +248,15 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         if let Self::Constant { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                if let Some(instr) = loaded_value.as_instruction_value() {
-                    atomic::configure_atomic_modificators(
-                        instr,
-                        LLVMAtomicModificators {
-                            atomic_volatile: metadata.volatile,
-                            atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
-                        },
-                    );
+                if let Some(instruction) = loaded_value.as_instruction_value() {
+                    let atomic_config: LLVMAtomicModificators = LLVMAtomicModificators {
+                        atomic_volatile: metadata.volatile,
+                        atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
+                    };
 
-                    instr.set_alignment(alignment).unwrap_or_else(|_| {
+                    atomic::set_atomic_behavior(context, instruction, atomic_config, span);
+
+                    instruction.set_alignment(alignment).unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
                             "Failed to set type alignment!",
@@ -275,16 +273,15 @@ impl<'ctx> SymbolAllocated<'ctx> {
 
         if let Self::Static { ptr, metadata, .. } = self {
             if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, *ptr, "") {
-                if let Some(instr) = loaded_value.as_instruction_value() {
-                    atomic::configure_atomic_modificators(
-                        instr,
-                        LLVMAtomicModificators {
-                            atomic_volatile: metadata.volatile,
-                            atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
-                        },
-                    );
+                if let Some(instruction) = loaded_value.as_instruction_value() {
+                    let atomic_config: LLVMAtomicModificators = LLVMAtomicModificators {
+                        atomic_volatile: metadata.volatile,
+                        atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
+                    };
 
-                    instr.set_alignment(alignment).unwrap_or_else(|_| {
+                    atomic::set_atomic_behavior(context, instruction, atomic_config, span);
+
+                    instruction.set_alignment(alignment).unwrap_or_else(|_| {
                         abort::abort_codegen(
                             context,
                             "Failed to set type alignment!",
@@ -308,8 +305,8 @@ impl<'ctx> SymbolAllocated<'ctx> {
                 let ptr: PointerValue = value.into_pointer_value();
 
                 if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
-                    if let Some(instr) = loaded_value.as_instruction_value() {
-                        instr.set_alignment(alignment).unwrap_or_else(|_| {
+                    if let Some(instruction) = loaded_value.as_instruction_value() {
+                        instruction.set_alignment(alignment).unwrap_or_else(|_| {
                             abort::abort_codegen(
                                 context,
                                 "Failed to set type alignment!",
@@ -509,8 +506,8 @@ pub fn load_anon<'ctx>(
     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
         context.mark_dbg_location(span);
 
-        if let Some(instr) = loaded_value.as_instruction_value() {
-            instr.set_alignment(alignment).unwrap_or_else(|_| {
+        if let Some(instruction) = loaded_value.as_instruction_value() {
+            instruction.set_alignment(alignment).unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
                     "Failed to set type alignment!",
@@ -551,16 +548,15 @@ pub fn dereference<'ctx>(
     if let Ok(loaded_value) = llvm_builder.build_load(llvm_type, ptr, "") {
         context.mark_dbg_location(span);
 
-        if let Some(instr) = loaded_value.as_instruction_value() {
-            atomic::configure_atomic_modificators(
-                instr,
-                LLVMAtomicModificators {
-                    atomic_volatile: metadata.volatile,
-                    atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
-                },
-            );
+        if let Some(instruction) = loaded_value.as_instruction_value() {
+            let atomic_config: LLVMAtomicModificators = LLVMAtomicModificators {
+                atomic_volatile: metadata.volatile,
+                atomic_ord: metadata.atomic_ord.map(|atomic_ord| atomic_ord.to_llvm()),
+            };
 
-            instr.set_alignment(alignment).unwrap_or_else(|_| {
+            atomic::set_atomic_behavior(context, instruction, atomic_config, span);
+
+            instruction.set_alignment(alignment).unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
                     "Failed to set type alignment!",
@@ -651,26 +647,24 @@ pub fn alloc_anon<'ctx>(
 
 pub fn gep_struct_anon<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    ptr: PointerValue<'ctx>,
+    ptr_value: PointerValue<'ctx>,
     ptr_type: &Type,
     index: u32,
     span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if let Ok(ptr) = llvm_builder.build_struct_gep(
-        typegeneration::generate_pointer_arithmetic_type(context, ptr_type),
-        ptr,
-        index,
-        "",
-    ) {
+    let ptr_type: BasicTypeEnum<'_> =
+        typegeneration::generate_pointer_arithmetic_type(context, ptr_type);
+
+    if let Ok(new_ptr_value) = llvm_builder.build_struct_gep(ptr_type, ptr_value, index, "") {
         context.mark_dbg_location(span);
 
-        ptr
+        new_ptr_value
     } else {
         abort::abort_codegen(
             context,
-            "Failed to calculate memory address of an structure!",
+            "Failed to get the field pointer!",
             span,
             PathBuf::from(file!()),
             line!(),
@@ -680,28 +674,26 @@ pub fn gep_struct_anon<'ctx>(
 
 pub fn gep_anon<'ctx>(
     context: &mut LLVMCodeGenContext<'_, 'ctx>,
-    ptr: PointerValue<'ctx>,
+    ptr_value: PointerValue<'ctx>,
     ptr_type: &Type,
     indexes: &[IntValue<'ctx>],
     span: Span,
 ) -> PointerValue<'ctx> {
     let llvm_builder: &Builder = context.get_llvm_builder();
 
-    if let Ok(ptr) = unsafe {
-        llvm_builder.build_in_bounds_gep(
-            typegeneration::generate_pointer_arithmetic_type(context, ptr_type),
-            ptr,
-            indexes,
-            "",
-        )
-    } {
+    let ptr_type: BasicTypeEnum<'_> =
+        typegeneration::generate_pointer_arithmetic_type(context, ptr_type);
+
+    if let Ok(new_ptr_value) =
+        unsafe { llvm_builder.build_in_bounds_gep(ptr_type, ptr_value, indexes, "") }
+    {
         context.mark_dbg_location(span);
 
-        ptr
+        new_ptr_value
     } else {
         abort::abort_codegen(
             context,
-            "Failed to calculate memory address of an pointer!",
+            "Failed to get the field pointer!",
             span,
             PathBuf::from(file!()),
             line!(),

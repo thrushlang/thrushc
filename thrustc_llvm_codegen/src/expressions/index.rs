@@ -32,8 +32,8 @@ pub fn compile<'ctx>(
     source: &'ctx Ast<'ctx>,
     index: &'ctx Ast<'ctx>,
 ) -> BasicValueEnum<'ctx> {
-    let ptr: PointerValue =
-        codegen::compile_as_ptr_value(context, source, None).into_pointer_value();
+    let source_value: BasicValueEnum<'_> = codegen::compile_as_ptr_value(context, source, None);
+    let ptr_value: PointerValue<'_> = source_value.into_pointer_value();
 
     let mut ptr_type: &Type = source.get_type_for_llvm();
     let infered_inner_type: Type = ptr_type.get_inferer_inner_type();
@@ -87,5 +87,12 @@ pub fn compile<'ctx>(
         indexes
     };
 
-    memory::gep_anon(context, ptr, ptr_type, &ordered_indexes, source.get_span()).into()
+    memory::gep_anon(
+        context,
+        ptr_value,
+        ptr_type,
+        &ordered_indexes,
+        source.get_span(),
+    )
+    .into()
 }

@@ -200,7 +200,7 @@ fn compile_fixed_array_without_anchor<'ctx>(
     let llvm_context: &Context = context.get_llvm_context();
 
     let array_type: &Type = cast_type.unwrap_or(array_type);
-    let items_type: Type = array_type.get_fixed_array_base_type();
+    let base_type: Type = array_type.get_fixed_array_base_type();
 
     let llvm_type: BasicTypeEnum = typegeneration::generate_type(context, array_type);
 
@@ -213,7 +213,7 @@ fn compile_fixed_array_without_anchor<'ctx>(
 
     let items: Vec<BasicValueEnum> = items
         .iter()
-        .map(|item| codegen::compile_as_value(context, item, Some(&items_type)))
+        .map(|item| codegen::compile_as_value(context, item, Some(&base_type)))
         .collect();
 
     for (n, value) in items.iter().enumerate() {
