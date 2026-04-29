@@ -45,7 +45,7 @@ pub fn compile<'ctx>(
     let is_allocated: bool = source.is_memory_assigned_value().unwrap_or_else(|_| {
         abort::abort_codegen(
             context,
-            "Failed to determinate if the value is in memory!",
+            "Failed to compile the property!",
             source.get_span(),
             std::path::PathBuf::from(file!()),
             line!(),
@@ -76,7 +76,7 @@ fn compile_extract_property<'ctx>(
             .unwrap_or_else(|| {
                 abort::abort_codegen(
                     context,
-                    "Failed to extract a value from a struct!",
+                    "Failed to compile the property!",
                     span,
                     std::path::PathBuf::from(file!()),
                     line!(),
@@ -89,7 +89,7 @@ fn compile_extract_property<'ctx>(
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
-                    "Failed to extract a value from struct!",
+                    "Failed to compile the property!",
                     span,
                     std::path::PathBuf::from(file!()),
                     line!(),
@@ -105,7 +105,7 @@ fn compile_extract_property<'ctx>(
             .unwrap_or_else(|_| {
                 abort::abort_codegen(
                     context,
-                    "Failed to extract a value from struct!",
+                    "Failed to compile the property!",
                     span,
                     std::path::PathBuf::from(file!()),
                     line!(),
@@ -135,7 +135,7 @@ fn compile_gep_property<'ctx>(
         .unwrap_or_else(|| {
             abort::abort_codegen(
                 context,
-                "Failed to gep a value from pointer!",
+                "Failed to compile the property!",
                 span,
                 std::path::PathBuf::from(file!()),
                 line!(),

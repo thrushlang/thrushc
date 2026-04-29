@@ -25,16 +25,24 @@ use thrustc_span::Span;
 
 use crate::context::LLVMCodeGenContext;
 use crate::traits::LLVMFunctionExtensions;
-use crate::utils;
+use crate::{abort, utils};
 
 #[inline]
 pub fn move_terminator_to_end(context: &mut LLVMCodeGenContext, span: Span) {
     let function: FunctionValue = context.get_current_function(span).get_value();
 
-    let last_builder_block: BasicBlock = context.get_last_builder_block(span);
+    let last_block: BasicBlock = context.get_last_builder_block(span);
 
     if let Some(parent) = function.get_last_basic_block() {
-        let _ = last_builder_block.move_after(parent);
+        last_block.move_after(parent).unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to move the IR block!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            );
+        });
     }
 }
 
@@ -44,8 +52,17 @@ pub fn move_specific_after_the_last(
     block: BasicBlock,
     span: Span,
 ) {
-    let last: BasicBlock = context.get_last_builder_block(span);
-    let _ = block.move_after(last);
+    let last_block: BasicBlock = context.get_last_builder_block(span);
+
+    block.move_after(last_block).unwrap_or_else(|_| {
+        abort::abort_codegen(
+            context,
+            "Failed to move the IR block!",
+            span,
+            std::path::PathBuf::from(file!()),
+            line!(),
+        );
+    });
 }
 
 #[inline]

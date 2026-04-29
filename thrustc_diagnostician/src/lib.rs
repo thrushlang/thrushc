@@ -40,7 +40,8 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy)]
 enum Notificator {
-    CommonError,
+    Error,
+    Warning,
     CompilerFrontendBug,
     CompilerBackendBug,
 }
@@ -87,7 +88,7 @@ impl Diagnostician {
                     message,
                     help,
                     DiagnosticType::Error,
-                    Notificator::CommonError,
+                    Notificator::Error,
                     logging_type,
                 );
 
@@ -102,16 +103,17 @@ impl Diagnostician {
                 );
 
                 if self.get_config().export_errors() {
-                    let path: PathBuf = self.get_config().export_path().join("errors");
+                    let base_path: PathBuf = self.get_config().export_path().join("errors");
 
-                    std::fs::create_dir_all(&path).unwrap_or_else(|_| {
+                    std::fs::create_dir_all(&base_path).unwrap_or_else(|_| {
                         thrustc_logging::print_warn(
                             LoggingType::Warning,
                             "Unable to create errors diagnostics path for export purposes!",
                         );
                     });
 
-                    let full_path: PathBuf = path.join(format!("{}.txt", self.get_base_name()));
+                    let full_path: PathBuf =
+                        base_path.join(format!("{}.txt", self.get_base_name()));
 
                     if let Ok(mut file_diag) =
                         OpenOptions::new().create(true).append(true).open(full_path)
@@ -130,7 +132,7 @@ impl Diagnostician {
                     message,
                     "",
                     DiagnosticType::Warning,
-                    Notificator::CommonError,
+                    Notificator::Warning,
                     logging_type,
                 );
 
@@ -140,16 +142,17 @@ impl Diagnostician {
                 );
 
                 if self.get_config().export_warnings() {
-                    let path: PathBuf = self.get_config().export_path().join("warnings");
+                    let base_path: PathBuf = self.get_config().export_path().join("warnings");
 
-                    std::fs::create_dir_all(&path).unwrap_or_else(|_| {
+                    std::fs::create_dir_all(&base_path).unwrap_or_else(|_| {
                         thrustc_logging::print_warn(
                             LoggingType::Warning,
                             "Unable to create warnings diagnostics path for export purposes!",
                         );
                     });
 
-                    let full_path: PathBuf = path.join(format!("{}.txt", self.get_base_name()));
+                    let full_path: PathBuf =
+                        base_path.join(format!("{}.txt", self.get_base_name()));
 
                     if let Ok(mut file_diag) =
                         OpenOptions::new().create(true).append(true).open(full_path)

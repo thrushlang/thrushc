@@ -47,7 +47,7 @@ impl<'ctx> LLVMJITCompiler<'ctx> {
             engine,
             modules,
             config,
-            mapped_symbols: HashSet::with_capacity(100_000),
+            mapped_symbols: HashSet::with_capacity(u8::MAX as usize),
         }
     }
 }

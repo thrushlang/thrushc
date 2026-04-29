@@ -43,27 +43,27 @@ pub fn compile<'ctx>(
         codegen::compile_as_ptr_value(context, pointer, cast_type);
     let function_ptr_value: PointerValue<'_> = source_value.into_pointer_value();
 
-    if let Type::Fn(parameters, kind, modificator, ..) = function_type {
-        let need_ignore: bool = modificator.llvm().has_ignore();
+    if let Type::Fn(parameter_types, kind, modificator, ..) = function_type {
+        let is_var_args: bool = modificator.llvm().has_ignore();
 
         let function_type: FunctionType<'_> =
             typegeneration::generate_type_function_type_to_function_type(
                 context,
                 kind,
-                parameters,
-                need_ignore,
+                parameter_types,
+                is_var_args,
             );
 
         let compiled_args: Vec<BasicMetadataValueEnum> = args
             .iter()
             .enumerate()
-            .map(|(i, expr)| {
-                let cast_type: Option<&Type> = parameters.get(i);
+            .map(|(index, expr)| {
+                let cast_type: Option<&Type> = parameter_types.get(index);
                 codegen::compile_as_value(context, expr, cast_type).into()
             })
             .collect();
 
-        let fn_value: BasicValueEnum<'_> = match llvm_builder.build_indirect_call(
+        let function_value: BasicValueEnum<'_> = match llvm_builder.build_indirect_call(
             function_type,
             function_ptr_value,
             &compiled_args,
@@ -97,7 +97,7 @@ pub fn compile<'ctx>(
             ),
         };
 
-        cast::try_smart_cast(context, cast_type, kind, fn_value, span)
+        cast::try_smart_cast(context, cast_type, kind, function_value, span)
     } else {
         abort::abort_codegen(
             context,

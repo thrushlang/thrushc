@@ -61,13 +61,21 @@ fn compile_with_anchor<'ctx>(
     let fields: Vec<_> = data
         .iter()
         .zip(fields_types)
-        .map(|((_, field, _, _), field_target_type)| {
+        .map(|((_, field, ..), field_target_type)| {
             codegen::compile_as_value(context, field, Some(field_target_type))
         })
         .collect();
 
     for (idx, value) in fields.iter().enumerate() {
-        let index: u32 = idx.try_into().unwrap_or(u32::MAX);
+        let index: u32 = idx.try_into().unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to get the field pointer!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
 
         let field_ptr_value: PointerValue<'_> = context
             .get_llvm_builder()
@@ -113,7 +121,15 @@ fn compile_without_anchor<'ctx>(
         .collect();
 
     for (idx, value) in fields.iter().enumerate() {
-        let index: u32 = idx.try_into().unwrap_or(u32::MAX);
+        let index: u32 = idx.try_into().unwrap_or_else(|_| {
+            abort::abort_codegen(
+                context,
+                "Failed to get the field pointer!",
+                span,
+                std::path::PathBuf::from(file!()),
+                line!(),
+            )
+        });
 
         let field_ptr_value: PointerValue<'_> = context
             .get_llvm_builder()
