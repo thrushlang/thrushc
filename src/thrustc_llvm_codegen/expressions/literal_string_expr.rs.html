@@ -50,7 +50,7 @@
 <a href=#50 id=50 data-nosnippet>50</a>        )
 <a href=#51 id=51 data-nosnippet>51</a>    });
 <a href=#52 id=52 data-nosnippet>52</a>
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="kw">let </span>fixed_cstr_size: u32 = <span class="kw">if </span>!bytes.is_empty() &amp;&amp; null_terminated {
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="kw">let </span>fixed_cstr_size: u32 = <span class="kw">if </span>null_terminated {
 <a href=#54 id=54 data-nosnippet>54</a>        parsed_size + <span class="number">1
 <a href=#55 id=55 data-nosnippet>55</a>    </span>} <span class="kw">else </span>{
 <a href=#56 id=56 data-nosnippet>56</a>        parsed_size

@@ -348,7 +348,7 @@
 <a href=#348 id=348 data-nosnippet>348</a>
 <a href=#349 id=349 data-nosnippet>349</a>                    arch <span class="kw">if </span>arch.contains(<span class="string">"nvidia"</span>) || arch.contains(<span class="string">"nvptx"</span>) =&gt; {
 <a href=#350 id=350 data-nosnippet>350</a>                        <span class="kw">if </span>!CUDA_CALL_CONVENTIONS.contains(<span class="kw-2">&amp;</span>call_conv) {
-<a href=#351 id=351 data-nosnippet>351</a>                            <span class="kw">let </span>transformed: Vec&lt;String&gt; = WASM_CALL_CONVENTIONS
+<a href=#351 id=351 data-nosnippet>351</a>                            <span class="kw">let </span>transformed: Vec&lt;String&gt; = CUDA_CALL_CONVENTIONS
 <a href=#352 id=352 data-nosnippet>352</a>                                .iter()
 <a href=#353 id=353 data-nosnippet>353</a>                                .map(|callconv| callconv.to_string())
 <a href=#354 id=354 data-nosnippet>354</a>                                .collect();

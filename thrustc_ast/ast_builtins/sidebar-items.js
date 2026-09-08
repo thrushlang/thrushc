@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["AstBuiltin"]};
+window.SIDEBAR_ITEMS = {"enum":["AstBuiltin","DeferredBuiltinArgument"]};

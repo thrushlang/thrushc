@@ -370,86 +370,80 @@
 <a href=#370 id=370 data-nosnippet>370</a>
 <a href=#371 id=371 data-nosnippet>371</a>    <span class="kw">let </span>arguments: ParsedCallArguments = <span class="self">self</span>::parse_call_arguments(ctx)<span class="question-mark">?</span>;
 <a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">let </span>parameter_names: Vec&lt;<span class="kw-2">&amp;</span>str&gt; =
-<a href=#374 id=374 data-nosnippet>374</a>        generic.parameter_names.iter().map(String::as_str).collect();
-<a href=#375 id=375 data-nosnippet>375</a>
-<a href=#376 id=376 data-nosnippet>376</a>    <span class="kw">let </span>args: Vec&lt;Ast&gt; = <span class="self">self</span>::reorder_call_arguments(
-<a href=#377 id=377 data-nosnippet>377</a>        name,
-<a href=#378 id=378 data-nosnippet>378</a>        span,
-<a href=#379 id=379 data-nosnippet>379</a>        arguments,
-<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw-2">&amp;</span>parameter_names,
-<a href=#381 id=381 data-nosnippet>381</a>        generic.has_varargs,
-<a href=#382 id=382 data-nosnippet>382</a>    )<span class="question-mark">?</span>;
-<a href=#383 id=383 data-nosnippet>383</a>
-<a href=#384 id=384 data-nosnippet>384</a>    <span class="kw">let </span>argument_types: Vec&lt;Type&gt; = args
-<a href=#385 id=385 data-nosnippet>385</a>        .iter()
-<a href=#386 id=386 data-nosnippet>386</a>        .map(|argument| <span class="kw">match </span>argument.get_value_type() {
-<a href=#387 id=387 data-nosnippet>387</a>            <span class="prelude-val">Ok</span>(ty) =&gt; ty.clone(),
-<a href=#388 id=388 data-nosnippet>388</a>            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; Type::Void { span },
-<a href=#389 id=389 data-nosnippet>389</a>        })
-<a href=#390 id=390 data-nosnippet>390</a>        .collect();
-<a href=#391 id=391 data-nosnippet>391</a>
-<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">let </span>kind: Type = <span class="kw">match </span>thrustc_generics::solve(
-<a href=#393 id=393 data-nosnippet>393</a>        <span class="kw-2">&amp;</span>generic.type_params,
-<a href=#394 id=394 data-nosnippet>394</a>        <span class="kw-2">&amp;</span>generic_args,
-<a href=#395 id=395 data-nosnippet>395</a>        <span class="kw-2">&amp;</span>generic.parameter_types,
-<a href=#396 id=396 data-nosnippet>396</a>        <span class="kw-2">&amp;</span>argument_types,
-<a href=#397 id=397 data-nosnippet>397</a>        <span class="kw-2">&amp;</span>generic.return_type,
-<a href=#398 id=398 data-nosnippet>398</a>        generic.has_varargs,
-<a href=#399 id=399 data-nosnippet>399</a>        span,
-<a href=#400 id=400 data-nosnippet>400</a>    ) {
-<a href=#401 id=401 data-nosnippet>401</a>        <span class="prelude-val">Ok</span>(result) =&gt; result.return_type,
-<a href=#402 id=402 data-nosnippet>402</a>        <span class="prelude-val">Err</span>(error) =&gt; {
-<a href=#403 id=403 data-nosnippet>403</a>            ctx.add_error_report(error);
-<a href=#404 id=404 data-nosnippet>404</a>
-<a href=#405 id=405 data-nosnippet>405</a>            Type::Void { span }
-<a href=#406 id=406 data-nosnippet>406</a>        }
-<a href=#407 id=407 data-nosnippet>407</a>    };
-<a href=#408 id=408 data-nosnippet>408</a>
-<a href=#409 id=409 data-nosnippet>409</a>    <span class="prelude-val">Ok</span>(Ast::Call {
-<a href=#410 id=410 data-nosnippet>410</a>        name: name.to_string(),
-<a href=#411 id=411 data-nosnippet>411</a>        args,
-<a href=#412 id=412 data-nosnippet>412</a>        generic_args,
-<a href=#413 id=413 data-nosnippet>413</a>        kind,
-<a href=#414 id=414 data-nosnippet>414</a>        span,
-<a href=#415 id=415 data-nosnippet>415</a>        id: NodeId::new(),
-<a href=#416 id=416 data-nosnippet>416</a>    })
-<a href=#417 id=417 data-nosnippet>417</a>}
-<a href=#418 id=418 data-nosnippet>418</a>
-<a href=#419 id=419 data-nosnippet>419</a><span class="kw">pub fn </span>build_anonymous_call&lt;<span class="lifetime">'parser</span>&gt;(
-<a href=#420 id=420 data-nosnippet>420</a>    ctx: <span class="kw-2">&amp;mut </span>ParserContext&lt;<span class="lifetime">'parser</span>&gt;,
-<a href=#421 id=421 data-nosnippet>421</a>    expr: Ast&lt;<span class="lifetime">'parser</span>&gt;,
-<a href=#422 id=422 data-nosnippet>422</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Ast&lt;<span class="lifetime">'parser</span>&gt;, CompilationIssue&gt; {
-<a href=#423 id=423 data-nosnippet>423</a>    ctx.consume(
-<a href=#424 id=424 data-nosnippet>424</a>        TokenType::LParen,
-<a href=#425 id=425 data-nosnippet>425</a>        CompilationIssueCode::E0001,
-<a href=#426 id=426 data-nosnippet>426</a>        <span class="string">"Expected '('."</span>.into(),
-<a href=#427 id=427 data-nosnippet>427</a>    )<span class="question-mark">?</span>;
-<a href=#428 id=428 data-nosnippet>428</a>
-<a href=#429 id=429 data-nosnippet>429</a>    <span class="kw">let </span>span: Span = expr.get_span();
-<a href=#430 id=430 data-nosnippet>430</a>
-<a href=#431 id=431 data-nosnippet>431</a>    <span class="kw">let </span>arguments: ParsedCallArguments = <span class="self">self</span>::parse_call_arguments(ctx)<span class="question-mark">?</span>;
-<a href=#432 id=432 data-nosnippet>432</a>
-<a href=#433 id=433 data-nosnippet>433</a>    <span class="kw">if </span>!arguments.named.is_empty() {
-<a href=#434 id=434 data-nosnippet>434</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(CompilationIssue::Error(
-<a href=#435 id=435 data-nosnippet>435</a>            CompilationIssueCode::E0044,
-<a href=#436 id=436 data-nosnippet>436</a>            <span class="string">"Named arguments are not supported in anonymous function calls."</span>.into(),
-<a href=#437 id=437 data-nosnippet>437</a>            <span class="string">"You should use only positional arguments."</span>.into(),
-<a href=#438 id=438 data-nosnippet>438</a>            <span class="prelude-val">None</span>,
-<a href=#439 id=439 data-nosnippet>439</a>            span,
-<a href=#440 id=440 data-nosnippet>440</a>        ));
-<a href=#441 id=441 data-nosnippet>441</a>    }
-<a href=#442 id=442 data-nosnippet>442</a>
-<a href=#443 id=443 data-nosnippet>443</a>    <span class="kw">let </span>expr_type: <span class="kw-2">&amp;</span>Type = expr.get_value_type()<span class="question-mark">?</span>;
-<a href=#444 id=444 data-nosnippet>444</a>    <span class="kw">let </span>return_type: Type = expr_type.get_function_reference_return_type();
-<a href=#445 id=445 data-nosnippet>445</a>
-<a href=#446 id=446 data-nosnippet>446</a>    <span class="prelude-val">Ok</span>(Ast::IndirectCall {
-<a href=#447 id=447 data-nosnippet>447</a>        function: expr.clone().into(),
-<a href=#448 id=448 data-nosnippet>448</a>        function_type: expr_type.clone(),
-<a href=#449 id=449 data-nosnippet>449</a>        args: arguments.positional,
-<a href=#450 id=450 data-nosnippet>450</a>        kind: return_type,
-<a href=#451 id=451 data-nosnippet>451</a>        span,
-<a href=#452 id=452 data-nosnippet>452</a>        id: NodeId::new(),
-<a href=#453 id=453 data-nosnippet>453</a>    })
-<a href=#454 id=454 data-nosnippet>454</a>}
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">let </span>parameter_names: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = generic.parameter_names.iter().map(String::as_str).collect();
+<a href=#374 id=374 data-nosnippet>374</a>
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="kw">let </span>args: Vec&lt;Ast&gt; =
+<a href=#376 id=376 data-nosnippet>376</a>        <span class="self">self</span>::reorder_call_arguments(name, span, arguments, <span class="kw-2">&amp;</span>parameter_names, generic.has_varargs)<span class="question-mark">?</span>;
+<a href=#377 id=377 data-nosnippet>377</a>
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="kw">let </span>argument_types: Vec&lt;Type&gt; = args
+<a href=#379 id=379 data-nosnippet>379</a>        .iter()
+<a href=#380 id=380 data-nosnippet>380</a>        .map(|argument| <span class="kw">match </span>argument.get_value_type() {
+<a href=#381 id=381 data-nosnippet>381</a>            <span class="prelude-val">Ok</span>(ty) =&gt; ty.clone(),
+<a href=#382 id=382 data-nosnippet>382</a>            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; Type::Void { span },
+<a href=#383 id=383 data-nosnippet>383</a>        })
+<a href=#384 id=384 data-nosnippet>384</a>        .collect();
+<a href=#385 id=385 data-nosnippet>385</a>
+<a href=#386 id=386 data-nosnippet>386</a>    <span class="kw">let </span>kind: Type = <span class="kw">match </span>thrustc_generics::solve(
+<a href=#387 id=387 data-nosnippet>387</a>        <span class="kw-2">&amp;</span>generic.type_params,
+<a href=#388 id=388 data-nosnippet>388</a>        <span class="kw-2">&amp;</span>generic_args,
+<a href=#389 id=389 data-nosnippet>389</a>        <span class="kw-2">&amp;</span>generic.parameter_types,
+<a href=#390 id=390 data-nosnippet>390</a>        <span class="kw-2">&amp;</span>argument_types,
+<a href=#391 id=391 data-nosnippet>391</a>        <span class="kw-2">&amp;</span>generic.return_type,
+<a href=#392 id=392 data-nosnippet>392</a>        generic.has_varargs,
+<a href=#393 id=393 data-nosnippet>393</a>        span,
+<a href=#394 id=394 data-nosnippet>394</a>    ) {
+<a href=#395 id=395 data-nosnippet>395</a>        <span class="prelude-val">Ok</span>(result) =&gt; result.return_type,
+<a href=#396 id=396 data-nosnippet>396</a>        <span class="prelude-val">Err</span>(error) =&gt; {
+<a href=#397 id=397 data-nosnippet>397</a>            ctx.add_error_report(error);
+<a href=#398 id=398 data-nosnippet>398</a>
+<a href=#399 id=399 data-nosnippet>399</a>            Type::Void { span }
+<a href=#400 id=400 data-nosnippet>400</a>        }
+<a href=#401 id=401 data-nosnippet>401</a>    };
+<a href=#402 id=402 data-nosnippet>402</a>
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="prelude-val">Ok</span>(Ast::Call {
+<a href=#404 id=404 data-nosnippet>404</a>        name: name.to_string(),
+<a href=#405 id=405 data-nosnippet>405</a>        args,
+<a href=#406 id=406 data-nosnippet>406</a>        generic_args,
+<a href=#407 id=407 data-nosnippet>407</a>        kind,
+<a href=#408 id=408 data-nosnippet>408</a>        span,
+<a href=#409 id=409 data-nosnippet>409</a>        id: NodeId::new(),
+<a href=#410 id=410 data-nosnippet>410</a>    })
+<a href=#411 id=411 data-nosnippet>411</a>}
+<a href=#412 id=412 data-nosnippet>412</a>
+<a href=#413 id=413 data-nosnippet>413</a><span class="kw">pub fn </span>build_anonymous_call&lt;<span class="lifetime">'parser</span>&gt;(
+<a href=#414 id=414 data-nosnippet>414</a>    ctx: <span class="kw-2">&amp;mut </span>ParserContext&lt;<span class="lifetime">'parser</span>&gt;,
+<a href=#415 id=415 data-nosnippet>415</a>    expr: Ast&lt;<span class="lifetime">'parser</span>&gt;,
+<a href=#416 id=416 data-nosnippet>416</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Ast&lt;<span class="lifetime">'parser</span>&gt;, CompilationIssue&gt; {
+<a href=#417 id=417 data-nosnippet>417</a>    ctx.consume(
+<a href=#418 id=418 data-nosnippet>418</a>        TokenType::LParen,
+<a href=#419 id=419 data-nosnippet>419</a>        CompilationIssueCode::E0001,
+<a href=#420 id=420 data-nosnippet>420</a>        <span class="string">"Expected '('."</span>.into(),
+<a href=#421 id=421 data-nosnippet>421</a>    )<span class="question-mark">?</span>;
+<a href=#422 id=422 data-nosnippet>422</a>
+<a href=#423 id=423 data-nosnippet>423</a>    <span class="kw">let </span>span: Span = expr.get_span();
+<a href=#424 id=424 data-nosnippet>424</a>
+<a href=#425 id=425 data-nosnippet>425</a>    <span class="kw">let </span>arguments: ParsedCallArguments = <span class="self">self</span>::parse_call_arguments(ctx)<span class="question-mark">?</span>;
+<a href=#426 id=426 data-nosnippet>426</a>
+<a href=#427 id=427 data-nosnippet>427</a>    <span class="kw">if </span>!arguments.named.is_empty() {
+<a href=#428 id=428 data-nosnippet>428</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(CompilationIssue::Error(
+<a href=#429 id=429 data-nosnippet>429</a>            CompilationIssueCode::E0044,
+<a href=#430 id=430 data-nosnippet>430</a>            <span class="string">"Named arguments are not supported in anonymous function calls."</span>.into(),
+<a href=#431 id=431 data-nosnippet>431</a>            <span class="string">"You should use only positional arguments."</span>.into(),
+<a href=#432 id=432 data-nosnippet>432</a>            <span class="prelude-val">None</span>,
+<a href=#433 id=433 data-nosnippet>433</a>            span,
+<a href=#434 id=434 data-nosnippet>434</a>        ));
+<a href=#435 id=435 data-nosnippet>435</a>    }
+<a href=#436 id=436 data-nosnippet>436</a>
+<a href=#437 id=437 data-nosnippet>437</a>    <span class="kw">let </span>expr_type: <span class="kw-2">&amp;</span>Type = expr.get_value_type()<span class="question-mark">?</span>;
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="kw">let </span>return_type: Type = expr_type.get_function_reference_return_type();
+<a href=#439 id=439 data-nosnippet>439</a>
+<a href=#440 id=440 data-nosnippet>440</a>    <span class="prelude-val">Ok</span>(Ast::IndirectCall {
+<a href=#441 id=441 data-nosnippet>441</a>        function: expr.clone().into(),
+<a href=#442 id=442 data-nosnippet>442</a>        function_type: expr_type.clone(),
+<a href=#443 id=443 data-nosnippet>443</a>        args: arguments.positional,
+<a href=#444 id=444 data-nosnippet>444</a>        kind: return_type,
+<a href=#445 id=445 data-nosnippet>445</a>        span,
+<a href=#446 id=446 data-nosnippet>446</a>        id: NodeId::new(),
+<a href=#447 id=447 data-nosnippet>447</a>    })
+<a href=#448 id=448 data-nosnippet>448</a>}
 </code></pre></div></section></main></body></html>

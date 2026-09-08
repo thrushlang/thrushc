@@ -53,23 +53,21 @@
 <a href=#53 id=53 data-nosnippet>53</a>        TokenType::Enum =&gt; <span class="prelude-val">Ok</span>(local_enum::parse_enum_stmt(ctx)<span class="question-mark">?</span>),
 <a href=#54 id=54 data-nosnippet>54</a>        TokenType::Var =&gt; <span class="prelude-val">Ok</span>(variable::build_variable_stmt(ctx)<span class="question-mark">?</span>),
 <a href=#55 id=55 data-nosnippet>55</a>        TokenType::If =&gt; <span class="prelude-val">Ok</span>(conditional::build_conditional(ctx)<span class="question-mark">?</span>),
-<a href=#56 id=56 data-nosnippet>56</a>        TokenType::IfAttribute =&gt; <span class="prelude-val">Ok</span>(compiletime_conditional::build_compiletime_conditional(
-<a href=#57 id=57 data-nosnippet>57</a>            ctx,
-<a href=#58 id=58 data-nosnippet>58</a>        )<span class="question-mark">?</span>),
-<a href=#59 id=59 data-nosnippet>59</a>        TokenType::For =&gt; <span class="prelude-val">Ok</span>(loops::parse_for_loop_stmt(ctx)<span class="question-mark">?</span>),
-<a href=#60 id=60 data-nosnippet>60</a>        TokenType::While =&gt; <span class="prelude-val">Ok</span>(loops::parse_while_loop_stmt(ctx)<span class="question-mark">?</span>),
-<a href=#61 id=61 data-nosnippet>61</a>        TokenType::Loop =&gt; <span class="prelude-val">Ok</span>(loops::parse_loop_stmt(ctx)<span class="question-mark">?</span>),
-<a href=#62 id=62 data-nosnippet>62</a>        TokenType::Continue =&gt; <span class="prelude-val">Ok</span>(loop_control::parse_continue_stmt(ctx)<span class="question-mark">?</span>),
-<a href=#63 id=63 data-nosnippet>63</a>        TokenType::ContinueAll =&gt; <span class="prelude-val">Ok</span>(loop_control::parse_continueall_stmt(ctx)<span class="question-mark">?</span>),
-<a href=#64 id=64 data-nosnippet>64</a>        TokenType::Break =&gt; <span class="prelude-val">Ok</span>(loop_control::parse_break_stmt(ctx)<span class="question-mark">?</span>),
-<a href=#65 id=65 data-nosnippet>65</a>        TokenType::BreakAll =&gt; <span class="prelude-val">Ok</span>(loop_control::parse_breakall_stmt(ctx)<span class="question-mark">?</span>),
-<a href=#66 id=66 data-nosnippet>66</a>        TokenType::Defer =&gt; <span class="prelude-val">Ok</span>(defer::parse_post_executation_stmt(ctx)<span class="question-mark">?</span>),
-<a href=#67 id=67 data-nosnippet>67</a>
-<a href=#68 id=68 data-nosnippet>68</a>        <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(expressions::parse_expression(ctx)<span class="question-mark">?</span>),
-<a href=#69 id=69 data-nosnippet>69</a>    };
+<a href=#56 id=56 data-nosnippet>56</a>        TokenType::IfAttribute =&gt; <span class="prelude-val">Ok</span>(compiletime_conditional::build_compiletime_conditional(ctx)<span class="question-mark">?</span>),
+<a href=#57 id=57 data-nosnippet>57</a>        TokenType::For =&gt; <span class="prelude-val">Ok</span>(loops::parse_for_loop_stmt(ctx)<span class="question-mark">?</span>),
+<a href=#58 id=58 data-nosnippet>58</a>        TokenType::While =&gt; <span class="prelude-val">Ok</span>(loops::parse_while_loop_stmt(ctx)<span class="question-mark">?</span>),
+<a href=#59 id=59 data-nosnippet>59</a>        TokenType::Loop =&gt; <span class="prelude-val">Ok</span>(loops::parse_loop_stmt(ctx)<span class="question-mark">?</span>),
+<a href=#60 id=60 data-nosnippet>60</a>        TokenType::Continue =&gt; <span class="prelude-val">Ok</span>(loop_control::parse_continue_stmt(ctx)<span class="question-mark">?</span>),
+<a href=#61 id=61 data-nosnippet>61</a>        TokenType::ContinueAll =&gt; <span class="prelude-val">Ok</span>(loop_control::parse_continueall_stmt(ctx)<span class="question-mark">?</span>),
+<a href=#62 id=62 data-nosnippet>62</a>        TokenType::Break =&gt; <span class="prelude-val">Ok</span>(loop_control::parse_break_stmt(ctx)<span class="question-mark">?</span>),
+<a href=#63 id=63 data-nosnippet>63</a>        TokenType::BreakAll =&gt; <span class="prelude-val">Ok</span>(loop_control::parse_breakall_stmt(ctx)<span class="question-mark">?</span>),
+<a href=#64 id=64 data-nosnippet>64</a>        TokenType::Defer =&gt; <span class="prelude-val">Ok</span>(defer::parse_post_executation_stmt(ctx)<span class="question-mark">?</span>),
+<a href=#65 id=65 data-nosnippet>65</a>
+<a href=#66 id=66 data-nosnippet>66</a>        <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(expressions::parse_expression(ctx)<span class="question-mark">?</span>),
+<a href=#67 id=67 data-nosnippet>67</a>    };
+<a href=#68 id=68 data-nosnippet>68</a>
+<a href=#69 id=69 data-nosnippet>69</a>    ctx.get_mut_control_context().pop_sync_position();
 <a href=#70 id=70 data-nosnippet>70</a>
-<a href=#71 id=71 data-nosnippet>71</a>    ctx.get_mut_control_context().pop_sync_position();
-<a href=#72 id=72 data-nosnippet>72</a>
-<a href=#73 id=73 data-nosnippet>73</a>    statement
-<a href=#74 id=74 data-nosnippet>74</a>}
+<a href=#71 id=71 data-nosnippet>71</a>    statement
+<a href=#72 id=72 data-nosnippet>72</a>}
 </code></pre></div></section></main></body></html>

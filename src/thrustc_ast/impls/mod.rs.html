@@ -439,7 +439,7 @@
 <a href=#439 id=439 data-nosnippet>439</a>            }
 <a href=#440 id=440 data-nosnippet>440</a>
 <a href=#441 id=441 data-nosnippet>441</a>            Ast::Property { metadata, kind, .. } =&gt; {
-<a href=#442 id=442 data-nosnippet>442</a>                <span class="prelude-val">Ok</span>(metadata.is_allocated() || kind.is_ptr_like_type())
+<a href=#442 id=442 data-nosnippet>442</a>                <span class="prelude-val">Ok</span>(metadata.is_allocated() || metadata.is_deref() || kind.is_ptr_like_type())
 <a href=#443 id=443 data-nosnippet>443</a>            }
 <a href=#444 id=444 data-nosnippet>444</a>
 <a href=#445 id=445 data-nosnippet>445</a>            Ast::Index { metadata, kind, .. } =&gt; {

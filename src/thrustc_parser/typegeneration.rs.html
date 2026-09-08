@@ -25,8 +25,8 @@
 <a href=#25 id=25 data-nosnippet>25</a>    traits::{AstGetType, AstStructFieldsDataExtensions},
 <a href=#26 id=26 data-nosnippet>26</a>};
 <a href=#27 id=27 data-nosnippet>27</a><span class="kw">use </span>thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
-<a href=#28 id=28 data-nosnippet>28</a><span class="kw">use </span>thrustc_builtins::BuiltinValue;
-<a href=#29 id=29 data-nosnippet>29</a><span class="kw">use </span>thrustc_code_location::Span;
+<a href=#28 id=28 data-nosnippet>28</a><span class="kw">use </span>thrustc_code_location::Span;
+<a href=#29 id=29 data-nosnippet>29</a><span class="kw">use </span>thrustc_compile_time::BuiltinValue;
 <a href=#30 id=30 data-nosnippet>30</a><span class="kw">use </span>thrustc_constants::COMPILER_TOO_MANY_EXPRESSION_DEPTH;
 <a href=#31 id=31 data-nosnippet>31</a><span class="kw">use </span>thrustc_errors::{CompilationIssue, CompilationIssueCode};
 <a href=#32 id=32 data-nosnippet>32</a>
@@ -533,7 +533,7 @@
 <a href=#533 id=533 data-nosnippet>533</a>            <span class="kw">let </span>ctx_ref: <span class="kw-2">&amp;</span>ParserContext&lt;<span class="lifetime">'_</span>&gt; = <span class="kw-2">&amp;*</span>ctx;
 <a href=#534 id=534 data-nosnippet>534</a>            <span class="kw">let </span><span class="kw-2">mut </span>depth: usize = <span class="number">0</span>;
 <a href=#535 id=535 data-nosnippet>535</a>
-<a href=#536 id=536 data-nosnippet>536</a>            <span class="kw">match </span>thrustc_builtins::value::fold_resolving(<span class="kw-2">&amp;</span>size, <span class="kw-2">&amp;mut </span>|name, span| {
+<a href=#536 id=536 data-nosnippet>536</a>            <span class="kw">match </span>thrustc_compile_time::fold_resolving(<span class="kw-2">&amp;</span>size, <span class="kw-2">&amp;mut </span>|name, span| {
 <a href=#537 id=537 data-nosnippet>537</a>                <span class="self">self</span>::resolve_constant_value(ctx_ref, name, span, <span class="kw-2">&amp;mut </span>depth)
 <a href=#538 id=538 data-nosnippet>538</a>            }) {
 <a href=#539 id=539 data-nosnippet>539</a>                <span class="prelude-val">Some</span>(BuiltinValue::Integer(value)) =&gt; <span class="prelude-val">Some</span>(value),
@@ -657,7 +657,7 @@
 <a href=#657 id=657 data-nosnippet>657</a>        <span class="kw">let </span>ctx_ref: <span class="kw-2">&amp;</span>ParserContext&lt;<span class="lifetime">'parser</span>&gt; = <span class="kw-2">&amp;*</span>ctx;
 <a href=#658 id=658 data-nosnippet>658</a>        <span class="kw">let </span><span class="kw-2">mut </span>depth: usize = <span class="number">0</span>;
 <a href=#659 id=659 data-nosnippet>659</a>
-<a href=#660 id=660 data-nosnippet>660</a>        <span class="kw">match </span>thrustc_builtins::value::fold_resolving(<span class="kw-2">&amp;</span>memory_address_expr, <span class="kw-2">&amp;mut </span>|name, span| {
+<a href=#660 id=660 data-nosnippet>660</a>        <span class="kw">match </span>thrustc_compile_time::fold_resolving(<span class="kw-2">&amp;</span>memory_address_expr, <span class="kw-2">&amp;mut </span>|name, span| {
 <a href=#661 id=661 data-nosnippet>661</a>            <span class="self">self</span>::resolve_constant_value(ctx_ref, name, span, <span class="kw-2">&amp;mut </span>depth)
 <a href=#662 id=662 data-nosnippet>662</a>        }) {
 <a href=#663 id=663 data-nosnippet>663</a>            <span class="prelude-val">Some</span>(BuiltinValue::Integer(value)) =&gt; <span class="prelude-val">Some</span>(value),
@@ -708,7 +708,7 @@
 <a href=#708 id=708 data-nosnippet>708</a>    <span class="kw-2">*</span>depth = depth.saturating_add(<span class="number">1</span>);
 <a href=#709 id=709 data-nosnippet>709</a>
 <a href=#710 id=710 data-nosnippet>710</a>    <span class="kw">let </span>result: <span class="prelude-ty">Option</span>&lt;BuiltinValue&gt; =
-<a href=#711 id=711 data-nosnippet>711</a>        thrustc_builtins::value::fold_resolving(<span class="kw-2">&amp;</span>value, <span class="kw-2">&amp;mut </span>|name, span| {
+<a href=#711 id=711 data-nosnippet>711</a>        thrustc_compile_time::fold_resolving(<span class="kw-2">&amp;</span>value, <span class="kw-2">&amp;mut </span>|name, span| {
 <a href=#712 id=712 data-nosnippet>712</a>            <span class="self">self</span>::resolve_constant_value(ctx, name, span, <span class="kw-2">&amp;mut *</span>depth)
 <a href=#713 id=713 data-nosnippet>713</a>        });
 <a href=#714 id=714 data-nosnippet>714</a>

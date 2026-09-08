@@ -18,8 +18,8 @@
 <a href=#18 id=18 data-nosnippet>18</a>*/
 <a href=#19 id=19 data-nosnippet>19</a>
 <a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">use </span>thrustc_attributes::ThrustAttributes;
-<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>thrustc_builtins::BuiltinValue;
-<a href=#22 id=22 data-nosnippet>22</a><span class="kw">use </span>thrustc_code_location::Span;
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span>thrustc_code_location::Span;
+<a href=#22 id=22 data-nosnippet>22</a><span class="kw">use </span>thrustc_compile_time::BuiltinValue;
 <a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span>thrustc_errors::{CompilationIssue, CompilationIssueCode};
 <a href=#24 id=24 data-nosnippet>24</a><span class="kw">use </span>thrustc_token::{Token, traits::TokenExtensions};
 <a href=#25 id=25 data-nosnippet>25</a><span class="kw">use </span>thrustc_token_type::TokenType;
@@ -64,7 +64,7 @@
 <a href=#64 id=64 data-nosnippet>64</a>    ctx.consume(TokenType::Eq)<span class="question-mark">?</span>;
 <a href=#65 id=65 data-nosnippet>65</a>
 <a href=#66 id=66 data-nosnippet>66</a>    <span class="kw">let </span>value: <span class="prelude-ty">Option</span>&lt;BuiltinValue&gt; = <span class="kw">match </span>expressions::parse_expr(ctx) {
-<a href=#67 id=67 data-nosnippet>67</a>        <span class="prelude-val">Ok</span>(expression) =&gt; thrustc_builtins::value::fold(<span class="kw-2">&amp;</span>expression),
+<a href=#67 id=67 data-nosnippet>67</a>        <span class="prelude-val">Ok</span>(expression) =&gt; thrustc_compile_time::fold(<span class="kw-2">&amp;</span>expression),
 <a href=#68 id=68 data-nosnippet>68</a>        <span class="prelude-val">Err</span>(()) =&gt; {
 <a href=#69 id=69 data-nosnippet>69</a>            ctx.advance_until(TokenType::SemiColon)<span class="question-mark">?</span>;
 <a href=#70 id=70 data-nosnippet>70</a>
