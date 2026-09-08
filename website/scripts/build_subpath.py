@@ -98,6 +98,7 @@ def build_subpath(source: Path, output: Path, base_path: str) -> None:
     normalized_base = normalize_base_path(base_path)
     copy_site(source, output)
     rewrite_paths(output, normalized_base)
+    (output / ".nojekyll").write_text("")
 
 
 def main(argv=None) -> None:
