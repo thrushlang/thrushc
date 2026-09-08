@@ -50,7 +50,7 @@ pub fn compile<'ctx>(
         )
     });
 
-    let fixed_cstr_size: u32 = if !bytes.is_empty() && null_terminated {
+    let fixed_cstr_size: u32 = if null_terminated {
         parsed_size + 1
     } else {
         parsed_size

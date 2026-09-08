@@ -249,14 +249,23 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let mut compiled_paths: std::collections::HashSet<std::path::PathBuf> =
             std::collections::HashSet::new();
 
-        for module in thrustc_preprocessor::std_library::get_imported_std_modules() {
-            let path: std::path::PathBuf = module.get_path().to_path_buf();
+        loop {
+            let mut compiled_any: bool = false;
 
-            if !path.is_file() || !compiled_paths.insert(path.clone()) {
-                continue;
+            for module in thrustc_preprocessor::std_library::get_imported_std_modules() {
+                let path: std::path::PathBuf = module.get_path().to_path_buf();
+
+                if !path.is_file() || !compiled_paths.insert(path.clone()) {
+                    continue;
+                }
+
+                self.compile_imported_std_module(&path)?;
+                compiled_any = true;
             }
 
-            self.compile_imported_std_module(&path)?;
+            if !compiled_any {
+                break;
+            }
         }
 
         Ok(())
@@ -291,36 +300,46 @@ impl<'thrustc> ThrustCompiler<'thrustc> {
         let mut compiled_paths: std::collections::HashSet<std::path::PathBuf> =
             std::collections::HashSet::new();
 
-        for module in thrustc_preprocessor::std_library::get_imported_std_modules() {
-            let path: std::path::PathBuf = module.get_path().to_path_buf();
+        loop {
+            let mut compiled_any: bool = false;
 
-            if !path.is_file() {
-                continue;
+            for module in thrustc_preprocessor::std_library::get_imported_std_modules() {
+                let path: std::path::PathBuf = module.get_path().to_path_buf();
+
+                if !path.is_file() {
+                    continue;
+                }
+
+                if !compiled_paths.insert(path.clone()) {
+                    continue;
+                }
+
+                let name: String = path
+                    .file_name()
+                    .map_or_else(String::new, |name| name.to_string_lossy().to_string());
+
+                let base_name: String = path.file_stem().map_or_else(String::new, |base_name| {
+                    base_name.to_string_lossy().to_string()
+                });
+
+                let content: String = thrustc_reader::get_file_source_code(&path);
+                let unit: CompilationUnit = CompilationUnit::new(name, path, content, base_name);
+
+                let compiled_file: either::Either<MemoryBuffer, ()> =
+                    self.compile_file_with_llvm_jit(&unit)?;
+
+                if let Some(module) = compiled_file
+                    .left()
+                    .and_then(|memory_buffer| context.create_module_from_ir(memory_buffer).ok())
+                {
+                    modules.push(module);
+                }
+
+                compiled_any = true;
             }
 
-            if !compiled_paths.insert(path.clone()) {
-                continue;
-            }
-
-            let name: String = path
-                .file_name()
-                .map_or_else(String::new, |name| name.to_string_lossy().to_string());
-
-            let base_name: String = path.file_stem().map_or_else(String::new, |base_name| {
-                base_name.to_string_lossy().to_string()
-            });
-
-            let content: String = thrustc_reader::get_file_source_code(&path);
-            let unit: CompilationUnit = CompilationUnit::new(name, path, content, base_name);
-
-            let compiled_file: either::Either<MemoryBuffer, ()> =
-                self.compile_file_with_llvm_jit(&unit)?;
-
-            if let Some(module) = compiled_file
-                .left()
-                .and_then(|memory_buffer| context.create_module_from_ir(memory_buffer).ok())
-            {
-                modules.push(module);
+            if !compiled_any {
+                break;
             }
         }
 

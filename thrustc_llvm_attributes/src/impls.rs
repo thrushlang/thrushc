@@ -51,6 +51,11 @@ impl LLVMAttributesExtensions for LLVMAttributes<'_> {
     }
 
     #[inline]
+    fn has_entrypoint_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_entrypoint_attribute())
+    }
+
+    #[inline]
     fn has_hot_attr(&self) -> bool {
         self.iter().any(|attr| attr.is_hot_attribute())
     }
@@ -119,6 +124,7 @@ impl LLVMAttributeComparatorExtensions for LLVMAttribute<'_> {
             LLVMAttribute::Stack => LLVMAttributeComparator::Stack,
             LLVMAttribute::Heap => LLVMAttributeComparator::Heap,
             LLVMAttribute::Public => LLVMAttributeComparator::Public,
+            LLVMAttribute::EntryPoint => LLVMAttributeComparator::EntryPoint,
             LLVMAttribute::Ignore => LLVMAttributeComparator::Ignore,
             LLVMAttribute::Hot => LLVMAttributeComparator::Hot,
             LLVMAttribute::NoInline => LLVMAttributeComparator::NoInline,
@@ -184,6 +190,7 @@ impl std::fmt::Display for LLVMAttribute<'_> {
             LLVMAttribute::Stack => write!(f, "@stack"),
             LLVMAttribute::Heap => write!(f, "@heap"),
             LLVMAttribute::Public => write!(f, "@public"),
+            LLVMAttribute::EntryPoint => write!(f, "@entrypoint"),
             LLVMAttribute::StrongStack => write!(f, "@strongStack"),
             LLVMAttribute::WeakStack => write!(f, "@weakStack"),
             LLVMAttribute::SafeStack => write!(f, "@safeStack"),

@@ -239,6 +239,7 @@ fn gen_function<'ast>(
     Ok(Ast::Function {
         name: name.to_string(),
         ascii_name: name.to_string(),
+        demangling_name: format!("fuzz.{name}"),
         original_name: Some(name.to_string()),
         parameters,
         parameter_types,

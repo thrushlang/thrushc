@@ -516,6 +516,7 @@ pub fn substitute_ast<'ast>(node: Ast<'ast>, env: &TypeEnv) -> Ast<'ast> {
         Ast::Function {
             name,
             ascii_name,
+            demangling_name,
             original_name,
             parameters,
             parameter_types,
@@ -527,6 +528,7 @@ pub fn substitute_ast<'ast>(node: Ast<'ast>, env: &TypeEnv) -> Ast<'ast> {
         } => Ast::Function {
             name,
             ascii_name,
+            demangling_name,
             original_name,
             parameters: self::substitute_ast_list(parameters, env),
             parameter_types: self::substitute_type_list(parameter_types, env),

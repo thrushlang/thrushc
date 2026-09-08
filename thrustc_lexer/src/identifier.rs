@@ -64,6 +64,7 @@ lazy_static! {
         attributes.insert("@packed", TokenType::Packed);
         attributes.insert("@heap", TokenType::Heap);
         attributes.insert("@public", TokenType::Public);
+        attributes.insert("@entrypoint", TokenType::EntryPoint);
         attributes.insert("@linkage", TokenType::Linkage);
         attributes.insert("@extern", TokenType::Extern);
         attributes.insert("@arbitraryArgs", TokenType::Ignore);

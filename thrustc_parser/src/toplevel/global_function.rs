@@ -202,6 +202,7 @@ pub fn build_function<'parser>(
             let prototype: Ast = Ast::Function {
                 name: name.to_string(),
                 ascii_name: ascii_name.to_string(),
+                demangling_name: format!("{}.{}", ctx.get_file().get_base_name(), ascii_name),
                 original_name: Some(name.to_string()),
                 parameters,
                 parameter_types: parameters_types,
@@ -232,6 +233,7 @@ pub fn build_function<'parser>(
         let mut prototype: Ast = Ast::Function {
             name: name.to_string(),
             ascii_name: ascii_name.to_string(),
+            demangling_name: format!("{}.{}", ctx.get_file().get_base_name(), ascii_name),
             original_name: Some(name.to_string()),
             parameters,
             parameter_types: parameters_types,

@@ -119,7 +119,10 @@ pub fn resolve_generics<'parser>(ctx: &mut ParserContext<'parser>) {
 
     for node in existing {
         let is_generic_template: bool = match &node {
-            Ast::Function { name, .. } => ctx.get_symbols().has_generic_function(name),
+            Ast::Function { name, .. } => ctx
+                .get_symbols()
+                .get_generic_function(name)
+                .is_some_and(|entry| entry.has_local_template),
             Ast::Struct { name, .. } => ctx.get_symbols().has_generic_struct(name),
             Ast::CustomType { name, .. } => ctx.get_symbols().has_generic_custom_type(name),
             _ => false,
@@ -170,11 +173,15 @@ pub fn resolve_generics<'parser>(ctx: &mut ParserContext<'parser>) {
             thrustc_generics::substitute_ast(template.clone(), &pending.env);
 
         if let Ast::Function {
-            name, ascii_name, ..
+            name,
+            ascii_name,
+            demangling_name,
+            ..
         } = &mut concrete
         {
             *name = key.clone();
             *ascii_name = key.clone();
+            *demangling_name = format!("{}.{}", ctx.get_file().get_base_name(), key);
         }
 
         if let Ast::Function { original_name, .. } = &mut concrete {
@@ -423,11 +430,15 @@ fn ensure_instantiation<'parser>(
         let mut concrete: Ast<'parser> = thrustc_generics::substitute_ast(template.clone(), env);
 
         if let Ast::Function {
-            name, ascii_name, ..
+            name,
+            ascii_name,
+            demangling_name,
+            ..
         } = &mut concrete
         {
             *name = key.to_string();
             *ascii_name = key.to_string();
+            *demangling_name = format!("{}.{}", ctx.get_file().get_base_name(), key);
         }
 
         if let Ast::Function { original_name, .. } = &mut concrete {
@@ -479,12 +490,22 @@ fn ensure_instantiation<'parser>(
         .cloned()
         .collect();
 
+    let demangling_name: String = ctx
+        .get_symbols()
+        .get_import_origin(&entry.name)
+        .and_then(|path| path.file_stem())
+        .map_or_else(
+            || format!("{}.{}", ctx.get_file().get_base_name(), key),
+            |module| format!("{}.{}", module.to_string_lossy(), key),
+        );
+
     attributes.push(ThrustAttribute::Public(entry.span));
-    attributes.push(ThrustAttribute::Extern(key.to_string(), entry.span));
+    attributes.push(ThrustAttribute::Extern(demangling_name.clone(), entry.span));
 
     output.push(Ast::Function {
         name: key.to_string(),
         ascii_name: key.to_string(),
+        demangling_name,
         original_name: Some(entry.name.clone()),
         parameters,
         parameter_types,
@@ -930,6 +951,7 @@ fn resolve_children<'parser>(
         Ast::Function {
             name,
             ascii_name,
+            demangling_name,
             original_name,
             parameters,
             parameter_types,
@@ -941,6 +963,7 @@ fn resolve_children<'parser>(
         } => Ast::Function {
             name,
             ascii_name,
+            demangling_name,
             original_name,
             parameters: self::resolve_ast_list(ctx, parameters, templates, memo, output),
             parameter_types,
@@ -1407,7 +1430,11 @@ fn collect_local_templates<'parser>(
             ..
         } = node
         {
-            if ctx.get_symbols().has_generic_function(name) {
+            if ctx
+                .get_symbols()
+                .get_generic_function(name)
+                .is_some_and(|entry| entry.has_local_template)
+            {
                 templates.insert(name.clone(), node.clone());
             }
         }

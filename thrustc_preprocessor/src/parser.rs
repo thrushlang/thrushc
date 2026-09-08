@@ -102,6 +102,11 @@ impl<'module_parser> ModuleParser<'module_parser> {
 }
 
 impl<'module_parser> ModuleParser<'module_parser> {
+    #[inline]
+    pub fn get_module_name(&self) -> &str {
+        self.module.get_name()
+    }
+
     pub fn parse(mut self) -> Result<Module, ()> {
         while !self.is_eof() {
             let _ = self.forward_declare();

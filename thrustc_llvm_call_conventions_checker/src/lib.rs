@@ -348,7 +348,7 @@ impl LLVMCallConventionsChecker<'_> {
 
                     arch if arch.contains("nvidia") || arch.contains("nvptx") => {
                         if !CUDA_CALL_CONVENTIONS.contains(&call_conv) {
-                            let transformed: Vec<String> = WASM_CALL_CONVENTIONS
+                            let transformed: Vec<String> = CUDA_CALL_CONVENTIONS
                                 .iter()
                                 .map(|callconv| callconv.to_string())
                                 .collect();

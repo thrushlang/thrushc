@@ -497,8 +497,39 @@ impl<'scoper> Scoper<'scoper> {
                 | AstBuiltin::DeferredCompileTime { .. } => (),
             },
 
-            // ---------------------------------------------------------
-            _ => (),
+            Ast::CString { .. }
+            | Ast::CNString { .. }
+            | Ast::Char { .. }
+            | Ast::Boolean { .. }
+            | Ast::Integer { .. }
+            | Ast::Float { .. }
+            | Ast::NullPtr { .. }
+            | Ast::GlobalAssembler { .. }
+            | Ast::Embedded { .. }
+            | Ast::Struct { .. }
+            | Ast::Block { .. }
+            | Ast::CustomType { .. }
+            | Ast::Enum { .. }
+            | Ast::CompilerIntrinsic { .. }
+            | Ast::CompilerIntrinsicParameter { .. }
+            | Ast::AssemblerFunction { .. }
+            | Ast::AssemblerFunctionParameter { .. }
+            | Ast::Function { .. }
+            | Ast::FunctionParameter { .. }
+            | Ast::Continue { .. }
+            | Ast::Break { .. }
+            | Ast::ContinueAll { .. }
+            | Ast::BreakAll { .. }
+            | Ast::Return { .. }
+            | Ast::Reference { .. }
+            | Ast::Mutation { .. }
+            | Ast::Address { .. }
+            | Ast::Write { .. }
+            | Ast::ModuleExpression { .. }
+            | Ast::Import { .. }
+            | Ast::ImportC { .. }
+            | Ast::Unreachable { .. }
+            | Ast::Invalid { .. } => (),
         }
     }
 }

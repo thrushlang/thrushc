@@ -111,6 +111,13 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
             });
     }
 
+    let else_entry_block: Option<BasicBlock> =
+        if !else_if_branch.is_empty() && else_branch.is_some() {
+            Some(block::append_block(codegen.get_context(), llvm_function))
+        } else {
+            None
+        };
+
     if !else_if_branch.is_empty() {
         let span: Span = else_if_branch
             .first()
@@ -125,11 +132,23 @@ pub fn compile<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, node: &'ctx Ast<'ctx>)
             })
             .get_span();
 
-        self::compile_elseif(codegen, else_if_branch, next_block, merge_block, span);
+        self::compile_elseif(
+            codegen,
+            else_if_branch,
+            next_block,
+            else_entry_block.unwrap_or(merge_block),
+            merge_block,
+            span,
+        );
     }
 
     if let Some(node) = else_branch {
-        self::compile_else(codegen, node, next_block, merge_block);
+        self::compile_else(
+            codegen,
+            node,
+            else_entry_block.unwrap_or(next_block),
+            merge_block,
+        );
     }
 
     llvm_builder.position_at_end(merge_block);
@@ -139,6 +158,7 @@ fn compile_elseif<'ctx>(
     codegen: &mut LLVMCodegen<'_, 'ctx>,
     else_if: &'ctx [Ast<'ctx>],
     first_block: BasicBlock<'ctx>,
+    final_fallthrough: BasicBlock<'ctx>,
     merge: BasicBlock<'ctx>,
     span: Span,
 ) {
@@ -167,7 +187,7 @@ fn compile_elseif<'ctx>(
         let then_block: BasicBlock = block::append_block(codegen.get_context(), llvm_function);
 
         let next_block: BasicBlock = if is_last {
-            merge
+            final_fallthrough
         } else {
             block::append_block(codegen.get_context(), llvm_function)
         };

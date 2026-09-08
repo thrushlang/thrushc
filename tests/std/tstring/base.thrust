@@ -1,0 +1,112 @@
+/*
+ * Exercises std::tstring base API: construction, capacity, conversion,
+ * append, concat, trim, search, equality, clear and ASCII case conversion.
+ * Returns 0 on success, non-zero on failure.
+ */
+
+import std::tstring;
+
+fn main() s32 @public {
+    var empty := tstring::newTString();
+
+    if tstring::len(ref empty) != 0 { return 1; }
+    if !tstring::isEmpty(ref empty) { return 2; }
+    if !tstring::startsWith(ref empty, "") { return 3; }
+    if !tstring::endsWith(ref empty, "") { return 4; }
+    if !tstring::contains(ref empty, "") { return 5; }
+
+    tstring::reserve(ref empty, 16);
+    if tstring::capacity(ref empty) < 16 { return 6; }
+
+    var reserved := tstring::withCapacity(8);
+    if tstring::capacity(ref reserved) < 8 { return 7; }
+
+    var hello := tstring::fromCString("hello");
+    if tstring::len(ref hello) != 5 { return 8; }
+    if tstring::isEmpty(ref hello) { return 9; }
+    if !tstring::startsWith(ref hello, "he") { return 10; }
+    if tstring::startsWith(ref hello, "world") { return 11; }
+    if !tstring::endsWith(ref hello, "lo") { return 12; }
+    if tstring::endsWith(ref hello, "hello!") { return 13; }
+    if !tstring::contains(ref hello, "ell") { return 14; }
+    if tstring::contains(ref hello, "zz") { return 15; }
+
+    var helloCopy := tstring::copy(ref hello);
+    if !tstring::equals(ref hello, ref helloCopy) { return 16; }
+
+    tstring::appendCString(ref helloCopy, " world");
+    if tstring::len(ref helloCopy) != 11 { return 17; }
+    if !tstring::startsWith(ref helloCopy, "hello") { return 18; }
+    if !tstring::endsWith(ref helloCopy, "world") { return 19; }
+    if !tstring::contains(ref helloCopy, "o w") { return 20; }
+    if tstring::equals(ref hello, ref helloCopy) { return 21; }
+
+    var fromView := tstring::fromCString(tstring::toCString(ref helloCopy));
+    if !tstring::equals(ref helloCopy, ref fromView) { return 22; }
+
+    var suffix := tstring::fromCString("!!!");
+    tstring::appendTString(ref fromView, ref suffix);
+    if tstring::len(ref fromView) != 14 { return 23; }
+    if !tstring::endsWith(ref fromView, "!!!") { return 24; }
+
+    var joined := tstring::concat(ref hello, ref suffix);
+    if tstring::len(ref joined) != 8 { return 25; }
+    if !tstring::startsWith(ref joined, "hello") { return 26; }
+    if !tstring::endsWith(ref joined, "!!!") { return 27; }
+
+    var padded := tstring::fromCString(" \t\nhello\r ");
+    var trimmed := tstring::trim(ref padded);
+    var trimStarted := tstring::trimStart(ref padded);
+    var trimEnded := tstring::trimEnd(ref padded);
+
+    if !tstring::equals(ref trimmed, ref hello) { return 28; }
+    if !tstring::startsWith(ref trimStarted, "hello") { return 29; }
+    if !tstring::endsWith(ref trimStarted, "\r ") { return 30; }
+    if !tstring::startsWith(ref trimEnded, " \t\n") { return 31; }
+    if !tstring::endsWith(ref trimEnded, "hello") { return 32; }
+
+    var mixed := tstring::fromCString("AbC xyz 123");
+    var upper := tstring::toUpperCaseASCII(ref mixed);
+    var lower := tstring::toLowerCaseASCII(ref mixed);
+
+    if !tstring::startsWith(ref upper, "ABC XYZ") { return 33; }
+    if !tstring::startsWith(ref lower, "abc xyz") { return 34; }
+
+    tstring::clear(ref helloCopy);
+    if tstring::len(ref helloCopy) != 0 { return 35; }
+    if !tstring::isEmpty(ref helloCopy) { return 36; }
+    if !tstring::startsWith(ref helloCopy, "") { return 37; }
+
+    if !tstring::hasIndex(ref hello, 0) { return 38; }
+    if !tstring::hasIndex(ref hello, 4) { return 39; }
+    if tstring::hasIndex(ref hello, 5) { return 40; }
+
+    if tstring::get(ref hello, 0) != 'h' { return 41; }
+    if tstring::get(ref hello, 1) != 'e' { return 42; }
+    if tstring::get(ref hello, 4) != 'o' { return 43; }
+    if tstring::get(ref hello, 5) != '\0' { return 44; }
+
+    if tstring::indexOf(ref hello, "") != 0 { return 45; }
+    if tstring::indexOf(ref hello, "h") != 0 { return 46; }
+    if tstring::indexOf(ref hello, "ell") != 1 { return 47; }
+    if tstring::indexOf(ref hello, "lo") != 3 { return 48; }
+    if tstring::indexOf(ref hello, "zz") != tstring::len(ref hello) { return 49; }
+    if tstring::indexOf(ref empty, "x") != 0 { return 50; }
+
+    tstring::destroyTString(ref lower);
+    tstring::destroyTString(ref upper);
+    tstring::destroyTString(ref mixed);
+    tstring::destroyTString(ref trimEnded);
+    tstring::destroyTString(ref trimStarted);
+    tstring::destroyTString(ref trimmed);
+    tstring::destroyTString(ref padded);
+    tstring::destroyTString(ref joined);
+    tstring::destroyTString(ref suffix);
+    tstring::destroyTString(ref fromView);
+    tstring::destroyTString(ref helloCopy);
+    tstring::destroyTString(ref hello);
+    tstring::destroyTString(ref reserved);
+    tstring::destroyTString(ref empty);
+
+    return 0;
+}

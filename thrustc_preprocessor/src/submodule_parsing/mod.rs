@@ -78,9 +78,7 @@ pub fn ensure_exposed(
         attributes.push(ThrustAttribute::Public(span));
     }
 
-    if needs_extern && !attributes.has_extern_attribute() {
-        attributes.push(ThrustAttribute::Extern(name.to_string(), span));
-    }
+    let _ = (name, needs_extern);
 
     added_public
 }

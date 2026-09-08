@@ -26,10 +26,20 @@ cargo docs
 
 echo "Preparing documentation..."
 TEMP_DOCS="/tmp/thrust-docs-build"
+TEMP_WEBSITE_SOURCE="/tmp/thrust-website-source"
+TEMP_WEBSITE_BUILD="/tmp/thrust-website-build"
+WEBSITE_REPO_URL="${WEBSITE_REPO_URL:-https://github.com/thrustlang/website}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 rm -rf "$TEMP_DOCS"
+rm -rf "$TEMP_WEBSITE_SOURCE"
+rm -rf "$TEMP_WEBSITE_BUILD"
 cp -r target/doc "$TEMP_DOCS"
 
 echo '<meta http-equiv="refresh" content="0; url=thrustc/index.html">' > "$TEMP_DOCS/index.html"
+
+echo "Preparing website..."
+git clone --depth 1 "$WEBSITE_REPO_URL" "$TEMP_WEBSITE_SOURCE"
+"$PYTHON_BIN" "$TEMP_WEBSITE_SOURCE/scripts/build_subpath.py" --source "$TEMP_WEBSITE_SOURCE" --base-path /website --output "$TEMP_WEBSITE_BUILD"
 
 echo "Deploying to GitHub Pages..."
 PAGES_WORKTREE="/tmp/thrust-gh-pages"
@@ -39,9 +49,11 @@ git fetch origin gh-pages >/dev/null 2>&1
 git worktree add "$PAGES_WORKTREE" gh-pages
 
 pushd "$PAGES_WORKTREE" > /dev/null
-    find . -maxdepth 1 ! -name '.git' ! -name '.' -exec rm -rf {} +
+    find . -maxdepth 1 ! -name '.git' ! -name '.' ! -name 'website' -exec rm -rf {} +
+    rm -rf website
     
     cp -r "$TEMP_DOCS"/* ./
+    cp -r "$TEMP_WEBSITE_BUILD" website
     
     git add -A
     if git diff-index --quiet HEAD --; then
@@ -54,5 +66,7 @@ popd > /dev/null
 
 git worktree remove "$PAGES_WORKTREE"
 rm -rf "$TEMP_DOCS"
+rm -rf "$TEMP_WEBSITE_SOURCE"
+rm -rf "$TEMP_WEBSITE_BUILD"
 
 echo "Done. Documentation updated successfully."

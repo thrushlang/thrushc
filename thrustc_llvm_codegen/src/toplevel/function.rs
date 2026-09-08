@@ -64,13 +64,14 @@ pub fn compile_top<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: F
 
     let name: &str = function.0;
     let ascii_name: &str = &function.1.replace("\0", "");
+    let demangling_name: &str = function.2;
 
-    let return_type: &Type = function.2;
+    let return_type: &Type = function.3;
 
-    let parameters: &[Ast<'ctx>] = function.3;
-    let parameters_types: &[Type] = function.4;
-    let attributes: LLVMAttributes = thrustc_llvm_attributes::into_llvm_attributes(function.6);
-    let span: Span = function.7;
+    let parameters: &[Ast<'ctx>] = function.4;
+    let parameters_types: &[Type] = function.5;
+    let attributes: LLVMAttributes = thrustc_llvm_attributes::into_llvm_attributes(function.7);
+    let span: Span = function.8;
 
     let ignore_args: bool = attributes.has_ignore_attribute();
     let is_public: bool = attributes.has_public_attribute();
@@ -87,8 +88,10 @@ pub fn compile_top<'ctx>(context: &mut LLVMCodeGenContext<'_, 'ctx>, function: F
         attributes.get_attr(LLVMAttributeComparator::Extern)
     {
         extern_name.to_string()
-    } else if is_public {
+    } else if name == "main" || attributes.has_entrypoint_attribute() {
         ascii_name.to_string()
+    } else if is_public {
+        demangling_name.to_string()
     } else {
         format!(
             "__fn_{}_{}",
@@ -212,9 +215,9 @@ pub fn compile_body<'ctx>(codegen: &mut LLVMCodegen<'_, 'ctx>, function: Functio
     let has_abi: bool = codegen.get_context().has_abi();
 
     let function_name: &str = function.0;
-    let function_type: &Type = function.2;
-    let function_parameters: &[Ast<'ctx>] = function.3;
-    let function_body: Option<&Ast> = function.5;
+    let function_type: &Type = function.3;
+    let function_parameters: &[Ast<'ctx>] = function.4;
+    let function_body: Option<&Ast> = function.6;
 
     let prototype: LLVMFunction<'ctx> = codegen
         .get_context()

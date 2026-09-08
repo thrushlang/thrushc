@@ -1,0 +1,50 @@
+directive "--disable-warnings=W0020";
+directive "--disable-warnings=W0030";
+
+fn elifNoElse(value: s32) s32 @public {
+    var result: s32 = 0;
+
+    if value == 0 {
+        result = 1;
+    } else if value == 1 {
+        result = 2;
+    } else if value == 2 {
+        result = 3;
+    }
+
+    return result;
+}
+
+fn ifElseBothReturn(value: s32) s32 @public {
+    if value == 0 {
+        return 1;
+    } else {
+        return 2;
+    }
+}
+
+fn voidChain(value: s32) void @public {
+    var result: s32 = 0;
+
+    if value == 0 {
+        result = 1;
+    } else if value == 1 {
+        result = 2;
+    } else {
+        result = 3;
+    }
+}
+
+fn main() s32 @public {
+    var total: s32 = 0;
+
+    total = total + elifNoElse(3);
+    total = total + ifElseBothReturn(1);
+    voidChain(total);
+
+    if total == 2 {
+        return 0;
+    }
+
+    return total;
+}

@@ -313,6 +313,7 @@ pub enum Ast<'ast> {
     Function {
         name: String,
         ascii_name: String,
+        demangling_name: String,
         original_name: Option<String>,
         parameters: std::vec::Vec<Ast<'ast>>,
         parameter_types: std::vec::Vec<Type>,

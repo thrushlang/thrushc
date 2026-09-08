@@ -29,7 +29,7 @@ use thrustc_ast::{
     traits::AstGetType,
 };
 use thrustc_ast_modificators::{Modificators, traits::ModificatorsExtensions};
-use thrustc_attributes::{ThrustAttributes, traits::ThrustAttributesExtensions};
+use thrustc_attributes::{ThrustAttribute, ThrustAttributes, traits::ThrustAttributesExtensions};
 use thrustc_code_location::Span;
 use thrustc_entities::parser_entities::{FunctionParameterNames, FunctionParametersTypes};
 use thrustc_errors::{CompilationIssue, CompilationIssueCode};
@@ -58,6 +58,7 @@ pub fn build_qualified_expression<'parser>(
     if ctx.check(TokenType::LParen) || ctx.check(TokenType::LBracket) {
         let Some(Signature::Function {
             kind,
+            demangling_name,
             parameters,
             attributes,
             type_params,
@@ -142,6 +143,7 @@ pub fn build_qualified_expression<'parser>(
                 parameter_types,
                 parameter_names,
                 attributes.clone(),
+                demangling_name.clone(),
                 span,
             );
         }
@@ -418,6 +420,7 @@ pub fn synthesize_only_import<'parser>(
         match &symbol.signature {
             Signature::Function {
                 kind,
+                demangling_name,
                 parameters,
                 attributes,
                 type_params,
@@ -486,6 +489,7 @@ pub fn synthesize_only_import<'parser>(
                     parameter_types,
                     parameter_names,
                     attributes.clone(),
+                    demangling_name.clone(),
                     span,
                 );
             }
@@ -746,7 +750,8 @@ fn synthesize_function<'parser>(
     return_type: thrustc_typesystem::Type,
     parameter_types: Vec<thrustc_typesystem::Type>,
     parameter_names: Vec<&'parser str>,
-    attributes: ThrustAttributes,
+    mut attributes: ThrustAttributes,
+    demangling_name: String,
     span: Span,
 ) {
     let mut parameters: Vec<Ast> = Vec::with_capacity(parameter_types.len());
@@ -766,9 +771,14 @@ fn synthesize_function<'parser>(
         position += 1;
     }
 
+    if !attributes.has_extern_attribute() {
+        attributes.push(ThrustAttribute::Extern(demangling_name.clone(), span));
+    }
+
     let declaration: Ast = Ast::Function {
         name: symbol.to_string(),
         ascii_name: symbol.to_string(),
+        demangling_name,
         original_name: Some(symbol.to_string()),
         parameters,
         parameter_types,

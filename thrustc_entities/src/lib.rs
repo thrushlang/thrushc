@@ -101,6 +101,7 @@ pub type LocalVariable<'entity> = (
 pub type Function<'entity> = (
     &'entity str,
     &'entity str,
+    &'entity str,
     &'entity Type,
     &'entity [Ast<'entity>],
     &'entity [Type],
@@ -191,6 +192,7 @@ pub fn function_from_ast<'entity>(ast: &'entity Ast) -> Function<'entity> {
     if let Ast::Function {
         name,
         ascii_name,
+        demangling_name,
         parameters,
         parameter_types,
         body,
@@ -203,6 +205,7 @@ pub fn function_from_ast<'entity>(ast: &'entity Ast) -> Function<'entity> {
         return (
             name,
             ascii_name,
+            demangling_name,
             return_type,
             parameters,
             parameter_types,

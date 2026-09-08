@@ -1,0 +1,116 @@
+directive "--disable-warnings=W0020";
+directive "--disable-warnings=W0030";
+
+fn chain(value: s32) s32 @public {
+    var result: s32 = 0;
+
+    if value == 0 {
+        result = 1;
+    } else if value == 1 {
+        result = 2;
+    } else if value == 2 {
+        result = 3;
+    } else {
+        result = 4;
+    }
+
+    return result;
+}
+
+fn allReturnChain(value: s32) s32 @public {
+    if value == 0 {
+        return 10;
+    } else if value == 1 {
+        return 11;
+    } else if value == 2 {
+        return 12;
+    } else {
+        return 13;
+    }
+}
+
+fn partialReturnChain(value: s32) s32 @public {
+    var result: s32 = value;
+
+    if value == 0 {
+        return 20;
+    } else if value == 1 {
+        return 21;
+    } else if value == 2 {
+        result = value + 30;
+    } else {
+        result = value + 40;
+    }
+
+    return result;
+}
+
+fn shortCircuitChain(left: s32, right: s32) s32 @public {
+    if left > 0 && right > 0 {
+        return 1;
+    } else if left > 0 || right > 0 {
+        return 2;
+    } else {
+        return 3;
+    }
+}
+
+fn nestedChain(value: s32) s32 @public {
+    var result: s32 = 0;
+
+    if value < 0 {
+        result = -1;
+    } else if value == 0 {
+        if value == 0 {
+            result = 100;
+        } else {
+            result = 101;
+        }
+    } else {
+        if value == 1 {
+            result = 200;
+        } else if value == 2 {
+            result = 201;
+        } else {
+            result = 202;
+        }
+    }
+
+    return result;
+}
+
+fn loopChain(limit: s32) s32 @public {
+    var index: s32 = 0;
+    var acc: s32 = 0;
+
+    while index < limit {
+        if index == 0 {
+            acc = acc + 1;
+        } else if index == 1 {
+            acc = acc + 2;
+        } else {
+            acc = acc + 3;
+        }
+
+        index = index + 1;
+    }
+
+    return acc;
+}
+
+fn main() s32 @public {
+    var total: s32 = 0;
+
+    total = total + chain(2);
+    total = total + allReturnChain(1);
+    total = total + partialReturnChain(2);
+    total = total + shortCircuitChain(0, 1);
+    total = total + nestedChain(2);
+    total = total + loopChain(3);
+
+    if total == 255 {
+        return 0;
+    }
+
+    return total;
+}

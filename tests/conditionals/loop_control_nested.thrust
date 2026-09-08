@@ -1,0 +1,100 @@
+directive "--disable-warnings=W0020";
+directive "--disable-warnings=W0030";
+
+fn continueFor() s32 @public {
+    var acc: s32 = 0;
+
+    for var i: s32 = 0; i < 5; i++; {
+        if i == 1 {
+            continue;
+        }
+
+        if i == 3 {
+            continue;
+        }
+
+        acc = acc + i;
+    }
+
+    return acc;
+}
+
+fn breakFor() s32 @public {
+    var acc: s32 = 0;
+
+    for var i: s32 = 0; i < 10; i++; {
+        if i == 4 {
+            break;
+        }
+
+        acc = acc + i;
+    }
+
+    return acc;
+}
+
+fn loopBreakScore() s32 @public {
+    var acc: s32 = 0;
+    var i: s32 = 0;
+
+    loop {
+        if i == 4 {
+            break;
+        }
+
+        acc = acc + i;
+        i = i + 1;
+    }
+
+    return acc;
+}
+
+fn breakAllNested() s32 @public {
+    var acc: s32 = 0;
+
+    for var outer: s32 = 0; outer < 5; outer++; {
+        for var inner: s32 = 0; inner < 5; inner++; {
+            if outer == 2 && inner == 1 {
+                breakall;
+            }
+
+            acc = acc + 1;
+        }
+    }
+
+    return acc;
+}
+
+fn continueAllNested() s32 @public {
+    var acc: s32 = 0;
+
+    for var outer: s32 = 0; outer < 4; outer++; {
+        for var inner: s32 = 0; inner < 4; inner++; {
+            if inner == 1 {
+                continueall;
+            }
+
+            acc = acc + 10 + outer;
+        }
+
+        acc = acc + 100;
+    }
+
+    return acc;
+}
+
+fn main() s32 @public {
+    var total: s32 = 0;
+
+    total = total + continueFor();
+    total = total + breakFor();
+    total = total + loopBreakScore();
+    total = total + breakAllNested();
+    total = total + continueAllNested();
+
+    if total != 75 {
+        return total;
+    }
+
+    return 0;
+}

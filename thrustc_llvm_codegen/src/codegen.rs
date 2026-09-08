@@ -1085,7 +1085,57 @@ impl<'a, 'ctx> LLVMCodegen<'a, 'ctx> {
                     });
             }
 
-            _ => (),
+            Ast::CString { .. }
+            | Ast::CNString { .. }
+            | Ast::Char { .. }
+            | Ast::Boolean { .. }
+            | Ast::Integer { .. }
+            | Ast::Float { .. }
+            | Ast::NullPtr { .. }
+            | Ast::GlobalAssembler { .. }
+            | Ast::FixedArray { .. }
+            | Ast::Array { .. }
+            | Ast::Index { .. }
+            | Ast::Embedded { .. }
+            | Ast::Struct { .. }
+            | Ast::Constructor { .. }
+            | Ast::Property { .. }
+            | Ast::If { .. }
+            | Ast::Elif { .. }
+            | Ast::Else { .. }
+            | Ast::For { .. }
+            | Ast::While { .. }
+            | Ast::Loop { .. }
+            | Ast::Continue { .. }
+            | Ast::Break { .. }
+            | Ast::ContinueAll { .. }
+            | Ast::BreakAll { .. }
+            | Ast::Block { .. }
+            | Ast::Defer { .. }
+            | Ast::CustomType { .. }
+            | Ast::Enum { .. }
+            | Ast::EnumValue { .. }
+            | Ast::CompilerIntrinsic { .. }
+            | Ast::CompilerIntrinsicParameter { .. }
+            | Ast::AssemblerFunction { .. }
+            | Ast::AssemblerFunctionParameter { .. }
+            | Ast::Function { .. }
+            | Ast::FunctionParameter { .. }
+            | Ast::Return { .. }
+            | Ast::Static { .. }
+            | Ast::Const { .. }
+            | Ast::Var { .. }
+            | Ast::Reference { .. }
+            | Ast::Address { .. }
+            | Ast::Load { .. }
+            | Ast::Deref { .. }
+            | Ast::As { .. }
+            | Ast::GetLocation { .. }
+            | Ast::ModuleExpression { .. }
+            | Ast::Group { .. }
+            | Ast::Import { .. }
+            | Ast::ImportC { .. }
+            | Ast::Invalid { .. } => (),
         }
     }
 }

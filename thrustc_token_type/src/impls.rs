@@ -222,6 +222,7 @@ impl TokenTypeAttributesExtensions for TokenType {
                 | TokenType::Constructor
                 | TokenType::Destructor
                 | TokenType::Public
+                | TokenType::EntryPoint
                 | TokenType::Linkage
                 | TokenType::Extern
                 | TokenType::Convention
@@ -356,6 +357,7 @@ impl std::fmt::Display for TokenType {
             TokenType::NoInline => write!(f, "@noInline"),
             TokenType::PreciseFloats => write!(f, "@preciseFloatingPoint"),
             TokenType::Public => write!(f, "@public"),
+            TokenType::EntryPoint => write!(f, "@entrypoint"),
             TokenType::IfAttribute => write!(f, "@if"),
             TokenType::ElifAttribute => write!(f, "@elif"),
             TokenType::ElseAttribute => write!(f, "@else"),
@@ -371,8 +373,8 @@ impl std::fmt::Display for TokenType {
             // Operators, Punctuation, and Special Constructs
             TokenType::Or => write!(f, "||"),
             TokenType::And => write!(f, "&&"),
-            TokenType::Float => write!(f, "integer"),
-            TokenType::Integer => write!(f, "float"),
+            TokenType::Float => write!(f, "float"),
+            TokenType::Integer => write!(f, "integer"),
             TokenType::Addr => write!(f, "addr"),
             TokenType::Alloc => write!(f, "alloc"),
             TokenType::Arith => write!(f, "%"),

@@ -25,11 +25,11 @@ use inkwell::module::Linkage;
 use inkwell::values::AsValueRef;
 use inkwell::values::FunctionValue;
 use inkwell::values::GlobalValue;
+use thrustc_code_location::Span;
 use thrustc_llvm_attributes::LLVMAttribute;
 use thrustc_llvm_attributes::LLVMAttributes;
 use thrustc_llvm_attributes::traits::LLVMAttributesExtensions;
 use thrustc_llvm_call_conventions::LLVMCallConvention;
-use thrustc_code_location::Span;
 
 use crate::context::LLVMCodeGenContext;
 
@@ -215,7 +215,20 @@ impl<'ctx> AttributeBuilder {
                     context.add_dtor(function.as_global_value().as_pointer_value(), span);
                 }
 
-                _ => (),
+                LLVMAttribute::Extern(..)
+                | LLVMAttribute::Public
+                | LLVMAttribute::EntryPoint
+                | LLVMAttribute::Ignore
+                | LLVMAttribute::NoReturn
+                | LLVMAttribute::Align(..)
+                | LLVMAttribute::Promote(..)
+                | LLVMAttribute::Packed
+                | LLVMAttribute::Stack
+                | LLVMAttribute::Heap
+                | LLVMAttribute::AsmThrow
+                | LLVMAttribute::AsmSyntax(..)
+                | LLVMAttribute::AsmAlignStack
+                | LLVMAttribute::AsmSideEffects => (),
             })
         }
 
@@ -372,7 +385,21 @@ impl<'ctx> AttributeBuilder {
                     context.add_dtor(function.as_global_value().as_pointer_value(), span);
                 }
 
-                _ => (),
+                LLVMAttribute::Extern(..)
+                | LLVMAttribute::Public
+                | LLVMAttribute::EntryPoint
+                | LLVMAttribute::Ignore
+                | LLVMAttribute::NoReturn
+                | LLVMAttribute::Align(..)
+                | LLVMAttribute::Promote(..)
+                | LLVMAttribute::Packed
+                | LLVMAttribute::Stack
+                | LLVMAttribute::Heap
+                | LLVMAttribute::AsmThrow
+                | LLVMAttribute::AsmSyntax(..)
+                | LLVMAttribute::AsmAlignStack
+                | LLVMAttribute::AsmSideEffects
+                | LLVMAttribute::Cuda => (),
             })
         }
     }
@@ -384,12 +411,45 @@ impl<'ctx> AttributeBuilder {
         if let LLVMAttributeApplicant::Global(global) = applicant {
             {
                 for attribute in attributes.iter() {
-                    if let LLVMAttribute::Linkage(linkage) = attribute {
-                        global.set_linkage(*linkage);
-                    }
+                    match attribute {
+                        LLVMAttribute::Linkage(linkage) => {
+                            global.set_linkage(*linkage);
+                        }
 
-                    if let LLVMAttribute::Align(value, ..) = attribute {
-                        global.set_alignment((*value).try_into().unwrap_or(u32::MAX));
+                        LLVMAttribute::Align(value, ..) => {
+                            global.set_alignment((*value).try_into().unwrap_or(u32::MAX));
+                        }
+
+                        LLVMAttribute::Extern(..)
+                        | LLVMAttribute::Convention(..)
+                        | LLVMAttribute::Public
+                        | LLVMAttribute::EntryPoint
+                        | LLVMAttribute::Ignore
+                        | LLVMAttribute::Hot
+                        | LLVMAttribute::NoInline
+                        | LLVMAttribute::InlineHint
+                        | LLVMAttribute::MinSize
+                        | LLVMAttribute::AlwaysInline
+                        | LLVMAttribute::SafeStack
+                        | LLVMAttribute::StrongStack
+                        | LLVMAttribute::WeakStack
+                        | LLVMAttribute::PreciseFloats
+                        | LLVMAttribute::NoUnwind
+                        | LLVMAttribute::NoReturn
+                        | LLVMAttribute::OptFuzzing
+                        | LLVMAttribute::Pure
+                        | LLVMAttribute::Thunk
+                        | LLVMAttribute::Promote(..)
+                        | LLVMAttribute::Packed
+                        | LLVMAttribute::Stack
+                        | LLVMAttribute::Heap
+                        | LLVMAttribute::AsmThrow
+                        | LLVMAttribute::AsmSyntax(..)
+                        | LLVMAttribute::AsmAlignStack
+                        | LLVMAttribute::AsmSideEffects
+                        | LLVMAttribute::Constructor
+                        | LLVMAttribute::Destructor
+                        | LLVMAttribute::Cuda => (),
                     }
                 }
             }

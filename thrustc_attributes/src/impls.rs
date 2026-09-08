@@ -33,6 +33,7 @@ impl std::fmt::Display for ThrustAttribute {
             ThrustAttribute::Stack(..) => write!(f, "@stack"),
             ThrustAttribute::Heap(..) => write!(f, "@heap"),
             ThrustAttribute::Public(..) => write!(f, "@public"),
+            ThrustAttribute::EntryPoint(..) => write!(f, "@entrypoint"),
             ThrustAttribute::StrongStack(..) => write!(f, "@strongStack"),
             ThrustAttribute::WeakStack(..) => write!(f, "@weakStack"),
             ThrustAttribute::SafeStack(..) => write!(f, "@safeStack"),

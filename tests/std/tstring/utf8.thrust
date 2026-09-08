@@ -1,0 +1,80 @@
+/*
+ * Exercises std::tstring UTF-8 helpers: validation, byte length,
+ * Unicode code point counting, char boundaries, decoding and encoding.
+ * Returns 0 on success, non-zero on failure.
+ */
+
+import std::tstring;
+
+fn main() s32 @public {
+    var text := tstring::fromCString("mañana");
+
+    if tstring::len(ref text) != 7 { return 1; }
+    if tstring::unicodeCodePointCount(ref text) != 6 { return 2; }
+    if !tstring::isValidUTF8(tstring::toCString(ref text)) { return 3; }
+    if !tstring::isCharBoundary(ref text, 0) { return 4; }
+    if !tstring::isCharBoundary(ref text, 2) { return 5; }
+    if tstring::isCharBoundary(ref text, 3) { return 6; }
+    if !tstring::isCharBoundary(ref text, 4) { return 7; }
+    if !tstring::isCharBoundary(ref text, 7) { return 8; }
+    if tstring::isCharBoundary(ref text, 8) { return 9; }
+
+    var codePoint: tstring::UnicodeCodePoint = 0;
+    var next: usize = tstring::decodeNext(ref text, 0, ref codePoint);
+    if next != 1 { return 10; }
+    if codePoint != 'm' as tstring::UnicodeCodePoint { return 11; }
+
+    next = tstring::decodeNext(ref text, 2, ref codePoint);
+    if next != 4 { return 12; }
+    if codePoint != 0xF1 { return 13; }
+
+    if tstring::decodeNext(ref text, tstring::len(ref text), ref codePoint) != tstring::len(ref text) { return 14; }
+
+    var built := tstring::newTString();
+    if !tstring::pushUnicodeCodePoint(ref built, 0x41) { return 15; }
+    if !tstring::pushUnicodeCodePoint(ref built, 0xF1) { return 16; }
+    if !tstring::pushUnicodeCodePoint(ref built, 0x1F642) { return 17; }
+    if tstring::pushUnicodeCodePoint(ref built, 0xD800) { return 18; }
+    if tstring::pushUnicodeCodePoint(ref built, 0x110000) { return 19; }
+
+    if tstring::len(ref built) != 7 { return 20; }
+    if tstring::unicodeCodePointCount(ref built) != 3 { return 21; }
+    if !tstring::isValidUTF8(tstring::toCString(ref built)) { return 22; }
+    if !tstring::isCharBoundary(ref built, 0) { return 23; }
+    if !tstring::isCharBoundary(ref built, 1) { return 24; }
+    if !tstring::isCharBoundary(ref built, 3) { return 25; }
+    if tstring::isCharBoundary(ref built, 4) { return 26; }
+    if tstring::isCharBoundary(ref built, 5) { return 27; }
+    if tstring::isCharBoundary(ref built, 6) { return 28; }
+    if !tstring::isCharBoundary(ref built, 7) { return 29; }
+
+    next = tstring::decodeNext(ref built, 3, ref codePoint);
+    if next != 7 { return 30; }
+    if codePoint != 0x1F642 { return 31; }
+
+    var builtCopy := tstring::fromCString(tstring::toCString(ref built));
+    if !tstring::equals(ref built, ref builtCopy) { return 32; }
+
+    var invalid: array[char; 3];
+    invalid[0] = 0xC3 as char;
+    invalid[1] = 'A';
+    invalid[2] = '\0';
+
+    if tstring::isValidUTF8((ref invalid[0]) as const array[char]) { return 33; }
+
+    if tstring::get(ref text, 0) != 'm' { return 34; }
+    if tstring::get(ref text, 2) != 0xC3 as char { return 35; }
+    if tstring::get(ref text, 3) != 0xB1 as char { return 36; }
+    if tstring::get(ref text, 7) != '\0' { return 37; }
+    if !tstring::hasIndex(ref text, 6) { return 38; }
+    if tstring::hasIndex(ref text, 7) { return 39; }
+    if tstring::indexOf(ref text, "ñ") != 2 { return 40; }
+    if tstring::indexOf(ref text, "ana") != 4 { return 41; }
+    if tstring::indexOf(ref text, "zz") != tstring::len(ref text) { return 42; }
+
+    tstring::destroyTString(ref builtCopy);
+    tstring::destroyTString(ref built);
+    tstring::destroyTString(ref text);
+
+    return 0;
+}

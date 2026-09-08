@@ -86,6 +86,7 @@ pub enum TokenType {
     Extern,
     Ignore,
     Public,
+    EntryPoint,
     MinSize,
     NoInline,
     AlwaysInline,

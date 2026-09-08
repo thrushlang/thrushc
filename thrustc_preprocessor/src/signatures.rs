@@ -44,6 +44,7 @@ pub enum Signature {
     Function {
         kind: Type,
         invalid_kind: Type,
+        demangling_name: String,
         type_params: Option<Vec<String>>,
         parameters: Vec<(String, Type, Span)>,
         attributes: ThrustAttributes,

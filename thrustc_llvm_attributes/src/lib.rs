@@ -36,6 +36,7 @@ pub enum LLVMAttribute<'ctx> {
     Convention(LLVMCallConvention),
     Linkage(Linkage),
     Public,
+    EntryPoint,
     Ignore,
     Hot,
     NoInline,
@@ -93,6 +94,11 @@ impl LLVMAttribute<'_> {
     #[inline]
     pub fn is_public_attribute(&self) -> bool {
         matches!(self, LLVMAttribute::Public)
+    }
+
+    #[inline]
+    pub fn is_entrypoint_attribute(&self) -> bool {
+        matches!(self, LLVMAttribute::EntryPoint)
     }
 
     #[inline]
@@ -188,6 +194,7 @@ pub enum LLVMAttributeComparator {
     Linkage,
     Pure,
     Thunk,
+    EntryPoint,
     Promote,
 
     Packed,
@@ -215,6 +222,7 @@ pub fn into_llvm_attribute(attribute: &ThrustAttribute) -> LLVMAttribute<'_> {
             thrustc_llvm_call_conventions::get_call_convention(name.as_bytes()),
         ),
         ThrustAttribute::Public(..) => LLVMAttribute::Public,
+        ThrustAttribute::EntryPoint(..) => LLVMAttribute::EntryPoint,
         ThrustAttribute::Ignore(..) => LLVMAttribute::Ignore,
         ThrustAttribute::Hot(..) => LLVMAttribute::Hot,
         ThrustAttribute::NoInline(..) => LLVMAttribute::NoInline,

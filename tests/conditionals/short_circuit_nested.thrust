@@ -1,0 +1,43 @@
+directive "--disable-warnings=W0020";
+directive "--disable-warnings=W0030";
+
+fn classify(a: s32, b: s32, c: s32, d: s32) s32 @public {
+    if a > 0 && (b > 0 || c > 0) {
+        if d == 0 {
+            return 10;
+        } else if d == 1 {
+            return 11;
+        } else {
+            return 12;
+        }
+    } else if a < 0 || (b < 0 && c < 0) {
+        if d < 0 {
+            return 20;
+        }
+
+        return 21;
+    } else {
+        if a == 0 && b == 0 && c == 0 {
+            return 30;
+        }
+
+        return 31;
+    }
+}
+
+fn main() s32 @public {
+    var total: s32 = 0;
+
+    total = total + classify(1, 0, 2, 0);
+    total = total + classify(1, 0, 2, 2);
+    total = total + classify(-1, 9, 9, 0);
+    total = total + classify(0, -1, -1, -1);
+    total = total + classify(0, 0, 0, 5);
+    total = total + classify(0, 1, -1, 5);
+
+    if total != 124 {
+        return total;
+    }
+
+    return 0;
+}

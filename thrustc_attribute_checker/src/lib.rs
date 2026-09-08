@@ -400,7 +400,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                         return;
                     };
 
-                    let is_power_of_two: bool = align_to % 2 == 0;
+                    let is_power_of_two: bool = align_to.is_power_of_two();
                     let is_up_128: bool = align_to > 128;
 
                     if !is_power_of_two {
@@ -507,7 +507,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                         return;
                     };
 
-                    let is_power_of_two: bool = align_to % 2 == 0;
+                    let is_power_of_two: bool = align_to.is_power_of_two();
                     let is_up_128: bool = align_to > 128;
 
                     if !is_power_of_two {
@@ -552,7 +552,7 @@ impl<'attr_checker> AttributeChecker<'attr_checker> {
                         return;
                     };
 
-                    let is_power_of_two: bool = align_to % 2 == 0;
+                    let is_power_of_two: bool = align_to.is_power_of_two();
                     let is_up_128: bool = align_to > 128;
 
                     if !is_power_of_two {

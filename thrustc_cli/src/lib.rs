@@ -1492,7 +1492,7 @@ impl CommandLine {
             }
             "compiler-callconventions-checking" => {
                 if self.options.llvm() {
-                    CompilationPhase::LLVMIntrinsicChecker
+                    CompilationPhase::LLVMCallConventionChecker
                 } else {
                     CompilationPhase::None
                 }

@@ -46,6 +46,7 @@ pub enum ThrustAttribute {
     Convention(String, Span),
     Linkage(ThrustLinkage, String, Span),
     Public(Span),
+    EntryPoint(Span),
     Ignore(Span),
     Hot(Span),
     NoInline(Span),
@@ -92,6 +93,7 @@ pub enum ThrustAttributeComparator {
     Convention,
     Linkage,
     Public,
+    EntryPoint,
     Ignore,
     Hot,
     NoInline,
@@ -145,6 +147,11 @@ impl ThrustAttribute {
     #[inline]
     pub fn is_public_attribute(&self) -> bool {
         matches!(self, ThrustAttribute::Public(..))
+    }
+
+    #[inline]
+    pub fn is_entrypoint_attribute(&self) -> bool {
+        matches!(self, ThrustAttribute::EntryPoint(..))
     }
 
     #[inline]
@@ -241,6 +248,7 @@ impl ThrustAttribute {
             ThrustAttribute::Convention(_, span) => *span,
             ThrustAttribute::Linkage(.., span) => *span,
             ThrustAttribute::Public(span) => *span,
+            ThrustAttribute::EntryPoint(span) => *span,
             ThrustAttribute::Ignore(span) => *span,
             ThrustAttribute::Hot(span) => *span,
             ThrustAttribute::NoInline(span) => *span,
@@ -295,6 +303,7 @@ pub fn as_attribute(token_type: TokenType, span: Span) -> Option<ThrustAttribute
         TokenType::OptFuzzing => Some(ThrustAttribute::OptFuzzing(span)),
         TokenType::Pure => Some(ThrustAttribute::Pure(span)),
         TokenType::Thunk => Some(ThrustAttribute::Thunk(span)),
+        TokenType::EntryPoint => Some(ThrustAttribute::EntryPoint(span)),
         TokenType::Constructor => Some(ThrustAttribute::Constructor(span)),
         TokenType::Destructor => Some(ThrustAttribute::Destructor(span)),
         TokenType::Cuda => Some(ThrustAttribute::Cuda(span)),
@@ -331,6 +340,11 @@ impl ThrustAttributesExtensions for ThrustAttributes {
     #[inline]
     fn has_public_attribute(&self) -> bool {
         self.iter().any(|attr| attr.is_public_attribute())
+    }
+
+    #[inline]
+    fn has_entrypoint_attribute(&self) -> bool {
+        self.iter().any(|attr| attr.is_entrypoint_attribute())
     }
 
     #[inline]
@@ -432,6 +446,7 @@ impl ThrustAttributeComparatorExtensions for ThrustAttribute {
             ThrustAttribute::Stack(..) => ThrustAttributeComparator::Stack,
             ThrustAttribute::Heap(..) => ThrustAttributeComparator::Heap,
             ThrustAttribute::Public(..) => ThrustAttributeComparator::Public,
+            ThrustAttribute::EntryPoint(..) => ThrustAttributeComparator::EntryPoint,
             ThrustAttribute::Ignore(..) => ThrustAttributeComparator::Ignore,
             ThrustAttribute::Hot(..) => ThrustAttributeComparator::Hot,
             ThrustAttribute::NoInline(..) => ThrustAttributeComparator::NoInline,
