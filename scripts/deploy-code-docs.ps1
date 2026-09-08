@@ -23,26 +23,10 @@ cargo docs
 
 Write-Host "Preparing documentation..."
 $TempDocs = Join-Path $env:TEMP "thrust-docs-build"
-$TempWebsiteSource = Join-Path $env:TEMP "thrust-website-source"
-$TempWebsiteBuild = Join-Path $env:TEMP "thrust-website-build"
-$WebsiteRepoUrl = if ($env:WEBSITE_REPO_URL) { $env:WEBSITE_REPO_URL } else { "https://github.com/thrustlang/website" }
-$WebsiteSourceDir = if ($env:WEBSITE_SOURCE_DIR) { $env:WEBSITE_SOURCE_DIR } else { $null }
-$PythonBin = if ($env:PYTHON_BIN) { $env:PYTHON_BIN } else { "python" }
 if (Test-Path $TempDocs) { Remove-Item -Recurse -Force $TempDocs }
-if (Test-Path $TempWebsiteBuild) { Remove-Item -Recurse -Force $TempWebsiteBuild }
 Copy-Item -Path "target/doc" -Destination $TempDocs -Recurse
 
 Set-Content -Path (Join-Path $TempDocs "index.html") -Value '<meta http-equiv="refresh" content="0; url=thrustc/index.html">'
-
-Write-Host "Preparing website..."
-if ($WebsiteSourceDir) {
-    $WebsiteSource = $WebsiteSourceDir
-} else {
-    if (Test-Path $TempWebsiteSource) { Remove-Item -Recurse -Force $TempWebsiteSource }
-    git clone --depth 1 $WebsiteRepoUrl $TempWebsiteSource
-    $WebsiteSource = $TempWebsiteSource
-}
-& $PythonBin (Join-Path $WebsiteSource "scripts/build_subpath.py") --source $WebsiteSource --base-path /website --output $TempWebsiteBuild
 
 Write-Host "Deploying to GitHub Pages..."
 $PagesWorktree = Join-Path $env:TEMP "thrust-gh-pages"
@@ -53,11 +37,8 @@ git worktree add $PagesWorktree gh-pages
 
 Push-Location $PagesWorktree
     Get-ChildItem -Exclude .git | Remove-Item -Recurse -Force
-    New-Item -ItemType File -Path ".nojekyll" -Force | Out-Null
     
     Copy-Item -Path "$TempDocs\*" -Destination "." -Recurse
-    New-Item -ItemType Directory -Path "website" -Force | Out-Null
-    Copy-Item -Path "$TempWebsiteBuild\*" -Destination "website" -Recurse
     
     git add -A
     if (git diff-index --quiet HEAD --) {
@@ -71,6 +52,4 @@ Pop-Location
 
 git worktree remove $PagesWorktree
 if (Test-Path $TempDocs) { Remove-Item -Recurse -Force $TempDocs }
-if (Test-Path $TempWebsiteSource) { Remove-Item -Recurse -Force $TempWebsiteSource }
-if (Test-Path $TempWebsiteBuild) { Remove-Item -Recurse -Force $TempWebsiteBuild }
 Write-Host "Done." -ForegroundColor Green

@@ -68,21 +68,15 @@ If any of the steps fails, the pipeline stops there. Each step can also be run o
 
 Script: `deploy-code-docs` (`.sh`, `.ps1`, `.fish`, `.bat`).
 
-This step publishes the Rust code documentation to GitHub Pages, under the `gh-pages` branch. It also publishes the website repository under `/website` as a temporary subpath deployment.
+This step publishes the Rust code documentation to GitHub Pages, under the `gh-pages` branch.
 
 What it does:
 
 1. Checks if the `gh-pages` branch exists on the `origin` remote. If it does not, it creates it as an orphan branch with an initial empty commit and pushes it.
 2. Builds the documentation with `cargo clean --doc` followed by `cargo docs`.
 3. Copies the generated `target/doc` folder to a temporary directory and adds an `index.html` that redirects to the main crate page (`thrustc/index.html`).
-4. Clones `https://github.com/thrustlang/website` to a temporary directory and runs `scripts/build_subpath.py --base-path /website` from that checkout.
-5. Uses a git worktree of the `gh-pages` branch to replace the Rust documentation at the root and replace the website copy under `website/`.
-6. Commits the changes with a message that includes the current date, and pushes them to `origin`. If there are no documentation changes, nothing is pushed.
-
-Environment overrides:
-
-- `WEBSITE_REPO_URL`: clone a different website repository or local mirror.
-- `PYTHON_BIN`: select the Python executable used for the website subpath build.
+4. Uses a git worktree of the `gh-pages` branch to replace its contents with the fresh documentation.
+5. Commits the changes with a message that includes the current date, and pushes them to `origin`. If there are no documentation changes, nothing is pushed.
 
 > [!NOTE]
 > This step does not require any tag, you can run it alone to update the online documentation without doing a release.
